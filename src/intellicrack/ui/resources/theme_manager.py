@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Final
 
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
 from ...core.logging import get_logger
@@ -583,6 +584,68 @@ QLabel[status="info"] {
 QLabel[status="idle"] {
     color: #888888;
 }
+
+/* Dock Widget */
+QDockWidget {
+    titlebar-close-icon: none;
+    titlebar-normal-icon: none;
+    color: #d4d4d4;
+}
+
+QDockWidget::title {
+    background-color: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+    padding: 6px;
+    text-align: left;
+}
+
+/* Message Box */
+QMessageBox {
+    background-color: #1e1e1e;
+}
+
+/* Disabled States */
+QComboBox:disabled {
+    background-color: #2d2d30;
+    color: #6e6e6e;
+    border-color: #3e3e42;
+}
+
+QCheckBox:disabled { color: #6e6e6e; }
+QRadioButton:disabled { color: #6e6e6e; }
+QLabel:disabled { color: #6e6e6e; }
+
+QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: #2d2d30;
+    color: #6e6e6e;
+}
+
+/* Focus States */
+QTableWidget:focus, QTableView:focus { border-color: #007acc; }
+QTreeWidget:focus, QTreeView:focus { border-color: #007acc; }
+QListWidget:focus, QListView:focus { border-color: #007acc; }
+
+/* ObjectName Selectors */
+QLabel#search_status_label { color: #888888; font-size: 8pt; }
+QLabel#muted_label { color: #888888; }
+QLabel#bold_label { font-weight: bold; }
+QLabel#hint_label { color: #888888; font-style: italic; font-size: 8pt; }
+
+QTabWidget#analysis_tabs::pane { border: none; background: #1e1e1e; }
+QTabWidget#analysis_tabs > QTabBar::tab { padding: 6px 12px; }
+
+QTextEdit#code_preview_text {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+}
+
+QPushButton#execute_button {
+    background-color: #0e639c;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 8px 20px;
+}
 """
 
 
@@ -988,6 +1051,68 @@ QLabel[status="info"] {
 QLabel[status="idle"] {
     color: #757575;
 }
+
+/* Dock Widget */
+QDockWidget {
+    titlebar-close-icon: none;
+    titlebar-normal-icon: none;
+    color: #1a1a1a;
+}
+
+QDockWidget::title {
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 6px;
+    text-align: left;
+}
+
+/* Message Box */
+QMessageBox {
+    background-color: #f8f8f8;
+}
+
+/* Disabled States */
+QComboBox:disabled {
+    background-color: #f5f5f5;
+    color: #a0a0a0;
+    border-color: #e0e0e0;
+}
+
+QCheckBox:disabled { color: #a0a0a0; }
+QRadioButton:disabled { color: #a0a0a0; }
+QLabel:disabled { color: #a0a0a0; }
+
+QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: #f5f5f5;
+    color: #a0a0a0;
+}
+
+/* Focus States */
+QTableWidget:focus, QTableView:focus { border-color: #0078d4; }
+QTreeWidget:focus, QTreeView:focus { border-color: #0078d4; }
+QListWidget:focus, QListView:focus { border-color: #0078d4; }
+
+/* ObjectName Selectors */
+QLabel#search_status_label { color: #757575; font-size: 8pt; }
+QLabel#muted_label { color: #757575; }
+QLabel#bold_label { font-weight: bold; }
+QLabel#hint_label { color: #757575; font-style: italic; font-size: 8pt; }
+
+QTabWidget#analysis_tabs::pane { border: none; background: #ffffff; }
+QTabWidget#analysis_tabs > QTabBar::tab { padding: 6px 12px; }
+
+QTextEdit#code_preview_text {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: none;
+}
+
+QPushButton#execute_button {
+    background-color: #0078d4;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 8px 20px;
+}
 """
 
 
@@ -1138,6 +1263,82 @@ class ThemeManager:
             bool: True if dark theme is active.
         """
         return self._current_theme == THEME_DARK
+
+    def get_analysis_colors(self) -> dict[str, QColor]:
+        """Get theme-aware semantic colors for custom painting and analysis views.
+
+        Returns:
+            dict[str, QColor]: Mapping of semantic color names to QColor instances.
+        """
+        if self.is_dark_theme():
+            return {
+                "background": QColor(30, 30, 30),
+                "foreground": QColor(212, 212, 212),
+                "accent": QColor(0, 122, 204),
+                "success": QColor(76, 175, 80),
+                "error": QColor(244, 67, 54),
+                "warning": QColor(255, 152, 0),
+                "info": QColor(33, 150, 243),
+                "muted": QColor(136, 136, 136),
+                "border": QColor(62, 62, 66),
+                "surface": QColor(45, 45, 48),
+                "selection": QColor(9, 71, 113),
+                "entropy_low": QColor(76, 175, 80),
+                "entropy_mid": QColor(255, 152, 0),
+                "entropy_high": QColor(244, 67, 54),
+                "graph_edge": QColor(100, 100, 100),
+                "graph_node_bg": QColor(45, 45, 48),
+                "graph_node_border": QColor(62, 62, 66),
+                "hex_zero": QColor(100, 100, 100),
+                "hex_printable": QColor(156, 220, 254),
+                "hex_nonprintable": QColor(244, 67, 54),
+                "hex_modified": QColor(255, 152, 0),
+                "offset_text": QColor(136, 136, 136),
+                "separator": QColor(62, 62, 66),
+                "minimap_bg": QColor(37, 37, 38),
+                "minimap_indicator": QColor(0, 122, 204, 80),
+                "mnemonic_jump": QColor(86, 156, 214),
+                "mnemonic_call": QColor(220, 220, 170),
+                "mnemonic_ret": QColor(206, 145, 120),
+                "mnemonic_nop": QColor(100, 100, 100),
+                "operand_register": QColor(78, 201, 176),
+                "operand_immediate": QColor(181, 206, 168),
+                "operand_memory": QColor(156, 220, 254),
+            }
+        return {
+            "background": QColor(248, 248, 248),
+            "foreground": QColor(26, 26, 26),
+            "accent": QColor(0, 120, 212),
+            "success": QColor(46, 125, 50),
+            "error": QColor(198, 40, 40),
+            "warning": QColor(239, 108, 0),
+            "info": QColor(21, 101, 192),
+            "muted": QColor(117, 117, 117),
+            "border": QColor(224, 224, 224),
+            "surface": QColor(255, 255, 255),
+            "selection": QColor(0, 120, 212, 50),
+            "entropy_low": QColor(46, 125, 50),
+            "entropy_mid": QColor(239, 108, 0),
+            "entropy_high": QColor(198, 40, 40),
+            "graph_edge": QColor(160, 160, 160),
+            "graph_node_bg": QColor(255, 255, 255),
+            "graph_node_border": QColor(224, 224, 224),
+            "hex_zero": QColor(160, 160, 160),
+            "hex_printable": QColor(4, 81, 165),
+            "hex_nonprintable": QColor(198, 40, 40),
+            "hex_modified": QColor(239, 108, 0),
+            "offset_text": QColor(117, 117, 117),
+            "separator": QColor(224, 224, 224),
+            "minimap_bg": QColor(245, 245, 245),
+            "minimap_indicator": QColor(0, 120, 212, 80),
+            "mnemonic_jump": QColor(0, 0, 255),
+            "mnemonic_call": QColor(121, 94, 38),
+            "mnemonic_ret": QColor(163, 21, 21),
+            "mnemonic_nop": QColor(160, 160, 160),
+            "operand_register": QColor(0, 128, 128),
+            "operand_immediate": QColor(9, 134, 88),
+            "operand_memory": QColor(4, 81, 165),
+        }
 
     def clear_cache(self) -> None:
         """Clear the stylesheet cache."""

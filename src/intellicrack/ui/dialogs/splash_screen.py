@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Final, final, override
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap, QResizeEvent
+from PyQt6.QtGui import QColor, QPainter, QPixmap, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -23,6 +23,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from intellicrack.ui.resources.font_manager import FontManager
 
 from ...core.logging import get_logger
 from ..resources import get_assets_path
@@ -159,11 +161,7 @@ class SplashScreen(QSplashScreen):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
 
-        title_font = QFont(
-            "Segoe UI",
-            int(_TITLE_FONT_SIZE * dpi_scale),
-            QFont.Weight.Bold,
-        )
+        title_font = FontManager.get_instance().get_heading_font(int(_TITLE_FONT_SIZE * dpi_scale))
         painter.setFont(title_font)
         painter.setPen(QColor(FALLBACK_TEXT_COLOR))
 
@@ -175,7 +173,7 @@ class SplashScreen(QSplashScreen):
             "INTELLICRACK",
         )
 
-        subtitle_font = QFont("Segoe UI", int(_SUBTITLE_FONT_SIZE * dpi_scale))
+        subtitle_font = FontManager.get_instance().get_ui_font(int(_SUBTITLE_FONT_SIZE * dpi_scale))
         painter.setFont(subtitle_font)
         painter.setPen(QColor(_SUBTITLE_COLOR))
 

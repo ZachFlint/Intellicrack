@@ -18,7 +18,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack._metadata import __version__
 
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
+_EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
@@ -332,7 +333,7 @@ def _setup_qt_and_splash(
             early_pixmap = QPixmap(str(icon_path))
         else:
             early_pixmap = QPixmap(400, 250)
-            early_pixmap.fill(QColor("#1e1e2e"))
+            early_pixmap.fill(QColor(_EARLY_SPLASH_BG))
 
         early_splash = QSplashScreen(early_pixmap)
         early_splash.show()

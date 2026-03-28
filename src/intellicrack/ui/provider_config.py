@@ -15,7 +15,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 
 import httpx
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
+    QProgressBar,
     QPushButton,
     QSpinBox,
     QSplitter,
@@ -58,6 +59,7 @@ from ..credentials.oauth import (
 )
 from ..credentials.store import CredentialStore
 from .resources import IconManager
+from .resources.theme_manager import ThemeManager
 
 
 try:
@@ -79,13 +81,75 @@ except ImportError:
     OpenRouterProvider = None
 
 try:
-    from ..providers.xpu_utils import get_optimal_dtype_for_xpu
+    from ..providers.xpu_utils import (
+        check_windows_requirements,
+        clear_xpu_cache,
+        get_optimal_dtype_for_xpu,
+        get_xpu_device_count,
+        get_xpu_device_info,
+        get_xpu_memory_info,
+        is_xpu_available,
+    )
 except ImportError:
     get_logger("ui.provider_config").debug("xpu_utils_unavailable")
+    check_windows_requirements = None
+    clear_xpu_cache = None
     get_optimal_dtype_for_xpu = None
+    get_xpu_device_count = None
+    get_xpu_device_info = None
+    get_xpu_memory_info = None
+    is_xpu_available = None
+
+try:
+    from ..providers.model_loader import (
+        clear_global_cache,
+        set_global_cache_size,
+    )
+except ImportError:
+    get_logger("ui.provider_config").debug("model_loader_unavailable")
+    clear_global_cache = None
+    set_global_cache_size = None
 
 
 _logger = get_logger("ui.provider_config")
+
+_DIALOG_WIDTH: Final[int] = 800
+_DIALOG_HEIGHT: Final[int] = 550
+_DISCOVERY_WIDTH: Final[int] = 500
+_DISCOVERY_HEIGHT: Final[int] = 400
+_LIST_MIN_WIDTH: Final[int] = 200
+_LIST_MAX_WIDTH: Final[int] = 250
+_KEY_INPUT_MIN_WIDTH: Final[int] = 280
+_SHOW_KEY_MAX_WIDTH: Final[int] = 60
+_MODEL_COMBO_MIN_WIDTH: Final[int] = 250
+
+
+def _get_source_colors() -> dict[str, QColor]:
+    """Get theme-aware colors for credential source indicators.
+
+    Returns:
+        dict[str, QColor]: Mapping of source names to QColor values.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return {
+            "env_file": QColor(34, 139, 34),
+            "environment": QColor(70, 130, 180),
+            "manual": QColor(218, 165, 32),
+            "not_configured": QColor(178, 34, 34),
+            "default": QColor(128, 128, 128),
+            "configured": QColor(34, 139, 34),
+            "unconfigured": QColor(169, 169, 169),
+        }
+    return {
+        "env_file": QColor(46, 125, 50),
+        "environment": QColor(21, 101, 192),
+        "manual": QColor(239, 108, 0),
+        "not_configured": QColor(198, 40, 40),
+        "default": QColor(117, 117, 117),
+        "configured": QColor(46, 125, 50),
+        "unconfigured": QColor(117, 117, 117),
+    }
+
 
 if TYPE_CHECKING:
     from intellicrack.core.types import ModelInfo
@@ -208,13 +272,15 @@ class CredentialSourceDetector:
         Returns:
             QColor: QColor for the source indicator.
         """
-        color_map = {
-            CredentialSource.ENV_FILE: QColor(34, 139, 34),
-            CredentialSource.ENVIRONMENT: QColor(70, 130, 180),
-            CredentialSource.MANUAL: QColor(218, 165, 32),
-            CredentialSource.NOT_CONFIGURED: QColor(178, 34, 34),
+        colors = _get_source_colors()
+        source_key_map = {
+            CredentialSource.ENV_FILE: "env_file",
+            CredentialSource.ENVIRONMENT: "environment",
+            CredentialSource.MANUAL: "manual",
+            CredentialSource.NOT_CONFIGURED: "not_configured",
         }
-        return color_map.get(source, QColor(128, 128, 128))
+        key = source_key_map.get(source, "default")
+        return colors.get(key, colors["default"])
 
 
 class ConnectionTestWorker(QThread):
@@ -777,7 +843,7 @@ class ProviderConfigDialog(QDialog):
         self._load_credential_overview()
 
         self.setWindowTitle("Provider Settings")
-        self.resize(800, 550)
+        self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
 
     def _load_credential_overview(self) -> None:
         """Load credential overview from env_loader and credential store."""
@@ -822,14 +888,14 @@ class ProviderConfigDialog(QDialog):
         left_layout.setContentsMargins(0, 0, 0, 0)
 
         self._provider_list = QListWidget()
-        self._provider_list.setMinimumWidth(200)
-        self._provider_list.setMaximumWidth(250)
+        self._provider_list.setMinimumWidth(_LIST_MIN_WIDTH)
+        self._provider_list.setMaximumWidth(_LIST_MAX_WIDTH)
         self._provider_list.currentRowChanged.connect(self._on_provider_selected)
         left_layout.addWidget(self._provider_list)
 
         self._active_label = QLabel()
         self._active_label.setWordWrap(True)
-        self._active_label.setStyleSheet("QLabel { padding: 8px; background-color: #2d2d2d; border-radius: 4px; }")
+        self._active_label.setObjectName("info_panel")
         self._update_active_label()
         left_layout.addWidget(self._active_label)
 
@@ -910,6 +976,8 @@ class ProviderConfigDialog(QDialog):
             ("Ollama", "ollama"),
             ("OpenRouter", "openrouter"),
             ("HuggingFace", "huggingface"),
+            ("Grok", "grok"),
+            ("Local Transformers", "local_transformers"),
         ]
 
         active_name = self._get_active_provider_name()
@@ -968,10 +1036,11 @@ class ProviderConfigDialog(QDialog):
         font.setBold(is_active)
         item.setFont(font)
 
+        colors = _get_source_colors()
         if is_connected:
-            item.setForeground(QColor(34, 139, 34))
+            item.setForeground(colors["configured"])
         else:
-            item.setForeground(QColor(169, 169, 169))
+            item.setForeground(colors["unconfigured"])
 
     def _get_active_provider_name(self) -> str | None:
         """Get the name of the currently active provider.
@@ -1336,12 +1405,12 @@ class ProviderSettingsWidget(QFrame):
         api_key_row = QHBoxLayout()
         self._api_key_input = QLineEdit()
         self._api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self._api_key_input.setMinimumWidth(280)
+        self._api_key_input.setMinimumWidth(_KEY_INPUT_MIN_WIDTH)
         self._api_key_input.textChanged.connect(self._on_api_key_changed)
         api_key_row.addWidget(self._api_key_input)
 
         self._show_key_btn = QPushButton("Show")
-        self._show_key_btn.setMaximumWidth(60)
+        self._show_key_btn.setMaximumWidth(_SHOW_KEY_MAX_WIDTH)
         self._show_key_btn.setCheckable(True)
         self._show_key_btn.toggled.connect(self._toggle_key_visibility)
         api_key_row.addWidget(self._show_key_btn)
@@ -1349,7 +1418,7 @@ class ProviderSettingsWidget(QFrame):
         credentials_layout.addRow("API Key:", api_key_row)
 
         self._credential_source_label = QLabel()
-        self._credential_source_label.setStyleSheet("QLabel { padding: 4px 8px; border-radius: 3px; font-size: 11px; }")
+        self._credential_source_label.setObjectName("credential_source_label")
         credentials_layout.addRow("Source:", self._credential_source_label)
 
         self._api_base_input: QLineEdit | None
@@ -1379,7 +1448,7 @@ class ProviderSettingsWidget(QFrame):
 
         model_row = QHBoxLayout()
         self._model_combo = QComboBox()
-        self._model_combo.setMinimumWidth(250)
+        self._model_combo.setMinimumWidth(_MODEL_COMBO_MIN_WIDTH)
         model_row.addWidget(self._model_combo)
 
         self._refresh_models_btn = QPushButton("Refresh")
@@ -1391,7 +1460,7 @@ class ProviderSettingsWidget(QFrame):
 
         self._recommended_label = QLabel()
         self._recommended_label.setWordWrap(True)
-        self._recommended_label.setStyleSheet("QLabel { color: #6a9fb5; font-style: italic; font-size: 11px; }")
+        self._recommended_label.setObjectName("hint_label")
         model_layout.addRow("", self._recommended_label)
 
         model_group.setLayout(model_layout)
@@ -1460,15 +1529,7 @@ class ProviderSettingsWidget(QFrame):
             layout.addWidget(pull_group)
 
         if self._provider_id == "local_transformers":
-            device_btn = QPushButton("Show Device Info")
-            device_btn.setToolTip("Show available compute device information")
-            device_btn.clicked.connect(self._on_show_device_info)
-            layout.addWidget(device_btn)
-
-            xpu_btn = QPushButton("Detect XPU Dtype")
-            xpu_btn.setToolTip("Auto-detect optimal dtype for XPU inference")
-            xpu_btn.clicked.connect(self._on_detect_xpu_dtype)
-            layout.addWidget(xpu_btn)
+            self._setup_xpu_settings(layout)
 
         if self._provider_id == "openrouter":
             gen_group = QGroupBox("Cost Tracking")
@@ -1493,6 +1554,199 @@ class ProviderSettingsWidget(QFrame):
         if model_name := model_input.text().strip():
             self.pull_ollama_model(model_name)
 
+    def _setup_xpu_settings(self, layout: QVBoxLayout) -> None:
+        """Build the XPU / Device Settings group box for Local Transformers.
+
+        Args:
+            layout: Parent layout to add the group box to.
+        """
+        xpu_group = QGroupBox("XPU / Device Settings")
+        form = QFormLayout()
+
+        self._prefer_xpu_cb = QCheckBox("Prefer XPU over CPU")
+        self._prefer_xpu_cb.setChecked(True)
+        form.addRow(self._prefer_xpu_cb)
+
+        self._device_combo = QComboBox()
+        self._populate_device_combo()
+        form.addRow("Device:", self._device_combo)
+
+        dtype_row = QHBoxLayout()
+        self._dtype_combo = QComboBox()
+        self._dtype_combo.addItems(["Auto", "float16", "bfloat16", "float32"])
+        dtype_row.addWidget(self._dtype_combo)
+        auto_dtype_btn = QPushButton("Auto-Detect")
+        auto_dtype_btn.setToolTip("Auto-detect optimal dtype for XPU inference")
+        auto_dtype_btn.clicked.connect(self._on_detect_xpu_dtype)
+        dtype_row.addWidget(auto_dtype_btn)
+        form.addRow("Dtype:", dtype_row)
+
+        self._xpu_mem_bar = QProgressBar()
+        self._xpu_mem_bar.setRange(0, 100)
+        self._xpu_mem_bar.setValue(0)
+        self._xpu_mem_text = QLabel("--")
+        mem_col = QVBoxLayout()
+        mem_col.addWidget(self._xpu_mem_bar)
+        mem_col.addWidget(self._xpu_mem_text)
+        form.addRow("Memory:", mem_col)
+
+        cache_row = QHBoxLayout()
+        self._cache_spin = QSpinBox()
+        self._cache_spin.setRange(512, 65536)
+        self._cache_spin.setSingleStep(512)
+        self._cache_spin.setValue(10240)
+        self._cache_spin.setSuffix(" MB")
+        cache_row.addWidget(self._cache_spin)
+        apply_cache_btn = QPushButton("Apply")
+        apply_cache_btn.clicked.connect(self._on_apply_cache_size)
+        cache_row.addWidget(apply_cache_btn)
+        form.addRow("Cache Limit:", cache_row)
+
+        btn_row = QHBoxLayout()
+        device_info_btn = QPushButton("Device Info")
+        device_info_btn.clicked.connect(self._on_show_device_info)
+        btn_row.addWidget(device_info_btn)
+        clear_cache_btn = QPushButton("Clear Cache")
+        clear_cache_btn.clicked.connect(self._on_clear_cache)
+        btn_row.addWidget(clear_cache_btn)
+        check_req_btn = QPushButton("Check Requirements")
+        check_req_btn.clicked.connect(self._on_check_requirements)
+        btn_row.addWidget(check_req_btn)
+        form.addRow(btn_row)
+
+        self._xpu_warnings_label = QLabel("")
+        self._xpu_warnings_label.setWordWrap(True)
+        form.addRow(self._xpu_warnings_label)
+
+        xpu_group.setLayout(form)
+        layout.addWidget(xpu_group)
+
+        self._xpu_mem_timer = QTimer(self)
+        self._xpu_mem_timer.timeout.connect(self._refresh_xpu_memory)
+        self._xpu_mem_timer.start(3000)
+        self._refresh_xpu_memory()
+
+    def _populate_device_combo(self) -> None:
+        """Populate the device selection combo with available XPU devices."""
+        combo = self._device_combo
+        combo.clear()
+
+        if get_xpu_device_count is None or get_xpu_device_info is None:
+            combo.addItem("CPU (XPU utils unavailable)", 0)
+            return
+
+        try:
+            count = get_xpu_device_count()
+        except Exception:
+            _logger.debug("xpu_device_count_failed", exc_info=True)
+            count = 0
+
+        if count == 0:
+            combo.addItem("CPU (no XPU devices)", 0)
+            return
+
+        for idx in range(count):
+            try:
+                info = get_xpu_device_info(idx)
+            except Exception:
+                _logger.debug("xpu_device_info_failed", device_index=idx, exc_info=True)
+                combo.addItem(f"XPU:{idx} - Unknown", idx)
+                continue
+
+            if info is not None:
+                mem_gb = info.total_memory_bytes / (1024.0 * 1024.0 * 1024.0)
+                combo.addItem(f"XPU:{idx} - {info.device_name} ({mem_gb:.1f} GB)", idx)
+            else:
+                combo.addItem(f"XPU:{idx}", idx)
+
+    def _refresh_xpu_memory(self) -> None:
+        """Refresh the XPU memory usage bar and text label."""
+        mem_bar: QProgressBar | None = getattr(self, "_xpu_mem_bar", None)
+        mem_text: QLabel | None = getattr(self, "_xpu_mem_text", None)
+        if mem_bar is None or mem_text is None:
+            return
+
+        if get_xpu_memory_info is None or is_xpu_available is None:
+            mem_bar.setValue(0)
+            mem_text.setText("XPU memory info not available")
+            return
+
+        try:
+            if not is_xpu_available():
+                mem_bar.setValue(0)
+                mem_text.setText("No XPU device")
+                return
+
+            device_idx: int = 0
+            device_combo: QComboBox | None = getattr(self, "_device_combo", None)
+            if device_combo is not None:
+                data = device_combo.currentData()
+                if isinstance(data, int):
+                    device_idx = data
+
+            allocated, total = get_xpu_memory_info(device_idx)
+        except Exception:
+            _logger.debug("xpu_memory_refresh_failed", exc_info=True)
+            mem_bar.setValue(0)
+            mem_text.setText("Failed to read memory")
+            return
+
+        if total > 0:
+            pct = int((allocated / total) * 100)
+            mem_bar.setValue(pct)
+            alloc_gb = allocated / (1024.0 * 1024.0 * 1024.0)
+            total_gb = total / (1024.0 * 1024.0 * 1024.0)
+            mem_text.setText(f"{alloc_gb:.2f} GB / {total_gb:.2f} GB ({pct}%)")
+        else:
+            mem_bar.setValue(0)
+            mem_text.setText("Unable to determine memory size")
+
+    def _on_apply_cache_size(self) -> None:
+        """Apply the configured cache size limit."""
+        cache_spin: QSpinBox | None = getattr(self, "_cache_spin", None)
+        if cache_spin is None or set_global_cache_size is None:
+            return
+        mb = cache_spin.value()
+        set_global_cache_size(mb * 1024 * 1024)
+        _logger.info("cache_size_applied", size_mb=mb)
+        QMessageBox.information(self, "Cache", f"Cache limit set to {mb} MB")
+
+    def _on_clear_cache(self) -> None:
+        """Clear the global model cache and XPU memory cache."""
+        if clear_global_cache is not None:
+            clear_global_cache()
+        if clear_xpu_cache is not None:
+            clear_xpu_cache()
+        self._refresh_xpu_memory()
+        _logger.info("caches_cleared")
+        QMessageBox.information(self, "Cache", "Model cache and XPU cache cleared")
+
+    def _on_check_requirements(self) -> None:
+        """Run Windows requirements check and display results."""
+        warnings_label: QLabel | None = getattr(self, "_xpu_warnings_label", None)
+        if warnings_label is None:
+            return
+
+        if check_windows_requirements is None:
+            warnings_label.setText("Requirements check not available")
+            warnings_label.setProperty("status", "idle")
+            return
+
+        try:
+            all_met, warnings = check_windows_requirements()
+        except Exception:
+            _logger.debug("requirements_check_failed", exc_info=True)
+            warnings_label.setText("Failed to check requirements")
+            warnings_label.setProperty("status", "error")
+            return
+
+        if all_met and not warnings:
+            warnings_label.setText("All system requirements met")
+            warnings_label.setProperty("status", "success")
+        else:
+            warnings_label.setText("\n".join(warnings))
+            warnings_label.setProperty("status", "warning")
+
     def _on_show_device_info(self) -> None:
         """Handle show device info button click."""
         info = self.get_provider_device_info()
@@ -1506,6 +1760,11 @@ class ProviderSettingsWidget(QFrame):
         cached = getattr(self, "_xpu_dtype", None)
         display_dtype = cached if cached is not None else dtype
         if display_dtype is not None:
+            dtype_combo: QComboBox | None = getattr(self, "_dtype_combo", None)
+            if dtype_combo is not None:
+                idx = dtype_combo.findText(display_dtype)
+                if idx >= 0:
+                    dtype_combo.setCurrentIndex(idx)
             QMessageBox.information(self, "XPU Dtype", f"Optimal dtype: {display_dtype}")
 
     def _on_lookup_generation(self) -> None:
@@ -1646,6 +1905,9 @@ class ProviderSettingsWidget(QFrame):
         self._timeout_spin.setValue(saved_settings.get("timeout_seconds", 120))
         self._retries_spin.setValue(saved_settings.get("max_retries", 3))
 
+        if self._provider_id == "local_transformers":
+            self._load_xpu_settings(saved_settings)
+
         saved_model: str = saved_settings.get("default_model", "")
         self._pending_saved_model = saved_model
         self._populate_default_models()
@@ -1674,6 +1936,38 @@ class ProviderSettingsWidget(QFrame):
         except (json.JSONDecodeError, OSError) as e:
             _logger.warning("provider_config_load_failed", error=str(e))
             return {}
+
+    def _load_xpu_settings(self, saved_settings: dict[str, Any]) -> None:
+        """Restore XPU-specific settings from saved configuration.
+
+        Args:
+            saved_settings: Dictionary of saved settings for this provider.
+        """
+        prefer_cb: QCheckBox | None = getattr(self, "_prefer_xpu_cb", None)
+        if prefer_cb is not None:
+            prefer_cb.setChecked(saved_settings.get("prefer_xpu", True))
+
+        dev_combo: QComboBox | None = getattr(self, "_device_combo", None)
+        if dev_combo is not None:
+            saved_idx = saved_settings.get("device_index", 0)
+            if isinstance(saved_idx, int):
+                combo_idx = dev_combo.findData(saved_idx)
+                if combo_idx >= 0:
+                    dev_combo.setCurrentIndex(combo_idx)
+
+        dt_combo: QComboBox | None = getattr(self, "_dtype_combo", None)
+        if dt_combo is not None:
+            saved_dtype = saved_settings.get("dtype_override", "Auto")
+            if isinstance(saved_dtype, str):
+                dt_idx = dt_combo.findText(saved_dtype)
+                if dt_idx >= 0:
+                    dt_combo.setCurrentIndex(dt_idx)
+
+        cache_sp: QSpinBox | None = getattr(self, "_cache_spin", None)
+        if cache_sp is not None:
+            saved_cache = saved_settings.get("cache_size_mb", 10240)
+            if isinstance(saved_cache, int):
+                cache_sp.setValue(saved_cache)
 
     _NO_KEY_PROVIDERS: ClassVar[set[str]] = {"ollama"}
 
@@ -1862,6 +2156,24 @@ class ProviderSettingsWidget(QFrame):
         if self._org_id_input:
             settings["organization_id"] = self._org_id_input.text().strip()
 
+        if self._provider_id == "local_transformers":
+            prefer_cb: QCheckBox | None = getattr(self, "_prefer_xpu_cb", None)
+            if prefer_cb is not None:
+                settings["prefer_xpu"] = prefer_cb.isChecked()
+
+            dev_combo: QComboBox | None = getattr(self, "_device_combo", None)
+            if dev_combo is not None:
+                data = dev_combo.currentData()
+                settings["device_index"] = data if isinstance(data, int) else 0
+
+            dt_combo: QComboBox | None = getattr(self, "_dtype_combo", None)
+            if dt_combo is not None:
+                settings["dtype_override"] = dt_combo.currentText()
+
+            cache_sp: QSpinBox | None = getattr(self, "_cache_spin", None)
+            if cache_sp is not None:
+                settings["cache_size_mb"] = cache_sp.value()
+
         return settings
 
     def save_settings(self) -> None:
@@ -1935,11 +2247,27 @@ class ProviderSettingsWidget(QFrame):
     def get_provider_device_info(self) -> dict[str, object] | None:
         """Get device info for local transformer providers.
 
+        Attempts to use the registered provider instance from the registry
+        before falling back to creating a new provider.
+
         Returns:
             dict[str, object] | None: Device information dict or None if not applicable.
         """
         if self._provider_id != "local_transformers":
             return None
+
+        if self._registry is not None:
+            registered = self._registry.get(ProviderName.LOCAL_TRANSFORMERS)
+            if registered is not None:
+                try:
+                    get_info = getattr(registered, "get_device_info", None)
+                    if callable(get_info):
+                        result: object = get_info()
+                        if isinstance(result, dict):
+                            return cast("dict[str, object]", result)
+                except Exception:
+                    _logger.debug("registry_device_info_failed", exc_info=True)
+
         if LocalTransformersProvider is None:
             return None
         try:
@@ -2052,7 +2380,7 @@ class ModelSelectionDialog(QDialog):
         self._update_discovery_status()
 
         self.setWindowTitle("Select Model")
-        self.resize(500, 400)
+        self.resize(_DISCOVERY_WIDTH, _DISCOVERY_HEIGHT)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
@@ -2070,7 +2398,7 @@ class ModelSelectionDialog(QDialog):
         self._discovery_status_label = QLabel()
         self._discovery_status_label.setWordWrap(True)
         self._discovery_status_label.setObjectName("discovery_status_label")
-        self._discovery_status_label.setStyleSheet("QLabel { color: #6a9fb5; font-style: italic; font-size: 11px; padding: 4px; }")
+        self._discovery_status_label.setObjectName("hint_label")
         layout.addWidget(self._discovery_status_label)
 
         self._model_list.currentRowChanged.connect(self._on_model_selected)

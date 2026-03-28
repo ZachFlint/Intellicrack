@@ -12,10 +12,9 @@ orchestrator, displaying conversation history and tool call information.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -29,7 +28,7 @@ from PyQt6.QtWidgets import (
 
 from ..core.logging import get_logger
 from ..core.types import Message, ToolCall, ToolResult
-from .resources.font_manager import DEFAULT_CODE_FONT
+from .resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -38,6 +37,17 @@ if TYPE_CHECKING:
 _logger = get_logger("ui.chat")
 
 _MAX_ARGS_DISPLAY_LEN = 100
+_BUBBLE_MARGIN_H: Final[int] = 12
+_BUBBLE_MARGIN_V: Final[int] = 8
+_TOOL_MARGIN_H: Final[int] = 8
+_TOOL_MARGIN_V: Final[int] = 6
+_INPUT_MARGIN: Final[int] = 8
+_INPUT_MAX_HEIGHT: Final[int] = 100
+_SEND_BTN_WIDTH: Final[int] = 80
+_SEND_BTN_HEIGHT: Final[int] = 40
+_HEADER_HEIGHT: Final[int] = 40
+_HEADER_MARGIN_H: Final[int] = 12
+_MSG_AREA_MARGIN: Final[int] = 12
 _MAX_RESULT_DISPLAY_LEN = 200
 
 
@@ -64,14 +74,14 @@ class MessageBubble(QFrame):
     def _setup_ui(self) -> None:
         """Set up the message bubble UI."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setContentsMargins(_BUBBLE_MARGIN_H, _BUBBLE_MARGIN_V, _BUBBLE_MARGIN_H, _BUBBLE_MARGIN_V)
         layout.setSpacing(4)
 
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
 
         role_label = QLabel(self._get_role_display())
-        role_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        role_label.setFont(FontManager.get_instance().get_ui_font_bold(9))
 
         time_label = QLabel(self._message.timestamp.strftime("%H:%M"))
         time_label.setObjectName("timestamp_label")
@@ -85,7 +95,7 @@ class MessageBubble(QFrame):
             content_label = QLabel(self._message.content)
             content_label.setWordWrap(True)
             content_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            content_label.setFont(QFont("Segoe UI", 10))
+            content_label.setFont(FontManager.get_instance().get_ui_font(10))
             layout.addWidget(content_label)
 
         if self._message.tool_calls:
@@ -116,29 +126,11 @@ class MessageBubble(QFrame):
 
     def _apply_style(self) -> None:
         """Apply styling based on message role."""
-        role_styles = {
-            "user": """
-                background-color: #2b5278;
-                border-radius: 12px;
-                border: 1px solid #3a6a98;
-            """,
-            "assistant": """
-                background-color: #2d2d30;
-                border-radius: 12px;
-                border: 1px solid #3e3e42;
-            """,
-            "system": """
-                background-color: #3d3d40;
-                border-radius: 8px;
-                border: 1px solid #505050;
-            """,
-            "tool": """
-                background-color: #1e3a1e;
-                border-radius: 8px;
-                border: 1px solid #2e5a2e;
-            """,
-        }
-        self.setStyleSheet(role_styles.get(self._message.role, ""))
+        self.setProperty("role", self._message.role)
+        style = self.style()
+        if style is not None:
+            style.unpolish(self)
+            style.polish(self)
 
     @staticmethod
     def _create_tool_call_widget(call: ToolCall) -> QFrame:
@@ -154,11 +146,11 @@ class MessageBubble(QFrame):
         frame.setObjectName("tool_call_frame")
 
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setContentsMargins(_TOOL_MARGIN_H, _TOOL_MARGIN_V, _TOOL_MARGIN_H, _TOOL_MARGIN_V)
         layout.setSpacing(2)
 
         header = QLabel(f"Tool: {call.tool_name}.{call.function_name}")
-        header.setFont(QFont(DEFAULT_CODE_FONT, 9, QFont.Weight.Bold))
+        header.setFont(FontManager.get_instance().get_code_font_bold(9))
         header.setObjectName("tool_call_header")
         layout.addWidget(header)
 
@@ -167,7 +159,7 @@ class MessageBubble(QFrame):
             if len(args_text) > _MAX_ARGS_DISPLAY_LEN:
                 args_text = f"{args_text[: _MAX_ARGS_DISPLAY_LEN - 3]}..."
             args_label = QLabel(args_text)
-            args_label.setFont(QFont(DEFAULT_CODE_FONT, 8))
+            args_label.setFont(FontManager.get_instance().get_code_font(8))
             args_label.setObjectName("tool_call_args")
             args_label.setWordWrap(True)
             layout.addWidget(args_label)
@@ -188,18 +180,18 @@ class MessageBubble(QFrame):
         frame.setObjectName("tool_result_success" if result.success else "tool_result_error")
 
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setContentsMargins(_TOOL_MARGIN_H, _TOOL_MARGIN_V, _TOOL_MARGIN_H, _TOOL_MARGIN_V)
         layout.setSpacing(2)
 
         status = "Success" if result.success else "Failed"
         header = QLabel(f"Result: {status} ({result.duration_ms:.1f}ms)")
-        header.setFont(QFont(DEFAULT_CODE_FONT, 9))
+        header.setFont(FontManager.get_instance().get_code_font(9))
         header.setObjectName("result_header_success" if result.success else "result_header_error")
         layout.addWidget(header)
 
         if result.error:
             error_label = QLabel(result.error)
-            error_label.setFont(QFont(DEFAULT_CODE_FONT, 8))
+            error_label.setFont(FontManager.get_instance().get_code_font(8))
             error_label.setObjectName("error_text")
             error_label.setWordWrap(True)
             layout.addWidget(error_label)
@@ -208,7 +200,7 @@ class MessageBubble(QFrame):
             if len(result_text) > _MAX_RESULT_DISPLAY_LEN:
                 result_text = f"{result_text[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             result_label = QLabel(result_text)
-            result_label.setFont(QFont(DEFAULT_CODE_FONT, 8))
+            result_label.setFont(FontManager.get_instance().get_code_font(8))
             result_label.setObjectName("result_text")
             result_label.setWordWrap(True)
             layout.addWidget(result_label)
@@ -238,20 +230,20 @@ class ChatInput(QFrame):
     def _setup_ui(self) -> None:
         """Set up the chat input UI."""
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(_INPUT_MARGIN, _INPUT_MARGIN, _INPUT_MARGIN, _INPUT_MARGIN)
         layout.setSpacing(8)
 
         self._text_edit = QTextEdit()
-        self._text_edit.setFont(QFont("Segoe UI", 10))
-        self._text_edit.setMaximumHeight(100)
+        self._text_edit.setFont(FontManager.get_instance().get_ui_font(10))
+        self._text_edit.setMaximumHeight(_INPUT_MAX_HEIGHT)
         self._hint_text = "Type a message..."
         self._show_hint()
         self._text_edit.textChanged.connect(self._on_text_changed)
         layout.addWidget(self._text_edit)
 
         self._send_button = QPushButton("Send")
-        self._send_button.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        self._send_button.setFixedSize(80, 40)
+        self._send_button.setFont(FontManager.get_instance().get_ui_font_bold(10))
+        self._send_button.setFixedSize(_SEND_BTN_WIDTH, _SEND_BTN_HEIGHT)
         self._send_button.setStyleSheet("""
             QPushButton {
                 background-color: #0e639c;
@@ -388,7 +380,7 @@ class ChatPanel(QFrame):
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setFixedHeight(40)
+        header.setFixedHeight(_HEADER_HEIGHT)
         header.setStyleSheet("""
             QFrame {
                 background-color: #2d2d30;
@@ -396,10 +388,10 @@ class ChatPanel(QFrame):
             }
         """)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(12, 0, 12, 0)
+        header_layout.setContentsMargins(_HEADER_MARGIN_H, 0, _HEADER_MARGIN_H, 0)
 
         title = QLabel("Chat")
-        title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        title.setFont(FontManager.get_instance().get_ui_font_bold(11))
         title.setObjectName("panel_title")
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -418,7 +410,7 @@ class ChatPanel(QFrame):
 
         self._messages_container = QWidget()
         self._messages_layout = QVBoxLayout(self._messages_container)
-        self._messages_layout.setContentsMargins(12, 12, 12, 12)
+        self._messages_layout.setContentsMargins(_MSG_AREA_MARGIN, _MSG_AREA_MARGIN, _MSG_AREA_MARGIN, _MSG_AREA_MARGIN)
         self._messages_layout.setSpacing(12)
         self._messages_layout.addStretch()
 

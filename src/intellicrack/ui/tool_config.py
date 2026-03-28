@@ -18,7 +18,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 import httpx
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -62,6 +62,18 @@ EXPECTED_TOOL_COUNT = 6
 _RETURNCODE_SUCCESS = 0
 
 _logger = get_logger("ui.tool_config")
+
+_DIALOG_WIDTH: Final[int] = 750
+_DIALOG_HEIGHT: Final[int] = 550
+_LIST_MAX_WIDTH: Final[int] = 180
+_SPLIT_LEFT: Final[int] = 180
+_SPLIT_RIGHT: Final[int] = 570
+_PATH_INPUT_MIN_WIDTH: Final[int] = 300
+_PROGRESS_MAX_WIDTH: Final[int] = 200
+_COMPAT_DIALOG_WIDTH: Final[int] = 700
+_COMPAT_DIALOG_HEIGHT: Final[int] = 500
+_COMPAT_SPLIT_LEFT: Final[int] = 300
+_COMPAT_SPLIT_RIGHT: Final[int] = 400
 
 
 class ToolInstallWorker(QThread):
@@ -556,7 +568,7 @@ class ToolConfigDialog(QDialog):
         self._load_tools()
 
         self.setWindowTitle("Tool Settings")
-        self.resize(750, 550)
+        self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -565,14 +577,14 @@ class ToolConfigDialog(QDialog):
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
         self._tool_list = QListWidget()
-        self._tool_list.setMaximumWidth(180)
+        self._tool_list.setMaximumWidth(_LIST_MAX_WIDTH)
         self._tool_list.currentRowChanged.connect(self._on_tool_selected)
 
         self._settings_stack = QStackedWidget()
 
         splitter.addWidget(self._tool_list)
         splitter.addWidget(self._settings_stack)
-        splitter.setSizes([180, 570])
+        splitter.setSizes([_SPLIT_LEFT, _SPLIT_RIGHT])
 
         layout.addWidget(splitter, stretch=1)
 
@@ -744,7 +756,7 @@ class ToolSettingsWidget(QFrame):
 
         path_row = QHBoxLayout()
         self._path_input = QLineEdit()
-        self._path_input.setMinimumWidth(300)
+        self._path_input.setMinimumWidth(_PATH_INPUT_MIN_WIDTH)
         path_row.addWidget(self._path_input)
 
         self._browse_btn = QPushButton("Browse...")
@@ -764,7 +776,7 @@ class ToolSettingsWidget(QFrame):
 
         self._install_progress = QProgressBar()
         self._install_progress.setVisible(False)
-        self._install_progress.setMaximumWidth(200)
+        self._install_progress.setMaximumWidth(_PROGRESS_MAX_WIDTH)
         install_row.addWidget(self._install_progress)
         install_row.addStretch()
 
@@ -988,7 +1000,8 @@ class ToolCapabilitiesWidget(QFrame):
         layout.setSpacing(8)
 
         self._name_label = QLabel("Select a tool")
-        self._name_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self._name_label.setObjectName("bold_label")
+        self._name_label.setProperty("heading", True)
         layout.addWidget(self._name_label)
 
         caps_group = QGroupBox("Capabilities")
@@ -1008,7 +1021,7 @@ class ToolCapabilitiesWidget(QFrame):
 
         for cap_id, cap_name in capabilities:
             indicator = QLabel("\u25cb")
-            indicator.setStyleSheet("color: #888;")
+            indicator.setProperty("muted", True)
             self._cap_labels[cap_id] = indicator
             caps_layout.addRow(cap_name, indicator)
 
@@ -1018,7 +1031,7 @@ class ToolCapabilitiesWidget(QFrame):
         arch_layout = QVBoxLayout(arch_group)
         self._arch_label = QLabel("--")
         self._arch_label.setWordWrap(True)
-        self._arch_label.setStyleSheet("color: #aaa;")
+        self._arch_label.setProperty("muted", True)
         arch_layout.addWidget(self._arch_label)
         layout.addWidget(arch_group)
 
@@ -1026,7 +1039,7 @@ class ToolCapabilitiesWidget(QFrame):
         fmt_layout = QVBoxLayout(fmt_group)
         self._fmt_label = QLabel("--")
         self._fmt_label.setWordWrap(True)
-        self._fmt_label.setStyleSheet("color: #aaa;")
+        self._fmt_label.setProperty("muted", True)
         fmt_layout.addWidget(self._fmt_label)
         layout.addWidget(fmt_group)
 
@@ -1057,10 +1070,10 @@ class ToolCapabilitiesWidget(QFrame):
             if label := self._cap_labels.get(cap_id):
                 if capabilities.get(cap_key):
                     label.setText("\u25cf")
-                    label.setStyleSheet("color: #4ec9b0;")
+                    label.setProperty("success", True)
                 else:
                     label.setText("\u25cb")
-                    label.setStyleSheet("color: #888;")
+                    label.setProperty("muted", True)
 
         self._arch_label.setText(", ".join(archs) if archs else "--")
         self._fmt_label.setText(", ".join(formats) if formats else "--")
@@ -1164,7 +1177,7 @@ class ToolStatusDialog(QDialog):
         self._refresh_status()
 
         self.setWindowTitle("Tool Status & Capabilities")
-        self.resize(700, 500)
+        self.resize(_COMPAT_DIALOG_WIDTH, _COMPAT_DIALOG_HEIGHT)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""
@@ -1177,7 +1190,7 @@ class ToolStatusDialog(QDialog):
         left_layout.setContentsMargins(0, 0, 0, 0)
 
         list_label = QLabel("Tools")
-        list_label.setStyleSheet("font-weight: bold;")
+        list_label.setObjectName("bold_label")
         left_layout.addWidget(list_label)
 
         self._status_list = QListWidget()
@@ -1189,7 +1202,7 @@ class ToolStatusDialog(QDialog):
         self._capabilities_widget = ToolCapabilitiesWidget()
         splitter.addWidget(self._capabilities_widget)
 
-        splitter.setSizes([300, 400])
+        splitter.setSizes([_COMPAT_SPLIT_LEFT, _COMPAT_SPLIT_RIGHT])
         layout.addWidget(splitter)
 
         button_layout = QHBoxLayout()

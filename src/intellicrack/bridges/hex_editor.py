@@ -709,6 +709,64 @@ class HexEditorBridge(ToolBridgeBase):
                     returns="List of {name, label} dicts",
                 ),
                 ToolFunction(
+                    name="hex_editor.encode_text",
+                    description="Encode text into bytes using the specified encoding.",
+                    parameters=[
+                        ToolParameter(name="text", type="string", description="Text to encode."),
+                        ToolParameter(
+                            name="encoding",
+                            type="string",
+                            description="Encoding (e.g. utf-8, utf-16le, shift-jis).",
+                            required=False,
+                            default="utf-8",
+                        ),
+                    ],
+                    returns="Hex string of encoded bytes",
+                ),
+                ToolFunction(
+                    name="hex_editor.search_bytes",
+                    description="Search for a raw byte pattern in the document.",
+                    parameters=[
+                        ToolParameter(name="pattern_hex", type="string", description="Hex string of bytes to find (e.g. '4D5A9000')."),
+                        ToolParameter(name="max_results", type="integer", description="Maximum results.", required=False, default=100),
+                    ],
+                    returns="List of {offset, length} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.search_numeric_range",
+                    description="Search for numeric values within a min/max range.",
+                    parameters=[
+                        ToolParameter(name="min_val", type="integer", description="Minimum value (inclusive)."),
+                        ToolParameter(name="max_val", type="integer", description="Maximum value (inclusive)."),
+                        ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8.", required=False, default=4),
+                        ToolParameter(
+                            name="value_type", type="string", description="Type: uint, int.", required=False, default="uint"
+                        ),
+                        ToolParameter(
+                            name="endianness", type="string", description="Byte order: little, big.", required=False, default="little"
+                        ),
+                        ToolParameter(name="alignment", type="integer", description="Search alignment.", required=False, default=1),
+                        ToolParameter(name="max_results", type="integer", description="Max results.", required=False, default=100),
+                    ],
+                    returns="List of {offset, length} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_process_regions",
+                    description="List memory regions of a process by PID (Windows only).",
+                    parameters=[ToolParameter(name="pid", type="integer", description="Process ID.")],
+                    returns="List of {base_address, size, protection, state} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.open_process_memory",
+                    description="Open a process memory region as a hex document (Windows only).",
+                    parameters=[
+                        ToolParameter(name="pid", type="integer", description="Process ID."),
+                        ToolParameter(name="address", type="integer", description="Base address."),
+                        ToolParameter(name="size", type="integer", description="Bytes to read."),
+                    ],
+                    returns="Dict with pid, address, size, document_length",
+                ),
+                ToolFunction(
                     name="hex_editor.calculate_hash_custom_crc",
                     description="Calculate CRC with custom parameters.",
                     parameters=[
@@ -1093,6 +1151,28 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("search_hex_completed", pattern=pattern, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
+    async def search_bytes(self, pattern_hex: str, max_results: int = 100) -> list[dict[str, int]]:
+        """Search for a raw byte pattern in the document.
+
+        Args:
+            pattern_hex: Hex string of bytes to find (e.g. '4D5A9000').
+            max_results: Maximum number of results to return.
+
+        Returns:
+            list[dict[str, int]]: List of dicts with offset and length keys.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        pattern = bytes.fromhex(pattern_hex.replace(" ", ""))
+        results = self._document.search_bytes(pattern, max_results)
+        _logger.debug("search_bytes_completed", pattern_len=len(pattern), matches=len(results))
+        return [{"offset": r[0], "length": r[1]} for r in results]
+
     async def search_text(
         self,
         text: str,
@@ -1104,7 +1184,7 @@ class HexEditorBridge(ToolBridgeBase):
 
         Args:
             text: Text string to search for.
-            encoding: Text encoding (utf-8, utf-16le, ascii).
+            encoding: Text encoding (utf-8, utf-16le, shift-jis, euc-kr, etc.).
             case_sensitive: Whether the search is case-sensitive.
             max_results: Maximum number of results.
 
@@ -1118,7 +1198,10 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        results = self._document.search_text(text, encoding, case_sensitive, max_results)
+        if hasattr(self._document, "search_text_encoded"):
+            results = self._document.search_text_encoded(text, encoding, case_sensitive, max_results)
+        else:
+            results = self._document.search_text(text, encoding, case_sensitive, max_results)
         _logger.debug("search_text_completed", encoding=encoding, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -2427,6 +2510,33 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="python")
         return decoded
 
+    async def encode_text(self, text: str, encoding: str = "utf-8") -> str:
+        """Encode text into bytes using the specified encoding.
+
+        Args:
+            text: Text string to encode.
+            encoding: Python codec name (e.g. utf-8, utf-16le, shift-jis).
+
+        Returns:
+            str: Hex string of the encoded bytes.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self._document, "encode_text_to_bytes"):
+            raw_bytes: list[int] = self._document.encode_text_to_bytes(text, encoding)
+            result = bytes(raw_bytes).hex()
+            _logger.debug("text_encoded", encoding=encoding, length=len(raw_bytes), backend="rust")
+            return result
+
+        encoded = text.encode(encoding)
+        _logger.debug("text_encoded", encoding=encoding, length=len(encoded), backend="python")
+        return encoded.hex()
+
     async def list_encodings(self) -> list[dict[str, str]]:
         """List all supported text encodings.
 
@@ -2675,10 +2785,8 @@ class HexEditorBridge(ToolBridgeBase):
                 break
             patch_data = raw[pos : pos + size]
             pos += size
-            if self._document is not None and hasattr(self._document, "write_bytes"):
+            if self._document is not None:
                 self._document.write_bytes(offset, list(patch_data))
-            elif self._document is not None:
-                self._document.overwrite(offset, list(patch_data))
             count += 1
         return count
 
@@ -2747,6 +2855,91 @@ class HexEditorBridge(ToolBridgeBase):
 
         _logger.debug("search_numeric_completed", matches=len(matches))
         return matches
+
+    async def search_numeric_range(
+        self,
+        min_val: int,
+        max_val: int,
+        size: int = 4,
+        value_type: str = "uint",
+        endianness: str = "little",
+        alignment: int = 1,
+        max_results: int = 100,
+    ) -> list[dict[str, int]]:
+        """Search for numeric values within a min/max range.
+
+        Args:
+            min_val: Minimum value (inclusive).
+            max_val: Maximum value (inclusive).
+            size: Byte size of the value: 1, 2, 4, or 8.
+            value_type: Value type interpretation: "uint" or "int".
+            endianness: Byte order: "little" or "big".
+            alignment: Search step alignment in bytes.
+            max_results: Maximum number of results to return.
+
+        Returns:
+            list[dict[str, int]]: List of dicts with offset and length.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self._document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self._document, "search_numeric_range"):
+            results = self._document.search_numeric_range(
+                min_val, max_val, size, value_type == "int",
+                endianness == "big", alignment, max_results,
+            )
+            _logger.debug("search_numeric_range_completed", matches=len(results))
+            return [{"offset": r[0], "length": r[1]} for r in results]
+
+        fmt = self._build_numeric_format(size, value_type, endianness == "big")
+        doc_len: int = self._document.length()
+        matches: list[dict[str, int]] = []
+        pos = 0
+        while pos <= doc_len - size and len(matches) < max_results:
+            read_len = min(65536, doc_len - pos)
+            raw = self._document.read(pos, read_len)
+            chunk = raw if isinstance(raw, bytes) else bytes(raw)
+            idx = 0
+            while idx <= len(chunk) - size and len(matches) < max_results:
+                try:
+                    (val,) = struct.unpack_from(fmt, chunk, idx)
+                except struct.error:
+                    idx += alignment
+                    continue
+                if ((pos + idx) % alignment) == 0 and min_val <= val <= max_val:
+                    matches.append({"offset": pos + idx, "length": size})
+                idx += alignment
+            pos += read_len - size + 1
+
+        _logger.debug("search_numeric_range_completed", matches=len(matches))
+        return matches
+
+    @staticmethod
+    def _build_numeric_format(size: int, value_type: str, big_endian: bool) -> str:
+        """Build a struct format string for numeric search.
+
+        Args:
+            size: Byte width: 1, 2, 4, or 8.
+            value_type: ``"int"`` or ``"uint"``.
+            big_endian: True for big-endian byte order.
+
+        Returns:
+            str: struct format string (e.g. ``"<I"``).
+
+        Raises:
+            ValueError: If size is not 1, 2, 4, or 8.
+        """
+        size_chars: dict[int, str] = {1: "b", 2: "h", 4: "i", 8: "q"}
+        if size not in size_chars:
+            msg = f"numeric size must be 1, 2, 4, or 8, got {size}"
+            raise ValueError(msg)
+        endian_char = ">" if big_endian else "<"
+        fmt_char = size_chars[size] if value_type == "int" else size_chars[size].upper()
+        return endian_char + fmt_char
 
     @staticmethod
     def _pack_numeric_needle(value: int, size: int, value_type: str, big_endian: bool) -> bytes:
@@ -2865,3 +3058,57 @@ class HexEditorBridge(ToolBridgeBase):
             str: Current display mode string.
         """
         return self._display_mode
+
+    async def list_process_regions(self, pid: int) -> list[dict[str, int]]:
+        """List memory regions of a process by PID (Windows only).
+
+        Args:
+            pid: Process ID to inspect.
+
+        Returns:
+            list[dict[str, int]]: List of dicts with base_address, size, protection, state.
+
+        Raises:
+            RuntimeError: If hexcore native module is not available.
+        """
+        if not _hexcore_available or _hexcore_mod is None:
+            msg = "hexcore native module not available"
+            raise RuntimeError(msg)
+
+        regions: list[tuple[int, int, int, int]] = _hexcore_mod.HexDocument.list_process_memory_regions(pid)
+        _logger.debug("process_regions_listed", pid=pid, count=len(regions), bridge=self.name)
+        return [
+            {"base_address": r[0], "size": r[1], "protection": r[2], "state": r[3]}
+            for r in regions
+        ]
+
+    async def open_process_memory(self, pid: int, address: int, size: int) -> dict[str, Any]:
+        """Open a process memory region as a hex document (Windows only).
+
+        Args:
+            pid: Process ID to read from.
+            address: Base address of the memory region.
+            size: Number of bytes to read.
+
+        Returns:
+            dict[str, Any]: Dict with pid, address, size, and document_length.
+
+        Raises:
+            RuntimeError: If hexcore native module is not available.
+        """
+        if not _hexcore_available or _hexcore_mod is None:
+            msg = "hexcore native module not available"
+            raise RuntimeError(msg)
+
+        self._document = _hexcore_mod.HexDocument.from_process_memory(pid, address, size)
+        self._cursor_position = 0
+        self._selection = None
+        self._state.binary_loaded = True
+        _logger.info("process_memory_opened", pid=pid, address=hex(address), size=size)
+
+        if self._state_holder is not None:
+            self._state_holder.set_document(self._document, None, source="bridge")
+
+        doc = self._document
+        doc_length: int = doc.length() if doc is not None else size
+        return {"pid": pid, "address": address, "size": size, "document_length": doc_length}

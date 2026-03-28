@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -36,6 +35,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.script_gen import Script, ScriptLanguage, ScriptType
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -398,7 +398,7 @@ class ScriptEditor(QPlainTextEdit):
 
     def _setup_ui(self) -> None:
         """Set up the editor UI."""
-        self.setFont(QFont("JetBrains Mono", 10))
+        self.setFont(FontManager.get_instance().get_code_font(10))
         self.setStyleSheet("""
             QPlainTextEdit {
                 background-color: #1e1e1e;

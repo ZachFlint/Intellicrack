@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, override
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPaintEvent, QPen
+from PyQt6.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 _logger = get_logger("ui.panels.hex_tools_panel")
@@ -297,7 +298,7 @@ class _IEEE754BitWidget(QWidget):
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.setFont(QFont("Courier New", 7))
+        painter.setFont(FontManager.get_instance().get_code_font(7))
 
         x_offset = 2
         y_offset = 4
@@ -462,7 +463,7 @@ class HexToolsPanel(QWidget):
 
         self._demangle_output = QPlainTextEdit()
         self._demangle_output.setReadOnly(True)
-        mono_font = QFont("Courier New", 10)
+        mono_font = FontManager.get_instance().get_code_font(10)
         self._demangle_output.setFont(mono_font)
         _set_hint(self._demangle_output, "Demangled output will appear here...")
         layout.addWidget(self._demangle_output)
@@ -507,7 +508,7 @@ class HexToolsPanel(QWidget):
         Args:
             table: The QTableWidget to populate.
         """
-        mono_font = QFont("Courier New", 10)
+        mono_font = FontManager.get_instance().get_code_font(10)
         for code in range(256):
             dec_item = QTableWidgetItem(str(code))
             hex_item = QTableWidgetItem(f"0x{code:02X}")
@@ -556,7 +557,7 @@ class HexToolsPanel(QWidget):
         layout.addWidget(QLabel("Input (0x=hex, 0b=binary, 0o=octal, plain=decimal):"))
         layout.addWidget(self._base_input)
 
-        mono_font = QFont("Courier New", 10)
+        mono_font = FontManager.get_instance().get_code_font(10)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -635,7 +636,7 @@ class HexToolsPanel(QWidget):
         self._ieee754_bit_widget.setMinimumHeight(40)
         layout.addWidget(self._ieee754_bit_widget)
 
-        mono_font = QFont("Courier New", 10)
+        mono_font = FontManager.get_instance().get_code_font(10)
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -678,7 +679,7 @@ class HexToolsPanel(QWidget):
         input_row.addWidget(self._swap_input, 1)
         layout.addLayout(input_row)
 
-        mono_font = QFont("Courier New", 10)
+        mono_font = FontManager.get_instance().get_code_font(10)
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -716,7 +717,7 @@ class HexToolsPanel(QWidget):
 
         layout.addWidget(QLabel("Expressions (one per line) — hex 0x, binary 0b, bitwise &|^~<<>>:"))
 
-        mono_font = QFont("Courier New", 10)
+        mono_font = FontManager.get_instance().get_code_font(10)
 
         self._calc_input = QPlainTextEdit()
         self._calc_input.setFont(mono_font)

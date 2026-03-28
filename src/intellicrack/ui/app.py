@@ -25,8 +25,11 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QMainWindow,
     QMenu,
@@ -36,7 +39,10 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QSplitter,
     QStatusBar,
+    QTableWidget,
+    QTableWidgetItem,
     QToolBar,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -1827,12 +1833,107 @@ class MainWindow(QMainWindow):
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
 
     def _on_open_process(self) -> None:
-        """Open process manager panel."""
+        """Open process manager panel and wire process_attached signal."""
         panel = self._tool_panel.add_process_tab()
         if panel is None:
             self._show_tool_error("Process", "Failed to initialize Process panel")
             return
         panel.start_tool()
+
+        signal = getattr(panel, "process_attached", None)
+        if signal is not None and not getattr(self, "_process_attached_wired", False):
+            signal.connect(self._on_process_attached)
+            self._process_attached_wired = True
+
+    def _on_process_attached(self, pid: int) -> None:
+        """Handle process attachment by showing a memory region picker.
+
+        When the user attaches to a process via the Process panel,
+        list its readable memory regions and let the user select one
+        to open in the hex editor.
+
+        Args:
+            pid: Process ID that was attached.
+        """
+        try:
+            import intellicrack_hexcore as _hc
+        except ImportError:
+            _logger.debug("hexcore_unavailable_for_process_memory")
+            return
+
+        try:
+            regions: list[tuple[int, int, int, int]] = _hc.HexDocument.list_process_memory_regions(pid)
+        except Exception as exc:
+            _logger.warning("process_regions_list_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Process Memory", f"Failed to list memory regions: {exc}")
+            return
+
+        if not regions:
+            QMessageBox.information(self, "Process Memory", f"No readable memory regions found for PID {pid}.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Memory Regions - PID {pid}")
+        dialog.resize(640, 400)
+        layout = QVBoxLayout(dialog)
+
+        table = QTableWidget(len(regions), 4, dialog)
+        table.setHorizontalHeaderLabels(["Base Address", "Size", "Protection", "State"])
+        header = table.horizontalHeader()
+        if header is not None:
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+
+        for row, (base, sz, prot, state) in enumerate(regions):
+            table.setItem(row, 0, QTableWidgetItem(f"0x{base:016X}"))
+            table.setItem(row, 1, QTableWidgetItem(f"0x{sz:X} ({sz:,} bytes)"))
+            table.setItem(row, 2, QTableWidgetItem(f"0x{prot:08X}"))
+            table.setItem(row, 3, QTableWidgetItem(f"0x{state:08X}"))
+
+        layout.addWidget(table)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            dialog,
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        selected = table.currentRow()
+        if selected < 0 or selected >= len(regions):
+            return
+
+        base_addr, region_size, _prot, _state = regions[selected]
+
+        hex_bridge = self._orchestrator.get_typed_bridge("hex_editor")
+        if hex_bridge is None:
+            _logger.debug("hex_bridge_unavailable_for_process_memory")
+            return
+
+        open_fn = getattr(hex_bridge, "open_process_memory", None)
+        if not callable(open_fn):
+            return
+
+        coro_result: object = open_fn(pid, base_addr, region_size)
+        if not asyncio.iscoroutine(coro_result):
+            return
+
+        task: asyncio.Task[dict[str, object]] = asyncio.ensure_future(coro_result)
+
+        def _on_done(fut: asyncio.Future[dict[str, object]]) -> None:
+            try:
+                result = fut.result()
+                _logger.info("process_memory_loaded", pid=pid, address=hex(base_addr), length=result.get("document_length"))
+            except Exception as exc:
+                _logger.warning("process_memory_open_failed", pid=pid, error=str(exc))
+                QMessageBox.warning(self, "Process Memory", f"Failed to open memory: {exc}")
+
+        task.add_done_callback(_on_done)
 
     def _on_open_binary(self) -> None:
         """Open binary hex viewer panel."""

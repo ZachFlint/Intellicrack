@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.panels.vnc_widget")
@@ -541,8 +542,9 @@ class VNCWidget(QWidget):
             y_offset = (self.height() - scaled.height()) // 2
             painter.drawImage(x_offset, y_offset, scaled)
         else:
-            painter.fillRect(self.rect(), QColor(30, 30, 30))
-            painter.setPen(QColor(150, 150, 150))
+            colors = ThemeManager.get_instance().get_analysis_colors()
+            painter.fillRect(self.rect(), colors["background"])
+            painter.setPen(colors["muted"])
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "VNC Display")
         painter.end()
 

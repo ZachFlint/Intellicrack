@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont  # noqa: TC002
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
 from ..core.config import Config, LogConfig, SessionConfig, UIConfig
 from ..core.logging import get_logger
 from ..core.types import ConfirmationLevel, ProviderName
+from .resources.font_manager import FontManager
 
 
 _logger = get_logger("ui.preferences")
@@ -515,7 +516,7 @@ class PreferencesDialog(QDialog):
         categories = ["General", "Appearance", "Session", "Logging"]
         for category in categories:
             item = QListWidgetItem(category)
-            _item_set_font(item, QFont("Segoe UI", 10))
+            _item_set_font(item, FontManager.get_instance().get_ui_font(10))
             self._category_list.addItem(item)
 
         layout.addWidget(self._category_list)

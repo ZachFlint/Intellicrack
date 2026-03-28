@@ -22,8 +22,6 @@ from PyQt6.QtCore import QPoint, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
     QContextMenuEvent,
-    QFont,
-    QFontDatabase,
     QFontMetrics,
     QKeyEvent,
     QMouseEvent,
@@ -36,6 +34,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QMenu, QWidget
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 _logger = get_logger("ui.panels.hex_editor_widget")
@@ -289,15 +288,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     def _setup_font(self) -> None:
         """Configure monospace font for rendering."""
-        font = QFont("Consolas", 10)
-        font.setStyleHint(QFont.StyleHint.Monospace)
-        families = QFontDatabase.families()
-        if "Consolas" not in families:
-            if "Courier New" in families:
-                font = QFont("Courier New", 10)
-            else:
-                font.setFamily("monospace")
-        font.setFixedPitch(True)
+        font = FontManager.get_instance().get_code_font(10)
         self.setFont(font)
         metrics = QFontMetrics(font)
         self._char_width: int = metrics.horizontalAdvance("0")
@@ -573,39 +564,38 @@ class HexEditorWidget(QAbstractScrollArea):
         padded = group_bytes + bytes(max(0, padded_size - n))
 
         if mode == "hex16_le":
-            return f"{cast(int, struct.unpack_from('<H', padded)[0]):04X}"
+            return f"{cast('int', struct.unpack_from('<H', padded)[0]):04X}"
         if mode == "hex16_be":
-            return f"{cast(int, struct.unpack_from('>H', padded)[0]):04X}"
+            return f"{cast('int', struct.unpack_from('>H', padded)[0]):04X}"
         if mode in ["hex32_le", "rgba8"]:
-            return f"{cast(int, struct.unpack_from('<I', padded)[0]):08X}"
+            return f"{cast('int', struct.unpack_from('<I', padded)[0]):08X}"
         if mode == "hex32_be":
-            return f"{cast(int, struct.unpack_from('>I', padded)[0]):08X}"
+            return f"{cast('int', struct.unpack_from('>I', padded)[0]):08X}"
         if mode == "hex64_le":
-            return f"{cast(int, struct.unpack_from('<Q', padded)[0]):016X}"
+            return f"{cast('int', struct.unpack_from('<Q', padded)[0]):016X}"
         if mode == "hex64_be":
-            return f"{cast(int, struct.unpack_from('>Q', padded)[0]):016X}"
+            return f"{cast('int', struct.unpack_from('>Q', padded)[0]):016X}"
         if mode == "dec_u16":
-            return f"{cast(int, struct.unpack_from('<H', padded)[0]):5d}"
+            return f"{cast('int', struct.unpack_from('<H', padded)[0]):5d}"
         if mode == "dec_u32":
-            return f"{cast(int, struct.unpack_from('<I', padded)[0]):10d}"
+            return f"{cast('int', struct.unpack_from('<I', padded)[0]):10d}"
         if mode == "dec_s16":
-            return f"{cast(int, struct.unpack_from('<h', padded)[0]):6d}"
+            return f"{cast('int', struct.unpack_from('<h', padded)[0]):6d}"
         if mode == "dec_s32":
-            return f"{cast(int, struct.unpack_from('<i', padded)[0]):11d}"
+            return f"{cast('int', struct.unpack_from('<i', padded)[0]):11d}"
         if mode == "float32":
             try:
-                val_f = cast(float, struct.unpack_from("<f", padded)[0])
+                val_f = cast("float", struct.unpack_from("<f", padded)[0])
             except struct.error:
                 return "         ?"
             if math.isnan(val_f):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            else:
-                return f"{val_f:13.6g}"
-        elif mode == "float64":
+            return f"{val_f:13.6g}"
+        if mode == "float64":
             try:
-                val_d = cast(float, struct.unpack_from("<d", padded)[0])
+                val_d = cast("float", struct.unpack_from("<d", padded)[0])
             except struct.error:
                 return "                     ?"
             if math.isnan(val_d):
@@ -851,10 +841,10 @@ class HexEditorWidget(QAbstractScrollArea):
                 continue
             matched = False
             if rule.condition_type == "byte_value":
-                matched = byte_val == cast(int, rule.condition_params.get("value", -1))
+                matched = byte_val == cast("int", rule.condition_params.get("value", -1))
             elif rule.condition_type == "byte_range":
-                lo = cast(int, rule.condition_params.get("min", 0))
-                hi = cast(int, rule.condition_params.get("max", 255))
+                lo = cast("int", rule.condition_params.get("min", 0))
+                hi = cast("int", rule.condition_params.get("max", 255))
                 matched = lo <= byte_val <= hi
             elif rule.condition_type == "pattern":
                 offsets_set = cast("set[int]", rule.condition_params.get("offsets", set()))

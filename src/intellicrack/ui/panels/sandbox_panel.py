@@ -12,10 +12,9 @@ snapshot management, and execution report viewing.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Final, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -42,6 +41,7 @@ from intellicrack.ui.panels.qt_compat import (
     set_max_block_count,
 )
 from intellicrack.ui.panels.vnc_widget import VNCWidget
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -49,6 +49,11 @@ if TYPE_CHECKING:
     from intellicrack.sandbox.manager import SandboxManager, SandboxType
 
 _logger = get_logger("ui.panels.sandbox")
+
+_EXEC_MARGIN: Final[int] = 4
+_EXEC_SPACING: Final[int] = 4
+_SPLIT_LEFT: Final[int] = 200
+_SPLIT_RIGHT: Final[int] = 400
 
 
 class SandboxPanel(AnalysisPanelBase):
@@ -89,7 +94,8 @@ class SandboxPanel(AnalysisPanelBase):
             toolbar: The toolbar to populate.
         """
         self._status_indicator = self._add_toolbar_label(toolbar, "Inactive")
-        self._status_indicator.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        fm = FontManager.get_instance()
+        self._status_indicator.setFont(fm.get_ui_font_bold(9))
 
         toolbar.addSeparator()
 
@@ -118,15 +124,16 @@ class SandboxPanel(AnalysisPanelBase):
         Returns:
             QWidget: Splitter with execution controls and output tabs.
         """
+        fm = FontManager.get_instance()
         main_splitter = QSplitter(Qt.Orientation.Vertical)
 
         exec_container = QWidget()
         exec_layout = QVBoxLayout(exec_container)
-        exec_layout.setContentsMargins(4, 4, 4, 4)
-        exec_layout.setSpacing(4)
+        exec_layout.setContentsMargins(_EXEC_MARGIN, _EXEC_MARGIN, _EXEC_MARGIN, _EXEC_MARGIN)
+        exec_layout.setSpacing(_EXEC_SPACING)
 
         exec_header = QLabel("Binary Execution")
-        exec_header.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        exec_header.setFont(fm.get_heading_font(10))
         exec_layout.addWidget(exec_header)
 
         path_row = QHBoxLayout()
@@ -135,7 +142,7 @@ class SandboxPanel(AnalysisPanelBase):
         path_row.addWidget(path_label)
 
         self._binary_path_input = QLineEdit()
-        self._binary_path_input.setFont(QFont("JetBrains Mono", 9))
+        self._binary_path_input.setFont(fm.get_code_font(9))
         path_row.addWidget(self._binary_path_input)
 
         self._browse_btn = QPushButton("Browse...")
@@ -150,7 +157,7 @@ class SandboxPanel(AnalysisPanelBase):
         args_row.addWidget(args_label)
 
         self._args_input = QLineEdit()
-        self._args_input.setFont(QFont("JetBrains Mono", 9))
+        self._args_input.setFont(fm.get_code_font(9))
         args_row.addWidget(self._args_input)
 
         self._run_btn = QPushButton("Run in Sandbox")
@@ -165,7 +172,7 @@ class SandboxPanel(AnalysisPanelBase):
         output_tabs = QTabWidget()
 
         self._console_output = QPlainTextEdit()
-        self._console_output.setFont(QFont("JetBrains Mono", 9))
+        self._console_output.setFont(fm.get_code_font(9))
         self._console_output.setReadOnly(True)
         set_max_block_count(self._console_output, 10000)
         output_tabs.addTab(self._console_output, "Console")
@@ -193,7 +200,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         main_splitter.addWidget(output_tabs)
 
-        main_splitter.setSizes([200, 400])
+        main_splitter.setSizes([_SPLIT_LEFT, _SPLIT_RIGHT])
         return main_splitter
 
     @override

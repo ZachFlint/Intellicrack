@@ -842,3 +842,256 @@ QTabWidget#analysis_tabs > QTabBar::tab:selected {
 QTabWidget#analysis_tabs > QTabBar::tab:hover:!selected {
     background-color: #3e3e42;
 }
+
+/* ========================================
+   Dock Widget
+   ======================================== */
+
+QDockWidget {
+    titlebar-close-icon: none;
+    titlebar-normal-icon: none;
+    color: #d4d4d4;
+}
+
+QDockWidget::title {
+    background-color: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+    padding: 6px;
+    text-align: left;
+}
+
+/* ========================================
+   Message Box
+   ======================================== */
+
+QMessageBox {
+    background-color: #1e1e1e;
+}
+
+QMessageBox QLabel {
+    color: #d4d4d4;
+}
+
+/* ========================================
+   Vertical Slider
+   ======================================== */
+
+QSlider::groove:vertical {
+    background-color: #3e3e42;
+    width: 4px;
+    border-radius: 2px;
+}
+
+QSlider::handle:vertical {
+    background-color: #007acc;
+    height: 16px;
+    width: 16px;
+    margin: 0 -6px;
+    border-radius: 8px;
+}
+
+QSlider::handle:vertical:hover {
+    background-color: #1177bb;
+}
+
+QSlider::handle:horizontal:pressed, QSlider::handle:vertical:pressed {
+    background-color: #094771;
+}
+
+QSlider:disabled {
+    opacity: 0.5;
+}
+
+/* ========================================
+   Tree Branch Indicators
+   ======================================== */
+
+QTreeWidget::branch:has-children:!has-siblings:closed,
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeWidget::branch:closed:has-children:has-siblings,
+QTreeView::branch:closed:has-children:has-siblings {
+    border-image: none;
+    image: none;
+}
+
+QTreeWidget::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeWidget::branch:open:has-children:has-siblings,
+QTreeView::branch:open:has-children:has-siblings {
+    border-image: none;
+    image: none;
+}
+
+/* ========================================
+   SpinBox Buttons
+   ======================================== */
+
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    background-color: #3e3e42;
+    border: none;
+    border-left: 1px solid #3e3e42;
+    width: 16px;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    background-color: #3e3e42;
+    border: none;
+    border-left: 1px solid #3e3e42;
+    width: 16px;
+}
+
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+    background-color: #505054;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    width: 8px;
+    height: 8px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    width: 8px;
+    height: 8px;
+}
+
+/* ========================================
+   ComboBox Down Arrow
+   ======================================== */
+
+QComboBox::down-arrow {
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #d4d4d4;
+    width: 0;
+    height: 0;
+}
+
+/* ========================================
+   ProgressBar Text Color
+   ======================================== */
+
+QProgressBar {
+    color: #d4d4d4;
+}
+
+/* ========================================
+   Disabled States
+   ======================================== */
+
+QComboBox:disabled {
+    background-color: #2d2d30;
+    color: #6e6e6e;
+    border-color: #3e3e42;
+}
+
+QCheckBox:disabled {
+    color: #6e6e6e;
+}
+
+QCheckBox::indicator:disabled {
+    background-color: #2d2d30;
+    border-color: #3e3e42;
+}
+
+QRadioButton:disabled {
+    color: #6e6e6e;
+}
+
+QRadioButton::indicator:disabled {
+    background-color: #2d2d30;
+    border-color: #3e3e42;
+}
+
+QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: #2d2d30;
+    color: #6e6e6e;
+    border-color: #3e3e42;
+}
+
+QSlider::handle:horizontal:disabled, QSlider::handle:vertical:disabled {
+    background-color: #6e6e6e;
+}
+
+QLabel:disabled {
+    color: #6e6e6e;
+}
+
+/* ========================================
+   Focus States
+   ======================================== */
+
+QTableWidget:focus, QTableView:focus {
+    border-color: #007acc;
+}
+
+QTreeWidget:focus, QTreeView:focus {
+    border-color: #007acc;
+}
+
+QListWidget:focus, QListView:focus {
+    border-color: #007acc;
+}
+
+QCheckBox:focus {
+    outline: 1px solid #007acc;
+    outline-offset: 2px;
+}
+
+QRadioButton:focus {
+    outline: 1px solid #007acc;
+    outline-offset: 2px;
+}
+
+/* ========================================
+   Additional ObjectName Selectors
+   ======================================== */
+
+QLabel#search_status_label {
+    color: #888888;
+    font-size: 8pt;
+}
+
+QLabel#muted_label {
+    color: #888888;
+}
+
+QPlainTextEdit#code_preview_text {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    border: none;
+}
+
+QLabel#credential_source_label {
+    color: #9cdcfe;
+    font-size: 8pt;
+}
+
+QLabel#bold_label {
+    font-weight: bold;
+    color: #d4d4d4;
+}
+
+QLabel#hint_label {
+    color: #888888;
+    font-style: italic;
+    font-size: 8pt;
+}
+
+QPushButton#execute_button {
+    background-color: #0e639c;
+    color: #ffffff;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 20px;
+}
+
+QPushButton#execute_button:hover {
+    background-color: #1177bb;
+}
+
+QPushButton#execute_button:pressed {
+    background-color: #094771;
+}

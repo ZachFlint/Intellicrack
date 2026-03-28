@@ -13,7 +13,7 @@ re-docked back into the tab bar.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Final, override
 
 from PyQt6.QtCore import QByteArray, QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger("ui.panel_dock")
+
+_TOOLBAR_HEIGHT: Final[int] = 32
+_DEFAULT_DOCK_WIDTH: Final[int] = 800
+_DEFAULT_DOCK_HEIGHT: Final[int] = 600
 
 
 class DetachedPanelWindow(QMainWindow):
@@ -69,7 +73,7 @@ class DetachedPanelWindow(QMainWindow):
 
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(32)
+        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
         self.addToolBar(toolbar)
 
         redock_btn = QPushButton("Re-dock")
@@ -79,7 +83,7 @@ class DetachedPanelWindow(QMainWindow):
         toolbar.addWidget(redock_btn)
 
         self.setCentralWidget(panel)
-        self.resize(800, 600)
+        self.resize(_DEFAULT_DOCK_WIDTH, _DEFAULT_DOCK_HEIGHT)
         self._restore_geometry()
 
     @property
