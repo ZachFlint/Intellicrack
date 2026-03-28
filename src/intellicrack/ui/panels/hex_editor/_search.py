@@ -8,9 +8,10 @@
 from __future__ import annotations
 
 import struct
-from typing import Any, override
+from typing import Any, Final, override
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QRegularExpression, QThread, pyqtSignal
+from PyQt6.QtGui import QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -25,6 +26,27 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.ui.panels.hex_editor._base import MAX_SEARCH_RESULTS, logger
+from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_LAYOUT_MARGIN: Final[int] = 4
+_LAYOUT_SPACING: Final[int] = 6
+_VALUE_INPUT_WIDTH: Final[int] = 120
+_ALIGN_SPIN_WIDTH: Final[int] = 50
+_MAX_INPUT_WIDTH: Final[int] = 100
+_HIGHLIGHT_DARK: Final[str] = "#FFAA00"
+_HIGHLIGHT_LIGHT: Final[str] = "#FF8800"
+
+
+def _get_highlight_color() -> str:
+    """Return a theme-appropriate highlight color for search results.
+
+    Returns:
+        str: Hex color string suitable for the active theme.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return _HIGHLIGHT_DARK
+    return _HIGHLIGHT_LIGHT
 
 
 class SearchWorker(QThread):
@@ -89,9 +111,20 @@ class SearchWorker(QThread):
         if self._mode == "Hex":
             raw = self._document.search_hex(self._query, self._max_results)
         elif self._mode == "Text":
-            raw = self._document.search_text(
-                self._query, self._encoding, True, self._max_results,
-            )
+            if hasattr(self._document, "search_text_encoded"):
+                raw = self._document.search_text_encoded(
+                    self._query,
+                    self._encoding,
+                    True,
+                    self._max_results,
+                )
+            else:
+                raw = self._document.search_text(
+                    self._query,
+                    self._encoding,
+                    True,
+                    self._max_results,
+                )
         elif self._mode == "Regex":
             raw = self._document.search_regex(self._query, self._max_results)
         else:
@@ -114,6 +147,10 @@ class NumericSearchWorker(QThread):
         alignment: Required byte alignment of search results.
         max_results: Maximum number of results to return.
         use_native: If True, try the native ``search_numeric`` FFI first.
+        size: Byte size of numeric values (1, 2, 4, or 8) for the native path.
+        signed: Whether the value is signed for the native path.
+        big_endian: Whether to use big-endian byte order for the native path.
+        is_range: Whether this is a range search (min != max).
         parent: Parent QObject for lifecycle management.
 
     Attributes:
@@ -135,6 +172,10 @@ class NumericSearchWorker(QThread):
         max_results: int,
         *,
         use_native: bool,
+        size: int = 4,
+        signed: bool = False,
+        big_endian: bool = False,
+        is_range: bool = False,
         parent: QThread | None = None,
     ) -> None:
         super().__init__(parent)
@@ -146,6 +187,10 @@ class NumericSearchWorker(QThread):
         self._alignment: int = alignment
         self._max_results: int = max_results
         self._use_native: bool = use_native
+        self._size: int = size
+        self._signed: bool = signed
+        self._big_endian: bool = big_endian
+        self._is_range: bool = is_range
         _: object = self.finished.connect(self.deleteLater)
 
     @override
@@ -159,15 +204,36 @@ class NumericSearchWorker(QThread):
             self.search_error.emit(exc)
 
     def _search_native(self) -> list[tuple[int, int]]:
-        """Use the document's native search_numeric FFI method.
+        """Use the document's native numeric search FFI methods.
+
+        Dispatches to ``search_numeric_range`` for range queries or
+        ``search_numeric`` for exact-value queries, with correct Rust
+        FFI argument order.
 
         Returns:
             list[tuple[int, int]]: List of (offset, byte_width) match tuples.
         """
-        raw = self._document.search_numeric(
-            self._min_val, self._max_val, self._fmt,
-            self._alignment, self._max_results,
-        )
+        if self._is_range and hasattr(self._document, "search_numeric_range"):
+            raw = self._document.search_numeric_range(
+                int(self._min_val),
+                int(self._max_val),
+                self._size,
+                self._signed,
+                self._big_endian,
+                self._alignment,
+                self._max_results,
+            )
+        elif hasattr(self._document, "search_numeric"):
+            raw = self._document.search_numeric(
+                int(self._min_val),
+                self._size,
+                self._signed,
+                self._big_endian,
+                self._alignment,
+                self._max_results,
+            )
+        else:
+            return self._search_fallback()
         return [(r[0], self._byte_width) for r in raw]
 
     def _search_fallback(self) -> list[tuple[int, int]]:
@@ -248,7 +314,11 @@ class SearchMixin:
         self._search_input.setEnabled(False)
 
         self._search_worker = SearchWorker(
-            self._document, mode, query, encoding, MAX_SEARCH_RESULTS,
+            self._document,
+            mode,
+            query,
+            encoding,
+            MAX_SEARCH_RESULTS,
         )
         self._search_worker.search_finished.connect(self._on_search_finished)
         self._search_worker.search_error.connect(self._on_search_error)
@@ -273,16 +343,15 @@ class SearchMixin:
 
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
             if callable(highlight_fn):
-                highlights = [(off, length, "#FFAA00") for off, length in results]
+                color = _get_highlight_color()
+                highlights = [(off, length, color) for off, length in results]
                 highlight_fn(highlights, "search")
 
         if self._search_status_label is not None:
             if not results:
                 self._search_status_label.setText("No results found")
             elif len(results) >= MAX_SEARCH_RESULTS:
-                self._search_status_label.setText(
-                    f"Showing {MAX_SEARCH_RESULTS}+ results (capped)"
-                )
+                self._search_status_label.setText(f"Showing {MAX_SEARCH_RESULTS}+ results (capped)")
             else:
                 self._search_status_label.setText(f"Found {len(results)} results")
 
@@ -327,12 +396,17 @@ class SearchMixin:
         frame = QFrame()
         frame.setFrameShape(QFrame.Shape.StyledPanel)
         layout = QHBoxLayout(frame)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(6)
+        layout.setContentsMargins(_LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN)
+        layout.setSpacing(_LAYOUT_SPACING)
 
         self._numeric_value_input = QLineEdit()
         self._numeric_value_input.setToolTip("Decimal (255) or hex (0xFF) numeric value to search for")
-        self._numeric_value_input.setFixedWidth(120)
+        self._numeric_value_input.setFixedWidth(_VALUE_INPUT_WIDTH)
+        numeric_validator = QRegularExpressionValidator(
+            QRegularExpression(r"-?(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?)"),
+            frame,
+        )
+        self._numeric_value_input.setValidator(numeric_validator)
         layout.addWidget(QLabel("Value:"))
         layout.addWidget(self._numeric_value_input)
 
@@ -356,7 +430,7 @@ class SearchMixin:
         self._numeric_align_spin = QSpinBox()
         self._numeric_align_spin.setRange(1, 8)
         self._numeric_align_spin.setValue(1)
-        self._numeric_align_spin.setFixedWidth(50)
+        self._numeric_align_spin.setFixedWidth(_ALIGN_SPIN_WIDTH)
         layout.addWidget(self._numeric_align_spin)
 
         self._numeric_range_check = QCheckBox("Range")
@@ -365,7 +439,13 @@ class SearchMixin:
 
         self._numeric_max_input = QLineEdit()
         self._numeric_max_input.setToolTip("Maximum value for range search (inclusive)")
-        self._numeric_max_input.setFixedWidth(100)
+        self._numeric_max_input.setFixedWidth(_MAX_INPUT_WIDTH)
+        self._numeric_max_input.setValidator(
+            QRegularExpressionValidator(
+                QRegularExpression(r"-?(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?)"),
+                frame,
+            )
+        )
         self._numeric_max_input.setVisible(False)
         layout.addWidget(self._numeric_max_input)
 
@@ -385,7 +465,10 @@ class SearchMixin:
             self._numeric_max_input.setVisible(checked)
 
     def _on_search_mode_changed(self, mode: str) -> None:
-        """Show or hide the numeric search panel based on current mode.
+        """Show or hide the numeric search panel and apply input validators based on mode.
+
+        When the mode is ``Hex``, a hex-byte validator is attached to the
+        search input.  For all other modes, any existing validator is cleared.
 
         Args:
             mode: The newly selected search mode string.
@@ -395,6 +478,14 @@ class SearchMixin:
             self._numeric_search_frame.setVisible(show_numeric)
         if self._search_input is not None:
             self._search_input.setEnabled(not show_numeric)
+            if mode == "Hex":
+                hex_validator = QRegularExpressionValidator(
+                    QRegularExpression(r"[0-9a-fA-F ]*"),
+                    self._search_input,
+                )
+                self._search_input.setValidator(hex_validator)
+            else:
+                self._search_input.setValidator(None)
 
     def _on_numeric_search(self) -> None:
         """Execute a numeric value search using the current panel settings."""
@@ -423,12 +514,18 @@ class SearchMixin:
         is_signed = type_text == "Signed Int"
 
         fmt_map: dict[tuple[int, bool, bool], str] = {
-            (1, False, False): "B", (1, True, False): "b",
-            (2, False, False): "H", (2, True, False): "h",
-            (4, False, False): "I", (4, True, False): "i",
-            (8, False, False): "Q", (8, True, False): "q",
-            (4, False, True): "f", (4, True, True): "f",
-            (8, False, True): "d", (8, True, True): "d",
+            (1, False, False): "B",
+            (1, True, False): "b",
+            (2, False, False): "H",
+            (2, True, False): "h",
+            (4, False, False): "I",
+            (4, True, False): "i",
+            (8, False, False): "Q",
+            (8, True, False): "q",
+            (4, False, True): "f",
+            (4, True, True): "f",
+            (8, False, True): "d",
+            (8, True, True): "d",
         }
         fmt_char = fmt_map.get((byte_width, is_signed, is_float), "I")
         fmt = endian_char + fmt_char
@@ -452,9 +549,18 @@ class SearchMixin:
         self._numeric_value_input.setEnabled(False)
 
         self._numeric_search_worker = NumericSearchWorker(
-            self._document, min_val, max_val, fmt,
-            byte_width, alignment, MAX_SEARCH_RESULTS,
+            self._document,
+            min_val,
+            max_val,
+            fmt,
+            byte_width,
+            alignment,
+            MAX_SEARCH_RESULTS,
             use_native=use_native,
+            size=byte_width,
+            signed=is_signed,
+            big_endian=big_endian,
+            is_range=(range_mode and bool(max_text)),
         )
         self._numeric_search_worker.search_finished.connect(self._on_numeric_search_finished)
         self._numeric_search_worker.search_error.connect(self._on_numeric_search_error)
@@ -477,16 +583,15 @@ class SearchMixin:
                 goto_fn(results[0][0])
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
             if callable(highlight_fn):
-                highlights = [(off, length, "#FFAA00") for off, length in results]
+                color = _get_highlight_color()
+                highlights = [(off, length, color) for off, length in results]
                 highlight_fn(highlights, "search")
 
         if self._search_status_label is not None:
             if not results:
                 self._search_status_label.setText("No results found")
             elif len(results) >= MAX_SEARCH_RESULTS:
-                self._search_status_label.setText(
-                    f"Showing {MAX_SEARCH_RESULTS}+ results (capped)"
-                )
+                self._search_status_label.setText(f"Showing {MAX_SEARCH_RESULTS}+ results (capped)")
             else:
                 self._search_status_label.setText(f"Found {len(results)} results")
 

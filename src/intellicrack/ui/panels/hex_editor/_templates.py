@@ -7,11 +7,27 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import QComboBox, QTreeWidget, QTreeWidgetItem
 
 from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_TEMPLATE_COLOR_DARK: Final[str] = "#44FF44"
+_TEMPLATE_COLOR_LIGHT: Final[str] = "#2E7D32"
+
+
+def _get_default_template_color() -> str:
+    """Return a theme-appropriate default color for template field highlights.
+
+    Returns:
+        str: Hex color string suitable for the active theme.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return _TEMPLATE_COLOR_DARK
+    return _TEMPLATE_COLOR_LIGHT
 
 
 class TemplatesMixin:
@@ -129,7 +145,7 @@ class TemplatesMixin:
             f_size = field_data.get("size")
             if isinstance(f_offset, int) and isinstance(f_size, int):
                 color_raw = field_data.get("color")
-                color = str(color_raw) if isinstance(color_raw, str) else "#44FF44"
+                color = str(color_raw) if isinstance(color_raw, str) else _get_default_template_color()
                 highlights.append((f_offset, f_size, color))
             children_raw = field_data.get("children")
             if isinstance(children_raw, list):

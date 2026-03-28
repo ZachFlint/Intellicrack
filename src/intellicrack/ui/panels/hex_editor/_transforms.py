@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -33,6 +33,11 @@ from intellicrack.ui.panels.hex_editor._base import (
     logger,
 )
 
+
+_LAYOUT_MARGIN: Final[int] = 2
+_ZERO_MARGIN: Final[int] = 0
+_PREVIEW_MAX_HEIGHT: Final[int] = 120
+_PIPELINE_MAX_HEIGHT: Final[int] = 100
 
 _TransformPipeline_cls: Any = None
 _pipeline_available: bool = False
@@ -70,7 +75,7 @@ class TransformsMixin:
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(_LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN)
 
         self._transform_nodes_cache = get_all_transform_nodes_fn() if get_all_transform_nodes_fn is not None else []
 
@@ -92,7 +97,7 @@ class TransformsMixin:
 
         self._transform_params_widget = QWidget()
         self._transform_params_form = QFormLayout(self._transform_params_widget)
-        self._transform_params_form.setContentsMargins(0, 0, 0, 0)
+        self._transform_params_form.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
         layout.addWidget(self._transform_params_widget)
 
         action_row = QHBoxLayout()
@@ -111,13 +116,13 @@ class TransformsMixin:
         preview_font.setFamily("Consolas")
         preview_font.setPointSize(9)
         self._transform_preview_pane.setFont(preview_font)
-        self._transform_preview_pane.setMaximumHeight(120)
+        self._transform_preview_pane.setMaximumHeight(_PREVIEW_MAX_HEIGHT)
         layout.addWidget(self._transform_preview_pane)
 
         layout.addWidget(QLabel("Pipeline:"))
 
         self._transform_pipeline_list = QListWidget()
-        self._transform_pipeline_list.setMaximumHeight(100)
+        self._transform_pipeline_list.setMaximumHeight(_PIPELINE_MAX_HEIGHT)
         layout.addWidget(self._transform_pipeline_list)
 
         pipeline_btn_row = QHBoxLayout()
@@ -187,9 +192,7 @@ class TransformsMixin:
         if not param_names and node.description:
             self._transform_params_form.addRow(
                 QLabel(
-                    node.description[:DESCRIPTION_TRUNCATE_LEN]
-                    if len(node.description) > DESCRIPTION_TRUNCATE_LEN
-                    else node.description
+                    node.description[:DESCRIPTION_TRUNCATE_LEN] if len(node.description) > DESCRIPTION_TRUNCATE_LEN else node.description
                 )
             )
 
@@ -323,8 +326,7 @@ class TransformsMixin:
             QMessageBox.warning(
                 parent,
                 "Transform Truncated",
-                f"Transform output ({len(result)} bytes) exceeds input region "
-                f"({read_len} bytes). Output will be truncated to fit.",
+                f"Transform output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
         try:
             self._document.write_bytes(cursor_offset, result[:write_len])
@@ -476,8 +478,7 @@ class TransformsMixin:
             QMessageBox.warning(
                 parent,
                 "Pipeline Truncated",
-                f"Pipeline output ({len(result)} bytes) exceeds input region "
-                f"({read_len} bytes). Output will be truncated to fit.",
+                f"Pipeline output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
         try:
             self._document.write_bytes(cursor_offset, result[:write_len])

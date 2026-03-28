@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -31,6 +31,10 @@ from intellicrack.ui.panels.hex_editor._base import (
 )
 
 
+_LAYOUT_MARGIN: Final[int] = 2
+_SPIN_WIDTH: Final[int] = 60
+
+
 class DisassemblyMixin:
     """Mixin providing disassembly functionality for the hex editor panel."""
 
@@ -52,13 +56,21 @@ class DisassemblyMixin:
         """
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(_LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN)
 
         toolbar_row = QHBoxLayout()
 
         self._disasm_arch_combo = QComboBox()
         self._disasm_arch_combo.addItems([
-            "Auto Detect", "x86", "ARM", "ARM64", "MIPS", "PPC", "SPARC", "SystemZ", "RISC-V",
+            "Auto Detect",
+            "x86",
+            "ARM",
+            "ARM64",
+            "MIPS",
+            "PPC",
+            "SPARC",
+            "SystemZ",
+            "RISC-V",
         ])
         toolbar_row.addWidget(self._disasm_arch_combo)
 
@@ -69,7 +81,7 @@ class DisassemblyMixin:
         self._disasm_count_spin = QSpinBox()
         self._disasm_count_spin.setRange(1, 500)
         self._disasm_count_spin.setValue(DEFAULT_DISASM_COUNT)
-        self._disasm_count_spin.setFixedWidth(60)
+        self._disasm_count_spin.setFixedWidth(_SPIN_WIDTH)
         toolbar_row.addWidget(self._disasm_count_spin)
 
         self._disasm_follow_cursor = QCheckBox("Follow Cursor")
@@ -178,9 +190,7 @@ class DisassemblyMixin:
             arch_str = arch_map.get(arch_text, "x86")
 
         try:
-            instructions = disassembler.disassemble(
-                data, base_addr=cursor_offset, arch=arch_str, mode=mode_str, count=count
-            )
+            instructions = disassembler.disassemble(data, base_addr=cursor_offset, arch=arch_str, mode=mode_str, count=count)
         except (RuntimeError, ValueError) as exc:
             logger.debug("disasm_failed", error=str(exc))
             return

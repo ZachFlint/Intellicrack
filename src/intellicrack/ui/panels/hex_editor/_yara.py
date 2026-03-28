@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QFileDialog,
@@ -28,6 +28,22 @@ from intellicrack.ui.panels.hex_editor._base import (
     logger,
     yara_scanner_available,
 )
+from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_YARA_MATCH_DARK: Final[str] = "#AA44FF"
+_YARA_MATCH_LIGHT: Final[str] = "#7B1FA2"
+
+
+def _get_yara_match_color() -> str:
+    """Return a theme-appropriate highlight color for YARA matches.
+
+    Returns:
+        str: Hex color string suitable for the active theme.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return _YARA_MATCH_DARK
+    return _YARA_MATCH_LIGHT
 
 
 class YaraMixin:
@@ -66,9 +82,7 @@ class YaraMixin:
         yara_font.setFamily("Consolas")
         yara_font.setPointSize(9)
         self._yara_inline_editor.setFont(yara_font)
-        self._yara_inline_editor.setToolTip(
-            "Enter inline YARA rule source. If empty, compiled rule files are used instead."
-        )
+        self._yara_inline_editor.setToolTip("Enter inline YARA rule source. If empty, compiled rule files are used instead.")
         self._yara_inline_editor.setMaximumHeight(140)
         layout.addWidget(self._yara_inline_editor)
 
@@ -169,14 +183,13 @@ class YaraMixin:
                     match_hex,
                 ])
                 rule_item.addChild(child)
-                match_len = len(string_match.data)
-                all_match_offsets.append((string_match.offset, match_len))
+                all_match_offsets.append((string_match.offset, len(string_match.data)))
             rule_item.setExpanded(True)
 
         if all_match_offsets and self._hex_widget is not None:
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
             if callable(highlight_fn):
-                highlights = [(off, length, "#AA44FF") for off, length in all_match_offsets]
+                highlights = [(off, length, _get_yara_match_color()) for off, length in all_match_offsets]
                 highlight_fn(highlights, "yara")
 
         logger.debug("yara_scan_complete", match_count=len(matches))
