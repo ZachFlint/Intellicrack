@@ -269,7 +269,7 @@ ruff==0.15.7
 safetensors==0.7.0
 safety==3.7.0
 safety_schemas==0.0.16
-scalene==2.1.4
+scalene==2.2.1
 sentencepiece==0.2.1
 setuptools_scm==9.2.2
 shellingham==1.5.4
