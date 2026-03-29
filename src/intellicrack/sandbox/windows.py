@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Windows Sandbox implementation for isolated binary analysis.
+"""
+Windows Sandbox implementation for isolated binary analysis.
 
-This module provides integration with Windows Sandbox for safe
-execution and behavioral monitoring of potentially malicious binaries.
+This module provides integration with Windows Sandbox for safe execution and behavioral monitoring of potentially malicious binaries.
 """
 
 from __future__ import annotations
@@ -83,7 +83,8 @@ _ERR_CMD_TIMEOUT = "Command timed out"
 
 
 class WindowsSandbox(SandboxBase):
-    r"""Windows Sandbox implementation for isolated binary testing.
+    r"""
+    Windows Sandbox implementation for isolated binary testing.
 
     Uses the Windows Sandbox feature (available in Windows 10 Pro/Enterprise)
     to provide an isolated execution environment for binary analysis.
@@ -110,7 +111,8 @@ class WindowsSandbox(SandboxBase):
         self._temp_dir: Path | None = None
 
     async def is_available(self) -> bool:
-        """Check if Windows Sandbox is available.
+        """
+        Check if Windows Sandbox is available.
 
         Returns:
             bool: True if Windows Sandbox can be used.
@@ -127,13 +129,14 @@ class WindowsSandbox(SandboxBase):
                 _logger.debug("windows_sandbox_exe_not_found", exe=self.SANDBOX_EXE)
                 return False
 
+            ps_exe = "pwsh" if shutil.which("pwsh") else "powershell"
             features_result = await process_manager.run_tracked_async(
                 [
-                    "powershell",
+                    ps_exe,
                     "-Command",
                     "(Get-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM).State",
                 ],
-                name="powershell-sandbox-feature-check",
+                name="pwsh-sandbox-feature-check",
                 timeout=_FEATURE_CHECK_TIMEOUT,
             )
 
@@ -151,7 +154,8 @@ class WindowsSandbox(SandboxBase):
             return is_available
 
     async def start(self) -> None:
-        """Start the Windows Sandbox environment.
+        """
+        Start the Windows Sandbox environment.
 
         Creates the shared folder structure, generates the .wsb configuration,
         and launches Windows Sandbox.
@@ -227,7 +231,8 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_START_FAILED) from e
 
     async def stop(self) -> None:
-        """Stop the Windows Sandbox environment.
+        """
+        Stop the Windows Sandbox environment.
 
         Terminates the sandbox process and cleans up resources.
 
@@ -305,7 +310,8 @@ class WindowsSandbox(SandboxBase):
         self._wsb_path = None
 
     async def _generate_wsb_config(self) -> None:
-        """Generate the .wsb configuration file.
+        """
+        Generate the .wsb configuration file.
 
         Raises:
             SandboxError: If sandbox paths are not initialized.
@@ -491,7 +497,8 @@ start /min powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0pr
         timeout: int | None = None,
         working_directory: str | None = None,
     ) -> tuple[int, str, str]:
-        """Execute a command in the sandbox.
+        """
+        Execute a command in the sandbox.
 
         Args:
             command: Command to execute.
@@ -559,7 +566,8 @@ call "{sandbox_script_path}"
         timeout: int | None = None,
         monitor: bool = True,
     ) -> ExecutionReport:
-        """Run a binary in the sandbox with monitoring.
+        """
+        Run a binary in the sandbox with monitoring.
 
         Args:
             binary_path: Path to the binary to run.
@@ -648,7 +656,8 @@ call "{sandbox_script_path}"
         )
 
     async def _parse_file_log(self) -> list[FileChange]:
-        """Parse file monitoring log.
+        """
+        Parse file monitoring log.
 
         Returns:
             list[FileChange]: List of file changes detected during execution.
@@ -680,7 +689,8 @@ call "{sandbox_script_path}"
         return changes
 
     async def _parse_registry_log(self) -> list[RegistryChange]:
-        """Parse registry monitoring log.
+        """
+        Parse registry monitoring log.
 
         Returns:
             list[RegistryChange]: List of registry changes detected during execution.
@@ -713,7 +723,8 @@ call "{sandbox_script_path}"
         return changes
 
     async def _parse_network_log(self) -> list[NetworkActivity]:
-        """Parse network monitoring log.
+        """
+        Parse network monitoring log.
 
         Returns:
             list[NetworkActivity]: List of network activity detected during execution.
@@ -752,7 +763,8 @@ call "{sandbox_script_path}"
         return activities
 
     async def _parse_process_log(self) -> list[ProcessActivity]:
-        """Parse process monitoring log.
+        """
+        Parse process monitoring log.
 
         Returns:
             list[ProcessActivity]: List of process activity detected during execution.
@@ -787,7 +799,8 @@ call "{sandbox_script_path}"
         return activities
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
-        """Copy a file into the sandbox.
+        """
+        Copy a file into the sandbox.
 
         Args:
             source: Local source path.
@@ -813,7 +826,8 @@ call "{sandbox_script_path}"
             raise SandboxError(_ERR_COPY_TO_SANDBOX_FAILED) from e
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
-        """Copy a file from the sandbox.
+        """
+        Copy a file from the sandbox.
 
         Args:
             source: Source path relative to sandbox shared folder.

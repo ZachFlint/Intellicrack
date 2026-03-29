@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Sandbox manager for coordinating sandbox instances.
+"""
+Sandbox manager for coordinating sandbox instances.
 
-This module provides a manager for creating, tracking, and coordinating
-multiple sandbox instances for binary analysis workflows.
+This module provides a manager for creating, tracking, and coordinating multiple sandbox instances for binary analysis workflows.
 """
 
 from __future__ import annotations
@@ -38,7 +38,8 @@ SandboxType = Literal["windows", "qemu"]
 
 
 class SandboxInstance:
-    """Represents a managed sandbox instance.
+    """
+    Represents a managed sandbox instance.
 
     Attributes:
         id: Unique instance identifier (auto-generated UUID).
@@ -69,7 +70,8 @@ class SandboxInstance:
 
     @property
     def state(self) -> SandboxState:
-        """Get sandbox state.
+        """
+        Get sandbox state.
 
         Returns:
             SandboxState: Current sandbox state.
@@ -82,7 +84,8 @@ class SandboxInstance:
 
 
 class SandboxManager:
-    """Manager for sandbox instances.
+    """
+    Manager for sandbox instances.
 
     Provides creation, lifecycle management, and coordination of
     multiple sandbox instances for binary analysis.
@@ -109,7 +112,8 @@ class SandboxManager:
 
     @property
     def instances(self) -> list[SandboxInstance]:
-        """Get all managed instances.
+        """
+        Get all managed instances.
 
         Returns:
             list[SandboxInstance]: List of sandbox instances.
@@ -118,7 +122,8 @@ class SandboxManager:
 
     @property
     def active_count(self) -> int:
-        """Get count of running instances.
+        """
+        Get count of running instances.
 
         Returns:
             int: Number of running sandboxes.
@@ -126,7 +131,8 @@ class SandboxManager:
         return sum(inst.state.status == "running" for inst in self._instances.values())
 
     async def get_available_types(self) -> list[SandboxType]:
-        """Get list of available sandbox types.
+        """
+        Get list of available sandbox types.
 
         Returns:
             list[SandboxType]: List of sandbox types that can be used.
@@ -151,7 +157,8 @@ class SandboxManager:
         auto_start: bool = True,
         qemu_config: QEMUConfig | None = None,
     ) -> SandboxInstance:
-        """Create a new sandbox instance.
+        """
+        Create a new sandbox instance.
 
         Args:
             sandbox_type: Type of sandbox to create.
@@ -213,7 +220,8 @@ class SandboxManager:
             return instance
 
     async def get(self, instance_id: str) -> SandboxInstance | None:
-        """Get a sandbox instance by ID.
+        """
+        Get a sandbox instance by ID.
 
         Args:
             instance_id: Instance identifier.
@@ -224,7 +232,8 @@ class SandboxManager:
         return self._instances.get(instance_id)
 
     async def destroy(self, instance_id: str) -> None:
-        """Destroy a sandbox instance.
+        """
+        Destroy a sandbox instance.
 
         Args:
             instance_id: Instance identifier.
@@ -266,7 +275,8 @@ class SandboxManager:
         reuse_instance: bool = False,
         qemu_config: QEMUConfig | None = None,
     ) -> tuple[SandboxInstance, ExecutionReport]:
-        """Run a binary in a sandbox.
+        """
+        Run a binary in a sandbox.
 
         Creates a new sandbox (or reuses an existing one), runs the binary,
         and returns the execution report.
@@ -323,7 +333,8 @@ class SandboxManager:
         self,
         sandbox_type: SandboxType,
     ) -> SandboxInstance | None:
-        """Find an idle instance of the specified type.
+        """
+        Find an idle instance of the specified type.
 
         Args:
             sandbox_type: Type of sandbox to find.
@@ -343,7 +354,8 @@ class SandboxManager:
         return found
 
     async def _find_oldest_idle(self) -> SandboxInstance | None:
-        """Find the oldest idle sandbox instance.
+        """
+        Find the oldest idle sandbox instance.
 
         Returns:
             SandboxInstance | None: Oldest idle instance or None if none idle.
@@ -360,7 +372,8 @@ class SandboxManager:
         return oldest
 
     async def cleanup_stale(self, max_idle_seconds: int = 3600) -> int:
-        """Clean up stale sandbox instances.
+        """
+        Clean up stale sandbox instances.
 
         Args:
             max_idle_seconds: Maximum idle time before cleanup.
@@ -386,7 +399,8 @@ class SandboxManager:
         return len(stale_ids)
 
     async def get_status(self) -> dict[str, object]:
-        """Get manager status summary.
+        """
+        Get manager status summary.
 
         Returns:
             dict[str, object]: Status dictionary with instance information.

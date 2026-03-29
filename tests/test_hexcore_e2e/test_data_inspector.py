@@ -294,7 +294,7 @@ class TestInspectAtEdge:
         """
         result: dict[str, str] = cast("dict[str, str]", sample_doc_from_bytes.inspect_at(128))
         assert isinstance(result, dict)
-        assert len(result) > 0
+        assert result
 
     def test_inspect_at_offset_zero_u8_value(self, hexcore: Any) -> None:
         """Verify that inspect_at(0) on a single-byte document returns u8 for that byte.

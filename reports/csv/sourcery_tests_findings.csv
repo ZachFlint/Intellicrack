@@ -1,19 +1,129 @@
 file,line,rule,description
-tests\test_bridges\test_frida_bridge.py,245,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
-tests\test_bridges\test_frida_bridge.py,592,simplify-boolean-comparison,Simplify comparison to boolean
-tests\test_bridges\test_frida_bridge.py,616,simplify-boolean-comparison,Simplify comparison to boolean
-tests\test_bridges\test_frida_bridge.py,633,simplify-str-len-comparison,Simplify comparison to string length
-tests\test_bridges\test_frida_bridge.py,660,simplify-len-comparison,Simplify sequence length comparison
-tests\test_bridges\test_frida_bridge.py,672,simplify-len-comparison,Simplify sequence length comparison
-tests\test_bridges\test_schemas.py,277,simplify-len-comparison,Simplify sequence length comparison
-tests\test_bridges\test_schemas.py,284,simplify-len-comparison,Simplify sequence length comparison
-tests\test_bridges\test_schemas.py,318,simplify-len-comparison,Simplify sequence length comparison
-tests\test_bridges\test_schemas.py,465,simplify-len-comparison,Simplify sequence length comparison
-tests\test_core\test_logging.py,75,dict-assign-update-to-union,Merge dictionary updates via the union operator
-tests\test_core\test_logging.py,66,dict-assign-update-to-union,Merge dictionary updates via the union operator
-tests\test_core\test_script_gen.py,273,dict-assign-update-to-union,Merge dictionary updates via the union operator
-tests\test_core\test_script_gen.py,266,dict-assign-update-to-union,Merge dictionary updates via the union operator
-tests\test_ui\test_vnc_widget.py,329,simplify-len-comparison,Simplify sequence length comparison
-tests\test_ui\test_win32_embed.py,118,simplify-len-comparison,Simplify sequence length comparison
-tests\test_ui\test_win32_embed.py,139,simplify-len-comparison,Simplify sequence length comparison
-tests\test_ui\test_graph_view.py:220-220 simplify-constant-sum
+tests\test_hexcore_e2e\conftest.py,137,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_hexcore_e2e\conftest.py,168,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_hexcore_e2e\test_binary_diff.py,57,move-assign,Move assignments closer to their usage
+tests\test_hexcore_e2e\test_bridge_ai_context.py,68,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_ai_context.py,93,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly.py,78,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly.py,93,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,59,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,97,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,118,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,142,use-named-expression,Use named expression to simplify assignment and conditional
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,163,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,198,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py,216,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_display.py,52,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_display.py,102,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_display.py,135,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_display.py,162,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_display.py,171,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py,49,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py,255,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py,171,remove-redundant-exception,Remove redundant exceptions from an except clause
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py,224,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py,309,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py,310,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py,320,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py,113,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py,302,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py,330,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_lifecycle.py,48,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_lifecycle.py,119,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_lifecycle.py,128,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py,170,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py,351,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py,420,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py,491,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py,509,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py,529,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_patches.py,56,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py,73,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py,143,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py,181,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py,213,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py,295,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_search.py,56,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_search.py,101,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_search.py,133,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_search.py,148,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_search.py,162,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_search.py,195,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_search.py,209,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_search.py,228,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py,207,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py,251,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_state_integration.py,188,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_state_integration.py,398,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_transforms.py,66,use-named-expression,Use named expression to simplify assignment and conditional
+tests\test_hexcore_e2e\test_bridge_yara.py,92,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara.py,101,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara.py,121,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_yara.py,135,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara.py,153,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara.py,165,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,145,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,158,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,176,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,186,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,196,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,199,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,210,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,223,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,237,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,247,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,266,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,298,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,321,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_bridge_yara_deep.py,323,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_data_inspector.py,297,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_encodings.py,192,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_encodings.py,329,remove-redundant-exception,Remove redundant exceptions from an except clause
+tests\test_hexcore_e2e\test_hashing.py,335,simplify-str-len-comparison,Simplify comparison to string length
+tests\test_hexcore_e2e\test_hex_document_state.py,626,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_hex_document_state.py,652,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_hex_document_state.py,684,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_patch_export.py,34,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_patch_export.py,44,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_process_memory.py,43,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_process_memory.py,100,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_search.py,39,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,91,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_search.py,109,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_search.py,121,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,143,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_search.py,209,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,249,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,260,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_search.py,362,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,393,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,438,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_search.py,509,simplify-empty-collection-comparison,Replaces an empty collection equality with a boolean operation
+tests\test_hexcore_e2e\test_templates.py,51,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_templates.py,117,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_templates.py,194,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_templates.py,285,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_templates.py,337,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_templates.py,450,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_templates.py,475,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_templates.py,486,simplify-boolean-comparison,Simplify comparison to boolean
+tests\test_hexcore_e2e\test_templates.py,693,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_transforms.py,26,simplify-len-comparison,Simplify sequence length comparison
+tests\test_hexcore_e2e\test_transforms.py,167,comprehension-to-generator,Replace unneeded comprehension with generator
+tests\test_hexcore_e2e\test_transforms.py,221,comprehension-to-generator,Replace unneeded comprehension with generator
+tests\test_hexcore_e2e\test_transforms.py,259,comprehension-to-generator,Replace unneeded comprehension with generator
+tests\test_hexpat\conftest.py,25,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_hexpat\conftest.py,39,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_hexpat\conftest.py,55,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_hexpat\conftest.py,72,remove-redundant-slice-index,Replace a[0:x] with a[:x] and a with a
+tests\test_ui\test_graph_view.py,220,remove-unnecessary-cast,"Remove unnecessary casts to int, str, float or bool"
+tests\test_hexcore_e2e\test_hexpat_control_flow.py:259-259
+simplify-constant-sum
+tests\test_hexcore_e2e\test_hexpat_control_flow.py:260-260
+simplify-constant-sum
+tests\test_hexcore_e2e\test_hexpat_control_flow.py:304-304
+simplify-constant-sum
+tests\test_hexcore_e2e\test_hexpat_control_flow.py:305-305
+simplify-constant-sum
+tests\test_hexcore_e2e\test_hexpat_parser_e2e.py:329-329 simplify-constant-sum
+tests\test_hexcore_e2e\test_hexpat_parser_e2e.py:330-330 simplify-constant-sum

@@ -23,7 +23,7 @@ class TestListTransforms:
         """
         transforms: list[tuple[str, str, str]] = sample_doc_from_bytes.list_transforms()
         assert isinstance(transforms, list)
-        assert len(transforms) > 0
+        assert transforms
 
     def test_list_transforms_each_entry_is_three_tuple(self, sample_doc_from_bytes: Any) -> None:
         """Verify that every entry returned by list_transforms() is a 3-tuple of strings.
@@ -164,7 +164,7 @@ class TestBitwiseTransforms:
         input_data = bytes([0x00, 0x55, 0xAA, 0xFF])
         doc = hexcore.HexDocument.open_bytes(input_data)
         result = doc.transform_data("bit_invert", 0, len(input_data), {})
-        expected = bytes([b ^ 0xFF for b in input_data])
+        expected = bytes(b ^ 0xFF for b in input_data)
         assert result == expected
 
     def test_bit_invert_double_application_is_identity(self, hexcore: Any) -> None:
@@ -218,7 +218,7 @@ class TestXorTransform:
         input_data = bytes(range(16))
         doc = hexcore.HexDocument.open_bytes(input_data)
         result = doc.transform_data("xor_key", 0, len(input_data), {"key": bytes([key_byte])})
-        expected = bytes([b ^ key_byte for b in input_data])
+        expected = bytes(b ^ key_byte for b in input_data)
         assert result == expected
 
     def test_xor_with_zero_key_is_identity(self, hexcore: Any) -> None:
@@ -256,7 +256,7 @@ class TestXorTransform:
         input_data = bytes(range(16))
         doc = hexcore.HexDocument.open_bytes(input_data)
         result = doc.transform_data("xor_key", 4, 4, {"key": bytes([key_byte])})
-        expected = bytes([b ^ key_byte for b in input_data[4:8]])
+        expected = bytes(b ^ key_byte for b in input_data[4:8])
         assert result == expected
 
 

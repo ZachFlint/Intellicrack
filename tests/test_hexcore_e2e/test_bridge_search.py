@@ -53,7 +53,7 @@ class TestBridgeSearchHex:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, int]] = _run(loaded_bridge.search_hex("4D 5A"))
-        assert len(results) > 0
+        assert results
         for item in results:
             assert "offset" in item
             assert "length" in item
@@ -98,7 +98,7 @@ class TestBridgeSearchHex:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, int]] = _run(loaded_bridge.search_hex("DE AD BE EF CA FE BA BE 00 11 22 33 44 55 66 77"))
-        assert results == []
+        assert not results
 
     def test_search_hex_max_results_respected(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that max_results caps the number of returned matches.
@@ -130,7 +130,7 @@ class TestBridgeSearchText:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_text("INTELLICRACK", encoding="ascii"))
-        assert len(results) >= 1
+        assert results
         assert results[0]["offset"] == 2
 
     def test_search_text_case_insensitive_finds_lowercase(self, bridge: Any, tmp_path: Path) -> None:
@@ -145,7 +145,7 @@ class TestBridgeSearchText:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_text("INTELLICRACK", encoding="ascii", case_sensitive=False))
-        assert len(results) >= 1
+        assert results
 
     def test_search_text_case_sensitive_no_match_on_wrong_case(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that case-sensitive search does not match wrong-case text.
@@ -159,7 +159,7 @@ class TestBridgeSearchText:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_text("INTELLICRACK", encoding="ascii", case_sensitive=True))
-        assert results == []
+        assert not results
 
     def test_search_text_result_length_matches_byte_length_of_string(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that search_text result length equals the byte length of the target.
@@ -192,7 +192,7 @@ class TestBridgeSearchRegex:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_regex(r"[A-Z]{3}"))
-        assert len(results) >= 1
+        assert results
 
     def test_search_regex_no_match_returns_empty_list(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that search_regex returns an empty list when no match exists.
@@ -206,7 +206,7 @@ class TestBridgeSearchRegex:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_regex(r"[A-Z]{10}"))
-        assert results == []
+        assert not results
 
 
 class TestBridgeSearchNumeric:
@@ -225,7 +225,7 @@ class TestBridgeSearchNumeric:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little"))
-        assert len(results) >= 1
+        assert results
         assert results[0]["offset"] == 8
 
     def test_search_numeric_result_has_correct_length(self, bridge: Any, tmp_path: Path) -> None:

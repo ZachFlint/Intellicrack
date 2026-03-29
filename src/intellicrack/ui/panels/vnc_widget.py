@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+VNC viewer widget for QEMU sandbox display.
 
-"""VNC viewer widget for QEMU sandbox display.
-
-Implements a subset of the RFB protocol (RFC 6143) for receiving
-framebuffer updates from a VNC server and rendering them in a Qt
-widget.  Supports Raw encoding, pointer events, and key events.
+Implements a subset of the RFB protocol (RFC 6143) for receiving framebuffer updates from a VNC server and rendering them in a Qt widget.
+Supports Raw encoding, pointer events, and key events.
 """
 
 from __future__ import annotations
@@ -51,10 +50,10 @@ _FB_UPDATE_INTERVAL_MS: Final[int] = 50
 
 
 class RFBClient:
-    """Async RFB (Remote Framebuffer) protocol client.
+    """
+    Async RFB (Remote Framebuffer) protocol client.
 
-    Implements a minimal subset of RFC 6143 sufficient for receiving
-    raw framebuffer updates and sending pointer/key events.
+    Implements a minimal subset of RFC 6143 sufficient for receiving raw framebuffer updates and sending pointer/key events.
     """
 
     width: int
@@ -73,7 +72,8 @@ class RFBClient:
 
     @property
     def connected(self) -> bool:
-        """Check if the client is connected.
+        """
+        Check if the client is connected.
 
         Returns:
             bool: True if connected to a VNC server.
@@ -81,7 +81,8 @@ class RFBClient:
         return self._connected
 
     async def connect(self, host: str, port: int, timeout: float = 10.0) -> bool:
-        """Connect to a VNC server and complete the handshake.
+        """
+        Connect to a VNC server and complete the handshake.
 
         Args:
             host: Server hostname or IP.
@@ -122,7 +123,8 @@ class RFBClient:
         return True
 
     async def _negotiate_version(self) -> None:
-        """Perform RFB version negotiation.
+        """
+        Perform RFB version negotiation.
 
         Raises:
             ConnectionError: If reader/writer not available.
@@ -137,7 +139,8 @@ class RFBClient:
         await self._writer.drain()
 
     async def _negotiate_security(self) -> bool:
-        """Perform RFB security type negotiation.
+        """
+        Perform RFB security type negotiation.
 
         Returns:
             bool: True if security negotiation succeeded.
@@ -189,7 +192,8 @@ class RFBClient:
         return False
 
     async def _client_init(self) -> tuple[int, int, str]:
-        """Send ClientInit and receive ServerInit.
+        """
+        Send ClientInit and receive ServerInit.
 
         Returns:
             tuple[int, int, str]: Tuple of (width, height, server_name).
@@ -217,7 +221,8 @@ class RFBClient:
         return width, height, name
 
     async def request_framebuffer_update(self, incremental: bool = True) -> None:
-        """Send a FramebufferUpdateRequest.
+        """
+        Send a FramebufferUpdateRequest.
 
         Args:
             incremental: Whether to request incremental update.
@@ -238,7 +243,8 @@ class RFBClient:
         await self._writer.drain()
 
     async def handle_server_message(self) -> bool:
-        """Read and process one server message.
+        """
+        Read and process one server message.
 
         Returns:
             bool: True if a message was handled, False on connection loss.
@@ -307,7 +313,8 @@ class RFBClient:
                 _logger.debug("vnc_unsupported_encoding", encoding=encoding)
 
     async def _read_raw_pixels(self, total_bytes: int) -> bytes | None:
-        """Read raw pixel data from the stream.
+        """
+        Read raw pixel data from the stream.
 
         Args:
             total_bytes: Number of bytes to read.
@@ -335,7 +342,8 @@ class RFBClient:
         h: int,
         pixel_data: bytes,
     ) -> None:
-        """Apply raw pixel data to the framebuffer.
+        """
+        Apply raw pixel data to the framebuffer.
 
         Args:
             x: Rectangle X offset.
@@ -362,7 +370,8 @@ class RFBClient:
                 )
 
     async def send_pointer_event(self, x: int, y: int, button_mask: int) -> None:
-        """Send a pointer (mouse) event to the server.
+        """
+        Send a pointer (mouse) event to the server.
 
         Args:
             x: X coordinate.
@@ -377,7 +386,8 @@ class RFBClient:
         await self._writer.drain()
 
     async def send_key_event(self, key: int, down: bool) -> None:
-        """Send a key event to the server.
+        """
+        Send a key event to the server.
 
         Args:
             key: X11 keysym value.
@@ -439,7 +449,8 @@ _QT_TO_X11_KEYSYM: dict[int, int] = {
 
 
 def _qt_key_to_x11(key: int, text: str) -> int:
-    """Convert a Qt key code to an X11 keysym.
+    """
+    Convert a Qt key code to an X11 keysym.
 
     Args:
         key: Qt key code.
@@ -456,7 +467,8 @@ def _qt_key_to_x11(key: int, text: str) -> int:
 
 
 class VNCWidget(QWidget):
-    """Qt widget that displays a VNC remote framebuffer.
+    """
+    Qt widget that displays a VNC remote framebuffer.
 
     Connects to a VNC server, displays the framebuffer, and forwards
     mouse and keyboard events.
@@ -480,7 +492,8 @@ class VNCWidget(QWidget):
         self.setMinimumSize(320, 240)
 
     def connect_to_server(self, host: str, port: int) -> None:
-        """Initiate connection to a VNC server.
+        """
+        Initiate connection to a VNC server.
 
         Args:
             host: Server hostname or IP.
@@ -526,7 +539,8 @@ class VNCWidget(QWidget):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """Paint the current framebuffer scaled to widget size.
+        """
+        Paint the current framebuffer scaled to widget size.
 
         Args:
             a0: Paint event.
@@ -549,7 +563,8 @@ class VNCWidget(QWidget):
         painter.end()
 
     def _scale_coords(self, event: QMouseEvent) -> tuple[int, int]:
-        """Scale widget coordinates to framebuffer coordinates.
+        """
+        Scale widget coordinates to framebuffer coordinates.
 
         Args:
             event: Mouse event with position data.
@@ -567,7 +582,8 @@ class VNCWidget(QWidget):
 
     @staticmethod
     def _button_mask(event: QMouseEvent) -> int:
-        """Convert Qt mouse buttons to RFB button mask.
+        """
+        Convert Qt mouse buttons to RFB button mask.
 
         Args:
             event: Mouse event.
@@ -587,7 +603,8 @@ class VNCWidget(QWidget):
 
     @override
     def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        """Forward mouse movement to VNC server.
+        """
+        Forward mouse movement to VNC server.
 
         Args:
             a0: Mouse event.
@@ -602,7 +619,8 @@ class VNCWidget(QWidget):
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        """Forward mouse press to VNC server.
+        """
+        Forward mouse press to VNC server.
 
         Args:
             a0: Mouse event.
@@ -617,7 +635,8 @@ class VNCWidget(QWidget):
 
     @override
     def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        """Forward mouse release to VNC server.
+        """
+        Forward mouse release to VNC server.
 
         Args:
             a0: Mouse event.
@@ -632,7 +651,8 @@ class VNCWidget(QWidget):
 
     @override
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        """Forward key press to VNC server.
+        """
+        Forward key press to VNC server.
 
         Args:
             a0: Key event.
@@ -647,7 +667,8 @@ class VNCWidget(QWidget):
 
     @override
     def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
-        """Forward key release to VNC server.
+        """
+        Forward key release to VNC server.
 
         Args:
             a0: Key event.

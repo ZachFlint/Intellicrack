@@ -98,7 +98,7 @@ def log_tool_invocation(
 
 
 _TOOL_NAMES = frozenset({
-    "ruff", "mypy", "bandit", "pydocstyle", "darglint",
+    "ruff", "mypy", "bandit", "pydocstyle", "pydoclint",
     "pytest", "coverage", "git",
 })
 

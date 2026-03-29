@@ -1,12 +1,12 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-03-22T02:16:48.013294",
-  "total_findings": 432,
+  "generated": "2026-03-28T15:20:35.421179",
+  "total_findings": 272,
   "total_files": 13,
   "files": [
     {
       "path": "vendor/community-patterns/README.md",
-      "count": 93,
+      "count": 91,
       "findings": [
         {
           "line": 3,
@@ -296,374 +296,360 @@
           "raw": "vendor/community-patterns/README.md:240:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
         },
         {
-          "line": 248,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]",
-          "raw": "vendor/community-patterns/README.md:248 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]"
-        },
-        {
-          "line": 249,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]",
-          "raw": "vendor/community-patterns/README.md:249 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]"
-        },
-        {
-          "line": 254,
+          "line": 252,
           "column": 11,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:254:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:252:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 254,
+          "line": 252,
           "column": 56,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:254:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:252:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 254,
+          "line": 252,
           "column": 123,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:254:123 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:252:123 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 255,
+          "line": 253,
           "column": 11,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:255:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:253:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 255,
+          "line": 253,
           "column": 56,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:255:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:253:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 255,
+          "line": 253,
           "column": 116,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:255:116 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:253:116 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:260:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:260:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:260:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:258:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:260:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:258:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:260:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:260:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 269,
+          "line": 267,
           "column": 18,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:269:18 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:267:18 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 269,
+          "line": 267,
           "column": 67,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:269:67 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:267:67 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 269,
+          "line": 267,
           "column": 100,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:269:100 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:267:100 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:274:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:274:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:274:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:272:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:274:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:272:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:274:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:274:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 277,
+          "line": 275,
           "column": 130,
           "code": "error",
           "message": "MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]",
-          "raw": "vendor/community-patterns/README.md:277:130 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]"
+          "raw": "vendor/community-patterns/README.md:275:130 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:282:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:282:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:282:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:280:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:282:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:280:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:282:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:282:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:291:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:291:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:291:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:289:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:291:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:289:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:291:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:291:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 319,
+          "line": 317,
           "column": 163,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:319:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:317:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
         },
         {
-          "line": 320,
+          "line": 318,
           "column": 163,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:320:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:318:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
         },
         {
-          "line": 332,
+          "line": 330,
           "column": 17,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:332:17 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:330:17 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 332,
+          "line": 330,
           "column": 66,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:332:66 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:330:66 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 332,
+          "line": 330,
           "column": 115,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:332:115 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:330:115 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 333,
+          "line": 331,
           "column": 14,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:333:14 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:331:14 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 333,
+          "line": 331,
           "column": 57,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:333:57 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:331:57 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 333,
+          "line": 331,
           "column": 97,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:333:97 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:331:97 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:338:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:338:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:338:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:336:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:338:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:336:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:338:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/community-patterns/README.md:338:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/community-patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 352,
+          "line": 350,
           "column": 63,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:352:63 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:350:63 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 352,
+          "line": 350,
           "column": 89,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/community-patterns/README.md:352:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/community-patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         }
       ]
     },
     {
       "path": "vendor/ImHex-Patterns/README.md",
-      "count": 93,
+      "count": 91,
       "findings": [
         {
           "line": 3,
@@ -953,1360 +939,354 @@
           "raw": "vendor/ImHex-Patterns/README.md:240:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
         },
         {
-          "line": 248,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/README.md:248 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]"
-        },
-        {
-          "line": 249,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]",
-          "raw": "vendor/ImHex-Patterns/README.md:249 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]"
-        },
-        {
-          "line": 254,
+          "line": 252,
           "column": 11,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:254:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:252:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 254,
+          "line": 252,
           "column": 56,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:254:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:252:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 254,
+          "line": 252,
           "column": 123,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:254:123 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:252:123 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 255,
+          "line": 253,
           "column": 11,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:255:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:253:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 255,
+          "line": 253,
           "column": 56,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:255:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:253:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 255,
+          "line": 253,
           "column": 116,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:255:116 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:253:116 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:260:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:260:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:260:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:258:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:260:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:258:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:260:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 260,
+          "line": 258,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:260:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 269,
+          "line": 267,
           "column": 18,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:269:18 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:267:18 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 269,
+          "line": 267,
           "column": 67,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:269:67 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:267:67 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 269,
+          "line": 267,
           "column": 100,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:269:100 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:267:100 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:274:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:274:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:274:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:272:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:274:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:272:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:274:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 274,
+          "line": 272,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:274:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 277,
+          "line": 275,
           "column": 130,
           "code": "error",
           "message": "MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]",
-          "raw": "vendor/ImHex-Patterns/README.md:277:130 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]"
+          "raw": "vendor/ImHex-Patterns/README.md:275:130 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:282:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:282:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:282:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:280:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:282:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:280:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:282:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 282,
+          "line": 280,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:282:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:291:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:291:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:291:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:289:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:291:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:289:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:291:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 291,
+          "line": 289,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:291:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 319,
+          "line": 317,
           "column": 163,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:319:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:317:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
         },
         {
-          "line": 320,
+          "line": 318,
           "column": 163,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:320:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:318:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style \"compact\"]"
         },
         {
-          "line": 332,
+          "line": 330,
           "column": 17,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:332:17 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:330:17 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 332,
+          "line": 330,
           "column": 66,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:332:66 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:330:66 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 332,
+          "line": 330,
           "column": 115,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:332:115 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:330:115 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 333,
+          "line": 331,
           "column": 14,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:333:14 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:331:14 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 333,
+          "line": 331,
           "column": 57,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:333:57 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:331:57 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 333,
+          "line": 331,
           "column": 97,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:333:97 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:331:97 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:338:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:338:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 29,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:338:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:336:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 1,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:338:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:336:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 8,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:338:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 338,
+          "line": 336,
           "column": 15,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:338:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
         },
         {
-          "line": 352,
+          "line": 350,
           "column": 63,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:352:63 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
+          "raw": "vendor/ImHex-Patterns/README.md:350:63 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         },
         {
-          "line": 352,
+          "line": 350,
           "column": 89,
           "code": "error",
           "message": "MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]",
-          "raw": "vendor/ImHex-Patterns/README.md:352:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
-        }
-      ]
-    },
-    {
-      "path": "vendor/community-patterns/patterns/DFIR/DFIR_README.md",
-      "count": 70,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "error",
-          "message": "MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]"
-        },
-        {
-          "line": 3,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:3:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 5,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
-        },
-        {
-          "line": 6,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:6:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 6,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [ImHex](https://github.com/W...\"]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:6 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [ImHex](https://github.com/W...\"]"
-        },
-        {
-          "line": 7,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:7:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 10,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:10:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 10,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- Open a physical disk via Raw...\"]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:10 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- Open a physical disk via Raw...\"]"
-        },
-        {
-          "line": 11,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:11:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 12,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:12:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 13,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:13:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 14,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:14:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 16,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:16:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 17,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:17:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 8]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:18:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 8]"
-        },
-        {
-          "line": 18,
-          "column": 73,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:18:73 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]"
-        },
-        {
-          "line": 19,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:19:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:20:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 22,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:22:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 23,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:23:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 24,
-          "column": 1,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 4]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:24:1 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 4]"
-        },
-        {
-          "line": 25,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:25:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 26,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:26:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 27,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:27:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 28,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:28:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 29,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:29:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 30,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:30:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 31,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:31:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 32,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:32:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 33,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:33:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 35,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:35:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 36,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:36:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 37,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:37:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 39,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:39:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 40,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:40:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 41,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:41:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 42,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:42:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 43,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:43:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 44,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:44:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 45,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:45:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 46,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:46:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 48,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:48:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 49,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:49:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 50,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:50:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 52,
-          "column": 1,
-          "code": "error",
-          "message": "MD005/list-indent Inconsistent indentation for list items at the same level [Expected: 2; Actual: 3]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:52:1 error MD005/list-indent Inconsistent indentation for list items at the same level [Expected: 2; Actual: 3]"
-        },
-        {
-          "line": 52,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 3]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:52:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 3]"
-        },
-        {
-          "line": 53,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:53:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 54,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:54:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 55,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:55:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 56,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 10]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:56:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 10]"
-        },
-        {
-          "line": 57,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:57:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 58,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:58:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 59,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:59:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 60,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:60:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 62,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:62:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 63,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:63:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 64,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:64:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 66,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:66:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 67,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:67:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]"
-        },
-        {
-          "line": 69,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:69:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]"
-        },
-        {
-          "line": 70,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:70:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]"
-        },
-        {
-          "line": 71,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:71:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]"
-        },
-        {
-          "line": 72,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:72:1 error MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]"
-        },
-        {
-          "line": 73,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:73:1 error MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]"
-        },
-        {
-          "line": 76,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:76:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 76,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [exFAT_Report](https://githu...\"]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:76 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [exFAT_Report](https://githu...\"]"
-        },
-        {
-          "line": 79,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:79:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 79,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [MBR_5_VOLs](https://github....\"]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:79 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [MBR_5_VOLs](https://github....\"]"
-        },
-        {
-          "line": 81,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:81 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]"
-        },
-        {
-          "line": 82,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]",
-          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:82 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]"
-        }
-      ]
-    },
-    {
-      "path": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md",
-      "count": 70,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "error",
-          "message": "MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]"
-        },
-        {
-          "line": 3,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:3:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 5,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
-        },
-        {
-          "line": 6,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:6:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 6,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [ImHex](https://github.com/W...\"]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:6 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [ImHex](https://github.com/W...\"]"
-        },
-        {
-          "line": 7,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:7:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 10,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:10:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 10,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- Open a physical disk via Raw...\"]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:10 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- Open a physical disk via Raw...\"]"
-        },
-        {
-          "line": 11,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:11:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 12,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:12:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 13,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:13:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 14,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:14:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 16,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:16:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 17,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:17:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 8]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:18:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 8]"
-        },
-        {
-          "line": 18,
-          "column": 73,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:18:73 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]"
-        },
-        {
-          "line": 19,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:19:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:20:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 22,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:22:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 23,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:23:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 24,
-          "column": 1,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 4]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:24:1 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 4]"
-        },
-        {
-          "line": 25,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:25:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 26,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:26:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 27,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:27:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 28,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:28:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 29,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:29:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 30,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:30:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 31,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:31:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 32,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:32:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 33,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:33:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 35,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:35:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 36,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:36:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 37,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:37:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 39,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:39:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 40,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:40:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 41,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:41:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 42,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:42:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 43,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:43:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 44,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:44:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 45,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:45:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 46,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:46:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 48,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:48:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 49,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:49:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 50,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:50:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 52,
-          "column": 1,
-          "code": "error",
-          "message": "MD005/list-indent Inconsistent indentation for list items at the same level [Expected: 2; Actual: 3]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:52:1 error MD005/list-indent Inconsistent indentation for list items at the same level [Expected: 2; Actual: 3]"
-        },
-        {
-          "line": 52,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 3]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:52:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 3]"
-        },
-        {
-          "line": 53,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:53:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 54,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:54:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 55,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:55:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 56,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 10]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:56:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 10]"
-        },
-        {
-          "line": 57,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:57:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 58,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:58:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 59,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:59:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 60,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:60:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 6]"
-        },
-        {
-          "line": 62,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:62:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 63,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:63:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 64,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:64:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 66,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:66:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 67,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:67:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]"
-        },
-        {
-          "line": 69,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:69:1 error MD007/ul-indent Unordered list indentation [Expected: 2; Actual: 4]"
-        },
-        {
-          "line": 70,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:70:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]"
-        },
-        {
-          "line": 71,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:71:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 6]"
-        },
-        {
-          "line": 72,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:72:1 error MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]"
-        },
-        {
-          "line": 73,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:73:1 error MD007/ul-indent Unordered list indentation [Expected: 6; Actual: 8]"
-        },
-        {
-          "line": 76,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:76:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 76,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [exFAT_Report](https://githu...\"]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:76 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [exFAT_Report](https://githu...\"]"
-        },
-        {
-          "line": 79,
-          "column": 1,
-          "code": "error",
-          "message": "MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:79:1 error MD007/ul-indent Unordered list indentation [Expected: 0; Actual: 2]"
-        },
-        {
-          "line": 79,
-          "column": null,
-          "code": "error",
-          "message": "MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [MBR_5_VOLs](https://github....\"]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:79 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: \"- [MBR_5_VOLs](https://github....\"]"
-        },
-        {
-          "line": 81,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:81 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]"
-        },
-        {
-          "line": 82,
-          "column": null,
-          "code": "error",
-          "message": "MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]",
-          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:82 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 3]"
+          "raw": "vendor/ImHex-Patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style \"aligned\"]"
         }
       ]
     },
@@ -2527,215 +1507,6 @@
       ]
     },
     {
-      "path": "vendor/PatternLanguage/fuzz/README.md",
-      "count": 29,
-      "findings": [
-        {
-          "line": 1,
-          "column": null,
-          "code": "error",
-          "message": "MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"## Pattern Language Fuzzing\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:1 error MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"## Pattern Language Fuzzing\"]"
-        },
-        {
-          "line": 1,
-          "column": null,
-          "code": "error",
-          "message": "MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"## Pattern Language Fuzzing\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"## Pattern Language Fuzzing\"]"
-        },
-        {
-          "line": 2,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:2:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
-        },
-        {
-          "line": 4,
-          "column": null,
-          "code": "error",
-          "message": "MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Pre-requisites\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:4 error MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Pre-requisites\"]"
-        },
-        {
-          "line": 5,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 112]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 112]"
-        },
-        {
-          "line": 6,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 93]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:6:81 error MD013/line-length Line length [Expected: 80; Actual: 93]"
-        },
-        {
-          "line": 7,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:7:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
-        },
-        {
-          "line": 10,
-          "column": null,
-          "code": "error",
-          "message": "MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Building\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:10 error MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Building\"]"
-        },
-        {
-          "line": 11,
-          "column": 119,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:11:119 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]"
-        },
-        {
-          "line": 11,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 119]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 119]"
-        },
-        {
-          "line": 13,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:13 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]"
-        },
-        {
-          "line": 15,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:15 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```\"]"
-        },
-        {
-          "line": 16,
-          "column": 48,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 3]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:16:48 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 3]"
-        },
-        {
-          "line": 19,
-          "column": null,
-          "code": "error",
-          "message": "MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Fuzzing\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:19 error MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Fuzzing\"]"
-        },
-        {
-          "line": 24,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:24:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
-        },
-        {
-          "line": 27,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:27 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]"
-        },
-        {
-          "line": 29,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:29 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```\"]"
-        },
-        {
-          "line": 30,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 116]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:30:81 error MD013/line-length Line length [Expected: 80; Actual: 116]"
-        },
-        {
-          "line": 34,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:34:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
-        },
-        {
-          "line": 36,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:36 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]"
-        },
-        {
-          "line": 37,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 87]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 87]"
-        },
-        {
-          "line": 41,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:41 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]"
-        },
-        {
-          "line": 45,
-          "column": null,
-          "code": "error",
-          "message": "MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Debugging\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:45 error MD022/blanks-around-headings Headings should be surrounded by blank lines [Expected: 1; Actual: 0; Below] [Context: \"### Debugging\"]"
-        },
-        {
-          "line": 46,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
-        },
-        {
-          "line": 47,
-          "column": 43,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 3]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:47:43 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 3]"
-        },
-        {
-          "line": 49,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:49 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]"
-        },
-        {
-          "line": 51,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:51 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```\"]"
-        },
-        {
-          "line": 53,
-          "column": null,
-          "code": "error",
-          "message": "MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:53 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: \"```bash\"]"
-        },
-        {
-          "line": 55,
-          "column": 3,
-          "code": "error",
-          "message": "MD047/single-trailing-newline Files should end with a single newline character",
-          "raw": "vendor/PatternLanguage/fuzz/README.md:55:3 error MD047/single-trailing-newline Files should end with a single newline character"
-        }
-      ]
-    },
-    {
       "path": "README.md",
       "count": 15,
       "findings": [
@@ -2843,6 +1614,89 @@
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 349]",
           "raw": "README.md:150:81 error MD013/line-length Line length [Expected: 80; Actual: 349]"
+        }
+      ]
+    },
+    {
+      "path": "vendor/PatternLanguage/fuzz/README.md",
+      "count": 11,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "error",
+          "message": "MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"## Pattern Language Fuzzing\"]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"## Pattern Language Fuzzing\"]"
+        },
+        {
+          "line": 3,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
+        },
+        {
+          "line": 7,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 112]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:7:81 error MD013/line-length Line length [Expected: 80; Actual: 112]"
+        },
+        {
+          "line": 8,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 93]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 93]"
+        },
+        {
+          "line": 9,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:9:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
+        },
+        {
+          "line": 14,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 118]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 118]"
+        },
+        {
+          "line": 30,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:30:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
+        },
+        {
+          "line": 38,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 116]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 116]"
+        },
+        {
+          "line": 42,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
+        },
+        {
+          "line": 46,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 87]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 87]"
+        },
+        {
+          "line": 57,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
+          "raw": "vendor/PatternLanguage/fuzz/README.md:57:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
         }
       ]
     },
@@ -3005,47 +1859,6 @@
       ]
     },
     {
-      "path": "vendor/PatternLanguage/README.md",
-      "count": 5,
-      "findings": [
-        {
-          "line": 1,
-          "column": 19,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]",
-          "raw": "vendor/PatternLanguage/README.md:1:19 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]"
-        },
-        {
-          "line": 3,
-          "column": 154,
-          "code": "error",
-          "message": "MD033/no-inline-html Inline HTML [Element: br]",
-          "raw": "vendor/PatternLanguage/README.md:3:154 error MD033/no-inline-html Inline HTML [Element: br]"
-        },
-        {
-          "line": 8,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 131]",
-          "raw": "vendor/PatternLanguage/README.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 131]"
-        },
-        {
-          "line": 39,
-          "column": 176,
-          "code": "error",
-          "message": "MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]",
-          "raw": "vendor/PatternLanguage/README.md:39:176 error MD009/no-trailing-spaces Trailing spaces [Expected: 0 or 2; Actual: 1]"
-        },
-        {
-          "line": 39,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 176]",
-          "raw": "vendor/PatternLanguage/README.md:39:81 error MD013/line-length Line length [Expected: 80; Actual: 176]"
-        }
-      ]
-    },
-    {
       "path": "AGENTS.md",
       "count": 4,
       "findings": [
@@ -3103,6 +1916,73 @@
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
           "raw": "CLAUDE.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
+        }
+      ]
+    },
+    {
+      "path": "vendor/PatternLanguage/README.md",
+      "count": 3,
+      "findings": [
+        {
+          "line": 3,
+          "column": 154,
+          "code": "error",
+          "message": "MD033/no-inline-html Inline HTML [Element: br]",
+          "raw": "vendor/PatternLanguage/README.md:3:154 error MD033/no-inline-html Inline HTML [Element: br]"
+        },
+        {
+          "line": 8,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 131]",
+          "raw": "vendor/PatternLanguage/README.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 131]"
+        },
+        {
+          "line": 39,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 175]",
+          "raw": "vendor/PatternLanguage/README.md:39:81 error MD013/line-length Line length [Expected: 80; Actual: 175]"
+        }
+      ]
+    },
+    {
+      "path": "vendor/community-patterns/patterns/DFIR/DFIR_README.md",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "error",
+          "message": "MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]",
+          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]"
+        },
+        {
+          "line": 5,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
+          "raw": "vendor/community-patterns/patterns/DFIR/DFIR_README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
+        }
+      ]
+    },
+    {
+      "path": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "error",
+          "message": "MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]",
+          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: \"ImHex Pattern Files - Digital ...\"]"
+        },
+        {
+          "line": 5,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
+          "raw": "vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
         }
       ]
     }

@@ -89,7 +89,7 @@ class TestBridgeYaraScan:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
-        assert len(results) >= 1
+        assert results
 
     def test_yara_scan_match_has_required_keys(self, loaded_bridge: Any) -> None:
         """Verify that each match dict has the rule, tags, meta, and strings keys.
@@ -98,7 +98,7 @@ class TestBridgeYaraScan:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
-        assert len(results) >= 1
+        assert results
         for match in results:
             assert _EXPECTED_MATCH_KEYS.issubset(match.keys())
 
@@ -118,7 +118,7 @@ class TestBridgeYaraScan:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_NO_MATCH_RULE))
-        assert results == []
+        assert not results
 
     def test_yara_scan_custom_bytes_match(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that a DEADBEEF rule matches a document containing those bytes.
@@ -132,7 +132,7 @@ class TestBridgeYaraScan:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.yara_scan(_DEAD_BEEF_RULE))
-        assert len(results) >= 1
+        assert results
         assert results[0]["rule"] == "DeadBeef"
 
 
@@ -150,7 +150,7 @@ class TestBridgeYaraScanFiles:
         rule_file.write_text(_MZ_YARA_RULE, encoding="utf-8")
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
         assert isinstance(results, list)
-        assert len(results) >= 1
+        assert results
 
     def test_yara_scan_files_no_match_rule_returns_empty(self, loaded_bridge: Any, tmp_path: Path) -> None:
         """Verify that a rule file with no matches returns an empty list.
@@ -162,4 +162,4 @@ class TestBridgeYaraScanFiles:
         rule_file = tmp_path / "nomatch.yar"
         rule_file.write_text(_NO_MATCH_RULE, encoding="utf-8")
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
-        assert results == []
+        assert not results

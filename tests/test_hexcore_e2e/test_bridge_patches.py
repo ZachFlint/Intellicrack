@@ -53,7 +53,7 @@ class TestBridgeExportPatches:
         _run(bridge.write_bytes(0, "AA BB CC DD"))
         result: str = _run(bridge.export_patches("ips"))
         assert isinstance(result, str)
-        assert len(result) > 0
+        assert result != ""
 
     def test_export_patches_ips_decodes_to_bytes_starting_with_patch(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that decoded IPS data begins with the PATCH magic header.

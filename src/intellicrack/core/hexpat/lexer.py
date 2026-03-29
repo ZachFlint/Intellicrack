@@ -11,7 +11,8 @@ from intellicrack.core.hexpat.tokens import KEYWORDS, Token, TokenType
 
 
 class HexPatLexer:
-    """Tokenizer for the HexPat pattern language.
+    """
+    Tokenizer for the HexPat pattern language.
 
     Converts raw source text into a flat list of Token objects.  The final
     token in the returned list is always an EOF token.
@@ -26,7 +27,8 @@ class HexPatLexer:
     """
 
     def __init__(self, source: str, file_path: str = "<input>") -> None:
-        """Initialize the lexer with source text.
+        """
+        Initialize the lexer with source text.
 
         Args:
             source: The raw source text to tokenize.
@@ -40,7 +42,8 @@ class HexPatLexer:
         self._tokens: list[Token] = []
 
     def tokenize(self) -> list[Token]:
-        """Tokenize the source into a list of Tokens.
+        """
+        Tokenize the source into a list of Tokens.
 
         Returns:
             A list of Token objects ending with an EOF token.
@@ -54,7 +57,8 @@ class HexPatLexer:
         return self._tokens
 
     def _peek(self, offset: int = 0) -> str:
-        """Return the character at pos+offset without consuming it.
+        """
+        Return the character at pos+offset without consuming it.
 
         Args:
             offset: How many characters ahead to look.
@@ -63,12 +67,11 @@ class HexPatLexer:
             The character at the requested position, or empty string if past end.
         """
         idx = self._pos + offset
-        if idx < len(self._source):
-            return self._source[idx]
-        return ""
+        return self._source[idx] if idx < len(self._source) else ""
 
     def _advance(self) -> str:
-        """Consume and return the current character, updating position tracking.
+        """
+        Consume and return the current character, updating position tracking.
 
         Returns:
             The consumed character.
@@ -83,7 +86,8 @@ class HexPatLexer:
         return ch
 
     def _match(self, expected: str) -> bool:
-        """Consume the next character if it matches expected.
+        """
+        Consume the next character if it matches expected.
 
         Args:
             expected: The single character to match.
@@ -97,7 +101,8 @@ class HexPatLexer:
         return False
 
     def _add(self, ttype: TokenType, value: str, line: int, column: int) -> None:
-        """Append a Token to the internal token list.
+        """
+        Append a Token to the internal token list.
 
         Args:
             ttype: The token type.
@@ -108,7 +113,8 @@ class HexPatLexer:
         self._tokens.append(Token(ttype, value, line, column))
 
     def _error(self, msg: str, line: int, column: int) -> HexPatParseError:
-        """Create a HexPatParseError at the given source location.
+        """
+        Create a HexPatParseError at the given source location.
 
         Args:
             msg: The error description.
@@ -121,7 +127,8 @@ class HexPatLexer:
         return HexPatParseError(msg, line, column, self._file_path)
 
     def _skip_whitespace(self) -> bool:
-        """Skip whitespace characters.
+        """
+        Skip whitespace characters.
 
         Returns:
             True if any whitespace was skipped.
@@ -133,7 +140,8 @@ class HexPatLexer:
         return False
 
     def _skip_line_comment(self) -> bool:
-        """Skip a single-line comment starting with //.
+        """
+        Skip a single-line comment starting with //.
 
         Returns:
             True if a line comment was skipped.
@@ -145,7 +153,8 @@ class HexPatLexer:
         return False
 
     def _skip_block_comment(self) -> bool:
-        """Skip a block comment delimited by /* and */, supporting nesting.
+        """
+        Skip a block comment delimited by /* and */, supporting nesting.
 
         Returns:
             True if a block comment was skipped.
@@ -177,7 +186,8 @@ class HexPatLexer:
         raise self._error(msg, line, col)
 
     def _scan_string(self, line: int, col: int) -> None:
-        """Scan a double-quoted string literal and emit a STRING_LITERAL token.
+        """
+        Scan a double-quoted string literal and emit a STRING_LITERAL token.
 
         Args:
             line: The 1-based line number where the string started.
@@ -208,7 +218,8 @@ class HexPatLexer:
         raise self._error(msg, line, col)
 
     def _scan_char(self, line: int, col: int) -> None:
-        """Scan a single-quoted character literal and emit a CHAR_LITERAL token.
+        """
+        Scan a single-quoted character literal and emit a CHAR_LITERAL token.
 
         Args:
             line: The 1-based line number where the literal started.
@@ -239,7 +250,8 @@ class HexPatLexer:
         self._add(TokenType.CHAR_LITERAL, value, line, col)
 
     def _scan_escape(self, line: int, col: int) -> str:
-        """Scan a single escape sequence (after the backslash has been consumed).
+        """
+        Scan a single escape sequence (after the backslash has been consumed).
 
         Args:
             line: The 1-based line number where the escape started.
@@ -281,7 +293,8 @@ class HexPatLexer:
         raise self._error(msg, line, col)
 
     def _scan_number(self, line: int, col: int) -> None:
-        """Scan an integer or float literal and emit a NUMBER or FLOAT_LITERAL token.
+        """
+        Scan an integer or float literal and emit a NUMBER or FLOAT_LITERAL token.
 
         Handles decimal, hexadecimal (0x/0X), binary (0b/0B), octal (0o/0O)
         integers and decimal floating-point numbers with optional exponents.
@@ -364,7 +377,8 @@ class HexPatLexer:
             self._add(TokenType.NUMBER, str(int(raw, 10)), line, col)
 
     def _scan_identifier(self, line: int, col: int) -> None:
-        """Scan an identifier or keyword and emit the appropriate token.
+        """
+        Scan an identifier or keyword and emit the appropriate token.
 
         Args:
             line: The 1-based line number where the identifier started.
@@ -378,7 +392,8 @@ class HexPatLexer:
         self._add(ttype, text, line, col)
 
     def _scan_operator(self, ch: str, line: int, col: int) -> None:
-        """Emit a token for an operator or multi-character punctuation.
+        """
+        Emit a token for an operator or multi-character punctuation.
 
         Args:
             ch: The first character of the operator, already consumed.
@@ -388,60 +403,16 @@ class HexPatLexer:
         Raises:
             HexPatParseError: If an incomplete operator sequence is encountered.
         """
-        if ch == "[":
-            if self._match("["):
-                self._add(TokenType.DOUBLE_LBRACKET, "[[", line, col)
-            else:
-                self._add(TokenType.LBRACKET, ch, line, col)
-        elif ch == "]":
-            if self._match("]"):
-                self._add(TokenType.DOUBLE_RBRACKET, "]]", line, col)
-            else:
-                self._add(TokenType.RBRACKET, ch, line, col)
-        elif ch == ".":
-            if self._match("."):
-                if self._match("."):
-                    self._add(TokenType.ELLIPSIS, "...", line, col)
-                else:
-                    msg = "Expected '...' but got '..'"
-                    raise self._error(msg, line, col)
-            else:
-                self._add(TokenType.DOT, ch, line, col)
-        elif ch == ":":
-            if self._match(":"):
-                self._add(TokenType.DOUBLE_COLON, "::", line, col)
-            else:
-                self._add(TokenType.COLON, ch, line, col)
-        elif ch == "=":
-            if self._match("="):
-                self._add(TokenType.EQ, "==", line, col)
-            else:
-                self._add(TokenType.ASSIGN, ch, line, col)
-        elif ch == "!":
+        if ch == "!":
             if self._match("="):
                 self._add(TokenType.NE, "!=", line, col)
             else:
                 self._add(TokenType.BANG, ch, line, col)
-        elif ch == "<":
-            if self._match("<"):
-                if self._match("="):
-                    self._add(TokenType.LSHIFT_ASSIGN, "<<=", line, col)
-                else:
-                    self._add(TokenType.LSHIFT, "<<", line, col)
-            elif self._match("="):
-                self._add(TokenType.LE_OP, "<=", line, col)
+        elif ch == "%":
+            if self._match("="):
+                self._add(TokenType.PERCENT_ASSIGN, "%=", line, col)
             else:
-                self._add(TokenType.LT, ch, line, col)
-        elif ch == ">":
-            if self._match(">"):
-                if self._match("="):
-                    self._add(TokenType.RSHIFT_ASSIGN, ">>=", line, col)
-                else:
-                    self._add(TokenType.RSHIFT, ">>", line, col)
-            elif self._match("="):
-                self._add(TokenType.GE_OP, ">=", line, col)
-            else:
-                self._add(TokenType.GT, ch, line, col)
+                self._add(TokenType.PERCENT, ch, line, col)
         elif ch == "&":
             if self._match("&"):
                 self._add(TokenType.DOUBLE_AMPERSAND, "&&", line, col)
@@ -449,20 +420,11 @@ class HexPatLexer:
                 self._add(TokenType.AMPERSAND_ASSIGN, "&=", line, col)
             else:
                 self._add(TokenType.AMPERSAND, ch, line, col)
-        elif ch == "|":
-            if self._match("|"):
-                self._add(TokenType.DOUBLE_PIPE, "||", line, col)
-            elif self._match("="):
-                self._add(TokenType.PIPE_ASSIGN, "|=", line, col)
+        elif ch == "*":
+            if self._match("="):
+                self._add(TokenType.STAR_ASSIGN, "*=", line, col)
             else:
-                self._add(TokenType.PIPE, ch, line, col)
-        elif ch == "^":
-            if self._match("^"):
-                self._add(TokenType.DOUBLE_CARET, "^^", line, col)
-            elif self._match("="):
-                self._add(TokenType.CARET_ASSIGN, "^=", line, col)
-            else:
-                self._add(TokenType.CARET, ch, line, col)
+                self._add(TokenType.STAR, ch, line, col)
         elif ch == "+":
             if self._match("="):
                 self._add(TokenType.PLUS_ASSIGN, "+=", line, col)
@@ -475,27 +437,80 @@ class HexPatLexer:
                 self._add(TokenType.MINUS_ASSIGN, "-=", line, col)
             else:
                 self._add(TokenType.MINUS, ch, line, col)
-        elif ch == "*":
-            if self._match("="):
-                self._add(TokenType.STAR_ASSIGN, "*=", line, col)
+        elif ch == ".":
+            if self._match("."):
+                if self._match("."):
+                    self._add(TokenType.ELLIPSIS, "...", line, col)
+                else:
+                    raise self._error("Expected '...' but got '..'", line, col)
             else:
-                self._add(TokenType.STAR, ch, line, col)
+                self._add(TokenType.DOT, ch, line, col)
         elif ch == "/":
             if self._match("="):
                 self._add(TokenType.SLASH_ASSIGN, "/=", line, col)
             else:
                 self._add(TokenType.SLASH, ch, line, col)
-        elif ch == "%":
-            if self._match("="):
-                self._add(TokenType.PERCENT_ASSIGN, "%=", line, col)
+        elif ch == ":":
+            if self._match(":"):
+                self._add(TokenType.DOUBLE_COLON, "::", line, col)
             else:
-                self._add(TokenType.PERCENT, ch, line, col)
+                self._add(TokenType.COLON, ch, line, col)
+        elif ch == "<":
+            if self._match("<"):
+                if self._match("="):
+                    self._add(TokenType.LSHIFT_ASSIGN, "<<=", line, col)
+                else:
+                    self._add(TokenType.LSHIFT, "<<", line, col)
+            elif self._match("="):
+                self._add(TokenType.LE_OP, "<=", line, col)
+            else:
+                self._add(TokenType.LT, ch, line, col)
+        elif ch == "=":
+            if self._match("="):
+                self._add(TokenType.EQ, "==", line, col)
+            else:
+                self._add(TokenType.ASSIGN, ch, line, col)
+        elif ch == ">":
+            if self._match(">"):
+                if self._match("="):
+                    self._add(TokenType.RSHIFT_ASSIGN, ">>=", line, col)
+                else:
+                    self._add(TokenType.RSHIFT, ">>", line, col)
+            elif self._match("="):
+                self._add(TokenType.GE_OP, ">=", line, col)
+            else:
+                self._add(TokenType.GT, ch, line, col)
+        elif ch == "[":
+            if self._match("["):
+                self._add(TokenType.DOUBLE_LBRACKET, "[[", line, col)
+            else:
+                self._add(TokenType.LBRACKET, ch, line, col)
+        elif ch == "]":
+            if self._match("]"):
+                self._add(TokenType.DOUBLE_RBRACKET, "]]", line, col)
+            else:
+                self._add(TokenType.RBRACKET, ch, line, col)
+        elif ch == "^":
+            if self._match("^"):
+                self._add(TokenType.DOUBLE_CARET, "^^", line, col)
+            elif self._match("="):
+                self._add(TokenType.CARET_ASSIGN, "^=", line, col)
+            else:
+                self._add(TokenType.CARET, ch, line, col)
+        elif ch == "|":
+            if self._match("|"):
+                self._add(TokenType.DOUBLE_PIPE, "||", line, col)
+            elif self._match("="):
+                self._add(TokenType.PIPE_ASSIGN, "|=", line, col)
+            else:
+                self._add(TokenType.PIPE, ch, line, col)
         else:
             msg = f"Unexpected character: {ch!r}"
             raise self._error(msg, line, col)
 
     def _scan_token(self) -> None:
-        """Scan and emit the next token from the current position.
+        """
+        Scan and emit the next token from the current position.
 
         Raises:
             HexPatParseError: If an unexpected character is encountered.

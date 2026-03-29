@@ -3,7 +3,8 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Preprocessor for HexPat .hexpat pattern files.
+"""
+Preprocessor for HexPat .hexpat pattern files.
 
 Handles #include, #define, #ifdef/#ifndef/#endif, and #pragma directives.
 """
@@ -47,7 +48,8 @@ _ERROR_RE = re.compile(r'#error\s+"([^"]*)"')
 
 
 def _parse_int_value(value_str: str) -> int:
-    """Parse an integer from a string, supporting hex prefix.
+    """
+    Parse an integer from a string, supporting hex prefix.
 
     Args:
         value_str: The string to parse, optionally prefixed with 0x.
@@ -61,7 +63,8 @@ def _parse_int_value(value_str: str) -> int:
 
 
 class HexPatPreprocessor:
-    """Preprocesses HexPat .hexpat source files before parsing.
+    """
+    Preprocesses HexPat .hexpat source files before parsing.
 
     Resolves #include directives, expands #define macros, processes
     conditional compilation (#ifdef/#ifndef/#endif), and extracts
@@ -72,7 +75,8 @@ class HexPatPreprocessor:
     """
 
     def __init__(self, include_paths: list[Path] | None = None) -> None:
-        """Initialize the preprocessor.
+        """
+        Initialize the preprocessor.
 
         Args:
             include_paths: Directories to search for included files.
@@ -88,7 +92,8 @@ class HexPatPreprocessor:
         source: str,
         file_path: Path | None = None,
     ) -> tuple[str, PragmaInfo]:
-        """Preprocess source code, resolving includes and extracting pragmas.
+        """
+        Preprocess source code, resolving includes and extracting pragmas.
 
         Args:
             source: The .hexpat source code to preprocess.
@@ -158,28 +163,23 @@ class HexPatPreprocessor:
                 array_limit = _parse_int_value(m.group(1))
                 continue
 
-            m = _PRAGMA_PATTERN_LIMIT_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_PATTERN_LIMIT_RE.match(stripped):
                 pattern_limit = _parse_int_value(m.group(1))
                 continue
 
-            m = _PRAGMA_AUTHOR_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_AUTHOR_RE.match(stripped):
                 author = m.group(1)
                 continue
 
-            m = _PRAGMA_DESCRIPTION_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_DESCRIPTION_RE.match(stripped):
                 description = m.group(1)
                 continue
 
-            m = _PRAGMA_BITFIELD_ORDER_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_BITFIELD_ORDER_RE.match(stripped):
                 bitfield_order = m.group(1)
                 continue
 
-            m = _PRAGMA_POINTER_SIZE_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_POINTER_SIZE_RE.match(stripped):
                 pointer_size = int(m.group(1))
                 continue
 
@@ -213,7 +213,8 @@ class HexPatPreprocessor:
         file_path: Path | None,
         depth: int,
     ) -> str:
-        """Recursively process source, handling includes and conditionals.
+        """
+        Recursively process source, handling includes and conditionals.
 
         Args:
             source: Source code to process.
@@ -238,8 +239,7 @@ class HexPatPreprocessor:
         for line_num, line in enumerate(source.splitlines(), start=1):
             stripped = line.strip()
 
-            m = _INCLUDE_ANGLE_RE.match(stripped)
-            if m:
+            if m := _INCLUDE_ANGLE_RE.match(stripped):
                 include_path = m.group(1)
                 resolved = self._resolve_include(
                     include_path,
@@ -252,8 +252,7 @@ class HexPatPreprocessor:
                     output_lines.append(resolved)
                 continue
 
-            m = _INCLUDE_QUOTE_RE.match(stripped)
-            if m:
+            if m := _INCLUDE_QUOTE_RE.match(stripped):
                 include_path = m.group(1)
                 resolved = self._resolve_include(
                     include_path,
@@ -266,8 +265,7 @@ class HexPatPreprocessor:
                     output_lines.append(resolved)
                 continue
 
-            m = _IMPORT_RE.match(stripped)
-            if m:
+            if m := _IMPORT_RE.match(stripped):
                 module_path = m.group(1).replace(".", "/") + ".pat"
                 resolved = self._resolve_include(
                     module_path,
@@ -280,16 +278,14 @@ class HexPatPreprocessor:
                     output_lines.append(resolved)
                 continue
 
-            m = _DEFINE_RE.match(stripped)
-            if m:
+            if m := _DEFINE_RE.match(stripped):
                 name = m.group(1)
                 value = m.group(2) or ""
                 self._defines[name] = value.strip()
                 output_lines.append("")
                 continue
 
-            m = _ERROR_RE.match(stripped)
-            if m:
+            if m := _ERROR_RE.match(stripped):
                 raise HexPatPreprocessorError(
                     m.group(1),
                     line=line_num,
@@ -308,7 +304,8 @@ class HexPatPreprocessor:
         line: int,
         depth: int,
     ) -> str | None:
-        """Resolve and inline an #include directive.
+        """
+        Resolve and inline an #include directive.
 
         Args:
             include_path: The path string from the include directive.
@@ -361,7 +358,8 @@ class HexPatPreprocessor:
         return ""
 
     def _process_conditionals(self, source: str) -> str:
-        """Process #ifdef/#ifndef/#else/#endif conditional blocks.
+        """
+        Process #ifdef/#ifndef/#else/#endif conditional blocks.
 
         Args:
             source: Source code with conditional directives.
@@ -376,8 +374,7 @@ class HexPatPreprocessor:
         for line in source.splitlines():
             stripped = line.strip()
 
-            m = _IFDEF_RE.match(stripped)
-            if m:
+            if m := _IFDEF_RE.match(stripped):
                 name = m.group(1)
                 active = not any(skip_stack) and name in self._defines
                 skip_stack.append(not active)
@@ -385,8 +382,7 @@ class HexPatPreprocessor:
                 output_lines.append("")
                 continue
 
-            m = _IFNDEF_RE.match(stripped)
-            if m:
+            if m := _IFNDEF_RE.match(stripped):
                 name = m.group(1)
                 active = not any(skip_stack) and name not in self._defines
                 skip_stack.append(not active)
@@ -397,7 +393,7 @@ class HexPatPreprocessor:
             if _ELSE_RE.match(stripped):
                 if skip_stack and not else_seen[-1]:
                     parent_skip = any(skip_stack[:-1])
-                    skip_stack[-1] = not skip_stack[-1] if not parent_skip else True
+                    skip_stack[-1] = True if parent_skip else not skip_stack[-1]
                     else_seen[-1] = True
                 output_lines.append("")
                 continue
@@ -417,7 +413,8 @@ class HexPatPreprocessor:
         return "\n".join(output_lines)
 
     def _process_defines(self, source: str) -> str:
-        """Expand #define macros in source text.
+        """
+        Expand #define macros in source text.
 
         Args:
             source: Source code with potential macro references.
@@ -433,7 +430,8 @@ class HexPatPreprocessor:
 
 
 def extract_pragmas_fast(source: str) -> PragmaInfo:
-    """Extract pragma metadata from source without full preprocessing.
+    """
+    Extract pragma metadata from source without full preprocessing.
 
     Reads only lines starting with #pragma for fast metadata extraction.
     Used by PatternRegistry for indexing .hexpat files.
@@ -495,28 +493,23 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             array_limit = _parse_int_value(m.group(1))
             continue
 
-        m = _PRAGMA_PATTERN_LIMIT_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_PATTERN_LIMIT_RE.match(stripped):
             pattern_limit = _parse_int_value(m.group(1))
             continue
 
-        m = _PRAGMA_AUTHOR_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_AUTHOR_RE.match(stripped):
             author = m.group(1)
             continue
 
-        m = _PRAGMA_DESCRIPTION_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_DESCRIPTION_RE.match(stripped):
             description = m.group(1)
             continue
 
-        m = _PRAGMA_BITFIELD_ORDER_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_BITFIELD_ORDER_RE.match(stripped):
             bitfield_order = m.group(1)
             continue
 
-        m = _PRAGMA_POINTER_SIZE_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_POINTER_SIZE_RE.match(stripped):
             pointer_size = int(m.group(1))
             continue
 

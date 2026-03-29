@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Bridge analysis aggregator for Intellicrack.
 
-"""Bridge analysis aggregator for Intellicrack.
-
-Queries connected bridges and aggregates their output into a unified
-BridgeAnalysisSummary. Replaces the standalone license_analyzer module
+Queries connected bridges and aggregates their output into a unified BridgeAnalysisSummary. Replaces the standalone license_analyzer module
 by delegating all actual analysis to the bridge layer.
 """
 
@@ -34,7 +33,8 @@ _logger = get_logger("core.analysis_aggregator")
 
 
 class AnalysisAggregator:
-    """Aggregates analysis data from connected bridges.
+    """
+    Aggregates analysis data from connected bridges.
 
     Queries BinaryBridge, GhidraBridge, and CutterBridge for strings,
     imports, exports, functions, and sections, then packages everything
@@ -52,7 +52,8 @@ class AnalysisAggregator:
         binary_name: str,
         binary_info: BinaryInfo,
     ) -> BridgeAnalysisSummary:
-        """Aggregate analysis data from all connected bridges.
+        """
+        Aggregate analysis data from all connected bridges.
 
         Starts with data already present in BinaryInfo (sections, imports,
         exports, file_type, architecture), then queries connected bridges
@@ -128,7 +129,8 @@ class AnalysisAggregator:
         source_bridges: list[str],
         notes: list[str],
     ) -> None:
-        """Collect string data from the BinaryBridge.
+        """
+        Collect string data from the BinaryBridge.
 
         Args:
             strings: Accumulator list for discovered strings.
@@ -171,7 +173,8 @@ class AnalysisAggregator:
         source_bridges: list[str],
         notes: list[str],
     ) -> None:
-        """Collect data from a static analysis bridge (Ghidra or Cutter).
+        """
+        Collect data from a static analysis bridge (Ghidra or Cutter).
 
         Args:
             bridge_name: Name of the bridge ("ghidra" or "cutter").
@@ -243,7 +246,8 @@ class AnalysisAggregator:
 
 
 def _deduplicate_imports(imports: list[ImportInfo]) -> list[ImportInfo]:
-    """Remove duplicate imports by address.
+    """
+    Remove duplicate imports by address.
 
     Args:
         imports: List of import entries possibly containing duplicates.
@@ -261,7 +265,8 @@ def _deduplicate_imports(imports: list[ImportInfo]) -> list[ImportInfo]:
 
 
 def _deduplicate_exports(exports: list[ExportInfo]) -> list[ExportInfo]:
-    """Remove duplicate exports by address.
+    """
+    Remove duplicate exports by address.
 
     Args:
         exports: List of export entries possibly containing duplicates.

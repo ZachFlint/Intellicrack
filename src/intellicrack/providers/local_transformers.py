@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Local Transformers provider with Intel XPU acceleration.
 
-"""Local Transformers provider with Intel XPU acceleration.
-
-This module provides a local LLM provider using HuggingFace Transformers
-with Intel XPU (Arc B580) acceleration via PyTorch 2.5+ native torch.xpu.
+This module provides a local LLM provider using HuggingFace Transformers with Intel XPU (Arc B580) acceleration via PyTorch 2.5+ native
+torch.xpu.
 """
 
 from __future__ import annotations
@@ -99,7 +99,8 @@ _HF_CONFIG_URL = "https://huggingface.co/{model_id}/resolve/main/config.json"
 
 
 async def _fetch_model_config(model_id: str) -> dict[str, Any]:
-    """Fetch model config.json from HuggingFace Hub.
+    """
+    Fetch model config.json from HuggingFace Hub.
 
     Args:
         model_id: HuggingFace model identifier (e.g. "microsoft/Phi-3-mini-4k-instruct").
@@ -122,7 +123,8 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
 def _classify_model_capabilities(
     config: dict[str, Any],
 ) -> tuple[int, bool]:
-    """Extract context window and vision support from a HuggingFace config.
+    """
+    Extract context window and vision support from a HuggingFace config.
 
     Args:
         config: Parsed config.json dict from HuggingFace Hub.
@@ -152,7 +154,8 @@ def _classify_model_capabilities(
 
 
 class LocalTransformersProvider(LLMProviderBase):
-    """Local Transformers provider with Intel XPU/CPU inference.
+    """
+    Local Transformers provider with Intel XPU/CPU inference.
 
     Provides local LLM inference using HuggingFace Transformers models
     with automatic Intel XPU acceleration when available, falling back
@@ -180,7 +183,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """
+        Get the provider's name.
 
         Returns:
             ProviderName: ProviderName.LOCAL_TRANSFORMERS
@@ -189,7 +193,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def device_type(self) -> str:
-        """Get the current device type.
+        """
+        Get the current device type.
 
         Returns:
             str: "xpu" or "cpu" depending on what's being used.
@@ -198,7 +203,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def xpu_available(self) -> bool:
-        """Check if XPU is available.
+        """
+        Check if XPU is available.
 
         Returns:
             bool: True if XPU is available and usable.
@@ -207,7 +213,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def is_b580_detected(self) -> bool:
-        """Check if an Arc B580 is detected.
+        """
+        Check if an Arc B580 is detected.
 
         Returns:
             bool: True if an Arc B580 GPU is detected.
@@ -216,7 +223,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def current_model_id(self) -> str | None:
-        """Get the currently loaded model ID.
+        """
+        Get the currently loaded model ID.
 
         Returns:
             str | None: Model ID or None if no model is loaded.
@@ -224,7 +232,8 @@ class LocalTransformersProvider(LLMProviderBase):
         return self._loaded_model.model_id if self._loaded_model else None
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """Connect to the local transformers provider.
+        """
+        Connect to the local transformers provider.
 
         Initializes XPU detection and validates system requirements.
         No API key is required for local inference.
@@ -288,7 +297,8 @@ class LocalTransformersProvider(LLMProviderBase):
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
-        """List local models that fit on the available hardware.
+        """
+        List local models that fit on the available hardware.
 
         When running on XPU the total VRAM is queried once and models
         whose estimated memory footprint exceeds 90 % of that VRAM are
@@ -370,7 +380,8 @@ class LocalTransformersProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Send a chat completion request.
+        """
+        Send a chat completion request.
 
         Args:
             messages: Conversation history.
@@ -458,7 +469,8 @@ class LocalTransformersProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """Stream a chat completion response.
+        """
+        Stream a chat completion response.
 
         After streaming completes, accumulated text is parsed for tool
         calls when tools are provided.
@@ -519,7 +531,8 @@ class LocalTransformersProvider(LLMProviderBase):
                 raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
 
     async def _ensure_model_loaded(self, model_id: str) -> None:
-        """Ensure the specified model is loaded.
+        """
+        Ensure the specified model is loaded.
 
         Args:
             model_id: Model to load.
@@ -582,7 +595,8 @@ class LocalTransformersProvider(LLMProviderBase):
         temperature: float,
         max_tokens: int,
     ) -> str:
-        """Generate text synchronously.
+        """
+        Generate text synchronously.
 
         Args:
             prompt: Input prompt.
@@ -634,7 +648,8 @@ class LocalTransformersProvider(LLMProviderBase):
         temperature: float,
         max_tokens: int,
     ) -> AsyncIterator[str]:
-        """Stream text generation.
+        """
+        Stream text generation.
 
         Args:
             prompt: Input prompt.
@@ -723,7 +738,8 @@ class LocalTransformersProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """Convert internal messages to a generic format.
+        """
+        Convert internal messages to a generic format.
 
         Args:
             messages: List of Message objects.
@@ -770,7 +786,8 @@ class LocalTransformersProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """Convert tools to a generic format.
+        """
+        Convert tools to a generic format.
 
         Args:
             tools: List of ToolDefinition objects.
@@ -789,7 +806,8 @@ class LocalTransformersProvider(LLMProviderBase):
         messages: list[dict[str, object]],
         tools: list[ToolDefinition] | None = None,
     ) -> str:
-        """Format messages into a prompt string using the tokenizer's chat template.
+        """
+        Format messages into a prompt string using the tokenizer's chat template.
 
         Uses ``tokenizer.apply_chat_template`` when available so every
         model family (Phi-3, Llama-3, Mistral, Qwen, TinyLlama/ChatML,
@@ -832,7 +850,8 @@ class LocalTransformersProvider(LLMProviderBase):
         messages: list[dict[str, object]],
         tools: list[ToolDefinition] | None = None,
     ) -> list[dict[str, str]]:
-        """Build a normalized message list suitable for chat templates.
+        """
+        Build a normalized message list suitable for chat templates.
 
         Converts the internal message dictionaries into the
         ``[{"role": ..., "content": ...}]`` format that HuggingFace
@@ -884,7 +903,8 @@ class LocalTransformersProvider(LLMProviderBase):
     def _format_prompt_chatml_fallback(
         chat_messages: list[dict[str, str]],
     ) -> str:
-        """Format messages using the ChatML template as a universal fallback.
+        """
+        Format messages using the ChatML template as a universal fallback.
 
         ChatML (``<|im_start|>``/``<|im_end|>``) is the most widely
         supported fallback template across open-source models and is
@@ -908,7 +928,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @staticmethod
     def _parse_tool_calls(response: str) -> list[ToolCall] | None:
-        """Parse tool calls from response.
+        """
+        Parse tool calls from response.
 
         Args:
             response: Model response text.
@@ -973,7 +994,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @staticmethod
     def _extract_text_before_tool_call(response: str) -> str:
-        """Extract text before tool call JSON.
+        """
+        Extract text before tool call JSON.
 
         Args:
             response: Full response text.
@@ -986,7 +1008,8 @@ class LocalTransformersProvider(LLMProviderBase):
         return response
 
     def get_device_info(self) -> dict[str, object]:
-        """Get information about the current device.
+        """
+        Get information about the current device.
 
         Returns:
             dict[str, object]: Dictionary with device information.

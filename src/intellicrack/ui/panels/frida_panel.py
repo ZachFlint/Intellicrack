@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Frida instrumentation panel for Intellicrack.
+"""
+Frida instrumentation panel for Intellicrack.
 
-Provides a script editor, console output, and hook manager
-for interacting with Frida dynamic instrumentation framework.
+Provides a script editor, console output, and hook manager for interacting with Frida dynamic instrumentation framework.
 """
 
 from __future__ import annotations
@@ -74,7 +74,8 @@ _HOOK_COL_STATUS = 3
 
 
 class FridaPanel(AnalysisPanelBase):
-    """Panel for Frida dynamic instrumentation and hooking.
+    """
+    Panel for Frida dynamic instrumentation and hooking.
 
     Provides a script editor for writing Frida JavaScript,
     a console for viewing output, and a hook manager table
@@ -100,7 +101,8 @@ class FridaPanel(AnalysisPanelBase):
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """Add Frida-specific controls to the toolbar.
+        """
+        Add Frida-specific controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
@@ -136,7 +138,8 @@ class FridaPanel(AnalysisPanelBase):
 
     @override
     def _create_content(self) -> QWidget:
-        """Create the Frida instrumentation content area.
+        """
+        Create the Frida instrumentation content area.
 
         Returns:
             QWidget: Splitter with process browser, editor, hooks/threads, and console.
@@ -180,7 +183,8 @@ class FridaPanel(AnalysisPanelBase):
         self._attached_pid = None
 
     def _create_editor_section(self) -> QWidget:
-        """Create the script editor section.
+        """
+        Create the script editor section.
 
         Returns:
             QWidget: Editor container widget.
@@ -209,7 +213,8 @@ class FridaPanel(AnalysisPanelBase):
         return editor_container
 
     def _create_process_browser(self) -> QWidget:
-        """Create the process browser panel.
+        """
+        Create the process browser panel.
 
         Returns:
             QWidget: Process browser container widget.
@@ -244,7 +249,8 @@ class FridaPanel(AnalysisPanelBase):
         return container
 
     def _create_right_tabs(self) -> QWidget:
-        """Create the tabbed right panel with hooks, threads, and stalker.
+        """
+        Create the tabbed right panel with hooks, threads, and stalker.
 
         Returns:
             QWidget: Tab widget containing hooks, threads, and stalker tabs.
@@ -256,7 +262,8 @@ class FridaPanel(AnalysisPanelBase):
         return self._right_tabs
 
     def _create_hooks_section(self) -> QWidget:
-        """Create the hooks manager section.
+        """
+        Create the hooks manager section.
 
         Returns:
             QWidget: Hooks container widget.
@@ -295,7 +302,8 @@ class FridaPanel(AnalysisPanelBase):
         return hooks_container
 
     def _create_threads_section(self) -> QWidget:
-        """Create the thread viewer section.
+        """
+        Create the thread viewer section.
 
         Returns:
             QWidget: Threads container widget.
@@ -328,7 +336,8 @@ class FridaPanel(AnalysisPanelBase):
         return container
 
     def _create_stalker_section(self) -> QWidget:
-        """Create the Stalker code tracing controls.
+        """
+        Create the Stalker code tracing controls.
 
         Returns:
             QWidget: Stalker controls container widget.
@@ -394,7 +403,8 @@ class FridaPanel(AnalysisPanelBase):
         return container
 
     def set_bridge(self, bridge: FridaBridge) -> None:
-        """Set the FridaBridge instance for instrumentation.
+        """
+        Set the FridaBridge instance for instrumentation.
 
         Args:
             bridge: The FridaBridge to use.
@@ -404,7 +414,8 @@ class FridaPanel(AnalysisPanelBase):
         _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> FridaBridge | None:
-        """Get the current FridaBridge instance.
+        """
+        Get the current FridaBridge instance.
 
         Returns:
             FridaBridge | None: The attached bridge or None.
@@ -412,7 +423,8 @@ class FridaPanel(AnalysisPanelBase):
         return self._bridge
 
     def log_message(self, message: str) -> None:
-        """Append a message to the console output.
+        """
+        Append a message to the console output.
 
         Args:
             message: Text to display.
@@ -420,7 +432,8 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(message)
 
     def _on_frida_message(self, message: dict[str, object]) -> None:
-        """Handle messages from Frida scripts.
+        """
+        Handle messages from Frida scripts.
 
         Args:
             message: Frida message dictionary.
@@ -468,7 +481,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _on_attach_pid_success(self, pid: int) -> None:
-        """Handle successful PID-based attach.
+        """
+        Handle successful PID-based attach.
 
         Args:
             pid: The attached process ID.
@@ -482,7 +496,8 @@ class FridaPanel(AnalysisPanelBase):
         self.tool_started.emit()
 
     def _on_attach_name_success(self, target: str) -> None:
-        """Handle successful name-based attach.
+        """
+        Handle successful name-based attach.
 
         Args:
             target: The process name attached to.
@@ -495,7 +510,8 @@ class FridaPanel(AnalysisPanelBase):
         self.tool_started.emit()
 
     def _on_attach_failed(self, target: str, exc: object) -> None:
-        """Handle attach failure.
+        """
+        Handle attach failure.
 
         Args:
             target: The target that failed to attach.
@@ -530,7 +546,8 @@ class FridaPanel(AnalysisPanelBase):
         self.tool_closed.emit()
 
     def _on_detach_error(self, exc: object) -> None:
-        """Handle detach failure.
+        """
+        Handle detach failure.
 
         Args:
             exc: The exception that occurred.
@@ -564,7 +581,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _on_run_script_success(self, script_size: int, result: object) -> None:
-        """Handle successful persistent script load.
+        """
+        Handle successful persistent script load.
 
         Args:
             script_size: Size of the executed script in characters.
@@ -578,7 +596,8 @@ class FridaPanel(AnalysisPanelBase):
         _logger.info("frida_script_executed", script_size=script_size)
 
     def _on_run_script_error(self, exc: object) -> None:
-        """Handle script execution failure.
+        """
+        Handle script execution failure.
 
         Args:
             exc: The exception that occurred.
@@ -613,7 +632,8 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText("[+] Script stopped")
 
     def _on_stop_script_error(self, exc: object) -> None:
-        """Handle script stop failure.
+        """
+        Handle script stop failure.
 
         Args:
             exc: The exception that occurred.
@@ -657,7 +677,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _on_hook_installed(self, row: int, target: str, result: object) -> None:
-        """Handle successful hook installation.
+        """
+        Handle successful hook installation.
 
         Args:
             row: Table row index for the hook.
@@ -695,7 +716,8 @@ class FridaPanel(AnalysisPanelBase):
         _logger.info("frida_hook_installed", target=target, hook_id=hook_id)
 
     def _on_hook_install_error(self, row: int, exc: object) -> None:
-        """Handle hook installation failure.
+        """
+        Handle hook installation failure.
 
         Args:
             row: Table row for the failed hook.
@@ -727,7 +749,8 @@ class FridaPanel(AnalysisPanelBase):
         self._hooks_table.removeRow(selected)
 
     def _on_hook_removed(self, row_index: int, hook_id: str) -> None:
-        """Handle successful hook removal.
+        """
+        Handle successful hook removal.
 
         Args:
             row_index: Table row to remove.
@@ -741,7 +764,8 @@ class FridaPanel(AnalysisPanelBase):
         self._remove_hook_btn.setEnabled(True)
 
     def _on_hook_remove_error(self, hook_id: str, exc: object) -> None:
-        """Handle hook removal failure.
+        """
+        Handle hook removal failure.
 
         Args:
             hook_id: The hook that failed to remove.
@@ -759,7 +783,8 @@ class FridaPanel(AnalysisPanelBase):
         status: str = "Active",
         hook_id: str = "",
     ) -> None:
-        """Add a hook entry to the table.
+        """
+        Add a hook entry to the table.
 
         Args:
             address: Hook address (hex string).
@@ -779,7 +804,8 @@ class FridaPanel(AnalysisPanelBase):
         _logger.debug("frida_hook_entry_added", address=address, target_module=module, function=function)
 
     def _on_device_changed(self, device_text: str) -> None:
-        """Handle device selector change.
+        """
+        Handle device selector change.
 
         Args:
             device_text: Selected device identifier text.
@@ -816,7 +842,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _populate_process_table(self, result: object) -> None:
-        """Populate the process table from enumeration results.
+        """
+        Populate the process table from enumeration results.
 
         Args:
             result: List of process dictionaries from the bridge.
@@ -837,7 +864,8 @@ class FridaPanel(AnalysisPanelBase):
         self._refresh_procs_btn.setEnabled(True)
 
     def _on_refresh_processes_error(self, exc: object) -> None:
-        """Handle process enumeration failure.
+        """
+        Handle process enumeration failure.
 
         Args:
             exc: The exception that occurred.
@@ -874,7 +902,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _populate_threads_table(self, result: object) -> None:
-        """Populate the threads table from enumeration results.
+        """
+        Populate the threads table from enumeration results.
 
         Args:
             result: List of ThreadInfo from the bridge.
@@ -898,7 +927,8 @@ class FridaPanel(AnalysisPanelBase):
         self._refresh_threads_btn.setEnabled(True)
 
     def _on_refresh_threads_error(self, exc: object) -> None:
-        """Handle thread enumeration failure.
+        """
+        Handle thread enumeration failure.
 
         Args:
             exc: The exception that occurred.
@@ -908,7 +938,8 @@ class FridaPanel(AnalysisPanelBase):
         self._refresh_threads_btn.setEnabled(True)
 
     def _get_stalker_events_string(self) -> str:
-        """Build comma-separated events string from stalker checkboxes.
+        """
+        Build comma-separated events string from stalker checkboxes.
 
         Returns:
             str: Comma-separated event type string.
@@ -951,7 +982,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _on_stalker_started(self, result: object) -> None:
-        """Handle successful Stalker trace start.
+        """
+        Handle successful Stalker trace start.
 
         Args:
             result: Trace ID from the bridge.
@@ -961,7 +993,8 @@ class FridaPanel(AnalysisPanelBase):
         self._stalker_stop_btn.setEnabled(True)
 
     def _on_stalker_start_error(self, exc: object) -> None:
-        """Handle Stalker start failure.
+        """
+        Handle Stalker start failure.
 
         Args:
             exc: The exception that occurred.
@@ -991,7 +1024,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _on_stalker_stopped(self, result: object) -> None:
-        """Handle Stalker trace completion and display results.
+        """
+        Handle Stalker trace completion and display results.
 
         Args:
             result: StalkerTrace from the bridge.
@@ -1014,7 +1048,8 @@ class FridaPanel(AnalysisPanelBase):
         self._stalker_stop_btn.setEnabled(False)
 
     def _on_stalker_stop_error(self, exc: object) -> None:
-        """Handle Stalker stop failure.
+        """
+        Handle Stalker stop failure.
 
         Args:
             exc: The exception that occurred.
@@ -1036,7 +1071,8 @@ class FridaPanel(AnalysisPanelBase):
         )
 
     def _populate_device_combo(self, result: object) -> None:
-        """Populate the device combo box from enumeration results.
+        """
+        Populate the device combo box from enumeration results.
 
         Args:
             result: List of FridaDeviceInfo from the bridge.

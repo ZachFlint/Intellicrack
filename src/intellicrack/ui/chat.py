@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Chat panel widget for the Intellicrack UI.
+"""
+Chat panel widget for the Intellicrack UI.
 
-This module provides the chat interface for interacting with the AI
-orchestrator, displaying conversation history and tool call information.
+This module provides the chat interface for interacting with the AI orchestrator, displaying conversation history and tool call information.
 """
 
 from __future__ import annotations
@@ -52,7 +52,8 @@ _MAX_RESULT_DISPLAY_LEN = 200
 
 
 class MessageBubble(QFrame):
-    """A single message bubble in the chat.
+    """
+    A single message bubble in the chat.
 
     Displays a message from the user, assistant, or tool with
     appropriate styling and formatting.
@@ -111,7 +112,8 @@ class MessageBubble(QFrame):
         self._apply_style()
 
     def _get_role_display(self) -> str:
-        """Get display text for message role.
+        """
+        Get display text for message role.
 
         Returns:
             str: Role display string with emoji.
@@ -134,7 +136,8 @@ class MessageBubble(QFrame):
 
     @staticmethod
     def _create_tool_call_widget(call: ToolCall) -> QFrame:
-        """Create a widget displaying a tool call.
+        """
+        Create a widget displaying a tool call.
 
         Args:
             call: The tool call to display.
@@ -168,7 +171,8 @@ class MessageBubble(QFrame):
 
     @staticmethod
     def _create_tool_result_widget(result: ToolResult) -> QFrame:
-        """Create a widget displaying a tool result.
+        """
+        Create a widget displaying a tool result.
 
         Args:
             result: The tool result to display.
@@ -209,7 +213,8 @@ class MessageBubble(QFrame):
 
 
 class ChatInput(QFrame):
-    """Chat input widget with send button.
+    """
+    Chat input widget with send button.
 
     Provides a text input area and send button for composing
     messages to send to the AI.
@@ -334,7 +339,8 @@ class ChatInput(QFrame):
             """)
 
     def set_enabled(self, enabled: bool) -> None:
-        """Enable or disable the input.
+        """
+        Enable or disable the input.
 
         Args:
             enabled: Whether input should be enabled.
@@ -354,7 +360,8 @@ class ChatInput(QFrame):
 
 
 class ChatPanel(QFrame):
-    """Main chat panel widget.
+    """
+    Main chat panel widget.
 
     Contains the message history scroll area and input widget.
     Manages displaying conversation messages and collecting user input.
@@ -424,7 +431,8 @@ class ChatPanel(QFrame):
         self.setObjectName("chat_panel")
 
     def add_message(self, message: Message) -> None:
-        """Add a message to the chat.
+        """
+        Add a message to the chat.
 
         Args:
             message: Message to add.
@@ -446,7 +454,8 @@ class ChatPanel(QFrame):
         self._scroll_to_bottom()
 
     def add_streaming_message(self) -> Callable[[str], None]:
-        """Create a streaming message and return the append function.
+        """
+        Create a streaming message and return the append function.
 
         Returns:
             Callable[[str], None]: Function to call with each text chunk.
@@ -499,7 +508,8 @@ class ChatPanel(QFrame):
                     widget.deleteLater()
 
     def set_input_enabled(self, enabled: bool) -> None:
-        """Enable or disable the input widget.
+        """
+        Enable or disable the input widget.
 
         Args:
             enabled: Whether input should be enabled.
@@ -513,7 +523,8 @@ class ChatPanel(QFrame):
             scrollbar.setValue(scrollbar.maximum())
 
     def get_messages(self) -> list[Message]:
-        """Get all messages in the chat.
+        """
+        Get all messages in the chat.
 
         Returns:
             list[Message]: List of messages.

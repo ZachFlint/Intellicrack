@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Transform pipeline system for chaining binary data transformations.
+"""
+Transform pipeline system for chaining binary data transformations.
 
-Provides a Python-side pipeline that wraps Rust hexcore transforms and
-exposes additional Python-only transform nodes. Pipelines can be built
-from any combination of Rust-accelerated and pure-Python steps.
+Provides a Python-side pipeline that wraps Rust hexcore transforms and exposes additional Python-only transform nodes. Pipelines can be
+built from any combination of Rust-accelerated and pure-Python steps.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import ast
 import operator
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, override
 
 from intellicrack.core.logging import get_logger
 
@@ -42,6 +42,10 @@ class TransformParamError(ValueError):
 
     def __init__(self, node_name: str, detail: str) -> None:
         super().__init__(f"{node_name}: {detail}")
+
+
+class HexcoreUnavailableError(RuntimeError):
+    """Raised when intellicrack_hexcore is not importable."""
 
 
 _hexcore_mod: Any = None
@@ -87,7 +91,8 @@ _COMPARE_OPS: dict[type[ast.cmpop], Any] = {
 
 
 def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
-    """Evaluate a restricted AST expression node.
+    """
+    Evaluate a restricted AST expression node.
 
     Supports arithmetic, bitwise, comparison, and conditional expressions
     using ``b`` (byte value) and ``i`` (byte index) as variables. No
@@ -172,7 +177,8 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
 
 
 class TransformNode:
-    """Base class for a single transform step in a pipeline.
+    """
+    Base class for a single transform step in a pipeline.
 
     Subclasses override ``name``, ``category``, and ``process`` to provide
     concrete transform behaviour. The base class returns safe no-op defaults
@@ -181,7 +187,8 @@ class TransformNode:
 
     @property
     def name(self) -> str:
-        """Unique identifier for this transform.
+        """
+        Unique identifier for this transform.
 
         Returns:
             str: Transform name, empty string in the base class.
@@ -190,7 +197,8 @@ class TransformNode:
 
     @property
     def category(self) -> str:
-        """Grouping category for this transform.
+        """
+        Grouping category for this transform.
 
         Returns:
             str: Category string, empty string in the base class.
@@ -199,16 +207,17 @@ class TransformNode:
 
     @property
     def description(self) -> str:
-        """Human-readable description of what the transform does.
+        """
+        Human-readable description of what the transform does.
 
         Returns:
             str: Description string, empty by default.
         """
         return ""
 
-    @staticmethod
-    def process(data: bytes, params: dict[str, Any]) -> bytes:
-        """Apply this transform to binary data.
+    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+        """
+        Apply this transform to binary data.
 
         The base implementation returns ``data`` unchanged. Subclasses must
         override this method to perform the actual transformation.
@@ -220,12 +229,13 @@ class TransformNode:
         Returns:
             bytes: Transformed output bytes.
         """
-        _ = params
+        _logger.debug("transform_noop", node=self.name, params_keys=list(params))
         return data
 
 
 class RustTransformNode(TransformNode):
-    """Wraps a Rust hexcore transform exposed via ``HexDocument.transform_data``.
+    """
+    Wraps a Rust hexcore transform exposed via ``HexDocument.transform_data``.
 
     Args:
         transform_name: Name of the Rust-side transform to invoke.
@@ -245,7 +255,8 @@ class RustTransformNode(TransformNode):
 
     @property
     def name(self) -> str:
-        """Rust transform name.
+        """
+        Rust transform name.
 
         Returns:
             str: The registered transform name on the Rust side.
@@ -254,7 +265,8 @@ class RustTransformNode(TransformNode):
 
     @property
     def category(self) -> str:
-        """Transform category.
+        """
+        Transform category.
 
         Returns:
             str: Category string supplied at construction.
@@ -263,15 +275,18 @@ class RustTransformNode(TransformNode):
 
     @property
     def description(self) -> str:
-        """Transform description.
+        """
+        Transform description.
 
         Returns:
             str: Description string supplied at construction.
         """
         return self._description
 
+    @override
     def process(self, data: bytes, params: dict[str, Any]) -> bytes:
-        """Apply the Rust-side transform to data.
+        """
+        Apply the Rust-side transform to data.
 
         Creates a temporary ``HexDocument`` from ``data``, calls
         ``transform_data``, and returns the result. String params are
@@ -288,10 +303,10 @@ class RustTransformNode(TransformNode):
             bytes: Transformed output bytes.
 
         Raises:
-            RuntimeError: If hexcore is not available.
+            HexcoreUnavailableError: If hexcore is not available.
         """
         if not _hexcore_available or _hexcore_mod is None:
-            raise RuntimeError("intellicrack_hexcore is not available")
+            raise HexcoreUnavailableError
 
         doc = _hexcore_mod.HexDocument.open_bytes(data)
 
@@ -315,7 +330,8 @@ class RustTransformNode(TransformNode):
 
 
 class RegexReplaceNode(TransformNode):
-    """Replace binary patterns in data using a regular expression.
+    """
+    Replace binary patterns in data using a regular expression.
 
     The regex is applied to the raw byte string. The replacement is
     specified as a hex string in ``params["replacement"]``.
@@ -327,7 +343,8 @@ class RegexReplaceNode(TransformNode):
 
     @property
     def name(self) -> str:
-        """Node name.
+        """
+        Node name.
 
         Returns:
             str: "regex_replace".
@@ -336,7 +353,8 @@ class RegexReplaceNode(TransformNode):
 
     @property
     def category(self) -> str:
-        """Node category.
+        """
+        Node category.
 
         Returns:
             str: "python".
@@ -345,16 +363,18 @@ class RegexReplaceNode(TransformNode):
 
     @property
     def description(self) -> str:
-        """Node description.
+        """
+        Node description.
 
         Returns:
             str: Human-readable description.
         """
         return "Replace binary patterns using a regular expression"
 
-    @staticmethod
-    def process(data: bytes, params: dict[str, Any]) -> bytes:
-        """Apply regex search-and-replace on binary data.
+    @override
+    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+        """
+        Apply regex search-and-replace on binary data.
 
         Args:
             data: Input bytes.
@@ -388,7 +408,8 @@ class RegexReplaceNode(TransformNode):
 
 
 class CustomExpressionNode(TransformNode):
-    """Apply a Python expression to each byte individually.
+    r"""
+    Apply a Python expression to each byte individually.
 
     The expression is evaluated per byte with ``b`` bound to the current
     byte value (0-255) and ``i`` bound to the byte index. The result is
@@ -401,12 +422,13 @@ class CustomExpressionNode(TransformNode):
     Example::
 
         node = CustomExpressionNode()
-        result = node.process(b"\\x00\\x01\\x02", {"expression": "b ^ 0x55"})
+        result = node.process(b"\x00\x01\x02", {"expression": "b ^ 0x55"})
     """
 
     @property
     def name(self) -> str:
-        """Node name.
+        """
+        Node name.
 
         Returns:
             str: "custom_expression".
@@ -415,7 +437,8 @@ class CustomExpressionNode(TransformNode):
 
     @property
     def category(self) -> str:
-        """Node category.
+        """
+        Node category.
 
         Returns:
             str: "python".
@@ -424,16 +447,18 @@ class CustomExpressionNode(TransformNode):
 
     @property
     def description(self) -> str:
-        """Node description.
+        """
+        Node description.
 
         Returns:
             str: Human-readable description.
         """
         return "Apply a Python expression to each byte; use 'b' for byte value, 'i' for index"
 
-    @staticmethod
-    def process(data: bytes, params: dict[str, Any]) -> bytes:
-        """Evaluate the expression for every byte in data.
+    @override
+    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+        """
+        Evaluate the expression for every byte in data.
 
         The expression is parsed with ``ast.parse`` and evaluated using a
         restricted AST walker that supports only arithmetic, bitwise,
@@ -469,7 +494,8 @@ class CustomExpressionNode(TransformNode):
 
 
 class RepeatNode(TransformNode):
-    """Repeat the input data a specified number of times.
+    """
+    Repeat the input data a specified number of times.
 
     Params:
         count: Number of repetitions (int, must be >= 1).
@@ -477,7 +503,8 @@ class RepeatNode(TransformNode):
 
     @property
     def name(self) -> str:
-        """Node name.
+        """
+        Node name.
 
         Returns:
             str: "repeat".
@@ -486,7 +513,8 @@ class RepeatNode(TransformNode):
 
     @property
     def category(self) -> str:
-        """Node category.
+        """
+        Node category.
 
         Returns:
             str: "python".
@@ -495,16 +523,18 @@ class RepeatNode(TransformNode):
 
     @property
     def description(self) -> str:
-        """Node description.
+        """
+        Node description.
 
         Returns:
             str: Human-readable description.
         """
         return "Repeat input data N times"
 
-    @staticmethod
-    def process(data: bytes, params: dict[str, Any]) -> bytes:
-        """Repeat data by the count factor.
+    @override
+    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+        """
+        Repeat data by the count factor.
 
         Args:
             data: Input bytes to repeat.
@@ -529,7 +559,8 @@ class RepeatNode(TransformNode):
 
 
 class TruncateNode(TransformNode):
-    """Truncate data to a maximum number of bytes.
+    """
+    Truncate data to a maximum number of bytes.
 
     Params:
         length: Maximum number of bytes to keep (int, must be >= 0).
@@ -537,7 +568,8 @@ class TruncateNode(TransformNode):
 
     @property
     def name(self) -> str:
-        """Node name.
+        """
+        Node name.
 
         Returns:
             str: "truncate".
@@ -546,7 +578,8 @@ class TruncateNode(TransformNode):
 
     @property
     def category(self) -> str:
-        """Node category.
+        """
+        Node category.
 
         Returns:
             str: "python".
@@ -555,16 +588,18 @@ class TruncateNode(TransformNode):
 
     @property
     def description(self) -> str:
-        """Node description.
+        """
+        Node description.
 
         Returns:
             str: Human-readable description.
         """
         return "Truncate data to at most N bytes"
 
-    @staticmethod
-    def process(data: bytes, params: dict[str, Any]) -> bytes:
-        """Return the first ``length`` bytes of data.
+    @override
+    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+        """
+        Return the first ``length`` bytes of data.
 
         Args:
             data: Input bytes.
@@ -592,7 +627,8 @@ class TruncateNode(TransformNode):
 
 
 class PadNode(TransformNode):
-    """Pad data to a target length with a specified fill byte.
+    """
+    Pad data to a target length with a specified fill byte.
 
     If data is already at or beyond ``length``, it is returned unchanged.
 
@@ -603,7 +639,8 @@ class PadNode(TransformNode):
 
     @property
     def name(self) -> str:
-        """Node name.
+        """
+        Node name.
 
         Returns:
             str: "pad".
@@ -612,7 +649,8 @@ class PadNode(TransformNode):
 
     @property
     def category(self) -> str:
-        """Node category.
+        """
+        Node category.
 
         Returns:
             str: "python".
@@ -621,16 +659,18 @@ class PadNode(TransformNode):
 
     @property
     def description(self) -> str:
-        """Node description.
+        """
+        Node description.
 
         Returns:
             str: Human-readable description.
         """
         return "Pad data to a target length with a fill byte"
 
-    @staticmethod
-    def process(data: bytes, params: dict[str, Any]) -> bytes:
-        """Pad data to the requested length.
+    @override
+    def process(self, data: bytes, params: dict[str, Any]) -> bytes:
+        """
+        Pad data to the requested length.
 
         Args:
             data: Input bytes.
@@ -675,7 +715,8 @@ class PadNode(TransformNode):
 
 @dataclass
 class PipelineStep:
-    """A single step in a transform pipeline.
+    """
+    A single step in a transform pipeline.
 
     Attributes:
         node: The transform node to execute.
@@ -687,7 +728,8 @@ class PipelineStep:
 
 
 class TransformPipeline:
-    """Ordered chain of binary transform operations.
+    """
+    Ordered chain of binary transform operations.
 
     Steps execute in insertion order, each receiving the output of the
     previous step as its input. The pipeline accumulates steps via
@@ -698,7 +740,8 @@ class TransformPipeline:
         self._steps: list[PipelineStep] = []
 
     def add_step(self, node: TransformNode, params: dict[str, Any] | None = None) -> int:
-        """Append a transform step to the end of the pipeline.
+        """
+        Append a transform step to the end of the pipeline.
 
         Args:
             node: Transform node to add.
@@ -718,7 +761,8 @@ class TransformPipeline:
         return len(self._steps) - 1
 
     def remove_step(self, index: int) -> bool:
-        """Remove the step at the given index.
+        """
+        Remove the step at the given index.
 
         Args:
             index: Zero-based index of the step to remove.
@@ -734,7 +778,8 @@ class TransformPipeline:
         return True
 
     def move_step(self, from_index: int, to_index: int) -> bool:
-        """Reorder a step within the pipeline.
+        """
+        Reorder a step within the pipeline.
 
         Args:
             from_index: Current zero-based index of the step.
@@ -758,7 +803,8 @@ class TransformPipeline:
         return True
 
     def execute(self, data: bytes) -> bytes:
-        """Execute all pipeline steps in order on the input data.
+        """
+        Execute all pipeline steps in order on the input data.
 
         Each step receives the output of the previous step. Steps are
         executed even if ``data`` is empty.
@@ -775,7 +821,8 @@ class TransformPipeline:
         return result
 
     def preview(self, data: bytes) -> list[tuple[str, bytes]]:
-        """Execute the pipeline and capture intermediate outputs.
+        """
+        Execute the pipeline and capture intermediate outputs.
 
         Args:
             data: Initial input bytes.
@@ -793,7 +840,8 @@ class TransformPipeline:
 
     @property
     def steps(self) -> list[PipelineStep]:
-        """Return a shallow copy of the current step list.
+        """
+        Return a shallow copy of the current step list.
 
         Returns:
             list[PipelineStep]: Copy of all pipeline steps in order.
@@ -807,7 +855,8 @@ class TransformPipeline:
 
 
 def get_all_transform_nodes() -> list[TransformNode]:
-    """Build a list of all available transform nodes.
+    """
+    Build a list of all available transform nodes.
 
     Rust hexcore transforms are included when the extension module is
     importable. Python-only transforms are always included.

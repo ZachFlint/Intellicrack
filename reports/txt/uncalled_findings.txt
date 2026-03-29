@@ -2,9 +2,9 @@
 
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function clear_highlight_rules
 
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function contextMenuEvent
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function clear_highlights
 
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function get_highlight_rules
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function contextMenuEvent
 
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseMoveEvent
 
@@ -72,15 +72,6 @@ src\intellicrack\core\hexpat\interpreter.py: Unused function compile_to_json
 src\intellicrack\core\hexpat\interpreter.py: Unused function execute_bytes
 
 
-3 findings in src\intellicrack\core\transform_pipeline.py
-
-src\intellicrack\core\transform_pipeline.py: Unused function move_step
-
-src\intellicrack\core\transform_pipeline.py: Unused function preview
-
-src\intellicrack\core\transform_pipeline.py: Unused function remove_step
-
-
 3 findings in src\intellicrack\credentials\oauth.py
 
 src\intellicrack\credentials\oauth.py: Unused function do_GET
@@ -128,7 +119,7 @@ src\intellicrack\bridges\base.py: Unused function supports_format
 
 src\intellicrack\bridges\hex_state.py: Unused function clear_selection
 
-src\intellicrack\bridges\hex_state.py: Unused function unregister_callback
+src\intellicrack\bridges\hex_state.py: Unused function get_current_state
 
 
 2 findings in src\intellicrack\core\hexpat\pattern_registry.py
@@ -191,9 +182,9 @@ src\intellicrack\core\process_manager.py: Unused function reset_instance
 src\intellicrack\core\script_gen.py: Unused function prepare_ai_prompt
 
 
-1 findings in src\intellicrack\ui\app.py
+1 findings in src\intellicrack\core\transform_pipeline.py
 
-src\intellicrack\ui\app.py: Unused function closeEvent
+src\intellicrack\core\transform_pipeline.py: Unused function preview
 
 
 1 findings in src\intellicrack\ui\confirmation_dialog.py
@@ -204,11 +195,6 @@ src\intellicrack\ui\confirmation_dialog.py: Unused function remember_similar
 1 findings in src\intellicrack\ui\highlighter.py
 
 src\intellicrack\ui\highlighter.py: Unused function highlightBlock
-
-
-1 findings in src\intellicrack\ui\panel_dock.py
-
-src\intellicrack\ui\panel_dock.py: Unused function closeEvent
 
 
 1 findings in src\intellicrack\ui\panels\binary_panel.py

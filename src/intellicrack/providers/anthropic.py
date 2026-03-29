@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Anthropic Claude API provider implementation.
+"""
+Anthropic Claude API provider implementation.
 
-This module provides integration with Anthropic's Claude models for
-chat completion and tool/function calling.
+This module provides integration with Anthropic's Claude models for chat completion and tool/function calling.
 """
 
 from __future__ import annotations
@@ -58,10 +58,10 @@ _MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Anthropic API"
 
 
 class AnthropicProvider(LLMProviderBase):
-    """Anthropic Claude API provider implementation.
+    """
+    Anthropic Claude API provider implementation.
 
-    Provides integration with Anthropic's Claude models including
-    support for tool/function calling and streaming responses.
+    Provides integration with Anthropic's Claude models including support for tool/function calling and streaming responses.
     """
 
     def __init__(self) -> None:
@@ -72,7 +72,8 @@ class AnthropicProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """
+        Get the provider's name.
 
         Returns:
             ProviderName: ProviderName.ANTHROPIC
@@ -80,7 +81,8 @@ class AnthropicProvider(LLMProviderBase):
         return ProviderName.ANTHROPIC
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """Connect to Anthropic API.
+        """
+        Connect to Anthropic API.
 
         Args:
             credentials: Must contain api_key.
@@ -124,7 +126,8 @@ class AnthropicProvider(LLMProviderBase):
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
-        """Dynamically fetch available Claude models from Anthropic API.
+        """
+        Dynamically fetch available Claude models from Anthropic API.
 
         Uses the /v1/models endpoint to retrieve the current list of
         available models, handling pagination as needed.
@@ -151,7 +154,8 @@ class AnthropicProvider(LLMProviderBase):
             return models
 
     async def _fetch_all_models(self) -> list[ModelInfo]:
-        """Paginate through the models endpoint and collect all results.
+        """
+        Paginate through the models endpoint and collect all results.
 
         Returns:
             list[ModelInfo]: Complete list of ModelInfo objects from all pages.
@@ -177,7 +181,8 @@ class AnthropicProvider(LLMProviderBase):
 
     @staticmethod
     def _build_model_info(model_id: str, display_name_raw: object) -> ModelInfo:
-        """Construct a ModelInfo from API model data.
+        """
+        Construct a ModelInfo from API model data.
 
         All Anthropic chat models support tools, vision, and streaming with
         a 200k token context window.  No hardcoded model-name checks are
@@ -216,7 +221,8 @@ class AnthropicProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> dict[str, Any]:
-        """Build keyword arguments for the Anthropic messages API.
+        """
+        Build keyword arguments for the Anthropic messages API.
 
         Args:
             model: Model ID to use.
@@ -273,7 +279,8 @@ class AnthropicProvider(LLMProviderBase):
         self,
         response: AnthropicMessage,
     ) -> tuple[str, list[ToolCall], str]:
-        """Extract text, tool calls, and thinking from response content blocks.
+        """
+        Extract text, tool calls, and thinking from response content blocks.
 
         Args:
             response: The Anthropic API response message.
@@ -306,7 +313,8 @@ class AnthropicProvider(LLMProviderBase):
         return content, tool_calls, thinking_text
 
     async def _make_anthropic_api_call(self, api_kwargs: dict[str, Any]) -> AnthropicMessage:
-        """Execute the Anthropic messages API call with exception translation.
+        """
+        Execute the Anthropic messages API call with exception translation.
 
         Args:
             api_kwargs: Keyword arguments to pass to messages.create.
@@ -337,7 +345,8 @@ class AnthropicProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Send a chat completion request to Claude.
+        """
+        Send a chat completion request to Claude.
 
         Args:
             messages: Conversation history.
@@ -430,7 +439,8 @@ class AnthropicProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """Stream a chat completion response from Claude.
+        """
+        Stream a chat completion response from Claude.
 
         Args:
             messages: Conversation history.
@@ -525,7 +535,8 @@ class AnthropicProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """Convert internal messages to Anthropic format.
+        """
+        Convert internal messages to Anthropic format.
 
         Args:
             messages: List of Message objects.
@@ -542,7 +553,8 @@ class AnthropicProvider(LLMProviderBase):
         return result
 
     def _convert_single_message(self, msg: Message) -> dict[str, object] | None:
-        """Route a single message to its role-specific formatter.
+        """
+        Route a single message to its role-specific formatter.
 
         Args:
             msg: The message to convert.
@@ -560,7 +572,8 @@ class AnthropicProvider(LLMProviderBase):
 
     @staticmethod
     def _format_user_message(msg: Message) -> dict[str, object]:
-        """Format a user message for the Anthropic API.
+        """
+        Format a user message for the Anthropic API.
 
         Args:
             msg: The user message.
@@ -572,7 +585,8 @@ class AnthropicProvider(LLMProviderBase):
 
     @staticmethod
     def _format_assistant_message(msg: Message) -> dict[str, object]:
-        """Format an assistant message for the Anthropic API.
+        """
+        Format an assistant message for the Anthropic API.
 
         Args:
             msg: The assistant message.
@@ -597,7 +611,8 @@ class AnthropicProvider(LLMProviderBase):
 
     @staticmethod
     def _format_tool_message(msg: Message) -> dict[str, object] | None:
-        """Format a tool result message for the Anthropic API.
+        """
+        Format a tool result message for the Anthropic API.
 
         Args:
             msg: The tool result message.
@@ -623,7 +638,8 @@ class AnthropicProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """Convert internal tools to Anthropic format.
+        """
+        Convert internal tools to Anthropic format.
 
         Args:
             tools: List of ToolDefinition objects.
@@ -639,7 +655,8 @@ class AnthropicProvider(LLMProviderBase):
 
     @staticmethod
     def get_system_prompt(messages: list[Message]) -> str | None:
-        """Extract and concatenate all system messages into a single prompt.
+        """
+        Extract and concatenate all system messages into a single prompt.
 
         Args:
             messages: List of messages to scan.

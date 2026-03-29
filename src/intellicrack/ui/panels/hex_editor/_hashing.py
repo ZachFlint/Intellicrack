@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Hashing mixin for the hex editor panel."""
 
 from __future__ import annotations

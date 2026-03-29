@@ -142,7 +142,7 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_TAGGED_RULE))
-        assert len(results) >= 1
+        assert results
         tags: list[str] = results[0]["tags"]
         assert isinstance(tags, list)
         assert "executable" in tags
@@ -155,7 +155,7 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_TAGGED_RULE))
-        assert len(results) >= 1
+        assert results
         meta: dict[str, Any] = results[0]["meta"]
         assert isinstance(meta, dict)
         assert "author" in meta
@@ -173,7 +173,7 @@ class TestYaraScanInline:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.yara_scan(_REGEX_RULE))
-        assert len(results) >= 1
+        assert results
         assert results[0]["rule"] == "RegexMatch"
 
     def test_int3_hex_pattern_matches_pe_text_section(self, loaded_bridge: Any) -> None:
@@ -183,7 +183,7 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_INT3_TEXT_RULE))
-        assert len(results) >= 1
+        assert results
         assert results[0]["rule"] == "Int3InTextSection"
 
     def test_int3_match_strings_contain_correct_offset(self, loaded_bridge: Any) -> None:
@@ -193,10 +193,10 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_INT3_TEXT_RULE))
-        assert len(results) >= 1
+        assert results
         strings: list[dict[str, Any]] = results[0]["strings"]
         assert isinstance(strings, list)
-        assert len(strings) >= 1
+        assert strings
         found_offset = any(s["offset"] == _PE_TEXT_OFFSET for s in strings)
         assert found_offset
 
@@ -207,7 +207,7 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_INT3_TEXT_RULE))
-        assert len(results) >= 1
+        assert results
         strings: list[dict[str, Any]] = results[0]["strings"]
         target = next((s for s in strings if s["offset"] == _PE_TEXT_OFFSET), None)
         assert target is not None
@@ -220,7 +220,7 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_NO_MATCH_RULE))
-        assert results == []
+        assert not results
 
     def test_ascii_string_rule_matches_embedded_text(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that a plain ASCII string rule finds the literal in the document.
@@ -234,7 +234,7 @@ class TestYaraScanInline:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.yara_scan(_ASCII_PATTERN_RULE))
-        assert len(results) >= 1
+        assert results
         assert results[0]["rule"] == "AsciiText"
 
     def test_match_dict_has_all_required_keys(self, loaded_bridge: Any) -> None:
@@ -244,7 +244,7 @@ class TestYaraScanInline:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_RULE))
-        assert len(results) >= 1
+        assert results
         for match in results:
             assert _EXPECTED_MATCH_KEYS.issubset(match.keys())
 
@@ -263,7 +263,7 @@ class TestYaraScanFiles:
         rule_file.write_text(_MZ_RULE, encoding="utf-8")
         file_results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
         inline_results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_RULE))
-        assert len(file_results) >= 1
+        assert file_results
         file_rule_names = {r["rule"] for r in file_results}
         inline_rule_names = {r["rule"] for r in inline_results}
         assert file_rule_names == inline_rule_names
@@ -295,7 +295,7 @@ class TestYaraScanFiles:
         rule_file = tmp_path / "nomatch.yar"
         rule_file.write_text(_NO_MATCH_RULE, encoding="utf-8")
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
-        assert results == []
+        assert not results
 
     def test_nonexistent_yar_file_raises_or_returns_error(self, loaded_bridge: Any, tmp_path: Path) -> None:
         """Verify yara_scan_files with a nonexistent path raises an exception.
@@ -318,9 +318,9 @@ class TestYaraScanFiles:
         rule_file = tmp_path / "int3_strings.yar"
         rule_file.write_text(_INT3_TEXT_RULE, encoding="utf-8")
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
-        assert len(results) >= 1
+        assert results
         strings: list[dict[str, Any]] = results[0]["strings"]
-        assert len(strings) >= 1
+        assert strings
         for s in strings:
             assert "identifier" in s
             assert "offset" in s

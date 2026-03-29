@@ -1,25 +1,25 @@
 file,line,rule,description
-src\intellicrack\bridges\hex_editor.py,1342,low-code-quality,Low code quality found in HexEditorBridge.copy_as - 25%
-src\intellicrack\bridges\x64dbg.py,1632,low-code-quality,Low code quality found in X64DbgBridge.get_breakpoints - 21%
-src\intellicrack\bridges\x64dbg.py,1739,low-code-quality,Low code quality found in X64DbgBridge.get_watchpoints - 22%
-src\intellicrack\core\disassembler.py,153,switch,Simplify conditional into switch-like form
-src\intellicrack\core\disassembler.py,154,reintroduce-else,Lift code into else after jump in control flow
-src\intellicrack\core\disassembler.py,154,assign-if-exp,Replace if statement with if expression
-src\intellicrack\core\disassembler.py,152,switch,Simplify conditional into switch-like form
-src\intellicrack\core\disassembler.py,152,switch,Simplify conditional into switch-like form
-src\intellicrack\core\disassembler.py,288,low-code-quality,Low code quality found in HexDisassembler.auto_detect_arch - 15%
-src\intellicrack\core\transform_pipeline.py,68,low-code-quality,Low code quality found in _eval_ast_node - 14%
-src\intellicrack\providers\grok.py,414,low-code-quality,Low code quality found in GrokProvider.chat_stream - 18%
-src\intellicrack\providers\huggingface.py,440,low-code-quality,Low code quality found in HuggingFaceProvider.chat_stream - 14%
-src\intellicrack\providers\openai.py,457,low-code-quality,Low code quality found in OpenAIProvider.chat_stream - 16%
-src\intellicrack\providers\openrouter.py,385,low-code-quality,Low code quality found in OpenRouterProvider.chat_stream - 14%
-src\intellicrack\sandbox\manager.py,394,remove-unnecessary-cast,"Remove unnecessary casts to int, str, float or bool"
-src\intellicrack\ui\panels\hex_editor_panel.py,419,reintroduce-else,Lift code into else after jump in control flow
-src\intellicrack\ui\panels\hex_editor_panel.py,419,assign-if-exp,Replace if statement with if expression
-src\intellicrack\ui\panels\hex_editor_panel.py,1691,low-code-quality,Low code quality found in HexEditorPanel._update_statistics - 8%
-src\intellicrack\ui\panels\hex_editor_panel.py,1903,low-code-quality,Low code quality found in HexEditorPanel._populate_strings - 23%
-src\intellicrack\ui\panels\hex_editor_panel.py,3184,low-code-quality,Low code quality found in HexEditorPanel._on_import_patches - 23%
-src\intellicrack\ui\panels\hex_editor_panel.py,3328,low-code-quality,Low code quality found in HexEditorPanel._on_numeric_search - 22%
-src\intellicrack\ui\panels\hex_editor_widget.py,540,low-code-quality,Low code quality found in HexEditorWidget._format_group - 18%
-src\intellicrack\ui\panels\hex_editor_widget.py,614,low-code-quality,Low code quality found in HexEditorWidget._paint_hex_group - 16%
-src\intellicrack\ui\panels\hex_editor_widget.py,896,low-code-quality,Low code quality found in HexEditorWidget.keyPressEvent - 8%
+src\intellicrack\bridges\hex_editor.py,1727,low-code-quality,Low code quality found in HexEditorBridge.copy_as - 25%
+src\intellicrack\bridges\x64dbg.py,1677,low-code-quality,Low code quality found in X64DbgBridge.get_breakpoints - 21%
+src\intellicrack\bridges\x64dbg.py,1787,low-code-quality,Low code quality found in X64DbgBridge.get_watchpoints - 22%
+src\intellicrack\core\disassembler.py,293,low-code-quality,Low code quality found in HexDisassembler.auto_detect_arch - 17%
+src\intellicrack\core\transform_pipeline.py,93,low-code-quality,Low code quality found in _eval_ast_node - 12%
+src\intellicrack\core\hexpat\evaluator.py,1054,low-code-quality,Low code quality found in HexPatEvaluator._eval_array_type - 21%
+src\intellicrack\core\hexpat\evaluator.py,1326,low-code-quality,Low code quality found in HexPatEvaluator._read_primitive - 23%
+src\intellicrack\core\hexpat\lexer.py,295,low-code-quality,Low code quality found in HexPatLexer._scan_number - 14%
+src\intellicrack\core\hexpat\lexer.py,394,low-code-quality,Low code quality found in HexPatLexer._scan_operator - 4%
+src\intellicrack\core\hexpat\parser.py,415,low-code-quality,Low code quality found in HexPatParser._parse_expression - 22%
+src\intellicrack\core\hexpat\preprocessor.py,166,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\core\hexpat\preprocessor.py,90,low-code-quality,Low code quality found in HexPatPreprocessor.process - 14%
+src\intellicrack\core\hexpat\preprocessor.py,497,use-named-expression,Use named expression to simplify assignment and conditional
+src\intellicrack\core\hexpat\preprocessor.py,433,low-code-quality,Low code quality found in extract_pragmas_fast - 19%
+src\intellicrack\providers\grok.py,424,low-code-quality,Low code quality found in GrokProvider.chat_stream - 18%
+src\intellicrack\providers\huggingface.py,447,low-code-quality,Low code quality found in HuggingFaceProvider.chat_stream - 14%
+src\intellicrack\providers\openai.py,466,low-code-quality,Low code quality found in OpenAIProvider.chat_stream - 16%
+src\intellicrack\providers\openrouter.py,390,low-code-quality,Low code quality found in OpenRouterProvider.chat_stream - 14%
+src\intellicrack\ui\panels\hex_editor_widget.py,717,low-code-quality,Low code quality found in HexEditorWidget._format_group - 18%
+src\intellicrack\ui\panels\hex_editor_widget.py,1180,low-code-quality,Low code quality found in HexEditorWidget.keyPressEvent - 8%
+src\intellicrack\ui\panels\hex_editor\_disassembly.py,119,low-code-quality,Low code quality found in DisassemblyMixin._on_disassemble - 25%
+src\intellicrack\ui\panels\hex_editor\_patches.py,142,low-code-quality,Low code quality found in PatchesMixin._on_import_patches - 19%
+src\intellicrack\ui\panels\hex_editor\_search.py,501,low-code-quality,Low code quality found in SearchMixin._on_numeric_search - 24%
+src\intellicrack\ui\panels\hex_editor\_sections.py,147,low-code-quality,Low code quality found in SectionsMixin._populate_strings - 22%

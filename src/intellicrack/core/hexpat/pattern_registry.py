@@ -24,7 +24,8 @@ _logger = get_logger("core.hexpat.pattern_registry")
 
 @dataclass(frozen=True)
 class PatternMetadata:
-    """Metadata extracted from a .hexpat pattern file.
+    """
+    Metadata extracted from a .hexpat pattern file.
 
     Attributes:
         name: The pattern name derived from the filename.
@@ -46,7 +47,8 @@ class PatternMetadata:
 
 
 class PatternRegistry:
-    """Discovers, indexes, and matches .hexpat pattern files.
+    """
+    Discovers, indexes, and matches .hexpat pattern files.
 
     Scans specified directories for .hexpat files, extracts metadata from
     #pragma directives, and provides file-format matching via magic bytes.
@@ -56,7 +58,8 @@ class PatternRegistry:
     """
 
     def __init__(self, pattern_dirs: list[Path] | None = None) -> None:
-        """Initialize the pattern registry.
+        """
+        Initialize the pattern registry.
 
         Args:
             pattern_dirs: Directories to scan for .hexpat files.
@@ -68,10 +71,10 @@ class PatternRegistry:
         self._scanned: bool = False
 
     def scan(self) -> None:
-        """Scan all configured directories for .hexpat files.
+        """
+        Scan all configured directories for .hexpat files.
 
-        Reads the first ~80 lines of each file to extract #pragma metadata.
-        Results are cached until scan() is called again.
+        Reads the first ~80 lines of each file to extract #pragma metadata. Results are cached until scan() is called again.
         """
         self._patterns = []
         self._by_name = {}
@@ -98,7 +101,8 @@ class PatternRegistry:
         )
 
     def list_patterns(self) -> list[PatternMetadata]:
-        """List all discovered patterns.
+        """
+        List all discovered patterns.
 
         Returns:
             A list of PatternMetadata for all indexed .hexpat files,
@@ -109,7 +113,8 @@ class PatternRegistry:
         return sorted(self._patterns, key=lambda p: p.name)
 
     def list_by_category(self) -> dict[str, list[PatternMetadata]]:
-        """List patterns grouped by category.
+        """
+        List patterns grouped by category.
 
         Returns:
             A dict mapping category names to lists of PatternMetadata.
@@ -124,7 +129,8 @@ class PatternRegistry:
         return dict(sorted(result.items()))
 
     def get_pattern(self, name: str) -> PatternMetadata | None:
-        """Look up a pattern by name.
+        """
+        Look up a pattern by name.
 
         Args:
             name: The pattern name to look up.
@@ -137,7 +143,8 @@ class PatternRegistry:
         return self._by_name.get(name)
 
     def match_file(self, data_reader: DataReader) -> list[PatternMetadata]:
-        """Find patterns whose magic bytes match the given binary data.
+        """
+        Find patterns whose magic bytes match the given binary data.
 
         Reads the first 1024 bytes and checks each indexed pattern's
         magic_bytes against the data.
@@ -188,7 +195,8 @@ class PatternRegistry:
 
     @staticmethod
     def load_source(metadata: PatternMetadata) -> str:
-        """Load the full source code of a pattern file.
+        """
+        Load the full source code of a pattern file.
 
         Args:
             metadata: The pattern metadata with the file path.
@@ -203,7 +211,8 @@ class PatternRegistry:
 
     @staticmethod
     def _extract_metadata(path: Path) -> PatternMetadata | None:
-        """Extract metadata from a .hexpat file's pragma directives.
+        """
+        Extract metadata from a .hexpat file's pragma directives.
 
         Args:
             path: Path to the .hexpat file.

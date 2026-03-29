@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Data inspector mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -21,7 +20,8 @@ class DataInspectorMixin:
     _document: Any | None
 
     def _update_data_inspector(self, offset: int) -> None:
-        """Update the data inspector tree for the given offset.
+        """
+        Update the data inspector tree for the given offset.
 
         Args:
             offset: Byte offset to inspect.

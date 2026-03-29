@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Base protocol for LLM providers.
 
-"""Base protocol for LLM providers.
-
-This module defines the abstract interface that all LLM provider implementations
-must follow, enabling consistent interaction across Anthropic, OpenAI, Google,
-Ollama, and OpenRouter.
+This module defines the abstract interface that all LLM provider implementations must follow, enabling consistent interaction across
+Anthropic, OpenAI, Google, Ollama, and OpenRouter.
 """
 
 from __future__ import annotations
@@ -100,7 +99,8 @@ def parse_tool_call(
     function_name: str,
     raw_arguments: str | dict[str, object],
 ) -> ToolCall:
-    """Parse a tool call from provider-specific data into a ToolCall.
+    """
+    Parse a tool call from provider-specific data into a ToolCall.
 
     Handles JSON argument parsing and tool name extraction from
     dotted function names.
@@ -133,11 +133,11 @@ def parse_tool_call(
 
 
 class LLMProviderBase(ABC):
-    """Abstract base class for LLM providers.
+    """
+    Abstract base class for LLM providers.
 
-    All provider implementations must inherit from this class and implement
-    the abstract methods defined here. This ensures a consistent interface
-    for the orchestrator to interact with any LLM provider.
+    All provider implementations must inherit from this class and implement the abstract methods defined here. This ensures a consistent
+    interface for the orchestrator to interact with any LLM provider.
     """
 
     def __init__(self) -> None:
@@ -150,7 +150,8 @@ class LLMProviderBase(ABC):
     @property
     @abstractmethod
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """
+        Get the provider's name.
 
         Returns:
             ProviderName: The ProviderName enum value for this provider.
@@ -158,7 +159,8 @@ class LLMProviderBase(ABC):
 
     @property
     def is_connected(self) -> bool:
-        """Check if the provider is connected and authenticated.
+        """
+        Check if the provider is connected and authenticated.
 
         Returns:
             bool: True if the provider is ready to accept requests.
@@ -167,7 +169,8 @@ class LLMProviderBase(ABC):
 
     @abstractmethod
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """Connect to the provider with given credentials.
+        """
+        Connect to the provider with given credentials.
 
         Args:
             credentials: API credentials for authentication.
@@ -178,7 +181,8 @@ class LLMProviderBase(ABC):
         """
 
     async def disconnect(self) -> None:
-        """Disconnect from the provider.
+        """
+        Disconnect from the provider.
 
         Cleans up any resources and invalidates the connection.
         """
@@ -190,7 +194,8 @@ class LLMProviderBase(ABC):
 
     @abstractmethod
     async def list_models(self) -> list[ModelInfo]:
-        """Dynamically fetch available models from the provider.
+        """
+        Dynamically fetch available models from the provider.
 
         Returns:
             list[ModelInfo]: List of available models with their capabilities.
@@ -211,7 +216,8 @@ class LLMProviderBase(ABC):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Send a chat completion request.
+        """
+        Send a chat completion request.
 
         Args:
             messages: Conversation history.
@@ -244,7 +250,8 @@ class LLMProviderBase(ABC):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """Stream a chat completion response.
+        """
+        Stream a chat completion response.
 
         Args:
             messages: Conversation history.
@@ -268,7 +275,8 @@ class LLMProviderBase(ABC):
         yield ""
 
     def get_pending_tool_calls(self) -> list[ToolCall]:
-        """Retrieve tool calls accumulated during the last streaming call.
+        """
+        Retrieve tool calls accumulated during the last streaming call.
 
         After a ``chat_stream()`` call completes, providers store any tool
         calls that were signalled in the stream deltas.  Consumers call
@@ -283,10 +291,10 @@ class LLMProviderBase(ABC):
         return calls
 
     async def cancel_request(self) -> None:
-        """Cancel any in-flight request.
+        """
+        Cancel any in-flight request.
 
-        This method should safely abort ongoing API calls without
-        raising exceptions.
+        This method should safely abort ongoing API calls without raising exceptions.
         """
         self._cancel_requested = True
 
@@ -298,7 +306,8 @@ class LLMProviderBase(ABC):
         max_delay: float = 30.0,
         retryable_exceptions: tuple[type[Exception], ...] = (RateLimitError,),
     ) -> _T:
-        """Execute an async operation with exponential backoff retry.
+        """
+        Execute an async operation with exponential backoff retry.
 
         Retries on transient failures using exponential backoff with jitter.
         ``AuthenticationError`` is never retried regardless of the
@@ -350,7 +359,8 @@ class LLMProviderBase(ABC):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """Convert internal tool format to provider-specific format.
+        """
+        Convert internal tool format to provider-specific format.
 
         Args:
             tools: List of ToolDefinition objects.
@@ -364,7 +374,8 @@ class LLMProviderBase(ABC):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """Convert internal message format to provider-specific format.
+        """
+        Convert internal message format to provider-specific format.
 
         Args:
             messages: List of Message objects.
@@ -382,7 +393,8 @@ class LLMProviderBase(ABC):
         tool_calls: list[ToolCall],
         duration_ms: float,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Create a standard chat response tuple and log the response.
+        """
+        Create a standard chat response tuple and log the response.
 
         Args:
             provider: Provider name for logging.
@@ -415,7 +427,8 @@ class LLMProviderBase(ABC):
         function_name: str,
         raw_arguments: str | dict[str, object],
     ) -> ToolCall:
-        """Parse a tool call from provider-specific data into a ToolCall.
+        """
+        Parse a tool call from provider-specific data into a ToolCall.
 
         Handles JSON argument parsing and tool name extraction from
         dotted function names.
@@ -436,7 +449,8 @@ class LLMProviderBase(ABC):
 
     @staticmethod
     def _serialize_tool_result(result: object) -> str:
-        """Serialize a tool result to a string for API consumption.
+        """
+        Serialize a tool result to a string for API consumption.
 
         Args:
             result: The tool result value, either a string or a
@@ -451,7 +465,8 @@ class LLMProviderBase(ABC):
     def _convert_tool_choice_to_openai_format(
         tool_choice: ToolChoice,
     ) -> str | dict[str, object]:
-        """Convert a ToolChoice to the OpenAI-compatible tool_choice parameter.
+        """
+        Convert a ToolChoice to the OpenAI-compatible tool_choice parameter.
 
         Args:
             tool_choice: The tool choice configuration.
@@ -477,7 +492,8 @@ class LLMProviderBase(ABC):
         serialize_tool_arguments: bool = True,
         include_tool_call_type: bool = True,
     ) -> list[dict[str, object]]:
-        """Convert internal messages to OpenAI-compatible format.
+        """
+        Convert internal messages to OpenAI-compatible format.
 
         Shared conversion logic for providers that use the OpenAI message
         schema (OpenAI, Grok, HuggingFace, OpenRouter, Ollama).
@@ -538,10 +554,10 @@ class LLMProviderBase(ABC):
 
 
 class ToolCallBufferManager:
-    """Accumulates streaming tool call deltas into complete ToolCall objects.
+    """
+    Accumulates streaming tool call deltas into complete ToolCall objects.
 
-    Used by providers that consume OpenAI-compatible SSE streams where tool
-    call fragments arrive incrementally across multiple chunks.
+    Used by providers that consume OpenAI-compatible SSE streams where tool call fragments arrive incrementally across multiple chunks.
     """
 
     def __init__(self) -> None:
@@ -555,7 +571,8 @@ class ToolCallBufferManager:
         name: str | None = None,
         arguments: str | None = None,
     ) -> None:
-        """Merge a single streaming delta into the buffer.
+        """
+        Merge a single streaming delta into the buffer.
 
         Args:
             index: Tool-call index from the SSE delta.
@@ -574,7 +591,8 @@ class ToolCallBufferManager:
             buf["arguments"] += arguments
 
     def finalize(self) -> list[ToolCall]:
-        """Convert all complete buffered entries to ToolCall objects and reset.
+        """
+        Convert all complete buffered entries to ToolCall objects and reset.
 
         Entries missing an ``id`` or ``name`` are silently discarded.
 
@@ -600,7 +618,8 @@ def _build_schema_property(
     enum_values: list[str] | None = None,
     default: object = None,
 ) -> JSONSchemaProperty:
-    """Build a JSON Schema property from parameters.
+    """
+    Build a JSON Schema property from parameters.
 
     Args:
         param_type: The JSON Schema type string.
@@ -626,7 +645,8 @@ def _build_schema_property(
 def create_anthropic_tool_schema(
     tool: ToolDefinition,
 ) -> list[AnthropicToolSchema]:
-    """Convert ToolDefinition to Anthropic's tool format.
+    """
+    Convert ToolDefinition to Anthropic's tool format.
 
     Args:
         tool: The tool definition to convert.
@@ -669,7 +689,8 @@ def create_anthropic_tool_schema(
 def create_openai_tool_schema(
     tool: ToolDefinition,
 ) -> list[OpenAIToolSchema]:
-    """Convert ToolDefinition to OpenAI's tool format.
+    """
+    Convert ToolDefinition to OpenAI's tool format.
 
     Args:
         tool: The tool definition to convert.
@@ -715,7 +736,8 @@ def create_openai_tool_schema(
 def create_google_tool_schema(
     tool: ToolDefinition,
 ) -> list[GoogleFunctionDeclaration]:
-    """Convert ToolDefinition to Google Gemini's function declaration format.
+    """
+    Convert ToolDefinition to Google Gemini's function declaration format.
 
     Args:
         tool: The tool definition to convert.

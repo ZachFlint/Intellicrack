@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Unified stack viewer panel for debugging.
+"""
+Unified stack viewer panel for debugging.
 
-Provides a Qt-based stack frame viewer that reads from both
-X64DbgBridge and FridaBridge for synchronized debugging views.
+Provides a Qt-based stack frame viewer that reads from both X64DbgBridge and FridaBridge for synchronized debugging views.
 """
 
 from __future__ import annotations
@@ -45,7 +45,8 @@ _SOURCE_COMBO_MIN_WIDTH: Final[int] = 120
 
 
 def _get_stack_colors() -> dict[str, QColor]:
-    """Get theme-aware colors for stack frame rendering.
+    """
+    Get theme-aware colors for stack frame rendering.
 
     Returns:
         dict[str, QColor]: Mapping of semantic names to QColor values.
@@ -79,7 +80,8 @@ def _get_stack_colors() -> dict[str, QColor]:
 
 @dataclass
 class StackFrame:
-    """Represents a single stack frame entry.
+    """
+    Represents a single stack frame entry.
 
     Attributes:
         index: Position in the call stack.
@@ -102,15 +104,16 @@ class StackFrame:
 
 @runtime_checkable
 class StackDataSource(Protocol):
-    """Protocol for stack frame data sources.
+    """
+    Protocol for stack frame data sources.
 
-    Implementations should provide methods to retrieve current
-    stack frames from debugging sessions.
+    Implementations should provide methods to retrieve current stack frames from debugging sessions.
     """
 
     @staticmethod
     def get_stack_frames() -> list[StackFrame]:
-        """Get current stack frames from the data source.
+        """
+        Get current stack frames from the data source.
 
         Returns:
             list[StackFrame]: List of StackFrame objects representing the call stack.
@@ -119,7 +122,8 @@ class StackDataSource(Protocol):
 
     @staticmethod
     def is_connected() -> bool:
-        """Check if the data source is connected.
+        """
+        Check if the data source is connected.
 
         Returns:
             bool: True if connected and can provide stack data.
@@ -128,7 +132,8 @@ class StackDataSource(Protocol):
 
     @staticmethod
     def get_source_name() -> str:
-        """Get the name of this data source.
+        """
+        Get the name of this data source.
 
         Returns:
             str: Human-readable source name.
@@ -137,17 +142,18 @@ class StackDataSource(Protocol):
 
 
 class X64DbgStackSource:
-    """Stack data source backed by X64DbgBridge.
+    """
+    Stack data source backed by X64DbgBridge.
 
-    Retrieves stack frames from an active x64dbg debugging session
-    using the bridge interface.
+    Retrieves stack frames from an active x64dbg debugging session using the bridge interface.
     """
 
     def __init__(self) -> None:
         self._bridge: object | None = None
 
     def set_bridge(self, bridge: object) -> None:
-        """Set the X64DbgBridge instance.
+        """
+        Set the X64DbgBridge instance.
 
         Args:
             bridge: The X64DbgBridge to use for stack data.
@@ -155,7 +161,8 @@ class X64DbgStackSource:
         self._bridge = bridge
 
     def get_stack_frames(self) -> list[StackFrame]:
-        """Get stack frames from x64dbg.
+        """
+        Get stack frames from x64dbg.
 
         Returns:
             list[StackFrame]: List of StackFrame objects.
@@ -185,7 +192,8 @@ class X64DbgStackSource:
             return frames
 
     def is_connected(self) -> bool:
-        """Check if x64dbg bridge is connected.
+        """
+        Check if x64dbg bridge is connected.
 
         Returns:
             bool: True if bridge is attached and connected.
@@ -200,7 +208,8 @@ class X64DbgStackSource:
 
     @staticmethod
     def get_source_name() -> str:
-        """Get the source name.
+        """
+        Get the source name.
 
         Returns:
             str: 'x64dbg' string.
@@ -209,10 +218,10 @@ class X64DbgStackSource:
 
 
 class FridaStackSource:
-    """Stack data source backed by FridaBridge.
+    """
+    Stack data source backed by FridaBridge.
 
-    Retrieves stack frames from an active Frida instrumentation session
-    using the bridge interface.
+    Retrieves stack frames from an active Frida instrumentation session using the bridge interface.
     """
 
     def __init__(self) -> None:
@@ -220,7 +229,8 @@ class FridaStackSource:
         self._cached_frames: list[StackFrame] = []
 
     def set_bridge(self, bridge: object) -> None:
-        """Set the FridaBridge instance.
+        """
+        Set the FridaBridge instance.
 
         Args:
             bridge: The FridaBridge to use for stack data.
@@ -228,7 +238,8 @@ class FridaStackSource:
         self._bridge = bridge
 
     def get_stack_frames(self) -> list[StackFrame]:
-        """Get stack frames from Frida.
+        """
+        Get stack frames from Frida.
 
         Returns:
             list[StackFrame]: List of StackFrame objects.
@@ -266,7 +277,8 @@ class FridaStackSource:
             return frames
 
     def is_connected(self) -> bool:
-        """Check if Frida bridge is connected.
+        """
+        Check if Frida bridge is connected.
 
         Returns:
             bool: True if bridge is attached and session is active.
@@ -281,7 +293,8 @@ class FridaStackSource:
 
     @staticmethod
     def get_source_name() -> str:
-        """Get the source name.
+        """
+        Get the source name.
 
         Returns:
             str: 'Frida' string.
@@ -290,7 +303,8 @@ class FridaStackSource:
 
 
 class StackFrameTable(QTableWidget):
-    """Table widget for displaying stack frames.
+    """
+    Table widget for displaying stack frames.
 
     Args:
         parent: Parent widget.
@@ -333,7 +347,8 @@ class StackFrameTable(QTableWidget):
         self.cellDoubleClicked.connect(self._on_cell_double_clicked)
 
     def _on_cell_clicked(self, row: int, _column: int) -> None:
-        """Handle cell click.
+        """
+        Handle cell click.
 
         Args:
             row: Row index.
@@ -347,7 +362,8 @@ class StackFrameTable(QTableWidget):
                 _logger.debug("stack_frame_address_parse_failed")
 
     def _on_cell_double_clicked(self, row: int, _column: int) -> None:
-        """Handle cell double-click.
+        """
+        Handle cell double-click.
 
         Args:
             row: Row index.
@@ -361,7 +377,8 @@ class StackFrameTable(QTableWidget):
                 _logger.debug("stack_frame_address_parse_failed")
 
     def set_frames(self, frames: list[StackFrame]) -> None:
-        """Populate the table with stack frames.
+        """
+        Populate the table with stack frames.
 
         Args:
             frames: List of StackFrame objects.
@@ -417,7 +434,8 @@ class StackFrameTable(QTableWidget):
 
 
 class StackViewerPanel(QWidget):
-    """Unified stack viewer panel for debugging sessions.
+    """
+    Unified stack viewer panel for debugging sessions.
 
     Displays call stack frames from x64dbg or Frida sources
     with auto-refresh during debugging.
@@ -506,7 +524,8 @@ class StackViewerPanel(QWidget):
             self._active_source = next(iter(self._sources.keys()))
 
     def _on_source_changed(self, source_name: str) -> None:
-        """Handle source selection change.
+        """
+        Handle source selection change.
 
         Args:
             source_name: Name of the selected source.
@@ -517,7 +536,8 @@ class StackViewerPanel(QWidget):
         self.refresh()
 
     def _on_auto_refresh_toggled(self, checked: bool) -> None:
-        """Handle auto-refresh toggle.
+        """
+        Handle auto-refresh toggle.
 
         Args:
             checked: Whether auto-refresh is enabled.
@@ -531,7 +551,8 @@ class StackViewerPanel(QWidget):
             self._refresh_timer.stop()
 
     def _on_frame_double_clicked(self, address: int) -> None:
-        """Handle frame double-click for navigation.
+        """
+        Handle frame double-click for navigation.
 
         Args:
             address: Address to navigate to.
@@ -590,7 +611,8 @@ class StackViewerPanel(QWidget):
         self._last_update_label.setText(f"Updated: {now.strftime('%H:%M:%S')}")
 
     def set_x64dbg_bridge(self, bridge: object) -> None:
-        """Set the x64dbg bridge for stack retrieval.
+        """
+        Set the x64dbg bridge for stack retrieval.
 
         Args:
             bridge: The X64DbgBridge instance.
@@ -601,7 +623,8 @@ class StackViewerPanel(QWidget):
             _logger.info("bridge_attached", source="x64dbg", component="stack_viewer")
 
     def set_frida_bridge(self, bridge: object) -> None:
-        """Set the Frida bridge for stack retrieval.
+        """
+        Set the Frida bridge for stack retrieval.
 
         Args:
             bridge: The FridaBridge instance.
@@ -612,7 +635,8 @@ class StackViewerPanel(QWidget):
             _logger.info("bridge_attached", source="frida", component="stack_viewer")
 
     def add_source(self, name: str, source: X64DbgStackSource | FridaStackSource) -> None:
-        """Add a custom stack data source.
+        """
+        Add a custom stack data source.
 
         Args:
             name: Display name for the source.

@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Dynamic model discovery and caching for LLM providers.
 
-"""Dynamic model discovery and caching for LLM providers.
-
-This module provides centralized model discovery orchestration with TTL-based
-caching, filtering, and fault tolerance across all registered providers.
+This module provides centralized model discovery orchestration with TTL-based caching, filtering, and fault tolerance across all registered
+providers.
 """
 
 from __future__ import annotations
@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class DiscoveryEvent:
-    """Metadata about a discovery operation.
+    """
+    Metadata about a discovery operation.
 
     Attributes:
         provider: Provider that was discovered.
@@ -56,7 +57,8 @@ class DiscoveryEvent:
 
 @dataclass
 class DiscoveryFilter:
-    """Filter criteria for model discovery.
+    """
+    Filter criteria for model discovery.
 
     Attributes:
         min_context_window: Minimum context window size in tokens.
@@ -87,7 +89,8 @@ class _CacheEntry:
 
 
 class DiscoveryCache:
-    """TTL-based cache for discovered models.
+    """
+    TTL-based cache for discovered models.
 
     Provides thread-safe caching of model lists per provider with
     configurable TTL and optional disk persistence.
@@ -103,7 +106,8 @@ class DiscoveryCache:
         self._logger = get_logger("providers.discovery.cache")
 
     def get(self, provider: ProviderName) -> list[ModelInfo] | None:
-        """Get cached models for a provider.
+        """
+        Get cached models for a provider.
 
         Args:
             provider: The provider to get cached models for.
@@ -122,7 +126,8 @@ class DiscoveryCache:
         return entry.models
 
     def set(self, provider: ProviderName, models: list[ModelInfo]) -> None:
-        """Cache models for a provider.
+        """
+        Cache models for a provider.
 
         Args:
             provider: The provider to cache models for.
@@ -143,7 +148,8 @@ class DiscoveryCache:
         )
 
     def invalidate(self, provider: ProviderName | None = None) -> None:
-        """Invalidate cache entries.
+        """
+        Invalidate cache entries.
 
         Args:
             provider: Specific provider to invalidate, or None for all.
@@ -156,7 +162,8 @@ class DiscoveryCache:
             self._logger.debug("cache_invalidated", provider=provider.value)
 
     def is_expired(self, provider: ProviderName) -> bool:
-        """Check if cache entry is expired.
+        """
+        Check if cache entry is expired.
 
         Args:
             provider: The provider to check.
@@ -168,7 +175,8 @@ class DiscoveryCache:
         return True if entry is None else time.time() > entry.expires_at
 
     def get_all_cached(self) -> dict[ProviderName, list[ModelInfo]]:
-        """Get all non-expired cached models.
+        """
+        Get all non-expired cached models.
 
         Returns:
             dict[ProviderName, list[ModelInfo]]: Dictionary mapping providers to their cached models.
@@ -180,7 +188,8 @@ class DiscoveryCache:
         return result
 
     async def save_to_disk(self, path: Path) -> None:
-        """Persist cache to disk as JSON.
+        """
+        Persist cache to disk as JSON.
 
         Args:
             path: File path to save cache to.
@@ -226,7 +235,8 @@ class DiscoveryCache:
                 self._logger.exception("cache_save_failed", cache_path=str(path))
 
     async def load_from_disk(self, path: Path) -> None:
-        """Load cache from disk.
+        """
+        Load cache from disk.
 
         Args:
             path: File path to load cache from.
@@ -288,7 +298,8 @@ class DiscoveryCache:
 
 
 class ModelDiscovery:
-    """Orchestrates model discovery from all providers.
+    """
+    Orchestrates model discovery from all providers.
 
     Provides unified model discovery with caching, filtering, and
     intelligent recommendations.
@@ -314,7 +325,8 @@ class ModelDiscovery:
 
     @property
     def cache(self) -> DiscoveryCache:
-        """Get the discovery cache.
+        """
+        Get the discovery cache.
 
         Returns:
             DiscoveryCache: The DiscoveryCache instance.
@@ -326,7 +338,8 @@ class ModelDiscovery:
         use_cache: bool = True,
         force_refresh: bool = False,
     ) -> dict[ProviderName, list[ModelInfo]]:
-        """Discover models from all registered providers.
+        """
+        Discover models from all registered providers.
 
         Args:
             use_cache: Whether to use cached results when available.
@@ -468,7 +481,8 @@ class ModelDiscovery:
         provider: ProviderName,
         use_cache: bool = True,
     ) -> list[ModelInfo]:
-        """Discover models from a specific provider.
+        """
+        Discover models from a specific provider.
 
         Args:
             provider: The provider to discover models from.
@@ -534,7 +548,8 @@ class ModelDiscovery:
         self,
         query: str,
     ) -> list[ModelInfo]:
-        """Search for models by name or ID.
+        """
+        Search for models by name or ID.
 
         Performs case-insensitive substring matching on model ID and name.
 
@@ -559,7 +574,8 @@ class ModelDiscovery:
         self,
         criteria: DiscoveryFilter,
     ) -> list[ModelInfo]:
-        """Filter models by criteria.
+        """
+        Filter models by criteria.
 
         Args:
             criteria: Filter criteria to apply.
@@ -614,7 +630,8 @@ class ModelDiscovery:
         provider: ProviderName,
         model_id: str,
     ) -> ModelInfo | None:
-        """Get a specific model by provider and ID.
+        """
+        Get a specific model by provider and ID.
 
         Args:
             provider: The provider the model belongs to.
@@ -633,7 +650,8 @@ class ModelDiscovery:
         self,
         limit: int | None = None,
     ) -> list[DiscoveryEvent]:
-        """Get history of discovery events.
+        """
+        Get history of discovery events.
 
         Args:
             limit: Maximum number of events to return (newest first).
@@ -650,7 +668,8 @@ class ModelDiscovery:
         self,
         provider: ProviderName,
     ) -> DiscoveryEvent | None:
-        """Get the most recent discovery event for a provider.
+        """
+        Get the most recent discovery event for a provider.
 
         Args:
             provider: The provider to get the event for.
@@ -667,7 +686,8 @@ class ModelDiscovery:
         self,
         task_type: str,
     ) -> ModelInfo | None:
-        """Get a recommended model for a specific task type.
+        """
+        Get a recommended model for a specific task type.
 
         Recommends models based on task requirements:
         - "analysis": Prefers large context, tool support
@@ -719,7 +739,8 @@ class ModelDiscovery:
         return None
 
     def get_provider_model_count(self) -> dict[ProviderName, int]:
-        """Get model count per provider from cache.
+        """
+        Get model count per provider from cache.
 
         Returns:
             dict[ProviderName, int]: Dictionary mapping providers to their cached model count.
@@ -733,7 +754,8 @@ class ModelDiscovery:
         return result
 
     async def save_cache(self, path: Path) -> None:
-        """Save the discovery cache to disk.
+        """
+        Save the discovery cache to disk.
 
         Args:
             path: File path to save cache to.
@@ -741,7 +763,8 @@ class ModelDiscovery:
         await self._cache.save_to_disk(path)
 
     async def load_cache(self, path: Path) -> None:
-        """Load the discovery cache from disk.
+        """
+        Load the discovery cache from disk.
 
         Args:
             path: File path to load cache from.

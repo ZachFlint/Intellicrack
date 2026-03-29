@@ -630,7 +630,7 @@ def test_stalker_follow_and_unfollow(
         )
     )
     assert isinstance(trace_id, str)
-    assert trace_id != ""
+    assert trace_id
 
     time.sleep(_STALKER_SLEEP)
 

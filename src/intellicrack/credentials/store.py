@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Secure credential storage using OS keyring.
 
-"""Secure credential storage using OS keyring.
-
-This module provides secure credential storage using the operating system's
-native credential manager (Windows Credential Manager, macOS Keychain,
-or Linux Secret Service via the keyring library).
+This module provides secure credential storage using the operating system's native credential manager (Windows Credential Manager, macOS
+Keychain, or Linux Secret Service via the keyring library).
 """
 
 from __future__ import annotations
@@ -66,7 +65,8 @@ class CredentialSource(Enum):
 
 @dataclass(frozen=True)
 class StoredCredential:
-    """Metadata for a stored credential.
+    """
+    Metadata for a stored credential.
 
     Attributes:
         provider: Provider this credential belongs to.
@@ -84,7 +84,8 @@ class StoredCredential:
 
 
 class CredentialStore:
-    """Secure credential storage using OS keyring with env fallback.
+    """
+    Secure credential storage using OS keyring with env fallback.
 
     This class provides thread-safe, async-compatible access to credentials
     stored in the operating system's secure credential storage (Windows
@@ -112,7 +113,8 @@ class CredentialStore:
         self._keyring_available: bool = False
 
     def _check_keyring(self) -> bool:
-        """Check if keyring backend is available and functional.
+        """
+        Check if keyring backend is available and functional.
 
         Returns:
             bool: True if keyring is available and working.
@@ -147,7 +149,8 @@ class CredentialStore:
 
     @cached_property
     def keyring_available(self) -> bool:
-        """Check if keyring backend is available and functional.
+        """
+        Check if keyring backend is available and functional.
 
         Returns:
             bool: True if keyring can be used for credential storage.
@@ -155,7 +158,8 @@ class CredentialStore:
         return self._check_keyring()
 
     def _get_keyring_key(self, provider: ProviderName) -> str:
-        """Get the keyring key name for a provider.
+        """
+        Get the keyring key name for a provider.
 
         Args:
             provider: The provider.
@@ -167,7 +171,8 @@ class CredentialStore:
 
     @staticmethod
     def _serialize_credentials(creds: ProviderCredentials) -> str:
-        """Serialize credentials to JSON for storage.
+        """
+        Serialize credentials to JSON for storage.
 
         Args:
             creds: Credentials to serialize.
@@ -180,7 +185,8 @@ class CredentialStore:
 
     @staticmethod
     def _deserialize_credentials(data: str) -> ProviderCredentials:
-        """Deserialize credentials from JSON.
+        """
+        Deserialize credentials from JSON.
 
         Args:
             data: JSON string to deserialize.
@@ -206,7 +212,8 @@ class CredentialStore:
 
     @staticmethod
     def _serialize_metadata(metadata: StoredCredential) -> str:
-        """Serialize credential metadata to JSON.
+        """
+        Serialize credential metadata to JSON.
 
         Args:
             metadata: Metadata to serialize.
@@ -225,7 +232,8 @@ class CredentialStore:
 
     @staticmethod
     def _deserialize_metadata(data: str, provider: ProviderName) -> StoredCredential:
-        """Deserialize credential metadata from JSON.
+        """
+        Deserialize credential metadata from JSON.
 
         Args:
             data: JSON string to deserialize.
@@ -255,7 +263,8 @@ class CredentialStore:
             )
 
     async def _get_from_keyring(self, provider: ProviderName) -> ProviderCredentials | None:
-        """Get credentials directly from keyring.
+        """
+        Get credentials directly from keyring.
 
         Args:
             provider: Provider to get credentials for.
@@ -287,7 +296,8 @@ class CredentialStore:
         key_name: str | None = None,
         source: CredentialSource = CredentialSource.KEYRING,
     ) -> None:
-        """Store credentials directly to keyring.
+        """
+        Store credentials directly to keyring.
 
         Args:
             provider: Provider to store credentials for.
@@ -333,7 +343,8 @@ class CredentialStore:
             raise CredentialStoreError(msg) from e
 
     async def _get_metadata(self, provider: ProviderName) -> StoredCredential | None:
-        """Get credential metadata from keyring.
+        """
+        Get credential metadata from keyring.
 
         Args:
             provider: Provider to get metadata for.
@@ -359,7 +370,8 @@ class CredentialStore:
             return None
 
     async def get(self, provider: ProviderName) -> ProviderCredentials | None:
-        """Get credentials for a provider.
+        """
+        Get credentials for a provider.
 
         Checks keyring first, then falls back to env loader.
 
@@ -379,7 +391,8 @@ class CredentialStore:
             return await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
 
     async def get_or_raise(self, provider: ProviderName) -> ProviderCredentials:
-        """Get credentials for a provider, raising if not found.
+        """
+        Get credentials for a provider, raising if not found.
 
         Args:
             provider: The provider to get credentials for.
@@ -403,7 +416,8 @@ class CredentialStore:
         key_name: str | None = None,
         source: CredentialSource = CredentialSource.KEYRING,
     ) -> None:
-        """Store credentials for a provider in keyring.
+        """
+        Store credentials for a provider in keyring.
 
         Args:
             provider: The provider to store credentials for.
@@ -425,7 +439,8 @@ class CredentialStore:
             await self._set_to_keyring(provider, credentials, key_name, source)
 
     async def delete(self, provider: ProviderName) -> bool:
-        """Delete credentials for a provider from keyring.
+        """
+        Delete credentials for a provider from keyring.
 
         Args:
             provider: The provider to delete credentials for.
@@ -463,7 +478,8 @@ class CredentialStore:
             return result
 
     async def list_providers(self) -> list[StoredCredential]:
-        """List all stored credential metadata.
+        """
+        List all stored credential metadata.
 
         Returns:
             list[StoredCredential]: List of StoredCredential with metadata for each provider.
@@ -496,7 +512,8 @@ class CredentialStore:
         providers: list[ProviderName] | None = None,
         overwrite: bool = False,
     ) -> dict[ProviderName, bool]:
-        """Migrate credentials from .env file to keyring.
+        """
+        Migrate credentials from .env file to keyring.
 
         Args:
             providers: Specific providers to migrate. If None, migrates all.
@@ -544,7 +561,8 @@ class CredentialStore:
         return results
 
     async def validate(self, provider: ProviderName) -> tuple[bool, str | None]:
-        """Validate credentials exist and are properly formatted.
+        """
+        Validate credentials exist and are properly formatted.
 
         Args:
             provider: The provider to validate.
@@ -579,7 +597,8 @@ class CredentialStore:
         return True, None
 
     async def get_source(self, provider: ProviderName) -> CredentialSource | None:
-        """Get the source of credentials for a provider.
+        """
+        Get the source of credentials for a provider.
 
         Args:
             provider: The provider to check.
@@ -610,7 +629,8 @@ _store_holder = _CredentialStoreHolder()
 
 
 def get_credential_store() -> CredentialStore:
-    """Get the global credential store instance.
+    """
+    Get the global credential store instance.
 
     Returns:
         CredentialStore: The singleton CredentialStore instance.
@@ -621,7 +641,8 @@ def get_credential_store() -> CredentialStore:
 
 
 async def get_credentials(provider: ProviderName) -> ProviderCredentials | None:
-    """Get credentials for a provider using the global store.
+    """
+    Get credentials for a provider using the global store.
 
     Args:
         provider: The provider to get credentials for.

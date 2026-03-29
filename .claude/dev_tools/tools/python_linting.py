@@ -634,30 +634,38 @@ def register_python_linting_tools(
         return run_command(args)
 
     @mcp.tool()
-    def darglint_check(
+    def pydoclint_check(
         path: str,
-        docstring_style: str = "google",
-        strictness: str = "full",
-        ignore: str | None = None,
-        ignore_regex: str | None = None,
-        ignore_raise: str | None = None,
-        enable: str | None = None,
-        message_template: str | None = None,
-        verbosity: int = 1,
+        style: str = "google",
+        quiet: bool = False,
+        exclude: str | None = None,
+        arg_type_hints_in_signature: bool = True,
+        arg_type_hints_in_docstring: bool = False,
+        check_arg_order: bool = True,
+        skip_checking_short_docstrings: bool = True,
+        skip_checking_raises: bool = False,
+        allow_init_docstring: bool = False,
+        require_return_section_when_returning_nothing: bool = False,
+        check_return_types: bool = True,
+        check_yield_types: bool = True,
     ) -> dict[str, Any]:
         """
-        Run darglint docstring validation on Python code.
+        Run pydoclint docstring validation on Python code.
 
         Args:
             path: File or directory to check.
-            docstring_style: Expected docstring style (google, sphinx, numpy). Defaults to google.
-            strictness: Strictness level (short, long, full). Defaults to full.
-            ignore: Comma-separated error codes to ignore (e.g., "DAR101,DAR102").
-            ignore_regex: Regex pattern for function names to ignore.
-            ignore_raise: Comma-separated exception types to ignore in Raises.
-            enable: Comma-separated error codes to enable.
-            message_template: Custom message template.
-            verbosity: Verbosity level (0=quiet, 1=normal, 2=verbose).
+            style: Docstring style (google, sphinx, numpy). Defaults to google.
+            quiet: If True, do not print file names being checked.
+            exclude: Regex pattern to exclude files/folders.
+            arg_type_hints_in_signature: Require arg type hints in signatures.
+            arg_type_hints_in_docstring: Require arg type hints in docstrings.
+            check_arg_order: Check docstring arg order matches signature.
+            skip_checking_short_docstrings: Skip checking summary-only docstrings.
+            skip_checking_raises: Skip checking Raises section against raise statements.
+            allow_init_docstring: Allow both __init__ and class to have docstrings.
+            require_return_section_when_returning_nothing: Require return section for None returns.
+            check_return_types: Check return type consistency.
+            check_yield_types: Check yield type consistency.
 
         Returns:
             Dict with docstring validation results.
@@ -666,27 +674,32 @@ def register_python_linting_tools(
         if not is_valid:
             return error_result(err or "Invalid path")
 
-        args = [PIXI, "run", "darglint", path]
+        args = [PIXI, "run", "pydoclint"]
+
         valid_styles = {"google", "sphinx", "numpy"}
-        if docstring_style in valid_styles:
-            args.extend(["--docstring-style", docstring_style])
-        valid_strictness = {"short", "long", "full"}
-        if strictness in valid_strictness:
-            args.extend(["--strictness", strictness])
-        if ignore:
-            args.extend(["--ignore", ignore])
-        if ignore_regex:
-            args.extend(["--ignore-regex", ignore_regex])
-        if ignore_raise:
-            args.extend(["--ignore-raise", ignore_raise])
-        if enable:
-            args.extend(["--enable", enable])
-        if message_template:
-            args.extend(["--message-template", message_template])
-        if verbosity == 0:
-            args.append("-q")
-        elif verbosity >= 2:
-            args.append("-v")
+        if style in valid_styles:
+            args.extend(["--style", style])
+
+        if quiet:
+            args.append("--quiet")
+        if exclude:
+            args.extend(["--exclude", exclude])
+
+        bool_flags: list[tuple[str, bool]] = [
+            ("--arg-type-hints-in-signature", arg_type_hints_in_signature),
+            ("--arg-type-hints-in-docstring", arg_type_hints_in_docstring),
+            ("--check-arg-order", check_arg_order),
+            ("--skip-checking-short-docstrings", skip_checking_short_docstrings),
+            ("--skip-checking-raises", skip_checking_raises),
+            ("--allow-init-docstring", allow_init_docstring),
+            ("--require-return-section-when-returning-nothing", require_return_section_when_returning_nothing),
+            ("--check-return-types", check_return_types),
+            ("--check-yield-types", check_yield_types),
+        ]
+        for flag, value in bool_flags:
+            args.extend([flag, str(value)])
+
+        args.append(path)
 
         return run_command(args)
 

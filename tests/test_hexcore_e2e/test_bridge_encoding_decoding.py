@@ -170,7 +170,7 @@ class TestDecodeText:
         result: str | None = None
         try:
             result = _run(bridge.decode_text(0, len(payload), "bogus-encoding-xyz"))
-        except (LookupError, ValueError, RuntimeError, UnicodeError) as exc:
+        except (LookupError, ValueError, RuntimeError) as exc:
             raised = exc
 
         if raised is None:
@@ -221,7 +221,7 @@ class TestListEncodings:
         result: list[dict[str, str]] = _run(bridge.list_encodings())
 
         assert isinstance(result, list)
-        assert len(result) > 0
+        assert result
 
     def test_list_encodings_entries_have_name_key(self, bridge: Any) -> None:
         """Every entry in list_encodings must contain a 'name' key.
@@ -306,8 +306,8 @@ class TestListEncodings:
 
         with_doc: list[dict[str, str]] = _run(bridge.list_encodings())
 
-        assert len(with_doc) > 0
-        assert len(without_doc) > 0
+        assert with_doc
+        assert without_doc
 
     def test_list_encodings_standalone_bridge(self) -> None:
         """list_encodings must return a usable list on a freshly initialized bridge."""
@@ -317,7 +317,7 @@ class TestListEncodings:
         result: list[dict[str, str]] = _run(fresh.list_encodings())
 
         assert isinstance(result, list)
-        assert len(result) > 0
+        assert result
 
         _run(fresh.shutdown())
 

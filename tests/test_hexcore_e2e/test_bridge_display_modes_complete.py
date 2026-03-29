@@ -46,7 +46,7 @@ class TestDisplayModesExtended:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: bool = _run(bridge.set_display_mode("hex16_be"))
-        assert result is True
+        assert result
 
     def test_get_after_set_hex16_be(self, bridge: Any) -> None:
         """Verify that get_display_mode returns 'hex16_be' after setting it.
@@ -252,7 +252,7 @@ class TestHighlightPatternCondition:
         params = json.dumps({"pattern": "01 02 03"})
         rule_id: str = _run(bridge.add_highlight_rule("pattern", params, "#654321"))
         removed: bool = _run(bridge.remove_highlight_rule(rule_id))
-        assert removed is True
+        assert removed
 
     def test_remove_pattern_rule_no_longer_in_list(self, bridge: Any) -> None:
         """Verify that a removed pattern rule no longer appears in list_highlight_rules.

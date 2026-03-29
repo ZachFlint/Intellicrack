@@ -3,10 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Ghidra bridge for static analysis and decompilation.
+"""
+Ghidra bridge for static analysis and decompilation.
 
-This module provides integration with Ghidra for advanced static analysis,
-decompilation, and reverse engineering capabilities using ghidra_bridge.
+This module provides integration with Ghidra for advanced static analysis, decompilation, and reverse engineering capabilities using
+ghidra_bridge.
 """
 
 from __future__ import annotations
@@ -76,7 +77,8 @@ _MACHINE_I386 = 0x14C
 
 
 class GhidraBridge(StaticAnalysisBridge):
-    """Bridge for Ghidra reverse engineering suite.
+    """
+    Bridge for Ghidra reverse engineering suite.
 
     Provides advanced static analysis and decompilation capabilities
     using the ghidra_bridge Python interface.
@@ -106,7 +108,8 @@ class GhidraBridge(StaticAnalysisBridge):
 
     @property
     def ghidra_path(self) -> Path | None:
-        """Get the Ghidra installation path.
+        """
+        Get the Ghidra installation path.
 
         Returns:
             Path | None: Path to Ghidra installation, or None if not set.
@@ -115,7 +118,8 @@ class GhidraBridge(StaticAnalysisBridge):
 
     @ghidra_path.setter
     def ghidra_path(self, value: Path | None) -> None:
-        """Set the Ghidra installation path.
+        """
+        Set the Ghidra installation path.
 
         Args:
             value: Path to Ghidra installation directory, or None.
@@ -124,7 +128,8 @@ class GhidraBridge(StaticAnalysisBridge):
 
     @property
     def project_path(self) -> Path | None:
-        """Get the active Ghidra project path.
+        """
+        Get the active Ghidra project path.
 
         Returns:
             Path | None: Path to the active Ghidra project, or None if no project is open.
@@ -133,7 +138,8 @@ class GhidraBridge(StaticAnalysisBridge):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """
+        Get the tool's name.
 
         Returns:
             ToolName: ToolName.GHIDRA
@@ -142,7 +148,8 @@ class GhidraBridge(StaticAnalysisBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """
+        Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -562,7 +569,8 @@ class GhidraBridge(StaticAnalysisBridge):
         )
 
     async def initialize(self, tool_path: Path | None = None, port: int | None = None) -> None:
-        """Initialize the Ghidra bridge.
+        """
+        Initialize the Ghidra bridge.
 
         Args:
             tool_path: Path to Ghidra installation.
@@ -657,7 +665,8 @@ class GhidraBridge(StaticAnalysisBridge):
         _logger.info("ghidra_bridge_shutdown", bridge="ghidra", project_path=project_path_str)
 
     async def is_available(self) -> bool:
-        """Check if Ghidra is available.
+        """
+        Check if Ghidra is available.
 
         Returns:
             bool: True if Ghidra can be used.
@@ -671,7 +680,8 @@ class GhidraBridge(StaticAnalysisBridge):
         project_dir: Path,
         project_name: str = "intellicrack",
     ) -> None:
-        """Start Ghidra in headless mode with bridge.
+        """
+        Start Ghidra in headless mode with bridge.
 
         Args:
             project_dir: Directory for Ghidra project.
@@ -753,7 +763,8 @@ class GhidraBridge(StaticAnalysisBridge):
         timeout_seconds: int = 60,
         poll_interval: float = 2.0,
     ) -> None:
-        """Poll until the Ghidra bridge port is accepting connections.
+        """
+        Poll until the Ghidra bridge port is accepting connections.
 
         Args:
             timeout_seconds: Maximum seconds to wait before raising.
@@ -800,7 +811,8 @@ class GhidraBridge(StaticAnalysisBridge):
         raise ToolError(msg)
 
     def _create_bridge_script(self) -> Path:
-        """Create the Ghidra bridge startup script.
+        """
+        Create the Ghidra bridge startup script.
 
         Returns:
             Path: Path to the created script.
@@ -825,7 +837,8 @@ ghidra_bridge_server.GhidraBridgeServer(
         return script_path
 
     async def load_binary(self, path: Path) -> BinaryInfo:
-        """Load a binary file into Ghidra.
+        """
+        Load a binary file into Ghidra.
 
         Args:
             path: Path to the binary file.
@@ -891,7 +904,8 @@ ghidra_bridge_server.GhidraBridgeServer(
     async def _extract_binary_metadata(
         self,
     ) -> tuple[int, list[SectionInfo], list[ImportInfo], list[ExportInfo]]:
-        """Extract entry point, sections, imports, and exports from Ghidra.
+        """
+        Extract entry point, sections, imports, and exports from Ghidra.
 
         Returns:
             tuple[int, list[SectionInfo], list[ImportInfo], list[ExportInfo]]: Tuple of (entry_point, sections, imports, exports).
@@ -1038,7 +1052,8 @@ metadata
 
     @staticmethod
     def _detect_format(data: bytes) -> str:
-        """Detect binary format.
+        """
+        Detect binary format.
 
         Args:
             data: Binary data.
@@ -1057,7 +1072,8 @@ metadata
 
     @staticmethod
     def _detect_architecture(data: bytes) -> tuple[str, bool]:
-        """Detect CPU architecture.
+        """
+        Detect CPU architecture.
 
         Args:
             data: Binary data.
@@ -1088,7 +1104,8 @@ metadata
         return "unknown", False
 
     async def analyze(self) -> None:
-        """Run full Ghidra analysis.
+        """
+        Run full Ghidra analysis.
 
         Raises:
             ToolError: If Ghidra is not connected or analysis fails.
@@ -1109,7 +1126,8 @@ metadata
         self,
         filter_pattern: str | None = None,
     ) -> list[FunctionInfo]:
-        """Get all analyzed functions.
+        """
+        Get all analyzed functions.
 
         Args:
             filter_pattern: Optional regex to filter names.
@@ -1169,7 +1187,8 @@ metadata
         return functions
 
     async def get_function(self, address: int) -> FunctionInfo | None:
-        """Get function at a specific address.
+        """
+        Get function at a specific address.
 
         Args:
             address: Function address.
@@ -1258,7 +1277,8 @@ metadata
             return None
 
     async def decompile(self, address: int) -> str:
-        """Decompile function at address.
+        """
+        Decompile function at address.
 
         Args:
             address: Function address.
@@ -1305,7 +1325,8 @@ metadata
         address: int,
         count: int = 20,
     ) -> list[DisassemblyLine]:
-        """Disassemble instructions at address.
+        """
+        Disassemble instructions at address.
 
         Args:
             address: Start address.
@@ -1361,7 +1382,8 @@ metadata
             return []
 
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
-        """Get cross-references to an address.
+        """
+        Get cross-references to an address.
 
         Args:
             address: Target address.
@@ -1408,7 +1430,8 @@ metadata
             return []
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
-        """Get cross-references from an address.
+        """
+        Get cross-references from an address.
 
         Args:
             address: Source address.
@@ -1455,7 +1478,8 @@ metadata
             return []
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
-        """Search for strings matching pattern.
+        """
+        Search for strings matching pattern.
 
         Args:
             pattern: Regex pattern.
@@ -1504,7 +1528,8 @@ metadata
             return []
 
     async def search_bytes(self, pattern: bytes) -> list[int]:
-        """Search for byte pattern.
+        """
+        Search for byte pattern.
 
         Args:
             pattern: Bytes to find.
@@ -1545,7 +1570,8 @@ metadata
         return []
 
     async def rename_function(self, address: int, new_name: str) -> bool:
-        """Rename a function.
+        """
+        Rename a function.
 
         Args:
             address: Function address.
@@ -1585,7 +1611,8 @@ metadata
         comment: str,
         comment_type: str = "EOL",
     ) -> bool:
-        """Add a comment at an address.
+        """
+        Add a comment at an address.
 
         Args:
             address: Address.
@@ -1629,7 +1656,8 @@ metadata
         return True
 
     async def get_imports(self) -> list[ImportInfo]:
-        """Get imported functions.
+        """
+        Get imported functions.
 
         Returns:
             list[ImportInfo]: List of imports.
@@ -1672,7 +1700,8 @@ metadata
             return []
 
     async def get_exports(self) -> list[ExportInfo]:
-        """Get exported functions.
+        """
+        Get exported functions.
 
         Returns:
             list[ExportInfo]: List of exports.
@@ -1714,7 +1743,8 @@ metadata
             return []
 
     async def get_data_type(self, address: int) -> DataTypeInfo | None:
-        """Get data type at address via Ghidra DataTypeManager.
+        """
+        Get data type at address via Ghidra DataTypeManager.
 
         Args:
             address: Address to check.
@@ -1780,7 +1810,8 @@ metadata
             return None
 
     async def set_data_type(self, address: int, data_type: str) -> bool:
-        """Set data type at an address.
+        """
+        Set data type at an address.
 
         Args:
             address: Address to set type.
@@ -1825,7 +1856,8 @@ metadata
             raise ToolError(error_message) from e
 
     async def execute_script(self, code: str) -> str:
-        """Execute arbitrary Jython script in Ghidra's JVM context.
+        """
+        Execute arbitrary Jython script in Ghidra's JVM context.
 
         Args:
             code: Jython code to execute.
@@ -1838,7 +1870,8 @@ metadata
         return str(result) if result is not None else ""
 
     async def set_label(self, address: int, name: str) -> dict[str, Any]:
-        """Create or modify a label at an address.
+        """
+        Create or modify a label at an address.
 
         Args:
             address: Address for the label.
@@ -1864,7 +1897,8 @@ metadata
         return {"address": hex(address), "name": name, "success": True}
 
     async def get_labels(self, address: int, radius: int = 0x100) -> list[dict[str, Any]]:
-        """Get labels near an address within a radius.
+        """
+        Get labels near an address within a radius.
 
         Args:
             address: Center address.
@@ -1903,7 +1937,8 @@ metadata
             return []
 
     async def create_bookmark(self, address: int, category: str, comment: str) -> dict[str, Any]:
-        """Create an analysis bookmark at an address.
+        """
+        Create an analysis bookmark at an address.
 
         Args:
             address: Address to bookmark.
@@ -1928,7 +1963,8 @@ metadata
         return {"address": hex(address), "category": category, "comment": comment, "success": True}
 
     async def get_bookmarks(self, category: str | None = None) -> list[dict[str, Any]]:
-        """List bookmarks, optionally filtered by category.
+        """
+        List bookmarks, optionally filtered by category.
 
         Args:
             category: Optional category filter.
@@ -1967,7 +2003,8 @@ metadata
             return []
 
     async def create_function(self, address: int, name: str | None = None) -> dict[str, Any]:
-        """Define a new function at an address.
+        """
+        Define a new function at an address.
 
         Args:
             address: Entry point address.
@@ -2004,7 +2041,8 @@ metadata
         return cast("dict[str, Any]", result)
 
     async def delete_function(self, address: int) -> dict[str, Any]:
-        """Remove function definition at an address.
+        """
+        Remove function definition at an address.
 
         Args:
             address: Function entry point address.
@@ -2040,7 +2078,8 @@ metadata
         calling_convention: str | None = None,
         name: str | None = None,
     ) -> dict[str, Any]:
-        """Modify function return type, calling convention, or name.
+        """
+        Modify function return type, calling convention, or name.
 
         Args:
             address: Function entry point.
@@ -2107,7 +2146,8 @@ metadata
         return cast("dict[str, Any]", result)
 
     async def set_function_variable_type(self, func_address: int, var_name: str, new_type: str) -> dict[str, Any]:
-        """Change the data type of a local variable in a function.
+        """
+        Change the data type of a local variable in a function.
 
         Args:
             func_address: Function entry address.
@@ -2155,7 +2195,8 @@ metadata
         return {"var_name": var_name, "new_type": new_type, "success": True}
 
     async def define_structure(self, name: str, fields: list[dict[str, Any]]) -> dict[str, Any]:
-        """Define a new struct data type with named fields.
+        """
+        Define a new struct data type with named fields.
 
         Args:
             name: Structure name.
@@ -2211,7 +2252,8 @@ metadata
             raise ToolError(error_message) from e
 
     async def get_structures(self, filter_name: str | None = None) -> list[dict[str, Any]]:
-        """List defined structures, optionally filtered by name.
+        """
+        List defined structures, optionally filtered by name.
 
         Args:
             filter_name: Optional substring filter for structure names.
@@ -2249,7 +2291,8 @@ metadata
             return []
 
     async def apply_structure_at(self, address: int, struct_name: str) -> dict[str, Any]:
-        """Apply a defined structure type at a memory address.
+        """
+        Apply a defined structure type at a memory address.
 
         Args:
             address: Address to apply the structure at.
@@ -2297,7 +2340,8 @@ metadata
         return {"address": hex(address), "struct_name": struct_name, "success": True}
 
     async def get_memory_map(self) -> list[dict[str, Any]]:
-        """Get all memory blocks with addresses, sizes, and permissions.
+        """
+        Get all memory blocks with addresses, sizes, and permissions.
 
         Returns:
             list[dict[str, Any]]: List of memory block dicts.
@@ -2332,7 +2376,8 @@ metadata
             return []
 
     async def get_call_graph(self, address: int, depth: int = 2) -> dict[str, Any]:
-        """Get function call graph from an address to a specified depth.
+        """
+        Get function call graph from an address to a specified depth.
 
         Args:
             address: Root function address.
@@ -2410,7 +2455,8 @@ metadata
             return {"address": hex(address), "callees": [], "callers": []}
 
     async def get_segments(self) -> list[dict[str, Any]]:
-        """Get program segments with detailed permissions and attributes.
+        """
+        Get program segments with detailed permissions and attributes.
 
         Returns:
             list[dict[str, Any]]: List of segment dicts with name, addresses, permissions, and source info.
@@ -2448,7 +2494,8 @@ metadata
             return []
 
     async def get_program_info(self) -> dict[str, Any]:
-        """Get program metadata including language, compiler, and layout info.
+        """
+        Get program metadata including language, compiler, and layout info.
 
         Returns:
             dict[str, Any]: Dict with language, compiler, endianness, pointer_size, image_base,
@@ -2486,7 +2533,8 @@ metadata
             return {}
 
     async def write_bytes(self, address: int, data: str) -> dict[str, Any]:
-        """Patch bytes at an address in the program.
+        """
+        Patch bytes at an address in the program.
 
         Args:
             address: Address to write at.
@@ -2520,7 +2568,8 @@ metadata
             raise ToolError(error_message) from e
 
     async def undo(self) -> dict[str, Any]:
-        """Undo the last change in Ghidra.
+        """
+        Undo the last change in Ghidra.
 
         Returns:
             dict[str, Any]: Dict with success status.
@@ -2545,7 +2594,8 @@ metadata
             raise ToolError(error_message) from e
 
     async def redo(self) -> dict[str, Any]:
-        """Redo the last undone change in Ghidra.
+        """
+        Redo the last undone change in Ghidra.
 
         Returns:
             dict[str, Any]: Dict with success status.
@@ -2570,7 +2620,8 @@ metadata
             raise ToolError(error_message) from e
 
     async def _execute_remote(self, code: str) -> object:
-        """Execute code on the Ghidra bridge.
+        """
+        Execute code on the Ghidra bridge.
 
         Args:
             code: Python code to execute.

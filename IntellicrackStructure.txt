@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sat, Mar 28, 2026 03:42:58 AM
+Generated: Sat, Mar 28, 2026 06:05:34 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -2670,6 +2670,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── ty_findings.json
 │   │   ├── uncalled_findings.json
 │   │   ├── validate-pyproject_findings.json
+│   │   ├── vermin_findings.json
 │   │   ├── vulture_findings.json
 │   │   ├── wemake_findings.json
 │   │   ├── xenon_findings.json
@@ -2708,6 +2709,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── wemake_findings.sarif
 │   │   ├── xenon_findings.sarif
 │   │   └── yamllint_findings.sarif
+│   ├── sql/
+│   │   └── precommit-hooks_findings.db
 │   ├── tests/
 │   │   ├── coverage/
 │   │   ├── results/
@@ -2756,6 +2759,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── ty_findings.txt
 │   │   ├── uncalled_findings.txt
 │   │   ├── validate-pyproject_findings.txt
+│   │   ├── vermin_findings.txt
 │   │   ├── vulture_findings.txt
 │   │   ├── wemake_findings.txt
 │   │   ├── xenon_findings.txt
@@ -2793,11 +2797,15 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── ty_findings.xml
 │   │   ├── uncalled_findings.xml
 │   │   ├── validate-pyproject_findings.xml
+│   │   ├── vermin_findings.xml
 │   │   ├── vulture_findings.xml
 │   │   ├── wemake_findings.xml
 │   │   ├── xenon_findings.xml
 │   │   └── yamllint_findings.xml
-│   └── lint_dashboard.html
+│   ├── lint_dashboard.html
+│   ├── tmp_dead.txt
+│   ├── tmp_deadcode.txt
+│   └── tmp_vulture.txt
 ├── Screenshots/
 │   ├── desktop.ini
 │   └── Screenshots.lnk
@@ -23057,6 +23065,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── CONTRIBUTING.md
 ├── coverage.json
 ├── coverage_report.txt
+├── dead_allowlist.txt
 ├── desktop.ini
 ├── GEMINI.md
 ├── gemini_cli_config.json
@@ -23066,7 +23075,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── IntellicrackStructure.txt
 ├── justfile
 ├── LICENSE
-├── MANIFEST.in
 ├── package-lock.json
 ├── package.json
 ├── pixi.lock

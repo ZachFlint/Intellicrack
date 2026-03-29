@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Session manager dialog for Intellicrack.
 
-"""Session manager dialog for Intellicrack.
-
-This module provides the UI for managing analysis sessions,
-including listing, loading, saving, and deleting sessions.
+This module provides the UI for managing analysis sessions, including listing, loading, saving, and deleting sessions.
 """
 
 from __future__ import annotations
@@ -58,7 +57,8 @@ MESSAGE_PREVIEW_MAX_LENGTH = 100
 
 
 class SessionManagerDialog(QDialog):
-    """Dialog for managing analysis sessions.
+    """
+    Dialog for managing analysis sessions.
 
     Allows users to:
     - View list of saved sessions
@@ -113,7 +113,8 @@ class SessionManagerDialog(QDialog):
         layout.addLayout(self._create_bottom_buttons())
 
     def _create_left_panel(self) -> QWidget:
-        """Create the left panel with session table.
+        """
+        Create the left panel with session table.
 
         Returns:
             QWidget: Widget containing the session table and action buttons.
@@ -148,7 +149,8 @@ class SessionManagerDialog(QDialog):
         self._session_table.itemDoubleClicked.connect(self._on_double_click)
 
     def _create_table_buttons(self) -> QHBoxLayout:
-        """Create refresh and delete buttons for the table.
+        """
+        Create refresh and delete buttons for the table.
 
         Returns:
             QHBoxLayout: Layout containing the table action buttons.
@@ -165,7 +167,8 @@ class SessionManagerDialog(QDialog):
         return layout
 
     def _create_right_panel(self) -> QWidget:
-        """Create the right panel with details and preview.
+        """
+        Create the right panel with details and preview.
 
         Returns:
             QWidget: Widget containing session details and preview.
@@ -178,7 +181,8 @@ class SessionManagerDialog(QDialog):
         return panel
 
     def _create_details_group(self) -> QGroupBox:
-        """Create the session details group box.
+        """
+        Create the session details group box.
 
         Returns:
             QGroupBox: Group box containing session detail labels.
@@ -204,7 +208,8 @@ class SessionManagerDialog(QDialog):
         return group
 
     def _create_preview_group(self) -> QGroupBox:
-        """Create the preview group box.
+        """
+        Create the preview group box.
 
         Returns:
             QGroupBox: Group box containing the preview text widget.
@@ -219,7 +224,8 @@ class SessionManagerDialog(QDialog):
         return group
 
     def _create_bottom_buttons(self) -> QHBoxLayout:
-        """Create the bottom button row.
+        """
+        Create the bottom button row.
 
         Returns:
             QHBoxLayout: Layout containing export, import, load and close buttons.
@@ -343,7 +349,8 @@ class SessionManagerDialog(QDialog):
 
     @staticmethod
     def _metadata_to_dict(metadata: SessionMetadata) -> dict[str, Any]:
-        """Convert a SessionMetadata object to a dictionary.
+        """
+        Convert a SessionMetadata object to a dictionary.
 
         Args:
             metadata: SessionMetadata object to convert.
@@ -400,7 +407,8 @@ class SessionManagerDialog(QDialog):
             self._delete_btn.setEnabled(False)
 
     def _on_double_click(self, _item: QTableWidgetItem) -> None:
-        """Handle double-click on session.
+        """
+        Handle double-click on session.
 
         Args:
             _item: The double-clicked item.
@@ -408,7 +416,8 @@ class SessionManagerDialog(QDialog):
         self._load_selected_session()
 
     def _update_details(self, session: dict[str, Any]) -> None:
-        """Update the details panel with session info.
+        """
+        Update the details panel with session info.
 
         Args:
             session: Session data dictionary.
@@ -541,7 +550,8 @@ class SessionManagerDialog(QDialog):
             self._load_sessions()
 
     def _delete_session_sync(self, session_id: str) -> bool:
-        """Delete a session synchronously.
+        """
+        Delete a session synchronously.
 
         Args:
             session_id: Session identifier.
@@ -638,7 +648,8 @@ class SessionManagerDialog(QDialog):
 
     @staticmethod
     def _prepare_export_data(session_data: dict[str, Any]) -> dict[str, Any]:
-        """Prepare session data for export.
+        """
+        Prepare session data for export.
 
         Args:
             session_data: Raw session data.
@@ -768,7 +779,8 @@ class SessionManagerDialog(QDialog):
             )
 
     def _save_session_to_disk(self, session_data: dict[str, Any]) -> None:
-        """Save session data to disk.
+        """
+        Save session data to disk.
 
         Args:
             session_data: Session data to save.
@@ -788,7 +800,8 @@ class SessionManagerDialog(QDialog):
         )
 
     def get_selected_session_id(self) -> str | None:
-        """Get the ID of the currently selected session.
+        """
+        Get the ID of the currently selected session.
 
         Returns:
             str | None: Selected session ID or None.
@@ -804,7 +817,8 @@ class SessionManagerDialog(QDialog):
 
 
 class NewSessionDialog(QDialog):
-    """Dialog for creating a new session.
+    """
+    Dialog for creating a new session.
 
     Allows users to specify session name and initial settings.
 
@@ -848,7 +862,8 @@ class NewSessionDialog(QDialog):
         self.accept()
 
     def get_session_name(self) -> str:
-        """Get the entered session name.
+        """
+        Get the entered session name.
 
         Returns:
             str: Session name.
@@ -856,7 +871,8 @@ class NewSessionDialog(QDialog):
         return str(self._name_input.text()).strip()
 
     def get_description(self) -> str:
-        """Get the entered description.
+        """
+        Get the entered description.
 
         Returns:
             str: Session description.

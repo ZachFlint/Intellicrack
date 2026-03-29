@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-22T02:17:08.471308",
-  "total_findings": 71,
-  "total_files": 32,
+  "generated": "2026-03-28T15:16:52.155783",
+  "total_findings": 67,
+  "total_files": 30,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
@@ -17,14 +17,14 @@
         {
           "line": null,
           "column": null,
-          "message": "Unused function: contextMenuEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function contextMenuEvent"
+          "message": "Unused function: clear_highlights",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function clear_highlights"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_highlight_rules",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function get_highlight_rules"
+          "message": "Unused function: contextMenuEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function contextMenuEvent"
         },
         {
           "line": null,
@@ -209,30 +209,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\transform_pipeline.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: move_step",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function move_step"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: preview",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function preview"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: remove_step",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function remove_step"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\credentials\\oauth.py",
       "count": 3,
       "findings": [
@@ -359,8 +335,8 @@
         {
           "line": null,
           "column": null,
-          "message": "Unused function: unregister_callback",
-          "raw": "src\\intellicrack\\bridges\\hex_state.py: Unused function unregister_callback"
+          "message": "Unused function: get_current_state",
+          "raw": "src\\intellicrack\\bridges\\hex_state.py: Unused function get_current_state"
         }
       ]
     },
@@ -515,14 +491,14 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
+      "path": "src\\intellicrack\\core\\transform_pipeline.py",
       "count": 1,
       "findings": [
         {
           "line": null,
           "column": null,
-          "message": "Unused function: closeEvent",
-          "raw": "src\\intellicrack\\ui\\app.py: Unused function closeEvent"
+          "message": "Unused function: preview",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function preview"
         }
       ]
     },
@@ -547,18 +523,6 @@
           "column": null,
           "message": "Unused function: highlightBlock",
           "raw": "src\\intellicrack\\ui\\highlighter.py: Unused function highlightBlock"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panel_dock.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: closeEvent",
-          "raw": "src\\intellicrack\\ui\\panel_dock.py: Unused function closeEvent"
         }
       ]
     },

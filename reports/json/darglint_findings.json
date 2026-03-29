@@ -1,7 +1,7 @@
 {
   "tool": "darglint",
-  "generated": "2026-03-22T02:20:41.330626",
-  "total_findings": 164,
+  "generated": "2026-03-28T15:13:50.067171",
+  "total_findings": 163,
   "total_files": 18,
   "files": [
     {
@@ -9,396 +9,396 @@
       "count": 49,
       "findings": [
         {
-          "line": 257,
+          "line": 266,
           "column": null,
           "function": "name",
           "code": "DAR202",
           "message": "[name] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:name:257: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:name:266: DAR202: + return"
         },
         {
-          "line": 288,
+          "line": 300,
           "column": null,
           "function": "tool_definition",
           "code": "DAR202",
           "message": "[tool_definition] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:tool_definition:288: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:tool_definition:300: DAR202: + return"
         },
         {
-          "line": 317,
+          "line": 331,
           "column": null,
           "function": "is_available",
           "code": "DAR202",
           "message": "[is_available] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:is_available:317: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:is_available:331: DAR202: + return"
         },
         {
-          "line": 349,
+          "line": 364,
           "column": null,
           "function": "load_binary",
           "code": "DAR202",
           "message": "[load_binary] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:load_binary:349: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:load_binary:364: DAR202: + return"
         },
         {
-          "line": 375,
+          "line": 392,
           "column": null,
           "function": "get_functions",
           "code": "DAR202",
           "message": "[get_functions] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_functions:375: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_functions:392: DAR202: + return"
         },
         {
-          "line": 391,
+          "line": 409,
           "column": null,
           "function": "get_function",
           "code": "DAR202",
           "message": "[get_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_function:391: DAR202: + return"
-        },
-        {
-          "line": 406,
-          "column": null,
-          "function": "decompile",
-          "code": "DAR202",
-          "message": "[decompile] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:decompile:406: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_function:409: DAR202: + return"
         },
         {
           "line": 425,
           "column": null,
+          "function": "decompile",
+          "code": "DAR202",
+          "message": "[decompile] + return",
+          "raw": "src\\intellicrack\\bridges\\base.py:decompile:425: DAR202: + return"
+        },
+        {
+          "line": 445,
+          "column": null,
           "function": "disassemble",
           "code": "DAR202",
           "message": "[disassemble] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:disassemble:425: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:disassemble:445: DAR202: + return"
         },
         {
-          "line": 441,
+          "line": 462,
           "column": null,
           "function": "get_xrefs_to",
           "code": "DAR202",
           "message": "[get_xrefs_to] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_to:441: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_to:462: DAR202: + return"
         },
         {
-          "line": 456,
+          "line": 478,
           "column": null,
           "function": "get_xrefs_from",
           "code": "DAR202",
           "message": "[get_xrefs_from] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_from:456: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_from:478: DAR202: + return"
         },
         {
-          "line": 471,
+          "line": 494,
           "column": null,
           "function": "search_strings",
           "code": "DAR202",
           "message": "[search_strings] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:search_strings:471: DAR202: + return"
-        },
-        {
-          "line": 486,
-          "column": null,
-          "function": "search_bytes",
-          "code": "DAR202",
-          "message": "[search_bytes] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:search_bytes:486: DAR202: + return"
-        },
-        {
-          "line": 498,
-          "column": null,
-          "function": "get_imports",
-          "code": "DAR202",
-          "message": "[get_imports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_imports:498: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:search_strings:494: DAR202: + return"
         },
         {
           "line": 510,
           "column": null,
+          "function": "search_bytes",
+          "code": "DAR202",
+          "message": "[search_bytes] + return",
+          "raw": "src\\intellicrack\\bridges\\base.py:search_bytes:510: DAR202: + return"
+        },
+        {
+          "line": 523,
+          "column": null,
+          "function": "get_imports",
+          "code": "DAR202",
+          "message": "[get_imports] + return",
+          "raw": "src\\intellicrack\\bridges\\base.py:get_imports:523: DAR202: + return"
+        },
+        {
+          "line": 536,
+          "column": null,
           "function": "get_exports",
           "code": "DAR202",
           "message": "[get_exports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_exports:510: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_exports:536: DAR202: + return"
         },
         {
-          "line": 526,
+          "line": 553,
           "column": null,
           "function": "rename_function",
           "code": "DAR202",
           "message": "[rename_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:rename_function:526: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:rename_function:553: DAR202: + return"
         },
         {
-          "line": 547,
+          "line": 575,
           "column": null,
           "function": "add_comment",
           "code": "DAR202",
           "message": "[add_comment] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:add_comment:547: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:add_comment:575: DAR202: + return"
         },
         {
-          "line": 597,
+          "line": 627,
           "column": null,
           "function": "spawn",
           "code": "DAR202",
           "message": "[spawn] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:spawn:597: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:spawn:627: DAR202: + return"
         },
         {
-          "line": 623,
+          "line": 655,
           "column": null,
           "function": "read_memory",
           "code": "DAR202",
           "message": "[read_memory] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:read_memory:623: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:read_memory:655: DAR202: + return"
         },
         {
-          "line": 639,
+          "line": 672,
           "column": null,
           "function": "write_memory",
           "code": "DAR202",
           "message": "[write_memory] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:write_memory:639: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:write_memory:672: DAR202: + return"
         },
         {
-          "line": 651,
+          "line": 685,
           "column": null,
           "function": "get_memory_regions",
           "code": "DAR202",
           "message": "[get_memory_regions] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_memory_regions:651: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_memory_regions:685: DAR202: + return"
         },
         {
-          "line": 666,
+          "line": 701,
           "column": null,
           "function": "scan_memory",
           "code": "DAR202",
           "message": "[scan_memory] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:scan_memory:666: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:scan_memory:701: DAR202: + return"
         },
         {
-          "line": 717,
+          "line": 756,
           "column": null,
           "function": "step_into",
           "code": "DAR202",
           "message": "[step_into] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:step_into:717: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:step_into:756: DAR202: + return"
         },
         {
-          "line": 729,
+          "line": 769,
           "column": null,
           "function": "step_over",
           "code": "DAR202",
           "message": "[step_over] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:step_over:729: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:step_over:769: DAR202: + return"
         },
         {
-          "line": 741,
+          "line": 782,
           "column": null,
           "function": "step_out",
           "code": "DAR202",
           "message": "[step_out] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:step_out:741: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:step_out:782: DAR202: + return"
         },
         {
-          "line": 762,
+          "line": 804,
           "column": null,
           "function": "set_breakpoint",
           "code": "DAR202",
           "message": "[set_breakpoint] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:set_breakpoint:762: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:set_breakpoint:804: DAR202: + return"
         },
         {
-          "line": 778,
+          "line": 821,
           "column": null,
           "function": "remove_breakpoint",
           "code": "DAR202",
           "message": "[remove_breakpoint] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:remove_breakpoint:778: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:remove_breakpoint:821: DAR202: + return"
         },
         {
-          "line": 790,
+          "line": 834,
           "column": null,
           "function": "get_breakpoints",
           "code": "DAR202",
           "message": "[get_breakpoints] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_breakpoints:790: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_breakpoints:834: DAR202: + return"
         },
         {
-          "line": 802,
+          "line": 847,
           "column": null,
           "function": "get_registers",
           "code": "DAR202",
           "message": "[get_registers] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_registers:802: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_registers:847: DAR202: + return"
         },
         {
-          "line": 818,
+          "line": 864,
           "column": null,
           "function": "set_register",
           "code": "DAR202",
           "message": "[set_register] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:set_register:818: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:set_register:864: DAR202: + return"
         },
         {
-          "line": 830,
+          "line": 877,
           "column": null,
           "function": "get_stack_trace",
           "code": "DAR202",
           "message": "[get_stack_trace] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_stack_trace:830: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_stack_trace:877: DAR202: + return"
         },
         {
-          "line": 849,
+          "line": 897,
           "column": null,
           "function": "disassemble_at",
           "code": "DAR202",
           "message": "[disassemble_at] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:disassemble_at:849: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:disassemble_at:897: DAR202: + return"
         },
         {
-          "line": 866,
+          "line": 915,
           "column": null,
           "function": "assemble_at",
           "code": "DAR202",
           "message": "[assemble_at] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:assemble_at:866: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:assemble_at:915: DAR202: + return"
         },
         {
-          "line": 890,
+          "line": 940,
           "column": null,
           "function": "enumerate_modules",
           "code": "DAR202",
           "message": "[enumerate_modules] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_modules:890: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_modules:940: DAR202: + return"
         },
         {
-          "line": 905,
+          "line": 956,
           "column": null,
           "function": "enumerate_exports",
           "code": "DAR202",
           "message": "[enumerate_exports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_exports:905: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_exports:956: DAR202: + return"
         },
         {
-          "line": 926,
+          "line": 978,
           "column": null,
           "function": "hook_function",
           "code": "DAR202",
           "message": "[hook_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:hook_function:926: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:hook_function:978: DAR202: + return"
         },
         {
-          "line": 942,
+          "line": 995,
           "column": null,
           "function": "remove_hook",
           "code": "DAR202",
           "message": "[remove_hook] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:remove_hook:942: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:remove_hook:995: DAR202: + return"
         },
         {
-          "line": 954,
+          "line": 1008,
           "column": null,
           "function": "get_hooks",
           "code": "DAR202",
           "message": "[get_hooks] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_hooks:954: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_hooks:1008: DAR202: + return"
         },
         {
-          "line": 969,
+          "line": 1024,
           "column": null,
           "function": "execute_script",
           "code": "DAR202",
           "message": "[execute_script] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:execute_script:969: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:execute_script:1024: DAR202: + return"
         },
         {
-          "line": 985,
+          "line": 1041,
           "column": null,
           "function": "intercept_return",
           "code": "DAR202",
           "message": "[intercept_return] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:intercept_return:985: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:intercept_return:1041: DAR202: + return"
         },
         {
-          "line": 1004,
+          "line": 1061,
           "column": null,
           "function": "call_function",
           "code": "DAR202",
           "message": "[call_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:call_function:1004: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:call_function:1061: DAR202: + return"
         },
         {
-          "line": 1020,
+          "line": 1078,
           "column": null,
           "function": "enumerate_imports",
           "code": "DAR202",
           "message": "[enumerate_imports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_imports:1020: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_imports:1078: DAR202: + return"
         },
         {
-          "line": 1032,
+          "line": 1091,
           "column": null,
           "function": "enumerate_threads",
           "code": "DAR202",
           "message": "[enumerate_threads] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_threads:1032: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_threads:1091: DAR202: + return"
         },
         {
-          "line": 1064,
+          "line": 1124,
           "column": null,
           "function": "load_file",
           "code": "DAR202",
           "message": "[load_file] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:load_file:1064: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:load_file:1124: DAR202: + return"
         },
         {
-          "line": 1080,
+          "line": 1141,
           "column": null,
           "function": "read_bytes",
           "code": "DAR202",
           "message": "[read_bytes] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:read_bytes:1080: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:read_bytes:1141: DAR202: + return"
         },
         {
-          "line": 1108,
+          "line": 1171,
           "column": null,
           "function": "apply_patch",
           "code": "DAR202",
           "message": "[apply_patch] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:apply_patch:1108: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:apply_patch:1171: DAR202: + return"
         },
         {
-          "line": 1123,
+          "line": 1187,
           "column": null,
           "function": "revert_patch",
           "code": "DAR202",
           "message": "[revert_patch] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:revert_patch:1123: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:revert_patch:1187: DAR202: + return"
         },
         {
-          "line": 1138,
+          "line": 1203,
           "column": null,
           "function": "save",
           "code": "DAR202",
           "message": "[save] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:save:1138: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:save:1203: DAR202: + return"
         },
         {
-          "line": 1159,
+          "line": 1225,
           "column": null,
           "function": "search_pattern",
           "code": "DAR202",
           "message": "[search_pattern] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:search_pattern:1159: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:search_pattern:1225: DAR202: + return"
         },
         {
-          "line": 1177,
+          "line": 1244,
           "column": null,
           "function": "calculate_checksum",
           "code": "DAR202",
           "message": "[calculate_checksum] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:calculate_checksum:1177: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:calculate_checksum:1244: DAR202: + return"
         }
       ]
     },
@@ -407,252 +407,252 @@
       "count": 31,
       "findings": [
         {
-          "line": 152,
+          "line": 154,
           "column": null,
           "function": "parse",
           "code": "DAR402",
           "message": "[parse] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:parse:152: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:parse:154: DAR402: +r HexPatParseError"
         },
         {
-          "line": 214,
+          "line": 216,
           "column": null,
           "function": "_expect",
           "code": "DAR401",
           "message": "[_expect] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_expect:214: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_expect:216: DAR401: -r _error"
         },
         {
-          "line": 224,
+          "line": 226,
           "column": null,
           "function": "_expect",
           "code": "DAR402",
           "message": "[_expect] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_expect:224: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_expect:226: DAR402: +r HexPatParseError"
         },
         {
-          "line": 299,
+          "line": 308,
           "column": null,
           "function": "_parse_annotations",
           "code": "DAR402",
           "message": "[_parse_annotations] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_annotations:299: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_annotations:308: DAR402: +r HexPatParseError"
         },
         {
-          "line": 317,
+          "line": 327,
           "column": null,
           "function": "_parse_type",
           "code": "DAR401",
           "message": "[_parse_type] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_type:317: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_type:327: DAR401: -r _error"
         },
         {
-          "line": 324,
+          "line": 334,
           "column": null,
           "function": "_parse_type",
           "code": "DAR402",
           "message": "[_parse_type] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_type:324: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_type:334: DAR402: +r HexPatParseError"
         },
         {
-          "line": 414,
+          "line": 425,
           "column": null,
           "function": "_parse_expression",
           "code": "DAR402",
           "message": "[_parse_expression] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_expression:414: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_expression:425: DAR402: +r HexPatParseError"
         },
         {
-          "line": 515,
+          "line": 527,
           "column": null,
           "function": "_parse_prefix",
           "code": "DAR401",
           "message": "[_parse_prefix] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_prefix:515: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_prefix:527: DAR401: -r _error"
         },
         {
-          "line": 522,
+          "line": 534,
           "column": null,
           "function": "_parse_prefix",
           "code": "DAR402",
           "message": "[_parse_prefix] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_prefix:522: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_prefix:534: DAR402: +r HexPatParseError"
         },
         {
-          "line": 644,
+          "line": 657,
           "column": null,
           "function": "_parse_paren_or_cast",
           "code": "DAR402",
           "message": "[_parse_paren_or_cast] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_paren_or_cast:644: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_paren_or_cast:657: DAR402: +r HexPatParseError"
         },
         {
-          "line": 685,
+          "line": 699,
           "column": null,
           "function": "_parse_block",
           "code": "DAR402",
           "message": "[_parse_block] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_block:685: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_block:699: DAR402: +r HexPatParseError"
         },
         {
-          "line": 705,
+          "line": 720,
           "column": null,
           "function": "_parse_statement",
           "code": "DAR402",
           "message": "[_parse_statement] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_statement:705: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_statement:720: DAR402: +r HexPatParseError"
         },
         {
-          "line": 809,
+          "line": 827,
           "column": null,
           "function": "_parse_expr_or_placement_stmt",
           "code": "DAR402",
           "message": "[_parse_expr_or_placement_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_expr_or_placement_stmt:809: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_expr_or_placement_stmt:827: DAR402: +r HexPatParseError"
         },
         {
-          "line": 830,
+          "line": 849,
           "column": null,
           "function": "_parse_expr_stmt",
           "code": "DAR402",
           "message": "[_parse_expr_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_expr_stmt:830: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_expr_stmt:849: DAR402: +r HexPatParseError"
         },
         {
-          "line": 844,
+          "line": 864,
           "column": null,
           "function": "_parse_top_level_statement",
           "code": "DAR402",
           "message": "[_parse_top_level_statement] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_top_level_statement:844: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_top_level_statement:864: DAR402: +r HexPatParseError"
         },
         {
-          "line": 882,
+          "line": 903,
           "column": null,
           "function": "_parse_const_decl",
           "code": "DAR402",
           "message": "[_parse_const_decl] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_const_decl:882: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_const_decl:903: DAR402: +r HexPatParseError"
         },
         {
-          "line": 924,
+          "line": 945,
           "column": null,
           "function": "_parse_field_or_placement",
           "code": "DAR402",
           "message": "[_parse_field_or_placement] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_field_or_placement:924: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_field_or_placement:945: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1020,
+          "line": 1044,
           "column": null,
           "function": "_parse_if_stmt",
           "code": "DAR402",
           "message": "[_parse_if_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_if_stmt:1020: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_if_stmt:1044: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1050,
+          "line": 1071,
           "column": null,
           "function": "_parse_while_stmt",
           "code": "DAR402",
           "message": "[_parse_while_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_while_stmt:1050: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_while_stmt:1071: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1066,
+          "line": 1088,
           "column": null,
           "function": "_parse_for_stmt",
           "code": "DAR402",
           "message": "[_parse_for_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_for_stmt:1066: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_for_stmt:1088: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1114,
+          "line": 1136,
           "column": null,
           "function": "_parse_match_stmt",
           "code": "DAR402",
           "message": "[_parse_match_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_match_stmt:1114: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_match_stmt:1136: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1162,
+          "line": 1185,
           "column": null,
           "function": "_parse_try_stmt",
           "code": "DAR402",
           "message": "[_parse_try_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_try_stmt:1162: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_try_stmt:1185: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1182,
+          "line": 1206,
           "column": null,
           "function": "_parse_return_stmt",
           "code": "DAR402",
           "message": "[_parse_return_stmt] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_return_stmt:1182: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_return_stmt:1206: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1203,
+          "line": 1228,
           "column": null,
           "function": "_parse_struct",
           "code": "DAR402",
           "message": "[_parse_struct] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_struct:1203: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_struct:1228: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1234,
+          "line": 1260,
           "column": null,
           "function": "_parse_union",
           "code": "DAR402",
           "message": "[_parse_union] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_union:1234: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_union:1260: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1255,
+          "line": 1282,
           "column": null,
           "function": "_parse_enum",
           "code": "DAR402",
           "message": "[_parse_enum] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_enum:1255: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_enum:1282: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1302,
+          "line": 1330,
           "column": null,
           "function": "_parse_bitfield",
           "code": "DAR402",
           "message": "[_parse_bitfield] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_bitfield:1302: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_bitfield:1330: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1340,
+          "line": 1369,
           "column": null,
           "function": "_parse_function",
           "code": "DAR402",
           "message": "[_parse_function] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_function:1340: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_function:1369: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1390,
+          "line": 1420,
           "column": null,
           "function": "_parse_namespace",
           "code": "DAR401",
           "message": "[_parse_namespace] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_namespace:1390: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_namespace:1420: DAR401: -r _error"
         },
         {
-          "line": 1397,
+          "line": 1427,
           "column": null,
           "function": "_parse_namespace",
           "code": "DAR402",
           "message": "[_parse_namespace] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_namespace:1397: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_namespace:1427: DAR402: +r HexPatParseError"
         },
         {
-          "line": 1440,
+          "line": 1471,
           "column": null,
           "function": "_parse_using",
           "code": "DAR402",
           "message": "[_parse_using] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_using:1440: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:_parse_using:1471: DAR402: +r HexPatParseError"
         }
       ]
     },
@@ -661,148 +661,148 @@
       "count": 18,
       "findings": [
         {
-          "line": 119,
+          "line": 125,
           "column": null,
           "function": "read_u8",
           "code": "DAR402",
           "message": "[read_u8] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u8:119: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u8:125: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 135,
+          "line": 142,
           "column": null,
           "function": "read_u16",
           "code": "DAR402",
           "message": "[read_u16] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u16:135: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u16:142: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 152,
+          "line": 160,
           "column": null,
           "function": "read_u32",
           "code": "DAR402",
           "message": "[read_u32] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u32:152: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u32:160: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 169,
+          "line": 178,
           "column": null,
           "function": "read_u64",
           "code": "DAR402",
           "message": "[read_u64] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u64:169: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u64:178: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 186,
+          "line": 196,
           "column": null,
           "function": "read_u128",
           "code": "DAR402",
           "message": "[read_u128] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u128:186: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_u128:196: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 202,
+          "line": 213,
           "column": null,
           "function": "read_s8",
           "code": "DAR402",
           "message": "[read_s8] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s8:202: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s8:213: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 218,
+          "line": 230,
           "column": null,
           "function": "read_s16",
           "code": "DAR402",
           "message": "[read_s16] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s16:218: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s16:230: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 235,
+          "line": 248,
           "column": null,
           "function": "read_s32",
           "code": "DAR402",
           "message": "[read_s32] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s32:235: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s32:248: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 252,
+          "line": 266,
           "column": null,
           "function": "read_s64",
           "code": "DAR402",
           "message": "[read_s64] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s64:252: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s64:266: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 269,
+          "line": 284,
           "column": null,
           "function": "read_s128",
           "code": "DAR402",
           "message": "[read_s128] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s128:269: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_s128:284: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 286,
+          "line": 302,
           "column": null,
           "function": "read_float",
           "code": "DAR402",
           "message": "[read_float] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_float:286: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_float:302: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 303,
+          "line": 320,
           "column": null,
           "function": "read_double",
           "code": "DAR402",
           "message": "[read_double] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_double:303: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_double:320: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 322,
+          "line": 340,
           "column": null,
           "function": "read_char",
           "code": "DAR402",
           "message": "[read_char] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_char:322: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_char:340: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 338,
+          "line": 357,
           "column": null,
           "function": "read_char16",
           "code": "DAR402",
           "message": "[read_char16] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_char16:338: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_char16:357: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 356,
+          "line": 376,
           "column": null,
           "function": "read_bool",
           "code": "DAR402",
           "message": "[read_bool] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_bool:356: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_bool:376: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 377,
+          "line": 398,
           "column": null,
           "function": "read_string",
           "code": "DAR402",
           "message": "[read_string] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_string:377: DAR402: +r HexPatRuntimeError"
-        },
-        {
-          "line": 400,
-          "column": null,
-          "function": "read_fixed_string",
-          "code": "DAR402",
-          "message": "[read_fixed_string] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_fixed_string:400: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_string:398: DAR402: +r HexPatRuntimeError"
         },
         {
           "line": 422,
           "column": null,
+          "function": "read_fixed_string",
+          "code": "DAR402",
+          "message": "[read_fixed_string] +r HexPatRuntimeError",
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:read_fixed_string:422: DAR402: +r HexPatRuntimeError"
+        },
+        {
+          "line": 445,
+          "column": null,
           "function": "find_sequence",
           "code": "DAR402",
           "message": "[find_sequence] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:find_sequence:422: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\data_reader.py:find_sequence:445: DAR402: +r HexPatRuntimeError"
         }
       ]
     },
@@ -811,116 +811,116 @@
       "count": 14,
       "findings": [
         {
-          "line": 49,
+          "line": 51,
           "column": null,
           "function": "tokenize",
           "code": "DAR402",
           "message": "[tokenize] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:tokenize:49: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:tokenize:51: DAR402: +r HexPatParseError"
         },
         {
-          "line": 147,
+          "line": 155,
           "column": null,
           "function": "_skip_block_comment",
           "code": "DAR401",
           "message": "[_skip_block_comment] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_skip_block_comment:147: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_skip_block_comment:155: DAR401: -r _error"
         },
         {
-          "line": 154,
+          "line": 162,
           "column": null,
           "function": "_skip_block_comment",
           "code": "DAR402",
           "message": "[_skip_block_comment] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_skip_block_comment:154: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_skip_block_comment:162: DAR402: +r HexPatParseError"
         },
         {
-          "line": 179,
+          "line": 188,
           "column": null,
           "function": "_scan_string",
           "code": "DAR401",
           "message": "[_scan_string] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_string:179: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_string:188: DAR401: -r _error"
         },
         {
-          "line": 187,
+          "line": 196,
           "column": null,
           "function": "_scan_string",
           "code": "DAR402",
           "message": "[_scan_string] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_string:187: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_string:196: DAR402: +r HexPatParseError"
         },
         {
-          "line": 210,
+          "line": 220,
           "column": null,
           "function": "_scan_char",
           "code": "DAR401",
           "message": "[_scan_char] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_char:210: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_char:220: DAR401: -r _error"
         },
         {
-          "line": 218,
+          "line": 228,
           "column": null,
           "function": "_scan_char",
           "code": "DAR402",
           "message": "[_scan_char] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_char:218: DAR402: +r HexPatParseError"
-        },
-        {
-          "line": 241,
-          "column": null,
-          "function": "_scan_escape",
-          "code": "DAR401",
-          "message": "[_scan_escape] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_escape:241: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_char:228: DAR402: +r HexPatParseError"
         },
         {
           "line": 252,
           "column": null,
           "function": "_scan_escape",
-          "code": "DAR402",
-          "message": "[_scan_escape] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_escape:252: DAR402: +r HexPatParseError"
+          "code": "DAR401",
+          "message": "[_scan_escape] -r _error",
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_escape:252: DAR401: -r _error"
         },
         {
-          "line": 283,
+          "line": 263,
+          "column": null,
+          "function": "_scan_escape",
+          "code": "DAR402",
+          "message": "[_scan_escape] +r HexPatParseError",
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_escape:263: DAR402: +r HexPatParseError"
+        },
+        {
+          "line": 295,
           "column": null,
           "function": "_scan_number",
           "code": "DAR401",
           "message": "[_scan_number] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_number:283: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_number:295: DAR401: -r _error"
         },
         {
-          "line": 294,
+          "line": 306,
           "column": null,
           "function": "_scan_number",
           "code": "DAR402",
           "message": "[_scan_number] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_number:294: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_number:306: DAR402: +r HexPatParseError"
         },
         {
-          "line": 378,
+          "line": 394,
           "column": null,
           "function": "_scan_operator",
           "code": "DAR401",
           "message": "[_scan_operator] -r _error",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_operator:378: DAR401: -r _error"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_operator:394: DAR401: -r _error"
         },
         {
-          "line": 387,
+          "line": 403,
           "column": null,
           "function": "_scan_operator",
           "code": "DAR402",
           "message": "[_scan_operator] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_operator:387: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_operator:403: DAR402: +r HexPatParseError"
         },
         {
-          "line": 499,
+          "line": 515,
           "column": null,
           "function": "_scan_token",
           "code": "DAR402",
           "message": "[_scan_token] +r HexPatParseError",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_token:499: DAR402: +r HexPatParseError"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:_scan_token:515: DAR402: +r HexPatParseError"
         }
       ]
     },
@@ -929,68 +929,68 @@
       "count": 8,
       "findings": [
         {
-          "line": 2089,
+          "line": 2289,
           "column": null,
           "function": "disassemble",
           "code": "DAR402",
           "message": "[disassemble] +r ImportError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:disassemble:2089: DAR402: +r ImportError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:disassemble:2289: DAR402: +r ImportError"
         },
         {
-          "line": 2141,
+          "line": 2343,
           "column": null,
           "function": "yara_scan",
           "code": "DAR402",
           "message": "[yara_scan] +r ImportError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:yara_scan:2141: DAR402: +r ImportError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:yara_scan:2343: DAR402: +r ImportError"
         },
         {
-          "line": 2188,
+          "line": 2388,
           "column": null,
           "function": "yara_scan_files",
           "code": "DAR402",
           "message": "[yara_scan_files] +r ImportError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:yara_scan_files:2188: DAR402: +r ImportError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:yara_scan_files:2388: DAR402: +r ImportError"
         },
         {
-          "line": 2244,
+          "line": 2442,
           "column": null,
           "function": "apply_transform",
           "code": "DAR402",
           "message": "[apply_transform] +r ValueError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:apply_transform:2244: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:apply_transform:2442: DAR402: +r ValueError"
         },
         {
-          "line": 2289,
+          "line": 2491,
           "column": null,
           "function": "apply_pipeline",
           "code": "DAR402",
           "message": "[apply_pipeline] +r ValueError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:apply_pipeline:2289: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:apply_pipeline:2491: DAR402: +r ValueError"
         },
         {
-          "line": 2290,
+          "line": 2492,
           "column": null,
           "function": "apply_pipeline",
           "code": "DAR402",
           "message": "[apply_pipeline] +r ImportError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:apply_pipeline:2290: DAR402: +r ImportError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:apply_pipeline:2492: DAR402: +r ImportError"
         },
         {
-          "line": 2561,
+          "line": 2882,
           "column": null,
           "function": "search_numeric",
           "code": "DAR402",
           "message": "[search_numeric] +r ValueError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:search_numeric:2561: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:search_numeric:2882: DAR402: +r ValueError"
         },
         {
-          "line": 2651,
+          "line": 3066,
           "column": null,
           "function": "add_highlight_rule",
           "code": "DAR402",
           "message": "[add_highlight_rule] +r ValueError",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:add_highlight_rule:2651: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:add_highlight_rule:3066: DAR402: +r ValueError"
         }
       ]
     },
@@ -999,60 +999,60 @@
       "count": 7,
       "findings": [
         {
-          "line": 413,
+          "line": 426,
           "column": null,
           "function": "_eval_decl",
           "code": "DAR402",
           "message": "[_eval_decl] +r HexPatTypeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_decl:413: DAR402: +r HexPatTypeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_decl:426: DAR402: +r HexPatTypeError"
         },
         {
-          "line": 706,
+          "line": 757,
           "column": null,
           "function": "_instantiate_type",
           "code": "DAR402",
           "message": "[_instantiate_type] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_instantiate_type:706: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_instantiate_type:757: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 1225,
+          "line": 1281,
           "column": null,
           "function": "_eval_stmt_collect",
           "code": "DAR401",
           "message": "[_eval_stmt_collect] -r _BreakSignalError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_stmt_collect:1225: DAR401: -r _BreakSignalError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_stmt_collect:1281: DAR401: -r _BreakSignalError"
         },
         {
-          "line": 1225,
+          "line": 1281,
           "column": null,
           "function": "_eval_stmt_collect",
           "code": "DAR401",
           "message": "[_eval_stmt_collect] -r _ContinueSignalError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_stmt_collect:1225: DAR401: -r _ContinueSignalError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_stmt_collect:1281: DAR401: -r _ContinueSignalError"
         },
         {
-          "line": 1225,
+          "line": 1281,
           "column": null,
           "function": "_eval_stmt_collect",
           "code": "DAR401",
           "message": "[_eval_stmt_collect] -r _ReturnSignalError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_stmt_collect:1225: DAR401: -r _ReturnSignalError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_stmt_collect:1281: DAR401: -r _ReturnSignalError"
         },
         {
-          "line": 1346,
+          "line": 1404,
           "column": null,
           "function": "_eval_expr",
           "code": "DAR402",
           "message": "[_eval_expr] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_expr:1346: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_expr:1404: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 1347,
+          "line": 1405,
           "column": null,
           "function": "_eval_expr",
           "code": "DAR402",
           "message": "[_eval_expr] +r HexPatTypeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_expr:1347: DAR402: +r HexPatTypeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:_eval_expr:1405: DAR402: +r HexPatTypeError"
         }
       ]
     },
@@ -1061,60 +1061,60 @@
       "count": 7,
       "findings": [
         {
-          "line": 138,
+          "line": 154,
           "column": null,
           "function": "_mem_read_unsigned",
           "code": "DAR402",
           "message": "[_mem_read_unsigned] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_read_unsigned:138: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_read_unsigned:154: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 156,
+          "line": 173,
           "column": null,
           "function": "_mem_read_signed",
           "code": "DAR402",
           "message": "[_mem_read_signed] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_read_signed:156: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_read_signed:173: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 174,
+          "line": 192,
           "column": null,
           "function": "_mem_read_string",
           "code": "DAR402",
           "message": "[_mem_read_string] +r HexPatRuntimeError",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_read_string:174: DAR402: +r HexPatRuntimeError"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_read_string:192: DAR402: +r HexPatRuntimeError"
         },
         {
-          "line": 200,
+          "line": 224,
           "column": null,
           "function": "_mem_size",
           "code": "DAR101",
           "message": "[_mem_size] - *_args",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_size:200: DAR101: - *_args"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_size:224: DAR101: - *_args"
         },
         {
-          "line": 210,
+          "line": 235,
           "column": null,
           "function": "_mem_base_address",
           "code": "DAR101",
           "message": "[_mem_base_address] - *_args",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_base_address:210: DAR101: - *_args"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_mem_base_address:235: DAR101: - *_args"
         },
         {
-          "line": 479,
+          "line": 510,
           "column": null,
           "function": "_core_get_endian",
           "code": "DAR101",
           "message": "[_core_get_endian] - *_args",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_core_get_endian:479: DAR101: - *_args"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_core_get_endian:510: DAR101: - *_args"
         },
         {
-          "line": 487,
+          "line": 519,
           "column": null,
           "function": "_core_array_index",
           "code": "DAR101",
           "message": "[_core_array_index] - *_args",
-          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_core_array_index:487: DAR101: - *_args"
+          "raw": "src\\intellicrack\\core\\hexpat\\stdlib.py:_core_array_index:519: DAR101: - *_args"
         }
       ]
     },
@@ -1123,52 +1123,52 @@
       "count": 6,
       "findings": [
         {
-          "line": 416,
+          "line": 429,
           "column": null,
           "function": "_run_agent_loop",
           "code": "DAR401",
           "message": "[_run_agent_loop] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:416: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:429: DAR401: -r CancelledError"
         },
         {
-          "line": 421,
+          "line": 434,
           "column": null,
           "function": "_run_agent_loop",
           "code": "DAR402",
           "message": "[_run_agent_loop] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:421: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:434: DAR402: +r asyncio.CancelledError"
         },
         {
-          "line": 899,
+          "line": 921,
           "column": null,
           "function": "_stream_response",
           "code": "DAR401",
           "message": "[_stream_response] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:899: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:921: DAR401: -r CancelledError"
         },
         {
-          "line": 919,
+          "line": 941,
           "column": null,
           "function": "_stream_response",
           "code": "DAR402",
           "message": "[_stream_response] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:919: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:941: DAR402: +r asyncio.CancelledError"
         },
         {
-          "line": 1013,
+          "line": 1037,
           "column": null,
           "function": "_execute_tool_calls",
           "code": "DAR401",
           "message": "[_execute_tool_calls] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1013: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1037: DAR401: -r CancelledError"
         },
         {
-          "line": 1023,
+          "line": 1047,
           "column": null,
           "function": "_execute_tool_calls",
           "code": "DAR402",
           "message": "[_execute_tool_calls] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1023: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1047: DAR402: +r asyncio.CancelledError"
         }
       ]
     },
@@ -1177,44 +1177,44 @@
       "count": 5,
       "findings": [
         {
-          "line": 597,
+          "line": 625,
           "column": null,
           "function": "_skip_whitespace_and_comments",
           "code": "DAR401",
           "message": "[_skip_whitespace_and_comments] -r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:_skip_whitespace_and_comments:597: DAR401: -r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:_skip_whitespace_and_comments:625: DAR401: -r HexPatError"
         },
         {
-          "line": 625,
+          "line": 653,
           "column": null,
           "function": "_read_string",
           "code": "DAR401",
           "message": "[_read_string] -r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:_read_string:625: DAR401: -r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:_read_string:653: DAR401: -r HexPatError"
         },
         {
-          "line": 709,
+          "line": 731,
           "column": null,
           "function": "parse",
           "code": "DAR402",
           "message": "[parse] +r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:parse:709: DAR402: +r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:parse:731: DAR402: +r HexPatError"
         },
         {
-          "line": 1464,
+          "line": 1581,
           "column": null,
           "function": "compile",
           "code": "DAR402",
           "message": "[compile] +r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:compile:1464: DAR402: +r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:compile:1581: DAR402: +r HexPatError"
         },
         {
-          "line": 1480,
+          "line": 1598,
           "column": null,
           "function": "compile_to_dict",
           "code": "DAR402",
           "message": "[compile_to_dict] +r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:compile_to_dict:1480: DAR402: +r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:compile_to_dict:1598: DAR402: +r HexPatError"
         }
       ]
     },
@@ -1223,36 +1223,36 @@
       "count": 4,
       "findings": [
         {
-          "line": 323,
+          "line": 336,
           "column": null,
           "function": "run_command",
           "code": "DAR202",
           "message": "[run_command] + return",
-          "raw": "src\\intellicrack\\sandbox\\base.py:run_command:323: DAR202: + return"
+          "raw": "src\\intellicrack\\sandbox\\base.py:run_command:336: DAR202: + return"
         },
         {
-          "line": 355,
+          "line": 369,
           "column": null,
           "function": "run_binary",
           "code": "DAR202",
           "message": "[run_binary] + return",
-          "raw": "src\\intellicrack\\sandbox\\base.py:run_binary:355: DAR202: + return"
+          "raw": "src\\intellicrack\\sandbox\\base.py:run_binary:369: DAR202: + return"
         },
         {
-          "line": 421,
+          "line": 438,
           "column": null,
           "function": "take_snapshot",
           "code": "DAR202",
           "message": "[take_snapshot] + return",
-          "raw": "src\\intellicrack\\sandbox\\base.py:take_snapshot:421: DAR202: + return"
+          "raw": "src\\intellicrack\\sandbox\\base.py:take_snapshot:438: DAR202: + return"
         },
         {
-          "line": 453,
+          "line": 472,
           "column": null,
           "function": "list_snapshots",
           "code": "DAR202",
           "message": "[list_snapshots] + return",
-          "raw": "src\\intellicrack\\sandbox\\base.py:list_snapshots:453: DAR202: + return"
+          "raw": "src\\intellicrack\\sandbox\\base.py:list_snapshots:472: DAR202: + return"
         }
       ]
     },
@@ -1261,66 +1261,58 @@
       "count": 4,
       "findings": [
         {
-          "line": 100,
+          "line": 103,
           "column": null,
           "function": "execute",
           "code": "DAR402",
           "message": "[execute] +r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute:100: DAR402: +r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute:103: DAR402: +r HexPatError"
         },
         {
-          "line": 154,
+          "line": 158,
           "column": null,
           "function": "execute_file",
           "code": "DAR402",
           "message": "[execute_file] +r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute_file:154: DAR402: +r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute_file:158: DAR402: +r HexPatError"
         },
         {
-          "line": 155,
+          "line": 159,
           "column": null,
           "function": "execute_file",
           "code": "DAR402",
           "message": "[execute_file] +r FileNotFoundError",
-          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute_file:155: DAR402: +r FileNotFoundError"
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute_file:159: DAR402: +r FileNotFoundError"
         },
         {
-          "line": 181,
+          "line": 186,
           "column": null,
           "function": "execute_bytes",
           "code": "DAR402",
           "message": "[execute_bytes] +r HexPatError",
-          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute_bytes:181: DAR402: +r HexPatError"
+          "raw": "src\\intellicrack\\core\\hexpat\\interpreter.py:execute_bytes:186: DAR402: +r HexPatError"
         }
       ]
     },
     {
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py",
-      "count": 3,
+      "count": 2,
       "findings": [
         {
-          "line": 171,
-          "column": null,
-          "function": "_ast_eval_node",
-          "code": "DAR402",
-          "message": "[_ast_eval_node] +r TypeError",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:_ast_eval_node:171: DAR402: +r TypeError"
-        },
-        {
-          "line": 214,
+          "line": 236,
           "column": null,
           "function": "_safe_eval_expr",
           "code": "DAR402",
           "message": "[_safe_eval_expr] +r SyntaxError",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:_safe_eval_expr:214: DAR402: +r SyntaxError"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:_safe_eval_expr:236: DAR402: +r SyntaxError"
         },
         {
-          "line": 215,
+          "line": 237,
           "column": null,
           "function": "_safe_eval_expr",
           "code": "DAR402",
           "message": "[_safe_eval_expr] +r ValueError",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:_safe_eval_expr:215: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:_safe_eval_expr:237: DAR402: +r ValueError"
         }
       ]
     },
@@ -1329,20 +1321,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 86,
+          "line": 110,
           "column": null,
           "function": "_execute_search",
           "code": "DAR402",
           "message": "[_execute_search] +r ValueError",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:_execute_search:86: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:_execute_search:110: DAR402: +r ValueError"
         },
         {
-          "line": 87,
+          "line": 111,
           "column": null,
           "function": "_execute_search",
           "code": "DAR402",
           "message": "[_execute_search] +r AttributeError",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:_execute_search:87: DAR402: +r AttributeError"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:_execute_search:111: DAR402: +r AttributeError"
         }
       ]
     },
@@ -1351,20 +1343,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 104,
+          "line": 105,
           "column": null,
           "function": "process",
           "code": "DAR402",
           "message": "[process] +r HexPatPreprocessorError",
-          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:process:104: DAR402: +r HexPatPreprocessorError"
+          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:process:105: DAR402: +r HexPatPreprocessorError"
         },
         {
-          "line": 296,
+          "line": 316,
           "column": null,
           "function": "_resolve_include",
           "code": "DAR402",
           "message": "[_resolve_include] +r HexPatPreprocessorError",
-          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:_resolve_include:296: DAR402: +r HexPatPreprocessorError"
+          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:_resolve_include:316: DAR402: +r HexPatPreprocessorError"
         }
       ]
     },
@@ -1373,12 +1365,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 38,
+          "line": 37,
           "column": null,
           "function": "_assert_never",
           "code": "DAR202",
           "message": "[_assert_never] + return",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:_assert_never:38: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\schemas.py:_assert_never:37: DAR202: + return"
         }
       ]
     },
@@ -1387,12 +1379,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 282,
+          "line": 284,
           "column": null,
           "function": "disassemble_to_lines",
           "code": "DAR402",
           "message": "[disassemble_to_lines] +r ValueError",
-          "raw": "src\\intellicrack\\core\\disassembler.py:disassemble_to_lines:282: DAR402: +r ValueError"
+          "raw": "src\\intellicrack\\core\\disassembler.py:disassemble_to_lines:284: DAR402: +r ValueError"
         }
       ]
     },
@@ -1401,12 +1393,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 321,
+          "line": 329,
           "column": null,
           "function": "_retry_with_backoff",
           "code": "DAR402",
           "message": "[_retry_with_backoff] +r retryable_exceptions",
-          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:321: DAR402: +r retryable_exceptions"
+          "raw": "src\\intellicrack\\providers\\base.py:_retry_with_backoff:329: DAR402: +r retryable_exceptions"
         }
       ]
     },
@@ -1415,12 +1407,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 196,
+          "line": 208,
           "column": null,
           "function": "load_source",
           "code": "DAR402",
           "message": "[load_source] +r FileNotFoundError",
-          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:load_source:196: DAR402: +r FileNotFoundError"
+          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:load_source:208: DAR402: +r FileNotFoundError"
         }
       ]
     }

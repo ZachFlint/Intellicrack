@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Token types and Token dataclass for the HexPat pattern language lexer."""
 
 from __future__ import annotations
@@ -140,7 +139,8 @@ class TokenType(enum.Enum):
 
 @dataclass(frozen=True)
 class Token:
-    """A single lexer token.
+    """
+    A single lexer token.
 
     Attributes:
         type: The token type.

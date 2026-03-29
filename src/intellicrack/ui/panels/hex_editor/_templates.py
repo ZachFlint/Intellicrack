@@ -20,7 +20,8 @@ _TEMPLATE_COLOR_LIGHT: Final[str] = "#2E7D32"
 
 
 def _get_default_template_color() -> str:
-    """Return a theme-appropriate default color for template field highlights.
+    """
+    Return a theme-appropriate default color for template field highlights.
 
     Returns:
         str: Hex color string suitable for the active theme.
@@ -66,7 +67,8 @@ class TemplatesMixin:
             logger.info("template_applied", template=template_name)
 
     def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
-        """Populate the templates tree with parsed field data.
+        """
+        Populate the templates tree with parsed field data.
 
         Supports arbitrary nesting depth by recursively building child items.
 
@@ -91,7 +93,8 @@ class TemplatesMixin:
         parent_item: QTreeWidgetItem,
         field_data: dict[str, object],
     ) -> None:
-        """Recursively add child fields to a tree widget item.
+        """
+        Recursively add child fields to a tree widget item.
 
         Args:
             parent_item: The parent QTreeWidgetItem to add children to.
@@ -112,7 +115,8 @@ class TemplatesMixin:
             TemplatesMixin._add_field_children(child_item, child)
 
     def _highlight_template_fields(self, fields: list[dict[str, object]]) -> None:
-        """Apply highlight overlays for template field regions.
+        """
+        Apply highlight overlays for template field regions.
 
         Recursively collects all descendant field regions for highlighting.
 
@@ -134,7 +138,8 @@ class TemplatesMixin:
         fields: list[dict[str, object]],
         highlights: list[tuple[int, int, str]],
     ) -> None:
-        """Recursively collect highlight regions from nested field data.
+        """
+        Recursively collect highlight regions from nested field data.
 
         Args:
             fields: List of field dictionaries.
@@ -167,7 +172,8 @@ class TemplatesMixin:
             self._template_combo.addItem(str(name))
 
     def _select_template(self, template_name: str) -> None:
-        """Select a template by name in the combo box.
+        """
+        Select a template by name in the combo box.
 
         Args:
             template_name: Template name to select.

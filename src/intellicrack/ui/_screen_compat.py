@@ -2,8 +2,8 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
-"""Screen geometry detection for PyQt6 SIP-generated bindings.
+"""
+Screen geometry detection for PyQt6 SIP-generated bindings.
 
 Provides wrapper functions that use dynamic attribute dispatch to access
 Qt screen and widget geometry methods. These wrappers exist because
@@ -37,7 +37,8 @@ _MOVE = "move"
 
 
 def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
-    """Resolve a method on a Qt object, raising a clear error if absent.
+    """
+    Resolve a method on a Qt object, raising a clear error if absent.
 
     Args:
         obj: The Qt object instance.
@@ -59,7 +60,8 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
 
 
 def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
-    """Return the primary screen's available area as (x, y, width, height).
+    """
+    Return the primary screen's available area as (x, y, width, height).
 
     Args:
         app: The QApplication instance.
@@ -80,7 +82,8 @@ def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
 
 
 def move_widget(widget: QWidget, x: int, y: int) -> None:
-    """Move a widget to the specified screen coordinates.
+    """
+    Move a widget to the specified screen coordinates.
 
     Args:
         widget: The widget to move.

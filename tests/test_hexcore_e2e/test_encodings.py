@@ -189,7 +189,7 @@ class TestListEncodings:
         """
         result: list[tuple[str, str]] = sample_doc_from_bytes.list_encodings()
         assert isinstance(result, list)
-        assert len(result) > 0
+        assert result
 
     def test_list_encodings_entries_are_two_tuples(self, sample_doc_from_bytes: Any) -> None:
         """Verify that each entry in list_encodings() is a tuple of exactly 2 elements.
@@ -328,7 +328,7 @@ class TestDecodeTextEdgeCases:
         result: str | None = None
         try:
             result = doc.decode_text(0, len(invalid_utf8), "utf-8")
-        except (ValueError, UnicodeDecodeError, RuntimeError) as exc:
+        except (ValueError, RuntimeError) as exc:
             raised = exc
         if raised is None:
             assert result is not None

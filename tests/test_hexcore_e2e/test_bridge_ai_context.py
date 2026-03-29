@@ -65,7 +65,7 @@ class TestBridgeAIContext:
         assert "bytes_at_cursor" in ctx
         bac: str = ctx["bytes_at_cursor"]
         assert isinstance(bac, str)
-        assert len(bac) > 0
+        assert bac != ""
         tokens = bac.split(" ")
         for token in tokens:
             assert len(token) == 2
@@ -90,7 +90,7 @@ class TestBridgeAIContext:
         _run(loaded_bridge.add_bookmark(0, 2, "MZ_magic", "#FF0000"))
         ctx: dict[str, Any] = _run(loaded_bridge.get_context_for_ai())
         bms: list[dict[str, Any]] = ctx["bookmarks"]
-        assert len(bms) >= 1
+        assert bms
         for bm in bms:
             assert "offset" in bm
             assert "length" in bm

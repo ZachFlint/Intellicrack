@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Credential management for Intellicrack.
 
-"""Credential management for Intellicrack.
-
-This module handles loading and validating API credentials from .env files
-for various LLM providers.
+This module handles loading and validating API credentials from .env files for various LLM providers.
 """
 
 from __future__ import annotations
@@ -27,7 +26,8 @@ _logger = get_logger("credentials.env_loader")
 
 @dataclass
 class ProviderCredentialMapping:
-    """Mapping of environment variable names for a provider.
+    """
+    Mapping of environment variable names for a provider.
 
     Attributes:
         api_key_var: Environment variable name for the primary API key.
@@ -45,7 +45,8 @@ class ProviderCredentialMapping:
 
 
 def _find_env_file() -> Path:
-    """Find the .env file by searching up the directory tree.
+    """
+    Find the .env file by searching up the directory tree.
 
     Returns:
         Path: Path to the found .env file or default location.
@@ -73,7 +74,8 @@ def _find_env_file() -> Path:
 
 
 def _validate_key_format(provider: ProviderName, api_key: str) -> str | None:
-    """Validate API key format for a provider.
+    """
+    Validate API key format for a provider.
 
     Args:
         provider: The provider the key is for.
@@ -101,7 +103,8 @@ def _validate_key_format(provider: ProviderName, api_key: str) -> str | None:
 
 
 class CredentialLoader:
-    """Loads and manages API credentials from .env file.
+    """
+    Loads and manages API credentials from .env file.
 
     This class parses .env files and provides credentials for each
     supported LLM provider.
@@ -158,10 +161,11 @@ class CredentialLoader:
         self._load_env_file()
 
     def _load_env_file(self) -> None:
-        """Load environment variables from .env file.
+        """
+        Load environment variables from .env file.
 
-        Parses the .env file and loads variables into the internal dict.
-        Also sets them in os.environ for compatibility with other libraries.
+        Parses the .env file and loads variables into the internal dict. Also sets them in os.environ for compatibility with other
+        libraries.
         """
         if not self.env_path.exists():
             _logger.debug(
@@ -201,10 +205,10 @@ class CredentialLoader:
         )
 
     def reload(self) -> None:
-        """Reload credentials from the .env file.
+        """
+        Reload credentials from the .env file.
 
-        Call this method to pick up changes to the .env file
-        without restarting the application.
+        Call this method to pick up changes to the .env file without restarting the application.
         """
         _logger.debug("env_file_reloading", path=str(self.env_path))
         self._env_vars.clear()
@@ -212,7 +216,8 @@ class CredentialLoader:
         _logger.info("env_file_reloaded", path=str(self.env_path))
 
     def get_credentials(self, provider: ProviderName) -> ProviderCredentials | None:
-        """Get credentials for a specific provider.
+        """
+        Get credentials for a specific provider.
 
         Args:
             provider: The LLM provider to get credentials for.
@@ -274,7 +279,8 @@ class CredentialLoader:
         )
 
     def _get_var(self, name: str) -> str | None:
-        """Get an environment variable value.
+        """
+        Get an environment variable value.
 
         First checks the parsed .env file, then falls back to os.environ.
 
@@ -289,7 +295,8 @@ class CredentialLoader:
         return os.environ.get(name)
 
     def validate_credentials(self, provider: ProviderName) -> tuple[bool, str | None]:
-        """Validate that credentials exist and are properly formatted.
+        """
+        Validate that credentials exist and are properly formatted.
 
         Args:
             provider: The provider to validate credentials for.
@@ -337,7 +344,8 @@ class CredentialLoader:
         return True, None
 
     def list_configured_providers(self) -> list[ProviderName]:
-        """List all providers that have credentials configured.
+        """
+        List all providers that have credentials configured.
 
         Returns:
             list[ProviderName]: List of provider names with valid credentials.
@@ -355,7 +363,8 @@ class CredentialLoader:
         return configured
 
     def list_missing_providers(self) -> list[ProviderName]:
-        """List all providers that are missing credentials.
+        """
+        List all providers that are missing credentials.
 
         Returns:
             list[ProviderName]: List of provider names without valid credentials.
@@ -373,7 +382,8 @@ class CredentialLoader:
         return missing
 
     def set_env_var(self, name: str, value: str) -> None:
-        """Set an environment variable (in memory only).
+        """
+        Set an environment variable (in memory only).
 
         Args:
             name: The environment variable name.
@@ -383,7 +393,8 @@ class CredentialLoader:
         os.environ[name] = value
 
     def get_env_var(self, name: str, default: str | None = None) -> str | None:
-        """Get an environment variable value.
+        """
+        Get an environment variable value.
 
         Checks the internal cache first, then falls back to os.environ.
 
@@ -398,7 +409,8 @@ class CredentialLoader:
         return value if value is not None else os.environ.get(name, default)
 
     def save_to_env_file(self, name: str, value: str) -> None:
-        """Save an environment variable to the .env file.
+        """
+        Save an environment variable to the .env file.
 
         Updates an existing variable or adds a new one at the end of the file.
         Preserves comments and file structure.
@@ -442,7 +454,8 @@ class CredentialLoader:
 
 
 def get_api_key_env_var_mapping() -> dict[str, str]:
-    """Get a mapping of provider ID to API key environment variable name.
+    """
+    Get a mapping of provider ID to API key environment variable name.
 
     Derives the mapping from PROVIDER_MAPPINGS to maintain a single source
     of truth for env var names.
@@ -454,7 +467,8 @@ def get_api_key_env_var_mapping() -> dict[str, str]:
 
 
 def create_env_template(path: Path) -> None:
-    """Create a template .env file with all supported providers.
+    """
+    Create a template .env file with all supported providers.
 
     Args:
         path: Path where to create the .env.example file.
@@ -491,7 +505,8 @@ OPENROUTER_API_KEY=sk-or-v1-...
 
 @functools.lru_cache(maxsize=1)
 def get_credential_loader() -> CredentialLoader:
-    """Get the global credential loader instance.
+    """
+    Get the global credential loader instance.
 
     Returns:
         CredentialLoader: The singleton CredentialLoader instance.

@@ -56,7 +56,7 @@ class TestDisassemblePeTextSection:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=4, arch="x86", mode="64"))
-        assert len(results) > 0
+        assert results
         assert results[0]["mnemonic"] == "int3"
 
     def test_disassemble_pe_text_count_1_returns_exactly_one(self, loaded_bridge: Any) -> None:
@@ -94,7 +94,7 @@ class TestDisassemblePeTextSection:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=4, arch="x86", mode="64"))
-        assert len(results) > 0
+        assert results
         for insn in results:
             assert _EXPECTED_INSN_KEYS.issubset(insn.keys())
 
@@ -115,7 +115,7 @@ class TestDisassemblePeTextSection:
         """
         auto_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=1, arch="auto"))
         explicit_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=1, arch="x86", mode="64"))
-        assert len(explicit_results) > 0
+        assert explicit_results
         assert explicit_results[0]["mnemonic"] == "int3"
         if auto_results:
             assert auto_results[0]["mnemonic"] == explicit_results[0]["mnemonic"]
@@ -139,8 +139,9 @@ class TestDisassembleMzHeader:
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=1, arch="x86", mode="64"))
-        if results:
+        if results := _run(
+            loaded_bridge.disassemble(0, count=1, arch="x86", mode="64")
+        ):
             assert results[0]["address"] == 0
 
 
@@ -160,7 +161,7 @@ class TestDisassembleX86Mode32:
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="32"))
         assert isinstance(results, list)
-        assert len(results) > 0
+        assert results
 
 
 class TestDisassembleKnownX86Sequence:
@@ -195,7 +196,7 @@ class TestDisassembleKnownX86Sequence:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.disassemble(0, count=2, arch="x86", mode="64"))
-        assert len(results) > 0
+        assert results
         bytes_field: str = results[0]["bytes"]
         assert isinstance(bytes_field, str)
         decoded = bytes.fromhex(bytes_field)
@@ -213,7 +214,7 @@ class TestDisassembleKnownX86Sequence:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.disassemble(0, count=2, arch="x86", mode="64"))
-        assert len(results) > 0
+        assert results
         size_val: int = results[0]["size"]
         assert isinstance(size_val, int)
         assert size_val > 0

@@ -67,7 +67,8 @@ class TransformsMixin:
     def _on_data_changed(self) -> None: ...
 
     def _create_transforms_tab(self) -> QWidget:
-        """Create the Transforms side panel tab widget.
+        """
+        Create the Transforms side panel tab widget.
 
         Returns:
             QWidget: Container widget with transform selector, parameters,
@@ -151,7 +152,8 @@ class TransformsMixin:
         return container
 
     def _on_transform_node_changed(self, index: int) -> None:
-        """Rebuild the parameter form when the selected transform changes.
+        """
+        Rebuild the parameter form when the selected transform changes.
 
         Args:
             index: Index of the newly selected transform in the combo box.
@@ -203,7 +205,8 @@ class TransformsMixin:
             self._transform_params_form.addRow(QLabel(f"{param_name}:"), param_edit)
 
     def _collect_transform_params(self) -> dict[str, str]:
-        """Collect current parameter values from the transform params form.
+        """
+        Collect current parameter values from the transform params form.
 
         Returns:
             dict[str, str]: Mapping of parameter names to their string values.
@@ -225,7 +228,8 @@ class TransformsMixin:
         return params
 
     def _run_single_transform(self, data: bytes) -> bytes | None:
-        """Apply the currently selected single transform to data.
+        """
+        Apply the currently selected single transform to data.
 
         Args:
             data: Input bytes to transform.
@@ -341,7 +345,8 @@ class TransformsMixin:
             logger.debug("transform_applied", offset=cursor_offset, length=write_len)
 
     def _pipeline_step_count(self) -> int:
-        """Return the number of steps in the current pipeline.
+        """
+        Return the number of steps in the current pipeline.
 
         Returns:
             int: Number of pipeline steps.

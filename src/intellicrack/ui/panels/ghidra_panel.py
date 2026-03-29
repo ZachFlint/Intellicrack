@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Ghidra analysis panel for Intellicrack.
 
-"""Ghidra analysis panel for Intellicrack.
-
-Provides decompilation, disassembly, function listing, string search,
-import/export tables, and cross-reference views powered by the
+Provides decompilation, disassembly, function listing, string search, import/export tables, and cross-reference views powered by the
 GhidraBridge headless analysis backend.
 """
 
@@ -71,7 +70,8 @@ _XREF_COLUMNS = ["Direction", "From/To", "Type", "Function"]
 
 
 class GhidraPanel(AnalysisPanelBase):
-    """Native Qt panel for Ghidra reverse engineering analysis.
+    """
+    Native Qt panel for Ghidra reverse engineering analysis.
 
     Displays decompiled code, disassembly, function lists, strings,
     imports, exports, and cross-references from Ghidra headless
@@ -87,7 +87,8 @@ class GhidraPanel(AnalysisPanelBase):
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """Add Ghidra-specific controls to the toolbar.
+        """
+        Add Ghidra-specific controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
@@ -107,7 +108,8 @@ class GhidraPanel(AnalysisPanelBase):
 
     @override
     def _create_content(self) -> QWidget:
-        """Create the Ghidra analysis content area.
+        """
+        Create the Ghidra analysis content area.
 
         Returns:
             QWidget: Splitter with code tabs, data tabs, and function sidebar.
@@ -135,7 +137,8 @@ class GhidraPanel(AnalysisPanelBase):
                 _logger.exception("ghidra_shutdown_failed", bridge_type="ghidra")
 
     def _create_code_tabs(self) -> QTabWidget:
-        """Create decompiled and disassembly code tabs.
+        """
+        Create decompiled and disassembly code tabs.
 
         Returns:
             QTabWidget: Tab widget with code views.
@@ -159,7 +162,8 @@ class GhidraPanel(AnalysisPanelBase):
         return tabs
 
     def _create_data_tabs(self) -> QTabWidget:
-        """Create strings, imports, exports, and xrefs tabs.
+        """
+        Create strings, imports, exports, and xrefs tabs.
 
         Returns:
             QTabWidget: Tab widget with data tables.
@@ -219,7 +223,8 @@ class GhidraPanel(AnalysisPanelBase):
         return tabs
 
     def _create_functions_sidebar(self) -> QWidget:
-        """Create the functions list sidebar.
+        """
+        Create the functions list sidebar.
 
         Returns:
             QWidget: Functions sidebar widget.
@@ -256,7 +261,8 @@ class GhidraPanel(AnalysisPanelBase):
         return container
 
     def set_bridge(self, bridge: GhidraBridge) -> None:
-        """Set the GhidraBridge instance for analysis.
+        """
+        Set the GhidraBridge instance for analysis.
 
         Args:
             bridge: The GhidraBridge to use.
@@ -266,7 +272,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._sync_toolbar_state()
 
     def get_bridge(self) -> GhidraBridge | None:
-        """Get the current GhidraBridge instance.
+        """
+        Get the current GhidraBridge instance.
 
         Returns:
             GhidraBridge | None: The attached bridge or None.
@@ -274,7 +281,8 @@ class GhidraPanel(AnalysisPanelBase):
         return self._bridge
 
     def set_ghidra_path(self, path: Path) -> None:
-        """Set the Ghidra installation path on the bridge.
+        """
+        Set the Ghidra installation path on the bridge.
 
         Args:
             path: Path to Ghidra installation directory.
@@ -284,7 +292,8 @@ class GhidraPanel(AnalysisPanelBase):
             _logger.info("ghidra_path_set", path=str(path))
 
     def _require_connected(self) -> GhidraBridge | None:
-        """Check bridge connection is live and show status if not.
+        """
+        Check bridge connection is live and show status if not.
 
         Returns:
             GhidraBridge | None: The connected bridge, or None if not ready.
@@ -308,7 +317,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._disconnect_btn.setEnabled(ready)
 
     def load_binary(self, binary_path: Path) -> bool:
-        """Load a binary for analysis (protocol-compatible convenience).
+        """
+        Load a binary for analysis (protocol-compatible convenience).
 
         Args:
             binary_path: Path to the binary to analyze.
@@ -329,7 +339,8 @@ class GhidraPanel(AnalysisPanelBase):
         return True
 
     def _on_binary_loaded(self, binary_path: Path) -> None:
-        """Handle successful binary load.
+        """
+        Handle successful binary load.
 
         Args:
             binary_path: The loaded binary path.
@@ -339,7 +350,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._sync_toolbar_state()
 
     def _on_binary_load_error(self, binary_path: Path, exc: object) -> None:
-        """Handle binary load failure.
+        """
+        Handle binary load failure.
 
         Args:
             binary_path: The binary that failed to load.
@@ -376,7 +388,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._sync_toolbar_state()
 
     def _on_connect_error(self, exc: object) -> None:
-        """Handle connection failure.
+        """
+        Handle connection failure.
 
         Args:
             exc: The exception that occurred.
@@ -404,7 +417,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._sync_toolbar_state()
 
     def _on_disconnect_error(self, exc: object) -> None:
-        """Handle disconnection failure.
+        """
+        Handle disconnection failure.
 
         Args:
             exc: The exception that occurred.
@@ -454,7 +468,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._refresh_exports()
 
     def _on_analysis_error(self, exc: object) -> None:
-        """Handle analysis failure.
+        """
+        Handle analysis failure.
 
         Args:
             exc: The exception that occurred.
@@ -479,7 +494,8 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _apply_functions(self, result: object) -> None:
-        """Apply function data to the tree.
+        """
+        Apply function data to the tree.
 
         Args:
             result: Function list from the bridge.
@@ -509,7 +525,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
-        """Handle function filter text changes.
+        """
+        Handle function filter text changes.
 
         Args:
             _text: New filter text (unused, read from widget).
@@ -517,7 +534,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._on_refresh_functions()
 
     def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
-        """Handle function tree item click to show decompilation.
+        """
+        Handle function tree item click to show decompilation.
 
         Args:
             item: Clicked tree widget item.
@@ -545,7 +563,8 @@ class GhidraPanel(AnalysisPanelBase):
         self.show_xrefs(address)
 
     def _apply_decompiled(self, result: object) -> None:
-        """Apply decompiled code to the view.
+        """
+        Apply decompiled code to the view.
 
         Args:
             result: Decompiled code string from the bridge.
@@ -554,7 +573,8 @@ class GhidraPanel(AnalysisPanelBase):
             self._decompiled_view.setPlainText(str(result))
 
     def _apply_disassembly(self, result: object) -> None:
-        """Apply disassembly data to the view.
+        """
+        Apply disassembly data to the view.
 
         Args:
             result: Disassembly lines from the bridge.
@@ -583,7 +603,8 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _apply_imports(self, result: object) -> None:
-        """Apply import data to the table.
+        """
+        Apply import data to the table.
 
         Args:
             result: Import list from the bridge.
@@ -611,7 +632,8 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _apply_exports(self, result: object) -> None:
-        """Apply export data to the table.
+        """
+        Apply export data to the table.
 
         Args:
             result: Export list from the bridge.
@@ -627,7 +649,8 @@ class GhidraPanel(AnalysisPanelBase):
             self._exports_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(exp, 'address', 0):X}"))
 
     def search_strings(self, pattern: str) -> None:
-        """Search for strings matching pattern and populate table.
+        """
+        Search for strings matching pattern and populate table.
 
         Args:
             pattern: Regex pattern to match.
@@ -644,7 +667,8 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _apply_strings(self, result: object) -> None:
-        """Apply string search results to the table.
+        """
+        Apply string search results to the table.
 
         Args:
             result: String list from the bridge.
@@ -662,7 +686,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._string_search_btn.setEnabled(True)
 
     def _on_string_search_error(self, pattern: str) -> None:
-        """Handle string search failure.
+        """
+        Handle string search failure.
 
         Args:
             pattern: The pattern that failed.
@@ -676,7 +701,8 @@ class GhidraPanel(AnalysisPanelBase):
             self.search_strings(pattern)
 
     def show_xrefs(self, address: int) -> None:
-        """Show cross-references to and from an address.
+        """
+        Show cross-references to and from an address.
 
         Args:
             address: Target address for xref lookup.
@@ -700,7 +726,8 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
-        """Apply xrefs-to data to the tree.
+        """
+        Apply xrefs-to data to the tree.
 
         Args:
             result: Cross-reference list from the bridge.
@@ -719,7 +746,8 @@ class GhidraPanel(AnalysisPanelBase):
             self._xrefs_tree.addTopLevelItem(item)
 
     def _apply_xrefs_from(self, result: object) -> None:
-        """Apply xrefs-from data to the tree.
+        """
+        Apply xrefs-from data to the tree.
 
         Args:
             result: Cross-reference list from the bridge.
@@ -774,7 +802,8 @@ class GhidraPanel(AnalysisPanelBase):
         self._sync_toolbar_state()
 
     def _on_headless_error(self, exc: object) -> None:
-        """Handle headless start failure.
+        """
+        Handle headless start failure.
 
         Args:
             exc: The exception that occurred.

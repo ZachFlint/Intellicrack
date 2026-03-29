@@ -1,13 +1,41 @@
 {
   "tool": "deptry",
-  "generated": "2026-03-22T02:21:36.777740",
-  "total_findings": 245,
-  "total_files": 72,
+  "generated": "2026-03-28T15:19:35.389358",
+  "total_findings": 242,
+  "total_files": 69,
   "files": [
     {
       "path": "pyproject.toml",
-      "count": 96,
+      "count": 100,
       "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'astor' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'astor' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'autopep8' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'autopep8' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'bandit' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'bandit' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'basedpyright' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'basedpyright' defined as a dependency but not used in the codebase"
+        },
         {
           "line": null,
           "column": null,
@@ -19,15 +47,99 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pylint' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pylint' defined as a dependency but not used in the codebase"
+          "message": "'blinter' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'blinter' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'autopep8' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'autopep8' defined as a dependency but not used in the codebase"
+          "message": "'build' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'build' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'bumpversion' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'bumpversion' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'check-wheel-contents' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'check-wheel-contents' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'codespell' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'codespell' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'commitizen' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'commitizen' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'coverage' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'coverage' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'darglint' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'darglint' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'dead' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'dead' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'deadcode' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'deadcode' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'deptry' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'deptry' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'detect-secrets' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'detect-secrets' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'docformatter' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'docformatter' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'faker' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'faker' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -47,148 +159,15 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'ruff' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'ruff' defined as a dependency but not used in the codebase"
+          "message": "'freezegun' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'freezegun' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'isort' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'isort' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pycodestyle' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pycodestyle' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'bandit' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'bandit' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'blinter' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'blinter' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'vulture' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'vulture' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pyupgrade' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pyupgrade' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pydocstyle' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pydocstyle' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'sourcery' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'sourcery' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'wemake-python-styleguide' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'wemake-python-styleguide' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'darglint' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'darglint' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pydoclint' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pydoclint' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pyroma' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pyroma' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'yapf' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'yapf' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'mccabe' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'mccabe' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'xenon' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'xenon' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'codespell' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'codespell' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'detect-secrets' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'detect-secrets' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'safety' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'safety' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'yamllint' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'yamllint' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'jsonlint' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'jsonlint' defined as a dependency but not used in the codebase"
+          "message": "'hypothesis' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'hypothesis' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -201,50 +180,57 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'deptry' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'deptry' defined as a dependency but not used in the codebase"
+          "message": "'ipdb' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'ipdb' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'radon' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'radon' defined as a dependency but not used in the codebase"
+          "message": "'isort' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'isort' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'dead' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'dead' defined as a dependency but not used in the codebase"
+          "message": "'jsonlint' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'jsonlint' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'uncalled' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'uncalled' defined as a dependency but not used in the codebase"
+          "message": "'line-profiler' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'line-profiler' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'deadcode' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'deadcode' defined as a dependency but not used in the codebase"
+          "message": "'mccabe' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'mccabe' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pygount' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pygount' defined as a dependency but not used in the codebase"
+          "message": "'memory-profiler' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'memory-profiler' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'basedpyright' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'basedpyright' defined as a dependency but not used in the codebase"
+          "message": "'mkdocs-material' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'mkdocs-material' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'monkeytype' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'monkeytype' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -264,50 +250,50 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'monkeytype' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'monkeytype' defined as a dependency but not used in the codebase"
+          "message": "'myst-parser' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'myst-parser' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'ty' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'ty' defined as a dependency but not used in the codebase"
+          "message": "'nodeenv' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'nodeenv' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pyannotate' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pyannotate' defined as a dependency but not used in the codebase"
+          "message": "'nox' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'nox' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'types-requests' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'types-requests' defined as a dependency but not used in the codebase"
+          "message": "'pdoc3' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pdoc3' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'types-pyyaml' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'types-pyyaml' defined as a dependency but not used in the codebase"
+          "message": "'pip-audit' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pip-audit' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'build' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'build' defined as a dependency but not used in the codebase"
+          "message": "'pipdeptree' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pipdeptree' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pyclean' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pyclean' defined as a dependency but not used in the codebase"
+          "message": "'poetry' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'poetry' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -327,78 +313,92 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'commitizen' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'commitizen' defined as a dependency but not used in the codebase"
+          "message": "'py-spy' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'py-spy' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'bumpversion' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'bumpversion' defined as a dependency but not used in the codebase"
+          "message": "'pyannotate' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pyannotate' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'setuptools-scm' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'setuptools-scm' defined as a dependency but not used in the codebase"
+          "message": "'pycallgraph2' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pycallgraph2' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'twine' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'twine' defined as a dependency but not used in the codebase"
+          "message": "'pyclean' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pyclean' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'rope' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'rope' defined as a dependency but not used in the codebase"
+          "message": "'pycodestyle' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pycodestyle' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'astor' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'astor' defined as a dependency but not used in the codebase"
+          "message": "'pydoclint' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pydoclint' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'nodeenv' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'nodeenv' defined as a dependency but not used in the codebase"
+          "message": "'pydocstyle' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pydocstyle' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pipdeptree' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pipdeptree' defined as a dependency but not used in the codebase"
+          "message": "'pygount' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pygount' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pip-audit' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pip-audit' defined as a dependency but not used in the codebase"
+          "message": "'pyinstrument' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pyinstrument' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'poetry' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'poetry' defined as a dependency but not used in the codebase"
+          "message": "'pylint' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pylint' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'validate-pyproject' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'validate-pyproject' defined as a dependency but not used in the codebase"
+          "message": "'pymdown-extensions' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pymdown-extensions' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pyproject-fmt' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pyproject-fmt' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pyroma' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pyroma' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -411,43 +411,8 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pytest-cov' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-cov' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pytest-mock' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-mock' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
           "message": "'pytest-asyncio' defined as a dependency but not used in the codebase",
           "raw": "pyproject.toml: DEP002 'pytest-asyncio' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pytest-xdist' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-xdist' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pytest-timeout' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-timeout' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'pytest-qt' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-qt' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -460,8 +425,50 @@
           "line": null,
           "column": null,
           "code": "DEP002",
+          "message": "'pytest-cov' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-cov' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pytest-deadfixtures' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-deadfixtures' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pytest-env' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-env' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
           "message": "'pytest-html' defined as a dependency but not used in the codebase",
           "raw": "pyproject.toml: DEP002 'pytest-html' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pytest-instafail' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-instafail' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pytest-mock' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-mock' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'pytest-qt' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-qt' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -481,57 +488,29 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pytest-env' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-env' defined as a dependency but not used in the codebase"
+          "message": "'pytest-timeout' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-timeout' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pytest-instafail' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-instafail' defined as a dependency but not used in the codebase"
+          "message": "'pytest-xdist' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pytest-xdist' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pytest-deadfixtures' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pytest-deadfixtures' defined as a dependency but not used in the codebase"
+          "message": "'pyupgrade' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'pyupgrade' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'hypothesis' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'hypothesis' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'tox' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'tox' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'nox' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'nox' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'coverage' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'coverage' defined as a dependency but not used in the codebase"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "DEP002",
-          "message": "'freezegun' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'freezegun' defined as a dependency but not used in the codebase"
+          "message": "'radon' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'radon' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -544,8 +523,43 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'faker' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'faker' defined as a dependency but not used in the codebase"
+          "message": "'rope' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'rope' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'ruff' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'ruff' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'safety' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'safety' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'scalene' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'scalene' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'snakeviz' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'snakeviz' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'sourcery' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'sourcery' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -558,8 +572,8 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'sphinx-rtd-theme' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'sphinx-rtd-theme' defined as a dependency but not used in the codebase"
+          "message": "'sphinx-autobuild' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'sphinx-autobuild' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
@@ -579,6 +593,13 @@
           "line": null,
           "column": null,
           "code": "DEP002",
+          "message": "'sphinx-rtd-theme' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'sphinx-rtd-theme' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
           "message": "'sphinx-tabs' defined as a dependency but not used in the codebase",
           "raw": "pyproject.toml: DEP002 'sphinx-tabs' defined as a dependency but not used in the codebase"
         },
@@ -593,92 +614,99 @@
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'sphinx-autobuild' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'sphinx-autobuild' defined as a dependency but not used in the codebase"
+          "message": "'tox' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'tox' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pdoc3' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pdoc3' defined as a dependency but not used in the codebase"
+          "message": "'twine' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'twine' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'mkdocs-material' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'mkdocs-material' defined as a dependency but not used in the codebase"
+          "message": "'ty' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'ty' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pymdown-extensions' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pymdown-extensions' defined as a dependency but not used in the codebase"
+          "message": "'types-pyyaml' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'types-pyyaml' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'myst-parser' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'myst-parser' defined as a dependency but not used in the codebase"
+          "message": "'types-requests' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'types-requests' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'ipdb' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'ipdb' defined as a dependency but not used in the codebase"
+          "message": "'uncalled' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'uncalled' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'line-profiler' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'line-profiler' defined as a dependency but not used in the codebase"
+          "message": "'validate-pyproject' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'validate-pyproject' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'memory-profiler' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'memory-profiler' defined as a dependency but not used in the codebase"
+          "message": "'vermin' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'vermin' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'py-spy' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'py-spy' defined as a dependency but not used in the codebase"
+          "message": "'vulture' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'vulture' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'snakeviz' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'snakeviz' defined as a dependency but not used in the codebase"
+          "message": "'wemake-python-styleguide' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'wemake-python-styleguide' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pyinstrument' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pyinstrument' defined as a dependency but not used in the codebase"
+          "message": "'wily' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'wily' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'scalene' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'scalene' defined as a dependency but not used in the codebase"
+          "message": "'xenon' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'xenon' defined as a dependency but not used in the codebase"
         },
         {
           "line": null,
           "column": null,
           "code": "DEP002",
-          "message": "'pycallgraph2' defined as a dependency but not used in the codebase",
-          "raw": "pyproject.toml: DEP002 'pycallgraph2' defined as a dependency but not used in the codebase"
+          "message": "'yamllint' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'yamllint' defined as a dependency but not used in the codebase"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "DEP002",
+          "message": "'yapf' defined as a dependency but not used in the codebase",
+          "raw": "pyproject.toml: DEP002 'yapf' defined as a dependency but not used in the codebase"
         }
       ]
     },
@@ -687,11 +715,18 @@
       "count": 8,
       "findings": [
         {
-          "line": 22,
+          "line": 21,
           "column": 8,
           "code": "DEP003",
           "message": "'capstone' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\binary.py:22:8: DEP003 'capstone' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\binary.py:21:8: DEP003 'capstone' imported but it is a transitive dependency"
+        },
+        {
+          "line": 22,
+          "column": 8,
+          "code": "DEP003",
+          "message": "'lief' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\bridges\\binary.py:22:8: DEP003 'lief' imported but it is a transitive dependency"
         },
         {
           "line": 23,
@@ -732,15 +767,8 @@
           "line": 28,
           "column": 8,
           "code": "DEP003",
-          "message": "'lief' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\binary.py:28:8: DEP003 'lief' imported but it is a transitive dependency"
-        },
-        {
-          "line": 29,
-          "column": 8,
-          "code": "DEP003",
           "message": "'pefile' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\binary.py:29:8: DEP003 'pefile' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\binary.py:28:8: DEP003 'pefile' imported but it is a transitive dependency"
         }
       ]
     },
@@ -748,6 +776,13 @@
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
       "count": 4,
       "findings": [
+        {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
         {
           "line": 20,
           "column": 1,
@@ -763,18 +798,11 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 22,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 44,
+          "line": 43,
           "column": 12,
           "code": "DEP003",
           "message": "'lief' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:44:12: DEP003 'lief' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:43:12: DEP003 'lief' imported but it is a transitive dependency"
         }
       ]
     },
@@ -783,32 +811,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 23,
+          "line": 26,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:26:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 24,
+          "line": 27,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:24:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:27:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 25,
+          "line": 28,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:25:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:28:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 52,
+          "line": 57,
           "column": 5,
           "code": "DEP003",
           "message": "'cxxfilt' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:52:5: DEP003 'cxxfilt' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:57:5: DEP003 'cxxfilt' imported but it is a transitive dependency"
         }
       ]
     },
@@ -851,6 +879,13 @@
       "count": 4,
       "findings": [
         {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\win32_embed.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
           "line": 20,
           "column": 1,
           "code": "DEP003",
@@ -865,18 +900,11 @@
           "raw": "src\\intellicrack\\ui\\win32_embed.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 27,
+          "line": 22,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\win32_embed.py:27:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 28,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\win32_embed.py:28:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\win32_embed.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -884,13 +912,6 @@
       "path": "src\\intellicrack\\providers\\google.py",
       "count": 3,
       "findings": [
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'google' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\providers\\google.py:20:1: DEP003 'google' imported but it is a transitive dependency"
-        },
         {
           "line": 21,
           "column": 1,
@@ -904,6 +925,13 @@
           "code": "DEP003",
           "message": "'google' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\providers\\google.py:22:1: DEP003 'google' imported but it is a transitive dependency"
+        },
+        {
+          "line": 23,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'google' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\providers\\google.py:23:1: DEP003 'google' imported but it is a transitive dependency"
         }
       ]
     },
@@ -962,36 +990,16 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\chat.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 17,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\chat.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\chat.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\chat.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
       "count": 3,
       "findings": [
+        {
+          "line": 15,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
         {
           "line": 16,
           "column": 1,
@@ -1005,67 +1013,6 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 16,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 17,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 21,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1097,33 +1044,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 21,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
       "count": 3,
       "findings": [
@@ -1142,38 +1062,38 @@
           "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 30,
+          "line": 29,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:30:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:29:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py",
       "count": 3,
       "findings": [
         {
-          "line": 57,
-          "column": 12,
+          "line": 13,
+          "column": 1,
           "code": "DEP003",
-          "message": "'pefile' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:57:12: DEP003 'pefile' imported but it is a transitive dependency"
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 67,
-          "column": 12,
-          "code": "DEP001",
-          "message": "'xxhash' imported but missing from the dependency definitions",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:67:12: DEP001 'xxhash' imported but missing from the dependency definitions"
+          "line": 14,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 78,
-          "column": 12,
+          "line": 15,
+          "column": 1,
           "code": "DEP003",
-          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:78:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:15:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1182,6 +1102,13 @@
       "count": 3,
       "findings": [
         {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
           "line": 13,
           "column": 1,
           "code": "DEP003",
@@ -1189,18 +1116,11 @@
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 14,
+          "line": 21,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 22,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1250,92 +1170,11 @@
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 36,
+          "line": 34,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:36:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 17,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 17,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\script_manager.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 17,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 18,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 19,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:34:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1371,6 +1210,13 @@
       "count": 3,
       "findings": [
         {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
           "line": 19,
           "column": 1,
           "code": "DEP003",
@@ -1383,13 +1229,6 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 21,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1397,6 +1236,13 @@
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
       "count": 3,
       "findings": [
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
         {
           "line": 18,
           "column": 1,
@@ -1410,13 +1256,6 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1424,6 +1263,13 @@
       "path": "src\\intellicrack\\ui\\preferences.py",
       "count": 3,
       "findings": [
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\preferences.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
         {
           "line": 18,
           "column": 1,
@@ -1437,13 +1283,6 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\preferences.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 20,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\preferences.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1526,18 +1365,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 320,
+          "line": 337,
           "column": 9,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\main.py:320:9: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\main.py:337:9: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 321,
+          "line": 338,
           "column": 9,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\main.py:321:9: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\main.py:338:9: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1558,6 +1397,26 @@
           "code": "DEP003",
           "message": "'anthropic' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\providers\\anthropic.py:18:1: DEP003 'anthropic' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\chat.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\chat.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\chat.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1586,18 +1445,38 @@
       "count": 2,
       "findings": [
         {
-          "line": 18,
+          "line": 16,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panel_dock.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panel_dock.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 19,
+          "line": 17,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panel_dock.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panel_dock.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 16,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\analysis_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1606,18 +1485,98 @@
       "count": 2,
       "findings": [
         {
+          "line": 16,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\base_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
           "line": 17,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\panels\\base_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py",
+      "count": 2,
+      "findings": [
         {
           "line": 18,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\base_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 57,
+          "column": 12,
+          "code": "DEP003",
+          "message": "'pefile' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:57:12: DEP003 'pefile' imported but it is a transitive dependency"
+        },
+        {
+          "line": 67,
+          "column": 12,
+          "code": "DEP003",
+          "message": "'xxhash' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py:67:12: DEP003 'xxhash' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 12,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 13,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1642,26 +1601,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 13,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:13:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 14,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:14:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py",
       "count": 2,
       "findings": [
@@ -1682,22 +1621,82 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\process_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 19,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\qt_compat.py",
       "count": 2,
       "findings": [
         {
-          "line": 224,
+          "line": 237,
           "column": 5,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py:224:5: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py:237:5: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 235,
+          "line": 249,
           "column": 5,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py:235:5: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py:249:5: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 16,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\sandbox_panel.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\script_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\panels\\script_manager.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1722,22 +1721,42 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 16,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\sandbox_config.py",
       "count": 2,
       "findings": [
+        {
+          "line": 21,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\sandbox_config.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
         {
           "line": 22,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\sandbox_config.py:22:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 23,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\sandbox_config.py:23:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1746,18 +1765,38 @@
       "count": 2,
       "findings": [
         {
+          "line": 18,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\session_manager.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
           "line": 19,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\session_manager.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\xpu_status.py",
+      "count": 2,
+      "findings": [
         {
-          "line": 20,
+          "line": 16,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:20:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\xpu_status.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\xpu_status.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1766,11 +1805,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 32,
+          "line": 31,
           "column": 8,
           "code": "DEP003",
           "message": "'structlog' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\__init__.py:32:8: DEP003 'structlog' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\__init__.py:31:8: DEP003 'structlog' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1792,24 +1831,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 21,
+          "line": 20,
           "column": 8,
           "code": "DEP003",
           "message": "'frida' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:21:8: DEP003 'frida' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 46,
-          "column": 12,
-          "code": "DEP003",
-          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:46:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:20:8: DEP003 'frida' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1844,11 +1870,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 24,
+          "line": 23,
           "column": 8,
           "code": "DEP003",
           "message": "'structlog' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\core\\logging.py:24:8: DEP003 'structlog' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\core\\logging.py:23:8: DEP003 'structlog' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1857,24 +1883,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 23,
+          "line": 22,
           "column": 8,
           "code": "DEP003",
           "message": "'structlog' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:23:8: DEP003 'structlog' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\transform_pipeline.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 29,
-          "column": 12,
-          "code": "DEP003",
-          "message": "'intellicrack_hexcore' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py:29:12: DEP003 'intellicrack_hexcore' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:22:8: DEP003 'structlog' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1883,11 +1896,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 30,
+          "line": 31,
           "column": 8,
           "code": "DEP003",
           "message": "'httpx' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:30:8: DEP003 'httpx' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\credentials\\oauth.py:31:8: DEP003 'httpx' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1935,11 +1948,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 22,
+          "line": 23,
           "column": 8,
           "code": "DEP003",
           "message": "'httpx' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\providers\\ollama.py:22:8: DEP003 'httpx' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\providers\\ollama.py:23:8: DEP003 'httpx' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1948,11 +1961,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 20,
+          "line": 19,
           "column": 8,
           "code": "DEP003",
           "message": "'httpx' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:20:8: DEP003 'httpx' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\providers\\openrouter.py:19:8: DEP003 'httpx' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1961,11 +1974,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 17,
+          "line": 18,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\confirmation_dialog.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\confirmation_dialog.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -1974,24 +1987,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 21,
+          "line": 18,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\async_bridge.py:21:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 12,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\async_bridge.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -2000,11 +2000,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 12,
+          "line": 11,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py:11:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -2026,11 +2026,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 12,
+          "line": 11,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py:12:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py:11:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },
@@ -2109,45 +2109,6 @@
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
           "raw": "src\\intellicrack\\ui\\resources\\font_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 16,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py:16:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "vendor\\community-patterns\\scripts\\ksy2pat.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": 8,
-          "code": "DEP003",
-          "message": "'yaml' imported but it is a transitive dependency",
-          "raw": "vendor\\community-patterns\\scripts\\ksy2pat.py:1:8: DEP003 'yaml' imported but it is a transitive dependency"
-        }
-      ]
-    },
-    {
-      "path": "vendor\\ImHex-Patterns\\scripts\\ksy2pat.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1,
-          "column": 8,
-          "code": "DEP003",
-          "message": "'yaml' imported but it is a transitive dependency",
-          "raw": "vendor\\ImHex-Patterns\\scripts\\ksy2pat.py:1:8: DEP003 'yaml' imported but it is a transitive dependency"
         }
       ]
     }

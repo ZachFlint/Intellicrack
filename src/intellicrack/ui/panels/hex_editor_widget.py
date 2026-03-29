@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Custom hex editor widget using QPainter rendering.
+"""
+Custom hex editor widget using QPainter rendering.
 
-Provides a high-performance hex editor view with virtual scrolling,
-keyboard editing, mouse selection, and column-based display for
-offset, hex, and ASCII data.
+Provides a high-performance hex editor view with virtual scrolling, keyboard editing, mouse selection, and column-based display for offset,
+hex, and ASCII data.
 """
 
 from __future__ import annotations
@@ -61,7 +61,8 @@ _ASCII_MAX = 0x7F
 
 
 def _get_hex_editor_colors() -> dict[str, QColor]:
-    """Get theme-aware colors for hex editor rendering.
+    """
+    Get theme-aware colors for hex editor rendering.
 
     Returns:
         dict[str, QColor]: Mapping of semantic color names to QColor values.
@@ -107,7 +108,8 @@ def _get_hex_editor_colors() -> dict[str, QColor]:
 
 @dataclass
 class HighlightRule:
-    """A conditional byte highlighting rule.
+    """
+    A conditional byte highlighting rule.
 
     Attributes:
         rule_id: Unique identifier for the rule.
@@ -125,7 +127,8 @@ class HighlightRule:
 
 
 class EntropyMiniMap(QWidget):
-    """Scaled overview widget showing file entropy by region.
+    """
+    Scaled overview widget showing file entropy by region.
 
     Paints a compact vertical strip colored by Shannon entropy with a
     semi-transparent rectangle indicating the currently visible viewport.
@@ -158,7 +161,8 @@ class EntropyMiniMap(QWidget):
         self.update()
 
     def set_entropy_data(self, values: list[float], total_size: int) -> None:
-        """Load entropy values for a file.
+        """
+        Load entropy values for a file.
 
         Args:
             values: List of per-chunk Shannon entropy values (0.0-8.0).
@@ -169,7 +173,8 @@ class EntropyMiniMap(QWidget):
         self.update()
 
     def set_viewport(self, start: int, end: int) -> None:
-        """Update the visible-region indicator.
+        """
+        Update the visible-region indicator.
 
         Args:
             start: First visible byte offset.
@@ -181,7 +186,8 @@ class EntropyMiniMap(QWidget):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """Paint the entropy overview and viewport indicator.
+        """
+        Paint the entropy overview and viewport indicator.
 
         Args:
             a0: Paint event (unused).
@@ -194,7 +200,8 @@ class EntropyMiniMap(QWidget):
             painter.end()
 
     def _draw_minimap(self, painter: QPainter) -> None:
-        """Render the minimap content.
+        """
+        Render the minimap content.
 
         Args:
             painter: Active QPainter instance.
@@ -209,6 +216,28 @@ class EntropyMiniMap(QWidget):
         h = rect.height()
         w = rect.width()
         count = len(self._entropy_values)
+
+        self._draw_entropy_bars(painter, w, h, count, colors)
+        self._draw_viewport_indicator(painter, w, h, colors)
+
+    def _draw_entropy_bars(
+        self,
+        painter: QPainter,
+        w: int,
+        h: int,
+        count: int,
+        colors: dict[str, QColor],
+    ) -> None:
+        """
+        Paint per-chunk entropy bars onto the minimap.
+
+        Args:
+            painter: Active QPainter instance.
+            w: Widget width in pixels.
+            h: Widget height in pixels.
+            count: Number of entropy chunks.
+            colors: Theme color mapping.
+        """
         entropy_low = colors["entropy_low"]
         entropy_mid = colors["entropy_mid"]
         entropy_high = colors["entropy_high"]
@@ -217,24 +246,58 @@ class EntropyMiniMap(QWidget):
             y0 = int(i * h / count)
             y1 = int((i + 1) * h / count)
             segment_h = max(1, y1 - y0)
-
-            if entropy < _ENTROPY_LOW_THRESH:
-                color = entropy_low
-            elif entropy < _ENTROPY_HIGH_THRESH:
-                t = (entropy - _ENTROPY_LOW_THRESH) / (_ENTROPY_HIGH_THRESH - _ENTROPY_LOW_THRESH)
-                r = int(entropy_low.red() + t * (entropy_mid.red() - entropy_low.red()))
-                g = int(entropy_low.green() + t * (entropy_mid.green() - entropy_low.green()))
-                b = int(entropy_low.blue() + t * (entropy_mid.blue() - entropy_low.blue()))
-                color = QColor(r, g, b)
-            else:
-                t = min(1.0, (entropy - _ENTROPY_HIGH_THRESH) / (8.0 - _ENTROPY_HIGH_THRESH))
-                r = int(entropy_mid.red() + t * (entropy_high.red() - entropy_mid.red()))
-                g = int(entropy_mid.green() + t * (entropy_high.green() - entropy_mid.green()))
-                b = int(entropy_mid.blue() + t * (entropy_high.blue() - entropy_mid.blue()))
-                color = QColor(r, g, b)
-
+            color = self._entropy_to_color(entropy, entropy_low, entropy_mid, entropy_high)
             painter.fillRect(QRect(0, y0, w, segment_h), color)
 
+    @staticmethod
+    def _entropy_to_color(
+        entropy: float,
+        low_color: QColor,
+        mid_color: QColor,
+        high_color: QColor,
+    ) -> QColor:
+        """
+        Interpolate an entropy value to a color between low, mid, and high.
+
+        Args:
+            entropy: Shannon entropy value (0.0-8.0).
+            low_color: Color for low entropy regions.
+            mid_color: Color for mid entropy regions.
+            high_color: Color for high entropy regions.
+
+        Returns:
+            QColor: Interpolated color for the given entropy value.
+        """
+        if entropy < _ENTROPY_LOW_THRESH:
+            return low_color
+        if entropy < _ENTROPY_HIGH_THRESH:
+            t = (entropy - _ENTROPY_LOW_THRESH) / (_ENTROPY_HIGH_THRESH - _ENTROPY_LOW_THRESH)
+            r = int(low_color.red() + t * (mid_color.red() - low_color.red()))
+            g = int(low_color.green() + t * (mid_color.green() - low_color.green()))
+            b = int(low_color.blue() + t * (mid_color.blue() - low_color.blue()))
+            return QColor(r, g, b)
+        t = min(1.0, (entropy - _ENTROPY_HIGH_THRESH) / (8.0 - _ENTROPY_HIGH_THRESH))
+        r = int(mid_color.red() + t * (high_color.red() - mid_color.red()))
+        g = int(mid_color.green() + t * (high_color.green() - mid_color.green()))
+        b = int(mid_color.blue() + t * (high_color.blue() - mid_color.blue()))
+        return QColor(r, g, b)
+
+    def _draw_viewport_indicator(
+        self,
+        painter: QPainter,
+        w: int,
+        h: int,
+        colors: dict[str, QColor],
+    ) -> None:
+        """
+        Draw the semi-transparent viewport position indicator.
+
+        Args:
+            painter: Active QPainter instance.
+            w: Widget width in pixels.
+            h: Widget height in pixels.
+            colors: Theme color mapping.
+        """
         if self._viewport_end > self._viewport_start and self._total_size > 0:
             vp_y0 = int(self._viewport_start * h / self._total_size)
             vp_y1 = int(self._viewport_end * h / self._total_size)
@@ -245,7 +308,8 @@ class EntropyMiniMap(QWidget):
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        """Navigate to the clicked file position.
+        """
+        Navigate to the clicked file position.
 
         Args:
             a0: Mouse event.
@@ -283,7 +347,8 @@ DISPLAY_MODES: list[str] = list(_MODE_PARAMS.keys())
 
 
 class HexEditorWidget(QAbstractScrollArea):
-    """Custom hex editor widget with QPainter rendering.
+    """
+    Custom hex editor widget with QPainter rendering.
 
     Renders hex data in three columns (offset, hex, ASCII) with
     virtual scrolling for large file support, keyboard editing,
@@ -363,7 +428,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def _get_mode_params(self) -> tuple[int, int]:
-        """Return (group_size, chars_per_group) for the current display mode.
+        """
+        Return (group_size, chars_per_group) for the current display mode.
 
         Returns:
             tuple[int, int]: Bytes per group and character width per group.
@@ -386,7 +452,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self.setMinimumWidth(self._total_width + 20)
 
     def set_display_mode(self, mode: str) -> None:
-        """Change the hex column display format.
+        """
+        Change the hex column display format.
 
         Args:
             mode: One of the supported display mode names from DISPLAY_MODES.
@@ -395,13 +462,15 @@ class HexEditorWidget(QAbstractScrollArea):
             ValueError: If the mode string is not a recognised display mode.
         """
         if mode not in _MODE_PARAMS:
-            raise ValueError(f"Unknown display mode: {mode!r}. Valid modes: {list(_MODE_PARAMS)}")
+            msg = f"{_ERR_UNKNOWN_MODE}: {mode!r}. Valid modes: {list(_MODE_PARAMS)}"
+            raise ValueError(msg)
         self._display_mode = mode
         self._calculate_layout()
         self._update_viewport()
 
     def _visible_row_count(self) -> int:
-        """Calculate the number of rows visible in the viewport.
+        """
+        Calculate the number of rows visible in the viewport.
 
         Returns:
             int: Number of visible rows.
@@ -410,7 +479,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return 1 if vp is None else max(1, vp.height() // self._line_height)
 
     def _doc_length(self) -> int:
-        """Get the document length safely.
+        """
+        Get the document length safely.
 
         Returns:
             int: Document length in bytes, or 0 if no document.
@@ -425,7 +495,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return 0
 
     def _total_rows(self) -> int:
-        """Calculate total number of rows in the document.
+        """
+        Calculate total number of rows in the document.
 
         Returns:
             int: Total row count.
@@ -436,7 +507,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return (doc_len + self._bytes_per_row - 1) // self._bytes_per_row
 
     def set_document(self, document: Any) -> None:
-        """Attach a HexDocument to this widget.
+        """
+        Attach a HexDocument to this widget.
 
         Args:
             document: HexDocument instance from the Rust core.
@@ -463,7 +535,8 @@ class HexEditorWidget(QAbstractScrollArea):
         _logger.debug("document_set", doc_length=self._doc_length())
 
     def _on_scroll_changed(self, value: int) -> None:
-        """Update the minimap viewport indicator on scroll.
+        """
+        Update the minimap viewport indicator on scroll.
 
         Args:
             value: New scrollbar row value.
@@ -477,7 +550,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """Render the hex editor display.
+        """
+        Render the hex editor display.
 
         Args:
             a0: Paint event.
@@ -493,7 +567,8 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.end()
 
     def _paint_content(self, painter: QPainter, clip_rect: QRect) -> None:
-        """Paint all hex editor content.
+        """
+        Paint all hex editor content.
 
         Args:
             painter: Active QPainter instance.
@@ -515,7 +590,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._paint_highlight_overlays(painter, first_row, visible_rows)
 
     def _paint_separators(self, painter: QPainter, vp_height: int) -> None:
-        """Draw column separator lines.
+        """
+        Draw column separator lines.
 
         Args:
             painter: Active QPainter instance.
@@ -528,7 +604,8 @@ class HexEditorWidget(QAbstractScrollArea):
         painter.drawLine(sep2_x, 0, sep2_x, vp_height)
 
     def _paint_data_rows(self, painter: QPainter, first_row: int, visible_rows: int) -> None:
-        """Paint offset, hex, and ASCII columns for visible rows.
+        """
+        Paint offset, hex, and ASCII columns for visible rows.
 
         Args:
             painter: Active QPainter instance.
@@ -553,35 +630,74 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.setPen(QPen(self._colors["selection_bg"]))
             painter.drawText(self._offset_col_x, y, f"0x{row_offset:08X}")
 
-            groups_per_row = max(1, _BYTES_PER_ROW // group_size)
-            for group_idx in range(groups_per_row):
-                group_start_col = group_idx * group_size
-                if group_start_col >= bytes_in_row:
-                    break
-                actual_group_size = min(group_size, bytes_in_row - group_start_col)
-                group_bytes = row_data[group_start_col : group_start_col + actual_group_size]
-                group_offset = row_offset + group_start_col
-                self._paint_hex_group(
-                    painter,
-                    row_idx,
-                    y,
-                    group_idx,
-                    group_bytes,
-                    actual_group_size,
-                    group_size,
-                    group_offset,
-                    sel_start,
-                    sel_end,
-                )
+            self._paint_row_hex_groups(
+                painter,
+                row_idx,
+                y,
+                row_data,
+                bytes_in_row,
+                row_offset,
+                group_size,
+                sel_start,
+                sel_end,
+            )
 
             for col in range(bytes_in_row):
                 byte_val = row_data[col] if col < len(row_data) else 0
                 byte_offset = row_offset + col
                 self._paint_ascii_byte(painter, row_idx, y, col, byte_val, byte_offset, sel_start, sel_end)
 
+    def _paint_row_hex_groups(
+        self,
+        painter: QPainter,
+        row_idx: int,
+        y: int,
+        row_data: bytes,
+        bytes_in_row: int,
+        row_offset: int,
+        group_size: int,
+        sel_start: int,
+        sel_end: int,
+    ) -> None:
+        """
+        Paint all hex groups for a single row.
+
+        Args:
+            painter: Active QPainter instance.
+            row_idx: Visual row index in viewport.
+            y: Y coordinate for text baseline.
+            row_data: Raw bytes for the entire row.
+            bytes_in_row: Number of valid bytes in the row.
+            row_offset: Absolute byte offset of the first byte in this row.
+            group_size: Bytes per display group.
+            sel_start: Selection start offset (-1 if none).
+            sel_end: Selection end offset (-1 if none).
+        """
+        groups_per_row = max(1, _BYTES_PER_ROW // group_size)
+        for group_idx in range(groups_per_row):
+            group_start_col = group_idx * group_size
+            if group_start_col >= bytes_in_row:
+                break
+            actual_group_size = min(group_size, bytes_in_row - group_start_col)
+            group_bytes = row_data[group_start_col : group_start_col + actual_group_size]
+            group_offset = row_offset + group_start_col
+            self._paint_hex_group(
+                painter,
+                row_idx,
+                y,
+                group_idx,
+                group_bytes,
+                actual_group_size,
+                group_size,
+                group_offset,
+                sel_start,
+                sel_end,
+            )
+
     @staticmethod
     def _read_row_data(read_fn: Any, offset: int, length: int) -> bytes:
-        """Read a row of bytes from the document.
+        """
+        Read a row of bytes from the document.
 
         Args:
             read_fn: Document read callable.
@@ -599,7 +715,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return bytes(cast("list[int]", raw)) if isinstance(raw, list) else b""
 
     def _format_group(self, group_bytes: bytes, padded_size: int) -> str:
-        """Format a byte group as a display string for the current mode.
+        """
+        Format a byte group as a display string for the current mode.
 
         Args:
             group_bytes: Actual bytes for this group (may be less than padded_size).
@@ -624,7 +741,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return f"{b:3d}"
         if mode == "dec_s8":
             b = group_bytes[0] if n > 0 else 0
-            signed = b if b < 128 else b - 256
+            signed = b if b < _SIGNED_BYTE_THRESHOLD else b - 256
             return f"{signed:4d}"
 
         padded = group_bytes + bytes(max(0, padded_size - n))
@@ -633,7 +750,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return f"{cast('int', struct.unpack_from('<H', padded)[0]):04X}"
         if mode == "hex16_be":
             return f"{cast('int', struct.unpack_from('>H', padded)[0]):04X}"
-        if mode in ["hex32_le", "rgba8"]:
+        if mode in {"hex32_le", "rgba8"}:
             return f"{cast('int', struct.unpack_from('<I', padded)[0]):08X}"
         if mode == "hex32_be":
             return f"{cast('int', struct.unpack_from('>I', padded)[0]):08X}"
@@ -658,8 +775,9 @@ class HexEditorWidget(QAbstractScrollArea):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            return f"{val_f:13.6g}"
-        if mode == "float64":
+            else:
+                return f"{val_f:13.6g}"
+        elif mode == "float64":
             try:
                 val_d = cast("float", struct.unpack_from("<d", padded)[0])
             except struct.error:
@@ -684,7 +802,8 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """Paint a group of bytes in the hex column.
+        """
+        Paint a group of bytes in the hex column.
 
         Args:
             painter: Active QPainter instance.
@@ -702,45 +821,143 @@ class HexEditorWidget(QAbstractScrollArea):
         cell_chars = chars_per_group + 1
         hex_x = self._hex_col_x + group_idx * cell_chars * self._char_width
         cell_w = chars_per_group * self._char_width
+        cell_rect = QRect(hex_x - 1, row_idx * self._line_height, cell_w + 2, self._line_height)
 
-        any_selected = False
-        if sel_start >= 0:
-            for bi in range(actual_size):
-                if sel_start <= group_offset + bi <= sel_end:
-                    any_selected = True
-                    break
-
+        any_selected = self._is_group_selected(group_offset, actual_size, sel_start, sel_end)
         any_modified = any((group_offset + bi) in self._modified_offsets for bi in range(actual_size))
 
+        highlight_color = self._find_group_highlight(
+            group_bytes,
+            actual_size,
+            group_offset,
+            any_selected,
+        )
+
+        self._paint_hex_group_background(
+            painter,
+            cell_rect,
+            group_bytes,
+            actual_size,
+            highlight_color,
+            any_selected,
+        )
+        self._set_hex_group_pen(
+            painter,
+            group_bytes,
+            actual_size,
+            any_selected,
+            any_modified,
+        )
+
+        text = self._format_group(group_bytes, group_size)
+        painter.drawText(hex_x, y, text)
+
         is_cursor = group_offset <= self._cursor_offset < group_offset + group_size
+        if is_cursor and self._active_column == "hex" and self.hasFocus():
+            painter.setPen(QPen(self._colors["cursor_text"]))
+            nibble_x = hex_x + self._nibble_index * self._char_width
+            painter.drawRect(nibble_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
-        highlight_color: str | None = None
-        if not any_selected:
-            for bi in range(actual_size):
-                bv = group_bytes[bi] if bi < len(group_bytes) else 0
-                hc = self._get_highlight_color(bv, group_offset + bi)
-                if hc is not None:
-                    highlight_color = hc
-                    break
+    @staticmethod
+    def _is_group_selected(group_offset: int, actual_size: int, sel_start: int, sel_end: int) -> bool:
+        """
+        Check whether any byte in the group falls within the selection.
 
-        if self._display_mode == "rgba8" and actual_size >= 3:
+        Args:
+            group_offset: Absolute byte offset of the first byte in the group.
+            actual_size: Number of bytes in the group.
+            sel_start: Selection start offset (-1 if none).
+            sel_end: Selection end offset (-1 if none).
+
+        Returns:
+            bool: True if at least one byte is selected.
+        """
+        if sel_start < 0:
+            return False
+        return any(sel_start <= group_offset + bi <= sel_end for bi in range(actual_size))
+
+    def _find_group_highlight(
+        self,
+        group_bytes: bytes,
+        actual_size: int,
+        group_offset: int,
+        any_selected: bool,
+    ) -> str | None:
+        """
+        Find the first matching highlight color for a byte group.
+
+        Args:
+            group_bytes: Raw bytes for the group.
+            actual_size: Number of valid bytes in the group.
+            group_offset: Absolute byte offset of the first byte.
+            any_selected: Whether any byte in the group is selected.
+
+        Returns:
+            str | None: Hex color string, or None if no highlight applies.
+        """
+        if any_selected:
+            return None
+        for bi in range(actual_size):
+            bv = group_bytes[bi] if bi < len(group_bytes) else 0
+            hc = self._get_highlight_color(bv, group_offset + bi)
+            if hc is not None:
+                return hc
+        return None
+
+    def _paint_hex_group_background(
+        self,
+        painter: QPainter,
+        cell_rect: QRect,
+        group_bytes: bytes,
+        actual_size: int,
+        highlight_color: str | None,
+        any_selected: bool,
+    ) -> None:
+        """
+        Paint RGBA, highlight, and selection backgrounds for a hex group.
+
+        Args:
+            painter: Active QPainter instance.
+            cell_rect: Bounding rectangle for this hex group cell.
+            group_bytes: Raw bytes for the group.
+            actual_size: Number of valid bytes in the group.
+            highlight_color: Optional hex color string from highlight rules.
+            any_selected: Whether any byte in the group is selected.
+        """
+        if self._display_mode == "rgba8" and actual_size >= _MIN_RGB_BYTES:
             r_ch = group_bytes[0]
             g_ch = group_bytes[1]
             b_ch = group_bytes[2]
-            a_ch = group_bytes[3] if actual_size >= 4 else 255
-            rgba_bg = QColor(r_ch, g_ch, b_ch, max(40, a_ch))
-            painter.fillRect(QRect(hex_x - 1, row_idx * self._line_height, cell_w + 2, self._line_height), rgba_bg)
+            a_ch = group_bytes[3] if actual_size >= _MIN_RGBA_BYTES else 255
+            painter.fillRect(cell_rect, QColor(r_ch, g_ch, b_ch, max(40, a_ch)))
 
         if highlight_color is not None:
             hc_obj = QColor(highlight_color)
             hc_obj.setAlpha(120)
-            painter.fillRect(QRect(hex_x - 1, row_idx * self._line_height, cell_w + 2, self._line_height), hc_obj)
+            painter.fillRect(cell_rect, hc_obj)
 
         if any_selected:
-            painter.fillRect(
-                QRect(hex_x - 1, row_idx * self._line_height, cell_w + 2, self._line_height),
-                self._colors["selection_bg"],
-            )
+            painter.fillRect(cell_rect, self._colors["selection_bg"])
+
+    def _set_hex_group_pen(
+        self,
+        painter: QPainter,
+        group_bytes: bytes,
+        actual_size: int,
+        any_selected: bool,
+        any_modified: bool,
+    ) -> None:
+        """
+        Set the painter pen color for hex group text.
+
+        Args:
+            painter: Active QPainter instance.
+            group_bytes: Raw bytes for the group.
+            actual_size: Number of valid bytes in the group.
+            any_selected: Whether any byte in the group is selected.
+            any_modified: Whether any byte in the group has been modified.
+        """
+        if any_selected:
             painter.setPen(QPen(self._colors["cursor_text"]))
         elif any_modified:
             painter.setPen(QPen(self._colors["hex_modified"]))
@@ -748,14 +965,6 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.setPen(QPen(self._colors["hex_zero"]))
         else:
             painter.setPen(QPen(self._colors["hex_normal"]))
-
-        text = self._format_group(group_bytes, group_size)
-        painter.drawText(hex_x, y, text)
-
-        if is_cursor and self._active_column == "hex" and self.hasFocus():
-            painter.setPen(QPen(self._colors["cursor_text"]))
-            nibble_x = hex_x + self._nibble_index * self._char_width
-            painter.drawRect(nibble_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
     def _paint_hex_byte(
         self,
@@ -768,7 +977,8 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """Paint a single byte in the hex column (hex8 mode only, kept for compatibility).
+        """
+        Paint a single byte in the hex column (hex8 mode only, kept for compatibility).
 
         Args:
             painter: Active QPainter instance.
@@ -804,7 +1014,8 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """Paint a single byte in the ASCII column.
+        """
+        Paint a single byte in the ASCII column.
 
         Args:
             painter: Active QPainter instance.
@@ -860,7 +1071,8 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.drawRect(ascii_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
     def _paint_highlight_overlays(self, painter: QPainter, first_row: int, visible_rows: int) -> None:
-        """Paint highlight overlays for bookmarks and templates.
+        """
+        Paint highlight overlays for bookmarks and templates.
 
         Args:
             painter: Active QPainter instance.
@@ -884,7 +1096,8 @@ class HexEditorWidget(QAbstractScrollArea):
                     painter.fillRect(QRect(hx - 1, hy, chars_per_group * self._char_width + 2, self._line_height), h_color)
 
     def _get_highlight_color(self, byte_val: int, offset: int) -> str | None:
-        """Return the background color for a byte based on highlight rules.
+        """
+        Return the background color for a byte based on highlight rules.
 
         Evaluates all active highlight rules in priority order and returns
         the color from the highest-priority matching rule.
@@ -922,7 +1135,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return best_color
 
     def add_highlight_rule(self, rule: HighlightRule) -> None:
-        """Add a conditional byte highlight rule.
+        """
+        Add a conditional byte highlight rule.
 
         Args:
             rule: The highlight rule to add.
@@ -932,7 +1146,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def remove_highlight_rule(self, rule_id: str) -> bool:
-        """Remove a highlight rule by its identifier.
+        """
+        Remove a highlight rule by its identifier.
 
         Args:
             rule_id: The unique rule identifier to remove.
@@ -953,7 +1168,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def get_highlight_rules(self) -> list[HighlightRule]:
-        """Return a copy of the current highlight rule list.
+        """
+        Return a copy of the current highlight rule list.
 
         Returns:
             list[HighlightRule]: Active highlight rules ordered by priority descending.
@@ -962,7 +1178,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        """Handle keyboard input for editing and navigation.
+        """
+        Handle keyboard input for editing and navigation.
 
         Args:
             a0: Key event.
@@ -1043,7 +1260,8 @@ class HexEditorWidget(QAbstractScrollArea):
                 self._handle_ascii_input(text)
 
     def _move_cursor(self, new_offset: int, extend_selection: bool = False) -> None:
-        """Move the cursor to a new offset.
+        """
+        Move the cursor to a new offset.
 
         Args:
             new_offset: Target offset.
@@ -1071,7 +1289,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def _handle_hex_input(self, char: str) -> None:
-        """Process a hex digit input character.
+        """
+        Process a hex digit input character.
 
         Args:
             char: Single hex character (0-9, a-f, A-F).
@@ -1113,7 +1332,8 @@ class HexEditorWidget(QAbstractScrollArea):
             self._move_cursor(self._cursor_offset + 1)
 
     def _handle_ascii_input(self, char: str) -> None:
-        """Process an ASCII character input.
+        """
+        Process an ASCII character input.
 
         Args:
             char: Single printable ASCII character.
@@ -1145,7 +1365,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._move_cursor(self._cursor_offset + 1)
 
     def _do_delete(self, backspace: bool) -> None:
-        """Delete byte(s) at cursor or selection.
+        """
+        Delete byte(s) at cursor or selection.
 
         Args:
             backspace: True if backspace key, False if delete key.
@@ -1213,11 +1434,10 @@ class HexEditorWidget(QAbstractScrollArea):
                 clipboard.setText(text)
 
     def _do_paste(self) -> None:
-        """Paste clipboard content at cursor position.
+        """
+        Paste clipboard content at cursor position.
 
-        Attempts to parse clipboard text as a hex string first
-        (e.g. "4D 5A 90"). Falls back to encoding the raw text
-        as UTF-8 bytes.
+        Attempts to parse clipboard text as a hex string first (e.g. "4D 5A 90"). Falls back to encoding the raw text as UTF-8 bytes.
         """
         if self._document is None:
             return
@@ -1269,7 +1489,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        """Handle mouse press for cursor positioning.
+        """
+        Handle mouse press for cursor positioning.
 
         Args:
             a0: Mouse event.
@@ -1303,7 +1524,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        """Handle mouse drag for selection.
+        """
+        Handle mouse drag for selection.
 
         Args:
             a0: Mouse event.
@@ -1328,7 +1550,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        """Handle mouse release to finalize selection.
+        """
+        Handle mouse release to finalize selection.
 
         Args:
             a0: Mouse event.
@@ -1342,7 +1565,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        """Handle mouse wheel for scrolling.
+        """
+        Handle mouse wheel for scrolling.
 
         Args:
             a0: Wheel event.
@@ -1359,7 +1583,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def resizeEvent(self, a0: QResizeEvent | None) -> None:
-        """Handle widget resize and reposition the minimap.
+        """
+        Handle widget resize and reposition the minimap.
 
         Args:
             a0: Resize event.
@@ -1381,7 +1606,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._minimap.setGeometry(mm_x, mm_y, _MINIMAP_WIDTH, mm_h)
 
     def show_minimap(self, visible: bool = True) -> None:
-        """Show or hide the entropy minimap.
+        """
+        Show or hide the entropy minimap.
 
         Args:
             visible: True to show the minimap, False to hide it.
@@ -1402,7 +1628,8 @@ class HexEditorWidget(QAbstractScrollArea):
             vbar.setPageStep(visible)
 
     def _offset_from_point(self, pos: QPoint) -> int | None:
-        """Determine the byte offset from a screen position.
+        """
+        Determine the byte offset from a screen position.
 
         Args:
             pos: Point in viewport coordinates.
@@ -1441,7 +1668,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return offset
 
     def _ensure_visible(self, offset: int) -> None:
-        """Scroll to ensure the given offset is visible.
+        """
+        Scroll to ensure the given offset is visible.
 
         Args:
             offset: Byte offset to make visible.
@@ -1466,7 +1694,8 @@ class HexEditorWidget(QAbstractScrollArea):
             vp.update()
 
     def goto_offset(self, offset: int) -> None:
-        """Navigate to a specific byte offset.
+        """
+        Navigate to a specific byte offset.
 
         Args:
             offset: Target byte offset.
@@ -1474,7 +1703,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._move_cursor(offset, extend_selection=False)
 
     def get_selection_bytes(self) -> bytes:
-        """Get the bytes in the current selection.
+        """
+        Get the bytes in the current selection.
 
         Returns:
             bytes: Selected bytes, or empty bytes if no selection.
@@ -1496,7 +1726,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return b""
 
     def copy_as(self, fmt: str = "hex") -> str:
-        """Format the current selection as a string.
+        """
+        Format the current selection as a string.
 
         Args:
             fmt: Output format identifier. Supported values are "hex",
@@ -1520,7 +1751,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return self.copy_as_format(fmt, data) if data else ""
 
     def copy_as_format(self, fmt: str, data: bytes | None = None) -> str:
-        """Format bytes as a string in the specified language format.
+        """
+        Format bytes as a string in the specified language format.
 
         Args:
             fmt: Output format identifier. Supported values are "hex",
@@ -1560,7 +1792,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if fmt == "java_array":
             parts = []
             for b in data:
-                if b > 0x7F:
+                if b > _ASCII_MAX:
                     parts.append(f"(byte)0x{b:02X}")
                 else:
                     parts.append(f"0x{b:02X}")
@@ -1579,7 +1811,8 @@ class HexEditorWidget(QAbstractScrollArea):
         return self._format_markdown_table(data) if fmt == "markdown_table" else ""
 
     def _format_markdown_table(self, data: bytes) -> str:
-        """Format bytes as a Markdown table with Offset, Hex, and ASCII columns.
+        """
+        Format bytes as a Markdown table with Offset, Hex, and ASCII columns.
 
         Args:
             data: Bytes to format.
@@ -1602,7 +1835,8 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
-        """Show the right-click context menu.
+        """
+        Show the right-click context menu.
 
         Args:
             a0: Context menu event.
@@ -1675,7 +1909,8 @@ class HexEditorWidget(QAbstractScrollArea):
         menu.exec(a0.globalPos())
 
     def _copy_as_action(self, fmt: str) -> None:
-        """Execute a copy-as action and put the result on the clipboard.
+        """
+        Execute a copy-as action and put the result on the clipboard.
 
         Args:
             fmt: Format key string passed to copy_as_format.
@@ -1690,7 +1925,8 @@ class HexEditorWidget(QAbstractScrollArea):
         highlights: list[tuple[int, int, str]],
         source: str = "default",
     ) -> None:
-        """Set highlight regions for template/bookmark visualization.
+        """
+        Set highlight regions for template/bookmark visualization.
 
         Each source maintains its own set of highlights. The merged result
         of all sources is used for rendering.
@@ -1705,7 +1941,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def clear_highlights(self, source: str) -> None:
-        """Remove all highlights from a specific source.
+        """
+        Remove all highlights from a specific source.
 
         Args:
             source: The source identifier whose highlights should be cleared.
@@ -1723,7 +1960,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._highlights = merged
 
     def set_encoding(self, encoding: str) -> None:
-        """Set the text encoding used for the ASCII column display.
+        """
+        Set the text encoding used for the ASCII column display.
 
         Args:
             encoding: Encoding name (e.g. "ascii", "utf-8", "latin-1").

@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Structured logging infrastructure for Intellicrack.
 
-"""Structured logging infrastructure for Intellicrack.
-
-This module provides comprehensive structured logging using structlog,
-with JSON file output for log aggregation and colored console output
+This module provides comprehensive structured logging using structlog, with JSON file output for log aggregation and colored console output
 for development. Includes automatic cleanup of old log files on startup.
 """
 
@@ -40,7 +39,8 @@ _STRING_TRUNCATE_SIZE = 200
 
 
 class ColoredConsoleRenderer:
-    """Custom structlog renderer for colored console output.
+    """
+    Custom structlog renderer for colored console output.
 
     Provides human-readable colored output to the console with ANSI
     color codes based on log level.
@@ -65,7 +65,8 @@ class ColoredConsoleRenderer:
         _name: str,
         event_dict: EventDict,
     ) -> str:
-        """Render log event with colors.
+        """
+        Render log event with colors.
 
         Args:
             _logger: The wrapped logger instance (unused, required by interface).
@@ -98,7 +99,8 @@ class ColoredConsoleRenderer:
 
 
 def cleanup_old_logs(log_dir: Path, retention_days: int) -> int:
-    """Delete log files older than retention_days on startup.
+    """
+    Delete log files older than retention_days on startup.
 
     Args:
         log_dir: Directory containing log files.
@@ -132,7 +134,8 @@ def _add_call_info(
     _method_name: str,
     event_dict: EventDict,
 ) -> EventDict:
-    """Add module, function, and line number to event dict.
+    """
+    Add module, function, and line number to event dict.
 
     Args:
         _logger: The wrapped logger (unused, required by processor interface).
@@ -168,7 +171,8 @@ def _configure_structlog(
     backup_count: int,
     json_file: bool,
 ) -> None:
-    """Configure structlog with processors and handlers.
+    """
+    Configure structlog with processors and handlers.
 
     Args:
         log_level: Log level string.
@@ -260,7 +264,8 @@ def _configure_structlog(
 
 
 class IntellicrackLogger:
-    """Application logger with structlog integration.
+    """
+    Application logger with structlog integration.
 
     This class manages the logging configuration for the entire application,
     providing structured logging with both file-based JSON output and
@@ -289,7 +294,8 @@ class IntellicrackLogger:
         retention_days: int = 14,
         json_file: bool = True,
     ) -> None:
-        """Configure the logger with structlog handlers.
+        """
+        Configure the logger with structlog handlers.
 
         Args:
             level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
@@ -315,7 +321,8 @@ class IntellicrackLogger:
         )
 
     def get_logger(self, name: str | None = None) -> structlog.stdlib.BoundLogger:
-        """Get a structlog BoundLogger instance.
+        """
+        Get a structlog BoundLogger instance.
 
         Args:
             name: Optional child logger name. If None, returns the root logger.
@@ -337,7 +344,8 @@ _logger_state = _LoggerState()
 
 
 def setup_logging(config: LogConfig) -> IntellicrackLogger:
-    """Set up application logging from configuration.
+    """
+    Set up application logging from configuration.
 
     Args:
         config: LogConfig instance with logging settings.
@@ -364,7 +372,8 @@ def setup_logging(config: LogConfig) -> IntellicrackLogger:
 
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
-    """Get a structlog BoundLogger instance for a module.
+    """
+    Get a structlog BoundLogger instance for a module.
 
     Args:
         name: Module name for the logger. If None, returns root app logger.
@@ -379,7 +388,8 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
 
 
 def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
-    """Get a structlog bound logger for structured logging.
+    """
+    Get a structlog bound logger for structured logging.
 
     .. deprecated::
         Use :func:`get_logger` instead, which now returns ``BoundLogger``.
@@ -400,7 +410,8 @@ def log_tool_call(
     duration_ms: float | None = None,
     success: bool | None = None,
 ) -> None:
-    """Log a tool call for debugging and auditing.
+    """
+    Log a tool call for debugging and auditing.
 
     Args:
         tool_name: Name of the tool being called.
@@ -424,7 +435,8 @@ def log_tool_call(
 
 
 def _sanitize_arguments(arguments: dict[str, object]) -> dict[str, str]:
-    """Sanitize arguments for logging by converting to strings.
+    """
+    Sanitize arguments for logging by converting to strings.
 
     Args:
         arguments: Dictionary of function arguments.
@@ -467,7 +479,8 @@ def log_provider_request(
     messages_count: int,
     tools_count: int,
 ) -> None:
-    """Log an LLM provider request.
+    """
+    Log an LLM provider request.
 
     Args:
         provider: Name of the LLM provider.
@@ -492,7 +505,8 @@ def log_provider_response(
     duration_ms: float,
     tokens_used: int | None = None,
 ) -> None:
-    """Log an LLM provider response.
+    """
+    Log an LLM provider response.
 
     Args:
         provider: Name of the LLM provider.
@@ -519,7 +533,8 @@ def log_binary_operation(
     path: str | Path,
     **kwargs: object,
 ) -> None:
-    """Log a binary analysis operation.
+    """
+    Log a binary analysis operation.
 
     Args:
         operation: Type of operation (load, patch, save, etc.).
@@ -535,7 +550,8 @@ def log_sandbox_operation(
     sandbox_type: str,
     **kwargs: object,
 ) -> None:
-    """Log a sandbox operation.
+    """
+    Log a sandbox operation.
 
     Args:
         operation: Type of operation (start, stop, execute, etc.).
@@ -551,7 +567,8 @@ def log_session_operation(
     session_id: str | None = None,
     **kwargs: object,
 ) -> None:
-    """Log a session operation.
+    """
+    Log a session operation.
 
     Args:
         operation: Type of operation (create, load, save, etc.).
@@ -570,7 +587,8 @@ def log_analysis_operation(
     target: str,
     **kwargs: object,
 ) -> None:
-    """Log a license analysis operation.
+    """
+    Log a license analysis operation.
 
     Args:
         operation: Type of analysis operation.
@@ -582,7 +600,8 @@ def log_analysis_operation(
 
 
 class OperationTimer:
-    """Context manager for timing operations and logging duration.
+    """
+    Context manager for timing operations and logging duration.
 
     Args:
         operation: The operation name.
@@ -613,7 +632,8 @@ class OperationTimer:
 
     @property
     def elapsed_ms(self) -> float:
-        """Return elapsed time in milliseconds since the timer started.
+        """
+        Return elapsed time in milliseconds since the timer started.
 
         Returns:
             float: Elapsed time in milliseconds, or 0.0 if the timer has not started.
@@ -623,7 +643,8 @@ class OperationTimer:
         return (time.perf_counter() - self._start_time) * 1000
 
     def __enter__(self) -> OperationTimer:
-        """Start the timer and log operation start.
+        """
+        Start the timer and log operation start.
 
         Returns:
             OperationTimer: Self for context manager use.
@@ -638,7 +659,8 @@ class OperationTimer:
         exc_val: BaseException | None,
         _exc_tb: TracebackType | None,
     ) -> None:
-        """Stop the timer and log operation completion.
+        """
+        Stop the timer and log operation completion.
 
         Args:
             exc_type: Exception type if an exception occurred.

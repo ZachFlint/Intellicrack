@@ -2,8 +2,8 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
-"""Backward-compatible re-export of HexEditorPanel.
+"""
+Backward-compatible re-export of HexEditorPanel.
 
 The implementation has moved to the hex_editor package.
 """

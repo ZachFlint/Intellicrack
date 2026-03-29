@@ -36,7 +36,8 @@ _YARA_MATCH_LIGHT: Final[str] = "#7B1FA2"
 
 
 def _get_yara_match_color() -> str:
-    """Return a theme-appropriate highlight color for YARA matches.
+    """
+    Return a theme-appropriate highlight color for YARA matches.
 
     Returns:
         str: Hex color string suitable for the active theme.
@@ -59,7 +60,8 @@ class YaraMixin:
     def goto_offset(self, offset: int) -> None: ...
 
     def _create_yara_tab(self) -> QWidget:
-        """Create the YARA scanner side panel tab widget.
+        """
+        Create the YARA scanner side panel tab widget.
 
         Returns:
             QWidget: Container widget with YARA rule input and results tree.
@@ -196,7 +198,8 @@ class YaraMixin:
         logger.debug("yara_scan_complete", match_count=len(matches))
 
     def _on_yara_result_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
-        """Navigate to the YARA match offset when a result child is double-clicked.
+        """
+        Navigate to the YARA match offset when a result child is double-clicked.
 
         Args:
             item: The double-clicked tree widget item.

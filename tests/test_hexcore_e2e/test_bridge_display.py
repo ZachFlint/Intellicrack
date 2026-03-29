@@ -49,7 +49,7 @@ class TestBridgeDisplayMode:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: bool = _run(bridge.set_display_mode("hex16_le"))
-        assert result is True
+        assert result
 
     def test_get_display_mode_returns_new_mode_after_set(self, bridge: Any) -> None:
         """Verify that get_display_mode reflects the mode set by set_display_mode.
@@ -99,7 +99,7 @@ class TestBridgeHighlights:
             )
         )
         assert isinstance(rule_id, str)
-        assert len(rule_id) > 0
+        assert rule_id != ""
 
     def test_list_highlight_rules_contains_added_rule(self, bridge: Any) -> None:
         """Verify that list_highlight_rules returns the newly added rule.
@@ -132,7 +132,7 @@ class TestBridgeHighlights:
             )
         )
         removed: bool = _run(bridge.remove_highlight_rule(rule_id))
-        assert removed is True
+        assert removed
 
     def test_remove_highlight_rule_no_longer_in_list(self, bridge: Any) -> None:
         """Verify that a removed rule does not appear in list_highlight_rules.
@@ -159,7 +159,7 @@ class TestBridgeHighlights:
             bridge: An initialized HexEditorBridge fixture.
         """
         removed: bool = _run(bridge.remove_highlight_rule("nonexistent-rule-id-00000000"))
-        assert removed is False
+        assert not removed
 
     def test_list_highlight_rules_empty_on_fresh_bridge(self, bridge: Any) -> None:
         """Verify that a fresh bridge starts with no highlight rules.
@@ -168,4 +168,4 @@ class TestBridgeHighlights:
             bridge: An initialized HexEditorBridge fixture.
         """
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
-        assert rules == []
+        assert not rules

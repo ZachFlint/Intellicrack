@@ -226,3 +226,27 @@ src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d:1: 
 src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d:3: ser ==> set
 
 src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d:31: ser ==> set
+
+
+2 findings in tests/test_hexcore_e2e\test_bridge_encoding_decoding.py
+
+tests/test_hexcore_e2e\test_bridge_encoding_decoding.py:75: caf ==> calf
+
+tests/test_hexcore_e2e\test_bridge_encoding_decoding.py:92: caf ==> calf
+
+
+2 findings in tests/test_hexcore_e2e\test_encodings.py
+
+tests/test_hexcore_e2e\test_encodings.py:53: caf ==> calf
+
+tests/test_hexcore_e2e\test_encodings.py:145: caf ==> calf
+
+
+1 findings in tests/test_hexcore_e2e\test_bridge_new_capabilities.py
+
+tests/test_hexcore_e2e\test_bridge_new_capabilities.py:109: Caf ==> Calf
+
+
+1 findings in tests/test_hexcore_e2e\test_bridge_search.py
+
+tests/test_hexcore_e2e\test_bridge_search.py:205: nore ==> nor, note, more, node

@@ -48,7 +48,7 @@ class TestListTemplates:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         templates: list[tuple[str, str]] = doc.list_templates()
-        assert len(templates) > 0
+        assert templates
 
     def test_entries_are_name_description_pairs(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify each entry is a 2-tuple of strings.
@@ -114,7 +114,7 @@ class TestListTemplatesDetailed:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         detailed: list[tuple[str, str, str, int]] = doc.list_templates_detailed()
-        assert len(detailed) > 0
+        assert detailed
 
     def test_entries_are_four_tuples(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify each entry is (name, description, category, field_count).
@@ -191,7 +191,7 @@ class TestApplyPETemplate:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         fields: list[dict[str, Any]] = doc.apply_template("IMAGE_DOS_HEADER", 0)
-        assert len(fields) > 0
+        assert fields
 
     def test_first_field_is_e_magic(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify the first parsed field is named e_magic.
@@ -282,7 +282,7 @@ class TestApplyELFTemplate:
         """
         doc = hexcore.HexDocument.open_bytes(elf_bytes)
         fields: list[dict[str, Any]] = doc.apply_template("Elf64_Ehdr", 0)
-        assert len(fields) > 0
+        assert fields
 
     def test_first_field_is_e_ident(self, hexcore: Any, elf_bytes: bytes) -> None:
         """Verify the first parsed field is named e_ident.
@@ -334,7 +334,7 @@ class TestApplyZIPTemplate:
         """
         doc = hexcore.HexDocument.open_bytes(zip_bytes)
         fields: list[dict[str, Any]] = doc.apply_template("ZIP_LOCAL_FILE_HEADER", 0)
-        assert len(fields) > 0
+        assert fields
 
     def test_first_field_is_signature(self, hexcore: Any, zip_bytes: bytes) -> None:
         """Verify the first parsed field is named signature.
@@ -447,7 +447,7 @@ class TestRemoveTemplate:
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         doc.register_json_template(_CUSTOM_TEMPLATE_JSON)
         result: bool = doc.remove_template("TestStruct")
-        assert result is True
+        assert result
 
     def test_removed_template_absent_from_list(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify removed template no longer appears in list_templates.
@@ -472,7 +472,7 @@ class TestRemoveTemplate:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         result: bool = doc.remove_template("__DOES_NOT_EXIST__")
-        assert result is False
+        assert not result
 
     def test_builtin_template_removable(self, hexcore: Any, pe_bytes: bytes) -> None:
         """Verify a built-in template can be removed and disappears from the list.
@@ -483,7 +483,7 @@ class TestRemoveTemplate:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         result: bool = doc.remove_template("IMAGE_DOS_HEADER")
-        assert result is True
+        assert result
         templates: list[tuple[str, str]] = doc.list_templates()
         names = [t[0] for t in templates]
         assert "IMAGE_DOS_HEADER" not in names
@@ -690,6 +690,6 @@ class TestTemplateOnWrongData:
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         coff_offset = PE_LFANEW_VALUE + 4
         fields: list[dict[str, Any]] = doc.apply_template("IMAGE_FILE_HEADER", coff_offset)
-        assert len(fields) > 0
+        assert fields
         assert fields[0]["name"] == "Machine"
         assert fields[0]["offset"] == coff_offset

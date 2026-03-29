@@ -375,7 +375,7 @@ class ToolRegistry:
             version = None
             path = None
 
-            if name not in {ToolName.BINARY, ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX}:
+            if name not in {ToolName.BINARY, ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
                 try:
                     path = await self._installer.find_tool(name)
                     if path is not None:

@@ -3,10 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tool confirmation dialog for Intellicrack.
+"""
+Tool confirmation dialog for Intellicrack.
 
-This module provides a dialog for confirming tool calls before execution,
-allowing users to review and approve or deny potentially destructive operations.
+This module provides a dialog for confirming tool calls before execution, allowing users to review and approve or deny potentially
+destructive operations.
 """
 
 from __future__ import annotations
@@ -35,7 +36,8 @@ _logger = get_logger("ui.confirmation_dialog")
 
 
 class ToolConfirmationDialog(QDialog):
-    """Dialog for confirming tool calls.
+    """
+    Dialog for confirming tool calls.
 
     Displays the tool name, function, and arguments for user review
     before executing potentially destructive operations.
@@ -63,7 +65,8 @@ class ToolConfirmationDialog(QDialog):
 
     @property
     def approved(self) -> bool:
-        """Get whether the call was approved.
+        """
+        Get whether the call was approved.
 
         Returns:
             bool: True if user approved, False otherwise.
@@ -72,7 +75,8 @@ class ToolConfirmationDialog(QDialog):
 
     @property
     def remember_similar(self) -> bool:
-        """Get whether to remember choice for similar operations.
+        """
+        Get whether to remember choice for similar operations.
 
         Returns:
             bool: True if user wants to remember choice.

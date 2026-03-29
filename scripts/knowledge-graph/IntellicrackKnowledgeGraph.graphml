@@ -15,8 +15,7 @@
       <data key="d3">src.intellicrack.main</data>
       <data key="d4">Main application entry point for Intellicrack.
 
-This module bootstraps the application, initializing configuration,
-logging, providers, tool bridges, and the GUI.</data>
+This module bootstraps the application, initializing configuration, logging, providers, tool bridges, and the GUI.</data>
     </node>
     <node id="__future__" />
     <node id="argparse" />
@@ -314,8 +313,7 @@ Returns:
       <data key="d3">src.intellicrack.ui.resources.resource_helper</data>
       <data key="d4">Resource path resolution for Intellicrack assets.
 
-Provides centralized path resolution supporting both development environments
-and PyInstaller frozen applications.</data>
+Provides centralized path resolution supporting both development environments and PyInstaller frozen applications.</data>
     </node>
     <node id="src.intellicrack._metadata">
       <data key="d0">module</data>
@@ -383,9 +381,8 @@ Example:
       <data key="d5">[]</data>
       <data key="d4">Execute the Intellicrack application.
 
-This function serves as the main entry point when the package
-is invoked as a module. It imports and calls the main function
-from the main module, handling any import errors gracefully.</data>
+This function serves as the main entry point when the package is invoked as a module. It imports and calls the main function from the
+main module, handling any import errors gracefully.</data>
     </node>
     <node id="src.intellicrack.bridges.base">
       <data key="d0">module</data>
@@ -394,9 +391,8 @@ from the main module, handling any import errors gracefully.</data>
       <data key="d3">src.intellicrack.bridges.base</data>
       <data key="d4">Base protocol for tool bridges.
 
-This module defines the abstract interface that all tool bridge implementations
-must follow, enabling consistent interaction across Ghidra, x64dbg, Frida,
-Cutter/Rizin, and other reverse engineering tools.</data>
+This module defines the abstract interface that all tool bridge implementations must follow, enabling consistent interaction across Ghidra,
+x64dbg, Frida, Cutter/Rizin, and other reverse engineering tools.</data>
     </node>
     <node id="abc" />
     <node id="src.intellicrack.core.logging">
@@ -406,8 +402,7 @@ Cutter/Rizin, and other reverse engineering tools.</data>
       <data key="d3">src.intellicrack.core.logging</data>
       <data key="d4">Structured logging infrastructure for Intellicrack.
 
-This module provides comprehensive structured logging using structlog,
-with JSON file output for log aggregation and colored console output
+This module provides comprehensive structured logging using structlog, with JSON file output for log aggregation and colored console output
 for development. Includes automatic cleanup of old log files on startup.</data>
     </node>
     <node id="src.intellicrack.bridges.base.DisassemblyLine">
@@ -500,8 +495,7 @@ Attributes:
       <data key="d3">ToolBridgeBase</data>
       <data key="d4">Base class for tool bridges.
 
-All bridge implementations must inherit from this class and override
-the methods defined here. This ensures a consistent interface for
+All bridge implementations must inherit from this class and override the methods defined here. This ensures a consistent interface for
 the orchestrator to interact with any reverse engineering tool.</data>
     </node>
     <node id="src.intellicrack.bridges.base.StaticAnalysisBridge">
@@ -510,8 +504,7 @@ the orchestrator to interact with any reverse engineering tool.</data>
       <data key="d3">StaticAnalysisBridge</data>
       <data key="d4">Base class for static analysis tools (Ghidra, Cutter/Rizin).
 
-Provides interface for binary loading, disassembly, decompilation,
-and cross-reference analysis without executing the target.</data>
+Provides interface for binary loading, disassembly, decompilation, and cross-reference analysis without executing the target.</data>
     </node>
     <node id="ToolBridgeBase" />
     <node id="src.intellicrack.bridges.base.DynamicAnalysisBridge">
@@ -520,8 +513,7 @@ and cross-reference analysis without executing the target.</data>
       <data key="d3">DynamicAnalysisBridge</data>
       <data key="d4">Base class for dynamic analysis tools (x64dbg, Frida).
 
-Provides interface for process attachment, memory manipulation,
-breakpoints, and runtime instrumentation.</data>
+Provides interface for process attachment, memory manipulation, breakpoints, and runtime instrumentation.</data>
     </node>
     <node id="src.intellicrack.bridges.base.DebuggerBridge">
       <data key="d0">class</data>
@@ -529,8 +521,7 @@ breakpoints, and runtime instrumentation.</data>
       <data key="d3">DebuggerBridge</data>
       <data key="d4">Base class for full debuggers (x64dbg).
 
-Extends DynamicAnalysisBridge with breakpoints, stepping,
-and register manipulation.</data>
+Extends DynamicAnalysisBridge with breakpoints, stepping, and register manipulation.</data>
     </node>
     <node id="DynamicAnalysisBridge" />
     <node id="src.intellicrack.bridges.base.InstrumentationBridge">
@@ -539,8 +530,7 @@ and register manipulation.</data>
       <data key="d3">InstrumentationBridge</data>
       <data key="d4">Base class for instrumentation tools (Frida).
 
-Extends DynamicAnalysisBridge with function hooking
-and script execution capabilities.</data>
+Extends DynamicAnalysisBridge with function hooking and script execution capabilities.</data>
     </node>
     <node id="src.intellicrack.bridges.base.BinaryOperationsBridge">
       <data key="d0">class</data>
@@ -548,8 +538,7 @@ and script execution capabilities.</data>
       <data key="d3">BinaryOperationsBridge</data>
       <data key="d4">Base class for direct binary file operations.
 
-Provides interface for reading, modifying, and patching
-binary files without running a full analysis tool.</data>
+Provides interface for reading, modifying, and patching binary files without running a full analysis tool.</data>
     </node>
     <node id="src.intellicrack.core.types">
       <data key="d0">module</data>
@@ -558,8 +547,7 @@ binary files without running a full analysis tool.</data>
       <data key="d3">src.intellicrack.core.types</data>
       <data key="d4">Core type definitions for Intellicrack.
 
-This module contains all the fundamental dataclasses, enums, and type definitions
-used throughout the Intellicrack application.</data>
+This module contains all the fundamental dataclasses, enums, and type definitions used throughout the Intellicrack application.</data>
     </node>
     <node id="src.intellicrack.bridges.base.has_capability">
       <data key="d0">function</data>
@@ -1507,8 +1495,7 @@ Raises:
       <data key="d3">src.intellicrack.bridges.binary</data>
       <data key="d4">Binary operations bridge for direct file manipulation.
 
-This module provides binary file analysis and patching capabilities
-using pefile, lief, and capstone without requiring external tools.</data>
+This module provides binary file analysis and patching capabilities using pefile, lief, and capstone without requiring external tools.</data>
     </node>
     <node id="hashlib" />
     <node id="math" />
@@ -1528,8 +1515,7 @@ using pefile, lief, and capstone without requiring external tools.</data>
       <data key="d3">BinaryBridge</data>
       <data key="d4">Bridge for direct binary file operations.
 
-Provides analysis and patching of PE, ELF, and Mach-O binaries
-using pefile, lief, and capstone libraries.</data>
+Provides analysis and patching of PE, ELF, and Mach-O binaries using pefile, lief, and capstone libraries.</data>
     </node>
     <node id="src.intellicrack.bridges.binary._lief_parse_raw">
       <data key="d0">function</data>
@@ -1903,9 +1889,8 @@ Raises:
       <data key="d3">src.intellicrack.bridges.cutter</data>
       <data key="d4">Cutter/Rizin bridge for static and dynamic analysis.
 
-This module provides integration with Cutter/Rizin for disassembly,
-analysis, and debugging capabilities using r2pipe (wire-compatible
-with Rizin's pipe protocol).</data>
+This module provides integration with Cutter/Rizin for disassembly, analysis, and debugging capabilities using r2pipe (wire-compatible with
+Rizin's pipe protocol).</data>
     </node>
     <node id="json" />
     <node id="r2pipe" />
@@ -1916,8 +1901,8 @@ with Rizin's pipe protocol).</data>
       <data key="d3">src.intellicrack.core.process_manager</data>
       <data key="d4">Centralized process management for Intellicrack.
 
-This module provides a singleton ProcessManager that tracks all spawned processes
-and ensures proper cleanup on application exit, signal handling, or exceptions.</data>
+This module provides a singleton ProcessManager that tracks all spawned processes and ensures proper cleanup on application exit, signal
+handling, or exceptions.</data>
     </node>
     <node id="src.intellicrack.bridges.cutter._get_str">
       <data key="d0">function</data>
@@ -2026,8 +2011,7 @@ Returns:
       <data key="d3">CutterBridge</data>
       <data key="d4">Bridge for Cutter/Rizin reverse engineering framework.
 
-Provides static analysis, disassembly, and debugging capabilities
-using the r2pipe interface.</data>
+Provides static analysis, disassembly, and debugging capabilities using the r2pipe interface.</data>
     </node>
     <node id="src.intellicrack.bridges.cutter.__init__">
       <data key="d0">function</data>
@@ -2511,8 +2495,7 @@ Returns:
       <data key="d3">src.intellicrack.bridges.frida_bridge</data>
       <data key="d4">Frida instrumentation bridge for dynamic analysis.
 
-This module provides runtime instrumentation capabilities using Frida
-for function hooking, memory manipulation, and process control.</data>
+This module provides runtime instrumentation capabilities using Frida for function hooking, memory manipulation, and process control.</data>
     </node>
     <node id="threading" />
     <node id="uuid" />
@@ -2523,8 +2506,7 @@ for function hooking, memory manipulation, and process control.</data>
       <data key="d3">FridaBridge</data>
       <data key="d4">Bridge for Frida dynamic instrumentation.
 
-Provides function hooking, memory manipulation, and script execution
-capabilities using the Frida framework.</data>
+Provides function hooking, memory manipulation, and script execution capabilities using the Frida framework.</data>
     </node>
     <node id="frida.core" />
     <node id="src.intellicrack.bridges.frida_bridge.__init__">
@@ -3261,8 +3243,8 @@ Raises:
       <data key="d3">src.intellicrack.bridges.ghidra</data>
       <data key="d4">Ghidra bridge for static analysis and decompilation.
 
-This module provides integration with Ghidra for advanced static analysis,
-decompilation, and reverse engineering capabilities using ghidra_bridge.</data>
+This module provides integration with Ghidra for advanced static analysis, decompilation, and reverse engineering capabilities using
+ghidra_bridge.</data>
     </node>
     <node id="importlib.util" />
     <node id="socket" />
@@ -4012,9 +3994,8 @@ Raises:
       <data key="d3">src.intellicrack.bridges.hex_editor</data>
       <data key="d4">Hex editor bridge wrapping the Rust-powered intellicrack_hexcore.
 
-Provides hex editing, search, hash, template, and diff operations
-via the native Rust HexDocument backed by a piece table with
-memory-mapped I/O for large file support.</data>
+Provides hex editing, search, hash, template, and diff operations via the native Rust HexDocument backed by a piece table with memory-mapped
+I/O for large file support.</data>
     </node>
     <node id="base64" />
     <node id="inspect" />
@@ -4037,8 +4018,7 @@ parsing, and binary diffing through the standard bridge interface.</data>
       <data key="d3">src.intellicrack.core.disassembler</data>
       <data key="d4">Multi-architecture disassembler module for the hex editor.
 
-Wraps the capstone disassembly engine to provide instruction-level
-analysis across all architectures supported by capstone, with automatic
+Wraps the capstone disassembly engine to provide instruction-level analysis across all architectures supported by capstone, with automatic
 binary-header detection for PE, ELF, and Mach-O targets.</data>
     </node>
     <node id="src.intellicrack.core.hexpat_compiler">
@@ -4073,9 +4053,8 @@ dependency: bridges.base -&gt; core.logging -&gt; core.__init__ -&gt; core.tools
       <data key="d3">src.intellicrack.core.transform_pipeline</data>
       <data key="d4">Transform pipeline system for chaining binary data transformations.
 
-Provides a Python-side pipeline that wraps Rust hexcore transforms and
-exposes additional Python-only transform nodes. Pipelines can be built
-from any combination of Rust-accelerated and pure-Python steps.</data>
+Provides a Python-side pipeline that wraps Rust hexcore transforms and exposes additional Python-only transform nodes. Pipelines can be
+built from any combination of Rust-accelerated and pure-Python steps.</data>
     </node>
     <node id="src.intellicrack.core.yara_scanner">
       <data key="d0">module</data>
@@ -4084,8 +4063,7 @@ from any combination of Rust-accelerated and pure-Python steps.</data>
       <data key="d3">src.intellicrack.core.yara_scanner</data>
       <data key="d4">YARA rule scanning module for Intellicrack.
 
-Provides synchronous and asynchronous YARA rule scanning against binary data
-and files, with version-transparent match object conversion.</data>
+Provides synchronous and asynchronous YARA rule scanning against binary data and files, with version-transparent match object conversion.</data>
     </node>
     <node id="src.intellicrack.bridges.hex_state">
       <data key="d0">module</data>
@@ -4094,10 +4072,9 @@ and files, with version-transparent match object conversion.</data>
       <data key="d3">src.intellicrack.bridges.hex_state</data>
       <data key="d4">Shared hex document state manager for bridge-GUI synchronization.
 
-Provides an observer-based state holder that bridges the HexEditorBridge
-(AI/programmatic control) and the HexEditorPanel (GUI display) by
-maintaining the canonical document reference, cursor position, selection,
-and file path, and notifying registered listeners of state changes.</data>
+Provides an observer-based state holder that bridges the HexEditorBridge (AI/programmatic control) and the HexEditorPanel (GUI display) by
+maintaining the canonical document reference, cursor position, selection, and file path, and notifying registered listeners of state
+changes.</data>
     </node>
     <node id="intellicrack_hexcore" />
     <node id="intellicrack.core.hexpat_compiler" />
@@ -5391,10 +5368,8 @@ Attributes:
       <data key="d3">HexDocumentState</data>
       <data key="d4">Thread-safe shared state holder for a hex document.
 
-Maintains the canonical document instance, cursor offset, selection
-range, and file path.  Registered callbacks are notified on state
-changes, enabling the bridge and GUI to stay in sync without direct
-coupling.</data>
+Maintains the canonical document instance, cursor offset, selection range, and file path.  Registered callbacks are notified on state
+changes, enabling the bridge and GUI to stay in sync without direct coupling.</data>
     </node>
     <node id="src.intellicrack.bridges.hex_state.__init__">
       <data key="d0">function</data>
@@ -5694,8 +5669,7 @@ Args:
       <data key="d3">src.intellicrack.bridges.installer</data>
       <data key="d4">Tool installer and detector for Intellicrack.
 
-This module handles automatic detection, downloading, and installation
-of reverse engineering tools required by the platform.</data>
+This module handles automatic detection, downloading, and installation of reverse engineering tools required by the platform.</data>
     </node>
     <node id="shutil" />
     <node id="zipfile" />
@@ -6248,9 +6222,8 @@ Raises:
       <data key="d3">src.intellicrack.bridges.process</data>
       <data key="d4">Process control bridge for Windows process manipulation.
 
-This module provides direct process control capabilities including
-memory access, thread manipulation, and module enumeration using
-Windows API.</data>
+This module provides direct process control capabilities including memory access, thread manipulation, and module enumeration using Windows
+API.</data>
     </node>
     <node id="src.intellicrack.bridges.process.PROCESSENTRY32">
       <data key="d0">class</data>
@@ -6618,8 +6591,7 @@ Returns:
       <data key="d3">src.intellicrack.bridges.sandbox_bridge</data>
       <data key="d4">Sandbox bridge for isolated binary execution environments.
 
-This module provides a tool bridge that wraps the SandboxManager
-to expose sandbox operations to the AI orchestrator.</data>
+This module provides a tool bridge that wraps the SandboxManager to expose sandbox operations to the AI orchestrator.</data>
     </node>
     <node id="src.intellicrack.sandbox" />
     <node id="src.intellicrack.bridges.sandbox_bridge.SandboxBridge">
@@ -6628,8 +6600,7 @@ to expose sandbox operations to the AI orchestrator.</data>
       <data key="d3">SandboxBridge</data>
       <data key="d4">Bridge for sandbox operations.
 
-Provides AI-accessible interface to the SandboxManager for
-creating isolated execution environments and running binaries.</data>
+Provides AI-accessible interface to the SandboxManager for creating isolated execution environments and running binaries.</data>
     </node>
     <node id="src.intellicrack.bridges.sandbox_bridge.__init__">
       <data key="d0">function</data>
@@ -6945,9 +6916,8 @@ Returns:
       <data key="d3">src.intellicrack.bridges.schemas</data>
       <data key="d4">JSON Schema generation for LLM tool calling.
 
-This module provides centralized schema generation for converting Intellicrack
-tool definitions to provider-specific formats for LLM function calling.
-Supports Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter.</data>
+This module provides centralized schema generation for converting Intellicrack tool definitions to provider-specific formats for LLM
+function calling. Supports Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter.</data>
     </node>
     <node id="src.intellicrack.bridges.schemas._assert_never">
       <data key="d0">function</data>
@@ -7277,10 +7247,9 @@ Returns:
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\bridges\x64dbg.py</data>
       <data key="d3">src.intellicrack.bridges.x64dbg</data>
-      <data key="d4">x64dbg bridge for Windows debugging.
+      <data key="d4">X64dbg bridge for Windows debugging.
 
-This module provides integration with x64dbg for dynamic analysis,
-debugging, and memory manipulation on Windows systems.</data>
+This module provides integration with x64dbg for dynamic analysis, debugging, and memory manipulation on Windows systems.</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.get_capstone">
       <data key="d0">function</data>
@@ -8478,8 +8447,8 @@ Returns:
       <data key="d3">src.intellicrack.bridges.__init__</data>
       <data key="d4">Tool bridges for external reverse engineering tools.
 
-This package provides bridge interfaces for controlling external tools
-including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct binary/process manipulation.</data>
+This package provides bridge interfaces for controlling external tools including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct
+binary/process manipulation.</data>
     </node>
     <node id="src.intellicrack.core.analysis_aggregator">
       <data key="d0">module</data>
@@ -8488,8 +8457,7 @@ including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct binary/process manipul
       <data key="d3">src.intellicrack.core.analysis_aggregator</data>
       <data key="d4">Bridge analysis aggregator for Intellicrack.
 
-Queries connected bridges and aggregates their output into a unified
-BridgeAnalysisSummary. Replaces the standalone license_analyzer module
+Queries connected bridges and aggregates their output into a unified BridgeAnalysisSummary. Replaces the standalone license_analyzer module
 by delegating all actual analysis to the bridge layer.</data>
     </node>
     <node id="src.intellicrack.core.analysis_aggregator.AnalysisAggregator">
@@ -8591,8 +8559,8 @@ Args:
       <data key="d3">src.intellicrack.core.config</data>
       <data key="d4">Configuration management for Intellicrack.
 
-This module provides the complete configuration system including loading
-from TOML files, saving, and default configurations for all components.</data>
+This module provides the complete configuration system including loading from TOML files, saving, and default configurations for all
+components.</data>
     </node>
     <node id="tomllib" />
     <node id="src.intellicrack.core.config.get_project_root">
@@ -9139,7 +9107,7 @@ Args:
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">SizeofExpr</data>
-      <data key="d4">sizeof() expression node.
+      <data key="d4">Sizeof() expression node.
 
 Args:
     target: Name of the target type or field.</data>
@@ -9169,7 +9137,7 @@ Args:
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">AddressofExpr</data>
-      <data key="d4">addressof() expression node.
+      <data key="d4">Addressof() expression node.
 
 Args:
     target: Name of the target field.</data>
@@ -10091,9 +10059,8 @@ Args:
       <data key="d3">src.intellicrack.core.orchestrator</data>
       <data key="d4">Main AI agent orchestrator for Intellicrack.
 
-This module provides the central orchestration layer that coordinates
-between the user, LLM providers, and tool bridges to execute
-reverse engineering workflows.</data>
+This module provides the central orchestration layer that coordinates between the user, LLM providers, and tool bridges to execute reverse
+engineering workflows.</data>
     </node>
     <node id="structlog.contextvars" />
     <node id="src.intellicrack.core.orchestrator.OrchestratorConfig">
@@ -10158,9 +10125,8 @@ Attributes:
       <data key="d3">src.intellicrack.providers.base</data>
       <data key="d4">Base protocol for LLM providers.
 
-This module defines the abstract interface that all LLM provider implementations
-must follow, enabling consistent interaction across Anthropic, OpenAI, Google,
-Ollama, and OpenRouter.</data>
+This module defines the abstract interface that all LLM provider implementations must follow, enabling consistent interaction across
+Anthropic, OpenAI, Google, Ollama, and OpenRouter.</data>
     </node>
     <node id="src.intellicrack.providers.registry">
       <data key="d0">module</data>
@@ -10169,8 +10135,7 @@ Ollama, and OpenRouter.</data>
       <data key="d3">src.intellicrack.providers.registry</data>
       <data key="d4">Provider registry for managing LLM providers.
 
-This module provides a centralized registry for registering, connecting,
-and managing all LLM provider instances.</data>
+This module provides a centralized registry for registering, connecting, and managing all LLM provider instances.</data>
     </node>
     <node id="src.intellicrack.core.script_gen">
       <data key="d0">module</data>
@@ -10198,8 +10163,7 @@ This module only provides:
       <data key="d3">src.intellicrack.core.session</data>
       <data key="d4">Session management for Intellicrack.
 
-This module provides session state management including conversation history,
-binary analysis state, and persistence to SQLite database.</data>
+This module provides session state management including conversation history, binary analysis state, and persistence to SQLite database.</data>
     </node>
     <node id="src.intellicrack.core.orchestrator.record_response_time">
       <data key="d0">function</data>
@@ -11027,8 +10991,7 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Install signal handlers and atexit hook for cleanup.
 
-This should be called once during application startup, typically
-in main.py before any processes are spawned.</data>
+This should be called once during application startup, typically in main.py before any processes are spawned.</data>
     </node>
     <node id="src.intellicrack.core.process_manager.uninstall_handlers">
       <data key="d0">function</data>
@@ -11358,13 +11321,11 @@ Returns:
       <data key="d3">src.intellicrack.core._subprocess</data>
       <data key="d4">Subprocess utilities wrapper.
 
-Centralizes subprocess access to a single auditable location. All modules
-that need subprocess functionality should import from this module rather
-than importing directly from the subprocess standard library module.
+Centralizes subprocess access to a single auditable location. All modules that need subprocess functionality should import from this module
+rather than importing directly from the subprocess standard library module.
 
-Uses a runtime-constructed module name to avoid triggering the B404 bandit
-rule at static analysis time. Type information is provided by the companion
-.pyi type definition file.</data>
+Uses a runtime-constructed module name to avoid triggering the B404 bandit rule at static analysis time. Type information is provided by the
+companion .pyi type definition file.</data>
     </node>
     <node id="src.intellicrack.core.script_gen._empty_str_list">
       <data key="d0">function</data>
@@ -12310,8 +12271,7 @@ Raises:
       <data key="d3">src.intellicrack.core.template_manager</data>
       <data key="d4">Template file management for the hex editor pattern system.
 
-Manages template storage, loading, saving, and directory structure
-for both built-in and user-defined binary structure templates.</data>
+Manages template storage, loading, saving, and directory structure for both built-in and user-defined binary structure templates.</data>
     </node>
     <node id="src.intellicrack.core.template_manager.TemplateInfo">
       <data key="d0">class</data>
@@ -12789,6 +12749,13 @@ Returns:
       <data key="d3">TransformParamError</data>
       <data key="d4">Raised when a transform node receives invalid parameters.</data>
     </node>
+    <node id="src.intellicrack.core.transform_pipeline.HexcoreUnavailableError">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">HexcoreUnavailableError</data>
+      <data key="d4">Raised when intellicrack_hexcore is not importable.</data>
+    </node>
+    <node id="RuntimeError" />
     <node id="src.intellicrack.core.transform_pipeline._eval_ast_node">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -12984,8 +12951,8 @@ Returns:
         long enough.
 
 Raises:
-    ValueError: If ``"length"`` is missing, negative, or ``"byte"``
-        is outside 0-255.</data>
+    TransformParamError: If ``"length"`` is missing, negative, or
+        ``"byte"`` is outside 0-255.</data>
     </node>
     <node id="src.intellicrack.core.transform_pipeline.add_step">
       <data key="d0">function</data>
@@ -14164,10 +14131,9 @@ Returns:
       <data key="d3">src.intellicrack.core._xml_gen</data>
       <data key="d4">XML generation utilities wrapper.
 
-Centralizes XML element construction to a single auditable location.
-Only generation functions are exported -- no parsing of untrusted input.
-Uses runtime string construction to avoid B405 bandit finding.
-Type information is provided by the companion .pyi type definition file.</data>
+Centralizes XML element construction to a single auditable location. Only generation functions are exported -- no parsing of untrusted
+input. Uses runtime string construction to avoid B405 bandit finding. Type information is provided by the companion .pyi type definition
+file.</data>
     </node>
     <node id="src.intellicrack.core.__init__">
       <data key="d0">module</data>
@@ -14176,8 +14142,8 @@ Type information is provided by the companion .pyi type definition file.</data>
       <data key="d3">src.intellicrack.core.__init__</data>
       <data key="d4">Core module for Intellicrack.
 
-This module contains the fundamental types, configuration, session management,
-and the main orchestrator that coordinates AI-driven tool operations.</data>
+This module contains the fundamental types, configuration, session management, and the main orchestrator that coordinates AI-driven tool
+operations.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.ast_nodes">
       <data key="d0">module</data>
@@ -17276,8 +17242,7 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Scan all configured directories for .hexpat files.
 
-Reads the first ~80 lines of each file to extract #pragma metadata.
-Results are cached until scan() is called again.</data>
+Reads the first ~80 lines of each file to extract #pragma metadata. Results are cached until scan() is called again.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.pattern_registry.list_patterns">
       <data key="d0">function</data>
@@ -18038,9 +18003,8 @@ Attributes:
       <data key="d3">TypeRegistry</data>
       <data key="d4">Resolves type names to their definitions during pattern evaluation.
 
-Maintains separate lookup tables for struct, union, enum, bitfield, and
-alias type definitions. Alias resolution is performed transparently through
-the resolve method.</data>
+Maintains separate lookup tables for struct, union, enum, bitfield, and alias type definitions. Alias resolution is performed
+transparently through the resolve method.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.type_system.get">
       <data key="d0">function</data>
@@ -18190,8 +18154,7 @@ Attributes:
       <data key="d3">src.intellicrack.core.hexpat.__init__</data>
       <data key="d4">HexPat .hexpat pattern language interpreter package.
 
-Provides a full interpreter for HexPat's pattern language that executes
-.hexpat files against binary data and outputs ParsedField-compatible
+Provides a full interpreter for HexPat's pattern language that executes .hexpat files against binary data and outputs ParsedField-compatible
 dicts for display in the hex editor template tree.</data>
     </node>
     <node id="intellicrack.core.hexpat.interpreter" />
@@ -18202,8 +18165,7 @@ dicts for display in the hex editor template tree.</data>
       <data key="d3">src.intellicrack.credentials.env_loader</data>
       <data key="d4">Credential management for Intellicrack.
 
-This module handles loading and validating API credentials from .env files
-for various LLM providers.</data>
+This module handles loading and validating API credentials from .env files for various LLM providers.</data>
     </node>
     <node id="functools" />
     <node id="src.intellicrack.credentials.env_loader.ProviderCredentialMapping">
@@ -18306,8 +18268,8 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Load environment variables from .env file.
 
-Parses the .env file and loads variables into the internal dict.
-Also sets them in os.environ for compatibility with other libraries.</data>
+Parses the .env file and loads variables into the internal dict. Also sets them in os.environ for compatibility with other
+libraries.</data>
     </node>
     <node id="src.intellicrack.credentials.env_loader.reload">
       <data key="d0">function</data>
@@ -18316,8 +18278,7 @@ Also sets them in os.environ for compatibility with other libraries.</data>
       <data key="d5">['self']</data>
       <data key="d4">Reload credentials from the .env file.
 
-Call this method to pick up changes to the .env file
-without restarting the application.</data>
+Call this method to pick up changes to the .env file without restarting the application.</data>
     </node>
     <node id="src.intellicrack.credentials.env_loader.get_credentials">
       <data key="d0">function</data>
@@ -18428,8 +18389,8 @@ Args:
       <data key="d3">src.intellicrack.credentials.oauth</data>
       <data key="d4">OAuth 2.0 flow handling for Intellicrack providers.
 
-This module handles OAuth 2.0 authorization flows for providers that support it,
-including authorization code flow with PKCE, token refresh, and secure storage.</data>
+This module handles OAuth 2.0 authorization flows for providers that support it, including authorization code flow with PKCE, token refresh,
+and secure storage.</data>
     </node>
     <node id="http.server" />
     <node id="secrets" />
@@ -18443,9 +18404,8 @@ including authorization code flow with PKCE, token refresh, and secure storage.<
       <data key="d3">src.intellicrack.credentials.store</data>
       <data key="d4">Secure credential storage using OS keyring.
 
-This module provides secure credential storage using the operating system's
-native credential manager (Windows Credential Manager, macOS Keychain,
-or Linux Secret Service via the keyring library).</data>
+This module provides secure credential storage using the operating system's native credential manager (Windows Credential Manager, macOS
+Keychain, or Linux Secret Service via the keyring library).</data>
     </node>
     <node id="src.intellicrack.credentials.oauth.OAuthError">
       <data key="d0">class</data>
@@ -19318,8 +19278,7 @@ This module handles loading and validating API credentials from multiple sources
       <data key="d3">src.intellicrack.providers.anthropic</data>
       <data key="d4">Anthropic Claude API provider implementation.
 
-This module provides integration with Anthropic's Claude models for
-chat completion and tool/function calling.</data>
+This module provides integration with Anthropic's Claude models for chat completion and tool/function calling.</data>
     </node>
     <node id="anthropic" />
     <node id="anthropic.types" />
@@ -19329,8 +19288,7 @@ chat completion and tool/function calling.</data>
       <data key="d3">AnthropicProvider</data>
       <data key="d4">Anthropic Claude API provider implementation.
 
-Provides integration with Anthropic's Claude models including
-support for tool/function calling and streaming responses.</data>
+Provides integration with Anthropic's Claude models including support for tool/function calling and streaming responses.</data>
     </node>
     <node id="src.intellicrack.providers.base.LLMProviderBase">
       <data key="d0">class</data>
@@ -19338,9 +19296,8 @@ support for tool/function calling and streaming responses.</data>
       <data key="d3">LLMProviderBase</data>
       <data key="d4">Abstract base class for LLM providers.
 
-All provider implementations must inherit from this class and implement
-the abstract methods defined here. This ensures a consistent interface
-for the orchestrator to interact with any LLM provider.</data>
+All provider implementations must inherit from this class and implement the abstract methods defined here. This ensures a consistent
+interface for the orchestrator to interact with any LLM provider.</data>
     </node>
     <node id="src.intellicrack.providers.anthropic.__init__">
       <data key="d0">function</data>
@@ -19680,8 +19637,7 @@ Returns:
       <data key="d3">ToolCallBufferManager</data>
       <data key="d4">Accumulates streaming tool call deltas into complete ToolCall objects.
 
-Used by providers that consume OpenAI-compatible SSE streams where tool
-call fragments arrive incrementally across multiple chunks.</data>
+Used by providers that consume OpenAI-compatible SSE streams where tool call fragments arrive incrementally across multiple chunks.</data>
     </node>
     <node id="src.intellicrack.providers.base._build_schema_property">
       <data key="d0">function</data>
@@ -19866,8 +19822,7 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Cancel any in-flight request.
 
-This method should safely abort ongoing API calls without
-raising exceptions.</data>
+This method should safely abort ongoing API calls without raising exceptions.</data>
     </node>
     <node id="src.intellicrack.providers.base._retry_with_backoff">
       <data key="d0">function</data>
@@ -20026,8 +19981,8 @@ Returns:
       <data key="d3">src.intellicrack.providers.discovery</data>
       <data key="d4">Dynamic model discovery and caching for LLM providers.
 
-This module provides centralized model discovery orchestration with TTL-based
-caching, filtering, and fault tolerance across all registered providers.</data>
+This module provides centralized model discovery orchestration with TTL-based caching, filtering, and fault tolerance across all registered
+providers.</data>
     </node>
     <node id="src.intellicrack.providers.discovery.DiscoveryEvent">
       <data key="d0">class</data>
@@ -20351,8 +20306,8 @@ Args:
       <data key="d3">src.intellicrack.providers.google</data>
       <data key="d4">Google Gemini API provider implementation.
 
-This module provides integration with Google's Gemini models for
-chat completion and tool/function calling using the modern google-genai SDK.</data>
+This module provides integration with Google's Gemini models for chat completion and tool/function calling using the modern google-genai
+SDK.</data>
     </node>
     <node id="google" />
     <node id="google.genai" />
@@ -20363,8 +20318,7 @@ chat completion and tool/function calling using the modern google-genai SDK.</da
       <data key="d3">GoogleProvider</data>
       <data key="d4">Google Gemini API provider implementation.
 
-Provides integration with Google's Gemini models including
-support for tool/function calling and streaming responses.</data>
+Provides integration with Google's Gemini models including support for tool/function calling and streaming responses.</data>
     </node>
     <node id="google.genai.types" />
     <node id="src.intellicrack.providers.google.__init__">
@@ -20581,9 +20535,8 @@ Returns:
       <data key="d3">src.intellicrack.providers.grok</data>
       <data key="d4">X.AI Grok API provider implementation.
 
-This module provides integration with X.AI's Grok models for
-chat completion and tool/function calling. Grok uses an OpenAI-compatible
-API, so this implementation leverages the OpenAI SDK with a custom base URL.</data>
+This module provides integration with X.AI's Grok models for chat completion and tool/function calling. Grok uses an OpenAI-compatible API,
+so this implementation leverages the OpenAI SDK with a custom base URL.</data>
     </node>
     <node id="openai" />
     <node id="src.intellicrack.providers.grok.GrokMessageContent">
@@ -20822,8 +20775,7 @@ Returns:
       <data key="d3">src.intellicrack.providers.huggingface</data>
       <data key="d4">HuggingFace Inference API provider implementation.
 
-This module provides integration with HuggingFace's Inference API for
-accessing various open-source LLM models through the serverless API.</data>
+This module provides integration with HuggingFace's Inference API for accessing various open-source LLM models through the serverless API.</data>
     </node>
     <node id="src.intellicrack.providers.huggingface.HuggingFaceProvider">
       <data key="d0">class</data>
@@ -21019,8 +20971,8 @@ Returns:
       <data key="d3">src.intellicrack.providers.local_transformers</data>
       <data key="d4">Local Transformers provider with Intel XPU acceleration.
 
-This module provides a local LLM provider using HuggingFace Transformers
-with Intel XPU (Arc B580) acceleration via PyTorch 2.5+ native torch.xpu.</data>
+This module provides a local LLM provider using HuggingFace Transformers with Intel XPU (Arc B580) acceleration via PyTorch 2.5+ native
+torch.xpu.</data>
     </node>
     <node id="gc" />
     <node id="src.intellicrack.providers.model_loader">
@@ -21030,8 +20982,8 @@ with Intel XPU (Arc B580) acceleration via PyTorch 2.5+ native torch.xpu.</data>
       <data key="d3">src.intellicrack.providers.model_loader</data>
       <data key="d4">Model loading utilities with quantization and caching for local transformers.
 
-This module provides model loading, caching, and memory management for
-HuggingFace Transformers models optimized for Intel XPU and CPU inference.</data>
+This module provides model loading, caching, and memory management for HuggingFace Transformers models optimized for Intel XPU and CPU
+inference.</data>
     </node>
     <node id="src.intellicrack.providers.xpu_utils">
       <data key="d0">module</data>
@@ -21040,9 +20992,8 @@ HuggingFace Transformers models optimized for Intel XPU and CPU inference.</data
       <data key="d3">src.intellicrack.providers.xpu_utils</data>
       <data key="d4">Intel XPU detection and initialization utilities for Intel Arc B580.
 
-This module provides utilities for detecting, initializing, and managing
-Intel XPU (eXtreme Performance Unit) devices using PyTorch 2.5+ native
-torch.xpu support. Specifically optimized for Intel Arc B580 GPU.</data>
+This module provides utilities for detecting, initializing, and managing Intel XPU (eXtreme Performance Unit) devices using PyTorch 2.5+
+native torch.xpu support. Specifically optimized for Intel Arc B580 GPU.</data>
     </node>
     <node id="src.intellicrack.providers.local_transformers._fetch_model_config">
       <data key="d0">function</data>
@@ -21708,8 +21659,8 @@ Args:
       <data key="d3">src.intellicrack.providers.ollama</data>
       <data key="d4">Ollama LLM provider implementation with dual local/cloud support.
 
-This module provides integration with both locally running Ollama models
-and the Ollama cloud API for chat completion and tool/function calling.</data>
+This module provides integration with both locally running Ollama models and the Ollama cloud API for chat completion and tool/function
+calling.</data>
     </node>
     <node id="http" />
     <node id="src.intellicrack.providers.ollama.OllamaProvider">
@@ -21719,7 +21670,7 @@ and the Ollama cloud API for chat completion and tool/function calling.</data>
       <data key="d4">Ollama LLM provider implementation with dual local/cloud support.
 
 Provides simultaneous integration with local Ollama instances and the
-Ollama cloud API at https://ollama.com/api. Models from each source are
+Ollama cloud API at https://ollama.com. Models from each source are
 prefixed to distinguish their origin (local/ or cloud/).
 
 Attributes:
@@ -22002,8 +21953,7 @@ Raises:
       <data key="d3">src.intellicrack.providers.openai</data>
       <data key="d4">OpenAI API provider implementation.
 
-This module provides integration with OpenAI's GPT models for
-chat completion and tool/function calling.</data>
+This module provides integration with OpenAI's GPT models for chat completion and tool/function calling.</data>
     </node>
     <node id="openai.types.chat.chat_completion_message_function_tool_call" />
     <node id="src.intellicrack.providers.openai.OpenAIMessageContent">
@@ -22024,8 +21974,7 @@ chat completion and tool/function calling.</data>
       <data key="d3">OpenAIProvider</data>
       <data key="d4">OpenAI GPT API provider implementation.
 
-Provides integration with OpenAI's GPT models including
-support for tool/function calling and streaming responses.</data>
+Provides integration with OpenAI's GPT models including support for tool/function calling and streaming responses.</data>
     </node>
     <node id="src.intellicrack.providers.openai.__init__">
       <data key="d0">function</data>
@@ -22235,8 +22184,7 @@ Returns:
       <data key="d3">src.intellicrack.providers.openrouter</data>
       <data key="d4">OpenRouter API provider implementation.
 
-This module provides integration with OpenRouter which provides access
-to many different LLM providers through a unified API.</data>
+This module provides integration with OpenRouter which provides access to many different LLM providers through a unified API.</data>
     </node>
     <node id="src.intellicrack.providers.openrouter.OpenRouterProvider">
       <data key="d0">class</data>
@@ -22775,8 +22723,7 @@ Returns:
       <data key="d5">[]</data>
       <data key="d4">Clear the XPU memory cache.
 
-Frees cached memory that is no longer in use. This does not free
-tensors that are still referenced.</data>
+Frees cached memory that is no longer in use. This does not free tensors that are still referenced.</data>
     </node>
     <node id="src.intellicrack.providers.xpu_utils.check_windows_requirements">
       <data key="d0">function</data>
@@ -22832,9 +22779,8 @@ Returns:
       <data key="d3">src.intellicrack.providers.__init__</data>
       <data key="d4">LLM Provider implementations for Intellicrack.
 
-This module contains provider implementations for various LLM APIs including
-Anthropic Claude, OpenAI GPT, Google Gemini, Ollama, OpenRouter, and local
-Transformers with Intel XPU acceleration.</data>
+This module contains provider implementations for various LLM APIs including Anthropic Claude, OpenAI GPT, Google Gemini, Ollama,
+OpenRouter, and local Transformers with Intel XPU acceleration.</data>
     </node>
     <node id="src.intellicrack.sandbox.base">
       <data key="d0">module</data>
@@ -22843,8 +22789,7 @@ Transformers with Intel XPU acceleration.</data>
       <data key="d3">src.intellicrack.sandbox.base</data>
       <data key="d4">Base sandbox protocol and types.
 
-This module defines the base class for sandbox implementations
-that provide isolated execution environments for binary analysis.</data>
+This module defines the base class for sandbox implementations that provide isolated execution environments for binary analysis.</data>
     </node>
     <node id="src.intellicrack.sandbox.base.validate_file_operation">
       <data key="d0">function</data>
@@ -23168,8 +23113,7 @@ Raises:
       <data key="d3">src.intellicrack.sandbox.manager</data>
       <data key="d4">Sandbox manager for coordinating sandbox instances.
 
-This module provides a manager for creating, tracking, and coordinating
-multiple sandbox instances for binary analysis workflows.</data>
+This module provides a manager for creating, tracking, and coordinating multiple sandbox instances for binary analysis workflows.</data>
     </node>
     <node id="src.intellicrack.sandbox.qemu">
       <data key="d0">module</data>
@@ -23178,8 +23122,8 @@ multiple sandbox instances for binary analysis workflows.</data>
       <data key="d3">src.intellicrack.sandbox.qemu</data>
       <data key="d4">QEMU sandbox implementation for isolated binary analysis.
 
-This module provides cross-platform sandbox functionality using QEMU
-virtualization for safe execution and behavioral monitoring of binaries.</data>
+This module provides cross-platform sandbox functionality using QEMU virtualization for safe execution and behavioral monitoring of
+binaries.</data>
     </node>
     <node id="src.intellicrack.sandbox.windows">
       <data key="d0">module</data>
@@ -23188,8 +23132,7 @@ virtualization for safe execution and behavioral monitoring of binaries.</data>
       <data key="d3">src.intellicrack.sandbox.windows</data>
       <data key="d4">Windows Sandbox implementation for isolated binary analysis.
 
-This module provides integration with Windows Sandbox for safe
-execution and behavioral monitoring of potentially malicious binaries.</data>
+This module provides integration with Windows Sandbox for safe execution and behavioral monitoring of potentially malicious binaries.</data>
     </node>
     <node id="src.intellicrack.sandbox.manager.SandboxInstance">
       <data key="d0">class</data>
@@ -24205,8 +24148,7 @@ Raises:
       <data key="d3">src.intellicrack.sandbox.__init__</data>
       <data key="d4">Sandbox implementations for isolated binary execution.
 
-This package provides sandbox environments for safe execution and
-behavioral analysis of potentially malicious binaries.</data>
+This package provides sandbox environments for safe execution and behavioral analysis of potentially malicious binaries.</data>
     </node>
     <node id="src.intellicrack.ui.app">
       <data key="d0">module</data>
@@ -24215,8 +24157,7 @@ behavioral analysis of potentially malicious binaries.</data>
       <data key="d3">src.intellicrack.ui.app</data>
       <data key="d4">Main application window for Intellicrack.
 
-This module provides the main PyQt6 application window that combines
-all UI components and connects them to the orchestrator.</data>
+This module provides the main PyQt6 application window that combines all UI components and connects them to the orchestrator.</data>
     </node>
     <node id="PyQt6.QtCore" />
     <node id="src.intellicrack.ui._screen_compat">
@@ -24242,8 +24183,7 @@ raises ``AttributeError`` with a clear diagn...</data>
       <data key="d3">src.intellicrack.ui.chat</data>
       <data key="d4">Chat panel widget for the Intellicrack UI.
 
-This module provides the chat interface for interacting with the AI
-orchestrator, displaying conversation history and tool call information.</data>
+This module provides the chat interface for interacting with the AI orchestrator, displaying conversation history and tool call information.</data>
     </node>
     <node id="src.intellicrack.ui.provider_config">
       <data key="d0">module</data>
@@ -24252,8 +24192,7 @@ orchestrator, displaying conversation history and tool call information.</data>
       <data key="d3">src.intellicrack.ui.provider_config</data>
       <data key="d4">Provider configuration dialog for Intellicrack.
 
-This module provides the UI for configuring LLM providers, including
-API key management, model selection, and connection settings.</data>
+This module provides the UI for configuring LLM providers, including API key management, model selection, and connection settings.</data>
     </node>
     <node id="src.intellicrack.ui.resources" />
     <node id="src.intellicrack.ui.sandbox_config">
@@ -24263,8 +24202,7 @@ API key management, model selection, and connection settings.</data>
       <data key="d3">src.intellicrack.ui.sandbox_config</data>
       <data key="d4">Sandbox configuration dialog for Intellicrack.
 
-This module provides the UI for configuring Windows Sandbox settings,
-including isolation options, resource limits, and execution policies.</data>
+This module provides the UI for configuring Windows Sandbox settings, including isolation options, resource limits, and execution policies.</data>
     </node>
     <node id="src.intellicrack.ui.session_manager">
       <data key="d0">module</data>
@@ -24273,8 +24211,7 @@ including isolation options, resource limits, and execution policies.</data>
       <data key="d3">src.intellicrack.ui.session_manager</data>
       <data key="d4">Session manager dialog for Intellicrack.
 
-This module provides the UI for managing analysis sessions,
-including listing, loading, saving, and deleting sessions.</data>
+This module provides the UI for managing analysis sessions, including listing, loading, saving, and deleting sessions.</data>
     </node>
     <node id="src.intellicrack.ui.tool_config">
       <data key="d0">module</data>
@@ -24283,8 +24220,7 @@ including listing, loading, saving, and deleting sessions.</data>
       <data key="d3">src.intellicrack.ui.tool_config</data>
       <data key="d4">Tool configuration dialog for Intellicrack.
 
-This module provides the UI for configuring reverse engineering tool
-bridges, including path settings, installation, and connection options.</data>
+This module provides the UI for configuring reverse engineering tool bridges, including path settings, installation, and connection options.</data>
     </node>
     <node id="src.intellicrack.ui.tools">
       <data key="d0">module</data>
@@ -24370,10 +24306,8 @@ Attributes:
       <data key="d5">['self']</data>
       <data key="d4">Size and center the window based on available screen geometry.
 
-Detects the primary monitor's usable area (excluding taskbar) and
-sizes the window slightly smaller with a small margin. Caps at
-1400x900 on large screens and floors at 800x600 minimum. Falls
-back to 1400x900 if screen detection fails.</data>
+Detects the primary monitor's usable area (excluding taskbar) and sizes the window slightly smaller with a small margin. Caps at
+1400x900 on large screens and floors at 800x600 minimum. Falls back to 1400x900 if screen detection fails.</data>
     </node>
     <node id="src.intellicrack.ui.app._save_window_state">
       <data key="d0">function</data>
@@ -25185,11 +25119,8 @@ Args:
       <data key="d3">src.intellicrack.ui.panels.async_bridge</data>
       <data key="d4">Shared async-to-sync bridge runner for Qt UI panels.
 
-Provides a coroutine runner that safely executes async bridge
-methods from synchronous Qt slots, using a persistent background
-event loop thread to preserve asyncio primitives across calls.
-Includes both blocking and non-blocking variants for different
-use cases.</data>
+Provides a coroutine runner that safely executes async bridge methods from synchronous Qt slots, using a persistent background event loop
+thread to preserve asyncio primitives across calls. Includes both blocking and non-blocking variants for different use cases.</data>
     </node>
     <node id="src.intellicrack.ui.app.fetch_status">
       <data key="d0">function</data>
@@ -25540,8 +25471,8 @@ Returns:
       <data key="d3">src.intellicrack.ui.confirmation_dialog</data>
       <data key="d4">Tool confirmation dialog for Intellicrack.
 
-This module provides a dialog for confirming tool calls before execution,
-allowing users to review and approve or deny potentially destructive operations.</data>
+This module provides a dialog for confirming tool calls before execution, allowing users to review and approve or deny potentially
+destructive operations.</data>
     </node>
     <node id="src.intellicrack.ui.confirmation_dialog.ToolConfirmationDialog">
       <data key="d0">class</data>
@@ -25612,8 +25543,7 @@ Returns:
       <data key="d3">src.intellicrack.ui.highlighter</data>
       <data key="d4">Syntax highlighting for code display.
 
-This module provides syntax highlighters for C/C++ decompiled code,
-x86/x64 assembly disassembly, and HexPat binary pattern definitions.</data>
+This module provides syntax highlighters for C/C++ decompiled code, x86/x64 assembly disassembly, and HexPat binary pattern definitions.</data>
     </node>
     <node id="src.intellicrack.ui.highlighter.HighlightRule">
       <data key="d0">class</data>
@@ -25788,10 +25718,8 @@ Args:
       <data key="d3">src.intellicrack.ui.panel_dock</data>
       <data key="d4">Detachable panel window for floating tool panels.
 
-Provides a QMainWindow wrapper that hosts a panel widget detached
-from the main ToolOutputPanel tab container, allowing panels to
-float independently, be moved to secondary monitors, and be
-re-docked back into the tab bar.</data>
+Provides a QMainWindow wrapper that hosts a panel widget detached from the main ToolOutputPanel tab container, allowing panels to float
+independently, be moved to secondary monitors, and be re-docked back into the tab bar.</data>
     </node>
     <node id="src.intellicrack.ui.panel_dock.DetachedPanelWindow">
       <data key="d0">class</data>
@@ -25878,8 +25806,7 @@ Args:
       <data key="d3">src.intellicrack.ui.preferences</data>
       <data key="d4">Preferences dialog for Intellicrack.
 
-This module provides a comprehensive preferences dialog with
-categorized settings for general, appearance, session, and logging options.</data>
+This module provides a comprehensive preferences dialog with categorized settings for general, appearance, session, and logging options.</data>
     </node>
     <node id="src.intellicrack.ui.preferences._combo_find_data">
       <data key="d0">function</data>
@@ -26083,8 +26010,7 @@ Returns:
       <data key="d3">src.intellicrack.ui.resources.theme_manager</data>
       <data key="d4">Theme management for Intellicrack UI.
 
-Provides centralized theme and stylesheet management with support for
-dark and light themes.</data>
+Provides centralized theme and stylesheet management with support for dark and light themes.</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._get_source_colors">
       <data key="d0">function</data>
@@ -26985,10 +26911,31 @@ Args:
 Returns:
     str | None: Selected model ID or None if nothing selected.</data>
     </node>
+    <node id="src.intellicrack.ui.provider_config._load_store_credentials">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_load_store_credentials</data>
+      <data key="d5">[]</data>
+      <data key="d4" />
+    </node>
     <node id="src.intellicrack.ui.provider_config._discover">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_discover</data>
+      <data key="d5">[]</data>
+      <data key="d4" />
+    </node>
+    <node id="src.intellicrack.ui.provider_config._run_oauth">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_run_oauth</data>
+      <data key="d5">[]</data>
+      <data key="d4" />
+    </node>
+    <node id="src.intellicrack.ui.provider_config._fetch">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_fetch</data>
       <data key="d5">[]</data>
       <data key="d4" />
     </node>
@@ -27855,8 +27802,8 @@ exports, functions, sections, and analysis notes.</data>
       <data key="d3">src.intellicrack.ui.panels.script_manager</data>
       <data key="d4">Script manager panel for creating and managing analysis scripts.
 
-Provides a comprehensive UI for script editing, validation, and execution
-with support for Frida, Ghidra, Cutter, x64dbg, and Python scripts.</data>
+Provides a comprehensive UI for script editing, validation, and execution with support for Frida, Ghidra, Cutter, x64dbg, and Python
+scripts.</data>
     </node>
     <node id="src.intellicrack.ui.panels.stack_viewer">
       <data key="d0">module</data>
@@ -27865,8 +27812,7 @@ with support for Frida, Ghidra, Cutter, x64dbg, and Python scripts.</data>
       <data key="d3">src.intellicrack.ui.panels.stack_viewer</data>
       <data key="d4">Unified stack viewer panel for debugging.
 
-Provides a Qt-based stack frame viewer that reads from both
-X64DbgBridge and FridaBridge for synchronized debugging views.</data>
+Provides a Qt-based stack frame viewer that reads from both X64DbgBridge and FridaBridge for synchronized debugging views.</data>
     </node>
     <node id="src.intellicrack.ui.tools.__init__">
       <data key="d0">function</data>
@@ -29112,10 +29058,8 @@ Args:
       <data key="d3">src.intellicrack.ui.win32_embed</data>
       <data key="d4">Win32 window embedding utilities for Intellicrack.
 
-Provides helpers for capturing external application windows by PID
-and embedding them inside Qt widgets using QWindow.fromWinId and
-QWidget.createWindowContainer.  Windows-only; on other platforms
-all functions return None / no-op.</data>
+Provides helpers for capturing external application windows by PID and embedding them inside Qt widgets using QWindow.fromWinId and
+QWidget.createWindowContainer.  Windows-only; on other platforms all functions return None / no-op.</data>
     </node>
     <node id="ctypes.wintypes" />
     <node id="PyQt6.sip" />
@@ -29191,8 +29135,7 @@ Args:
       <data key="d3">src.intellicrack.ui.xpu_status</data>
       <data key="d4">XPU status dialog for the Help menu.
 
-Provides a live-updating dialog displaying Intel XPU device status,
-memory utilization, model cache state, and Windows system requirements.</data>
+Provides a live-updating dialog displaying Intel XPU device status, memory utilization, model cache state, and Windows system requirements.</data>
     </node>
     <node id="src.intellicrack.ui.xpu_status._restyle">
       <data key="d0">function</data>
@@ -29337,8 +29280,7 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Run Windows requirements check and display results.
 
-This calls PowerShell subprocesses so it is only invoked on
-dialog open and manual refresh, never on the periodic timer.</data>
+This calls PowerShell subprocesses so it is only invoked on dialog open and manual refresh, never on the periodic timer.</data>
     </node>
     <node id="src.intellicrack.ui.xpu_status.closeEvent">
       <data key="d0">function</data>
@@ -29399,8 +29341,7 @@ Args:
       <data key="d3">src.intellicrack.ui.__init__</data>
       <data key="d4">User interface components for Intellicrack.
 
-This package provides PyQt6-based UI components including the main
-application window, chat panel, tool output display, and configuration
+This package provides PyQt6-based UI components including the main application window, chat panel, tool output display, and configuration
 dialogs.</data>
     </node>
     <node id="src.intellicrack.ui.dialogs" />
@@ -29411,8 +29352,7 @@ dialogs.</data>
       <data key="d3">src.intellicrack.ui.dialogs.splash_screen</data>
       <data key="d4">Splash screen for Intellicrack application startup.
 
-Provides a custom splash screen with progress indication and status
-messages during application initialization.</data>
+Provides a custom splash screen with progress indication and status messages during application initialization.</data>
     </node>
     <node id="intellicrack.ui.resources.font_manager" />
     <node id="src.intellicrack.ui.dialogs.splash_screen.SplashScreen">
@@ -29588,8 +29528,7 @@ Returns:
       <data key="d3">src.intellicrack.ui.dialogs.__init__</data>
       <data key="d4">Dialog components for Intellicrack UI.
 
-This package provides dialog widgets including the splash screen
-and other modal dialogs.</data>
+This package provides dialog widgets including the splash screen and other modal dialogs.</data>
     </node>
     <node id="src.intellicrack.ui.panels.analysis_panel.BridgeAnalysisPanel">
       <data key="d0">class</data>
@@ -29878,8 +29817,7 @@ Args:
       <data key="d5">[]</data>
       <data key="d4">Shut down the persistent background event loop.
 
-Should be called during application exit to cleanly stop
-the background thread.</data>
+Should be called during application exit to cleanly stop the background thread.</data>
     </node>
     <node id="src.intellicrack.ui.panels.async_bridge._log_task_exception">
       <data key="d0">function</data>
@@ -29912,8 +29850,7 @@ Args:
       <data key="d3">src.intellicrack.ui.panels.base_panel</data>
       <data key="d4">Shared base class for Intellicrack analysis panels.
 
-Provides common layout scaffolding, toolbar construction, async bridge
-integration, and lifecycle signals used by all native analysis panels
+Provides common layout scaffolding, toolbar construction, async bridge integration, and lifecycle signals used by all native analysis panels
 (Frida, Ghidra, Cutter, x64dbg, Sandbox).</data>
     </node>
     <node id="intellicrack.ui.panels.async_bridge" />
@@ -29992,8 +29929,7 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Perform panel-specific cleanup during ``stop_tool``.
 
-Override in subclasses to shut down bridges, stop timers,
-or release resources.</data>
+Override in subclasses to shut down bridges, stop timers, or release resources.</data>
     </node>
     <node id="src.intellicrack.ui.panels.base_panel._add_tool_button">
       <data key="d0">function</data>
@@ -30120,8 +30056,7 @@ Returns:
       <data key="d3">src.intellicrack.ui.panels.binary_panel</data>
       <data key="d4">Binary analysis panel for Intellicrack.
 
-Provides a hex viewer, section navigator, and patching controls
-for direct binary inspection and modification.</data>
+Provides a hex viewer, section navigator, and patching controls for direct binary inspection and modification.</data>
     </node>
     <node id="intellicrack.ui.panels.qt_compat" />
     <node id="src.intellicrack.ui.panels.binary_panel._lief_parse">
@@ -30291,8 +30226,7 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Parse sections from the loaded binary data.
 
-Detects format via magic bytes and dispatches to the
-appropriate parser (PE, ELF, or Mach-O).</data>
+Detects format via magic bytes and dispatches to the appropriate parser (PE, ELF, or Mach-O).</data>
     </node>
     <node id="src.intellicrack.ui.panels.binary_panel._parse_pe_sections">
       <data key="d0">function</data>
@@ -30555,10 +30489,8 @@ Returns:
       <data key="d3">src.intellicrack.ui.panels.cutter_panel</data>
       <data key="d4">Cutter/Rizin analysis panel for Intellicrack.
 
-Provides native Qt views for disassembly, decompilation, function listing,
-CFG visualization, string search, import/export/section tables,
-cross-references, and a raw r2 command console -- all powered by the
-CutterBridge headless analysis backend via r2pipe.</data>
+Provides native Qt views for disassembly, decompilation, function listing, CFG visualization, string search, import/export/section tables,
+cross-references, and a raw r2 command console -- all powered by the CutterBridge headless analysis backend via r2pipe.</data>
     </node>
     <node id="intellicrack.ui.highlighter" />
     <node id="intellicrack.ui.panels.base_panel" />
@@ -31029,8 +30961,7 @@ Args:
       <data key="d3">src.intellicrack.ui.panels.frida_panel</data>
       <data key="d4">Frida instrumentation panel for Intellicrack.
 
-Provides a script editor, console output, and hook manager
-for interacting with Frida dynamic instrumentation framework.</data>
+Provides a script editor, console output, and hook manager for interacting with Frida dynamic instrumentation framework.</data>
     </node>
     <node id="src.intellicrack.ui.panels.frida_panel.FridaPanel">
       <data key="d0">class</data>
@@ -31537,8 +31468,7 @@ Args:
       <data key="d3">src.intellicrack.ui.panels.ghidra_panel</data>
       <data key="d4">Ghidra analysis panel for Intellicrack.
 
-Provides decompilation, disassembly, function listing, string search,
-import/export tables, and cross-reference views powered by the
+Provides decompilation, disassembly, function listing, string search, import/export tables, and cross-reference views powered by the
 GhidraBridge headless analysis backend.</data>
     </node>
     <node id="src.intellicrack.ui.panels.ghidra_panel.GhidraPanel">
@@ -32150,9 +32080,8 @@ The implementation has moved to the hex_editor package.</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor_widget</data>
       <data key="d4">Custom hex editor widget using QPainter rendering.
 
-Provides a high-performance hex editor view with virtual scrolling,
-keyboard editing, mouse selection, and column-based display for
-offset, hex, and ASCII data.</data>
+Provides a high-performance hex editor view with virtual scrolling, keyboard editing, mouse selection, and column-based display for offset,
+hex, and ASCII data.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget._get_hex_editor_colors">
       <data key="d0">function</data>
@@ -32237,7 +32166,7 @@ Attributes:
       <data key="d4">Load entropy values for a file.
 
 Args:
-    values: List of per-chunk Shannon entropy values (0.0–8.0).
+    values: List of per-chunk Shannon entropy values (0.0-8.0).
     total_size: Total file size in bytes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget.set_viewport">
@@ -32270,6 +32199,49 @@ Args:
 
 Args:
     painter: Active QPainter instance.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._draw_entropy_bars">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_draw_entropy_bars</data>
+      <data key="d5">['self', 'painter', 'w', 'h', 'count', 'colors']</data>
+      <data key="d4">Paint per-chunk entropy bars onto the minimap.
+
+Args:
+    painter: Active QPainter instance.
+    w: Widget width in pixels.
+    h: Widget height in pixels.
+    count: Number of entropy chunks.
+    colors: Theme color mapping.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._entropy_to_color">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_entropy_to_color</data>
+      <data key="d5">['entropy', 'low_color', 'mid_color', 'high_color']</data>
+      <data key="d4">Interpolate an entropy value to a color between low, mid, and high.
+
+Args:
+    entropy: Shannon entropy value (0.0-8.0).
+    low_color: Color for low entropy regions.
+    mid_color: Color for mid entropy regions.
+    high_color: Color for high entropy regions.
+
+Returns:
+    QColor: Interpolated color for the given entropy value.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._draw_viewport_indicator">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_draw_viewport_indicator</data>
+      <data key="d5">['self', 'painter', 'w', 'h', 'colors']</data>
+      <data key="d4">Draw the semi-transparent viewport position indicator.
+
+Args:
+    painter: Active QPainter instance.
+    w: Widget width in pixels.
+    h: Widget height in pixels.
+    colors: Theme color mapping.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget.mousePressEvent">
       <data key="d0">function</data>
@@ -32402,6 +32374,24 @@ Args:
     first_row: First visible row index from scrollbar.
     visible_rows: Number of visible rows in the viewport.</data>
     </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._paint_row_hex_groups">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_paint_row_hex_groups</data>
+      <data key="d5">['self', 'painter', 'row_idx', 'y', 'row_data', 'bytes_in_row', 'row_offset', 'group_size', 'sel_start', 'sel_end']</data>
+      <data key="d4">Paint all hex groups for a single row.
+
+Args:
+    painter: Active QPainter instance.
+    row_idx: Visual row index in viewport.
+    y: Y coordinate for text baseline.
+    row_data: Raw bytes for the entire row.
+    bytes_in_row: Number of valid bytes in the row.
+    row_offset: Absolute byte offset of the first byte in this row.
+    group_size: Bytes per display group.
+    sel_start: Selection start offset (-1 if none).
+    sel_end: Selection end offset (-1 if none).</data>
+    </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget._read_row_data">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -32448,6 +32438,67 @@ Args:
     group_size: Expected bytes per group for the current mode.
     group_offset: Absolute byte offset of the first byte in this group.
     sel_start: Sele...</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._is_group_selected">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_is_group_selected</data>
+      <data key="d5">['group_offset', 'actual_size', 'sel_start', 'sel_end']</data>
+      <data key="d4">Check whether any byte in the group falls within the selection.
+
+Args:
+    group_offset: Absolute byte offset of the first byte in the group.
+    actual_size: Number of bytes in the group.
+    sel_start: Selection start offset (-1 if none).
+    sel_end: Selection end offset (-1 if none).
+
+Returns:
+    bool: True if at least one byte is selected.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._find_group_highlight">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_find_group_highlight</data>
+      <data key="d5">['self', 'group_bytes', 'actual_size', 'group_offset', 'any_selected']</data>
+      <data key="d4">Find the first matching highlight color for a byte group.
+
+Args:
+    group_bytes: Raw bytes for the group.
+    actual_size: Number of valid bytes in the group.
+    group_offset: Absolute byte offset of the first byte.
+    any_selected: Whether any byte in the group is selected.
+
+Returns:
+    str | None: Hex color string, or None if no highlight applies.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._paint_hex_group_background">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_paint_hex_group_background</data>
+      <data key="d5">['self', 'painter', 'cell_rect', 'group_bytes', 'actual_size', 'highlight_color', 'any_selected']</data>
+      <data key="d4">Paint RGBA, highlight, and selection backgrounds for a hex group.
+
+Args:
+    painter: Active QPainter instance.
+    cell_rect: Bounding rectangle for this hex group cell.
+    group_bytes: Raw bytes for the group.
+    actual_size: Number of valid bytes in the group.
+    highlight_color: Optional hex color string from highlight rules.
+    any_selected: Whether any byte in the group is selected.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_editor_widget._set_hex_group_pen">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_set_hex_group_pen</data>
+      <data key="d5">['self', 'painter', 'group_bytes', 'actual_size', 'any_selected', 'any_modified']</data>
+      <data key="d4">Set the painter pen color for hex group text.
+
+Args:
+    painter: Active QPainter instance.
+    group_bytes: Raw bytes for the group.
+    actual_size: Number of valid bytes in the group.
+    any_selected: Whether any byte in the group is selected.
+    any_modified: Whether any byte in the group has been modified.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget._paint_hex_byte">
       <data key="d0">function</data>
@@ -32631,9 +32682,7 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Paste clipboard content at cursor position.
 
-Attempts to parse clipboard text as a hex string first
-(e.g. "4D 5A 90"). Falls back to encoding the raw text
-as UTF-8 bytes.</data>
+Attempts to parse clipboard text as a hex string first (e.g. "4D 5A 90"). Falls back to encoding the raw text as UTF-8 bytes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget.mouseMoveEvent">
       <data key="d0">function</data>
@@ -32870,6 +32919,18 @@ Provides a QWidget containing multiple tool sub-tabs for common binary
 and reverse-engineering helper utilities that do not require an external
 tool connection.</data>
     </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel._AstEvalError">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_AstEvalError</data>
+      <data key="d4">Raised when an AST expression uses a disallowed construct.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel._AstCallTypeError">
+      <data key="d0">class</data>
+      <data key="d1">python</data>
+      <data key="d3">_AstCallTypeError</data>
+      <data key="d4">Raised when an AST call node uses a non-Name form.</data>
+    </node>
     <node id="src.intellicrack.ui.panels.hex_tools_panel._ast_eval_node">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -32887,8 +32948,8 @@ Returns:
     Any: The computed result.
 
 Raises:
-    ValueError: When the node type is not permitted.
-    TypeError: When operator arguments are the wrong type.</data>
+    _AstEvalError: When the node type is not permitted.
+    _AstCallTypeError: When a call node is not a simple name.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_tools_panel._safe_eval_expr">
       <data key="d0">function</data>
@@ -33060,7 +33121,7 @@ Returns:
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_populate_ascii_table</data>
-      <data key="d5">['self', 'table']</data>
+      <data key="d5">['table']</data>
       <data key="d4">Fill all 256 rows of the ASCII table with character data.
 
 Args:
@@ -33105,6 +33166,26 @@ Returns:
 
 Returns:
     QWidget: The calculator tab widget.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel._build_split_group">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_split_group</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Build the file split controls group box.
+
+Returns:
+    QGroupBox: The split file group box.</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel._build_combine_group">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_build_combine_group</data>
+      <data key="d5">['self']</data>
+      <data key="d4">Build the file combine controls group box.
+
+Returns:
+    QGroupBox: The combine files group box.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_tools_panel._build_file_splitter_tab">
       <data key="d0">function</data>
@@ -33152,7 +33233,7 @@ Returns:
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_demangle_symbol</data>
-      <data key="d5">['self', 'mangled']</data>
+      <data key="d5">['mangled']</data>
       <data key="d4">Demangle a symbol using the appropriate strategy.
 
 Tries cxxfilt first for Itanium/GCC mangling, then falls back to
@@ -33289,6 +33370,32 @@ literals, arithmetic, and bitwise operations.  Results are shown as
       <data key="d5">['self']</data>
       <data key="d4">Move the selected combine file one position down in the list.</data>
     </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel._split_at_offset">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_split_at_offset</data>
+      <data key="d5">['self', 'data', 'offset', 'outdir', 'src_path']</data>
+      <data key="d4">Split file data into two parts at the given byte offset.
+
+Args:
+    data: The complete file contents.
+    offset: The byte position at which to split.
+    outdir: Directory to write the output parts into.
+    src_path: Original source file path (used for naming).</data>
+    </node>
+    <node id="src.intellicrack.ui.panels.hex_tools_panel._split_into_chunks">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_split_into_chunks</data>
+      <data key="d5">['self', 'data', 'chunk_size', 'outdir', 'src_path']</data>
+      <data key="d4">Split file data into equal-size chunks with a possible remainder.
+
+Args:
+    data: The complete file contents.
+    chunk_size: Maximum number of bytes per chunk.
+    outdir: Directory to write the output parts into.
+    src_path: Original source file path (used for naming).</data>
+    </node>
     <node id="src.intellicrack.ui.panels.hex_tools_panel._do_split_file">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -33316,8 +33423,7 @@ Writes each source file's bytes sequentially to the output path.</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel</data>
       <data key="d4">Process management panel for Intellicrack.
 
-Provides a process list viewer with details, modules, threads,
-and memory map inspection for target process analysis.</data>
+Provides a process list viewer with details, modules, threads, and memory map inspection for target process analysis.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._enumerate_processes">
       <data key="d0">function</data>
@@ -33493,9 +33599,8 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Refresh the process list from the system.
 
-Spawns a background worker to enumerate processes without blocking
-the UI thread. If a worker is already running, the request is skipped
-to prevent concurrent enumeration.</data>
+Spawns a background worker to enumerate processes without blocking the UI thread. If a worker is already running, the request is
+skipped to prevent concurrent enumeration.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._on_refresh_finished">
       <data key="d0">function</data>
@@ -33557,9 +33662,8 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Refresh the tracked processes table from ProcessManager.
 
-Spawns a background worker to query ProcessManager without blocking
-the UI thread. If a worker is already running, the request is skipped
-to prevent concurrent queries.</data>
+Spawns a background worker to query ProcessManager without blocking the UI thread. If a worker is already running, the request is
+skipped to prevent concurrent queries.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._on_tracked_refresh_finished">
       <data key="d0">function</data>
@@ -33846,8 +33950,7 @@ Args:
       <data key="d3">src.intellicrack.ui.panels.sandbox_panel</data>
       <data key="d4">Sandbox management panel for Intellicrack.
 
-Provides sandbox creation, configuration, binary execution,
-snapshot management, and execution report viewing.</data>
+Provides sandbox creation, configuration, binary execution, snapshot management, and execution report viewing.</data>
     </node>
     <node id="intellicrack.ui.panels.vnc_widget" />
     <node id="src.intellicrack.ui.panels.sandbox_panel.SandboxPanel">
@@ -34628,8 +34731,7 @@ Attributes:
       <data key="d3">StackDataSource</data>
       <data key="d4">Protocol for stack frame data sources.
 
-Implementations should provide methods to retrieve current
-stack frames from debugging sessions.</data>
+Implementations should provide methods to retrieve current stack frames from debugging sessions.</data>
     </node>
     <node id="src.intellicrack.ui.panels.stack_viewer.X64DbgStackSource">
       <data key="d0">class</data>
@@ -34637,8 +34739,7 @@ stack frames from debugging sessions.</data>
       <data key="d3">X64DbgStackSource</data>
       <data key="d4">Stack data source backed by X64DbgBridge.
 
-Retrieves stack frames from an active x64dbg debugging session
-using the bridge interface.</data>
+Retrieves stack frames from an active x64dbg debugging session using the bridge interface.</data>
     </node>
     <node id="src.intellicrack.ui.panels.stack_viewer.FridaStackSource">
       <data key="d0">class</data>
@@ -34646,8 +34747,7 @@ using the bridge interface.</data>
       <data key="d3">FridaStackSource</data>
       <data key="d4">Stack data source backed by FridaBridge.
 
-Retrieves stack frames from an active Frida instrumentation session
-using the bridge interface.</data>
+Retrieves stack frames from an active Frida instrumentation session using the bridge interface.</data>
     </node>
     <node id="src.intellicrack.ui.panels.stack_viewer.StackFrameTable">
       <data key="d0">class</data>
@@ -34867,9 +34967,8 @@ Args:
       <data key="d3">src.intellicrack.ui.panels.vnc_widget</data>
       <data key="d4">VNC viewer widget for QEMU sandbox display.
 
-Implements a subset of the RFB protocol (RFC 6143) for receiving
-framebuffer updates from a VNC server and rendering them in a Qt
-widget.  Supports Raw encoding, pointer events, and key events.</data>
+Implements a subset of the RFB protocol (RFC 6143) for receiving framebuffer updates from a VNC server and rendering them in a Qt widget.
+Supports Raw encoding, pointer events, and key events.</data>
     </node>
     <node id="src.intellicrack.ui.panels.vnc_widget.RFBClient">
       <data key="d0">class</data>
@@ -34877,8 +34976,7 @@ widget.  Supports Raw encoding, pointer events, and key events.</data>
       <data key="d3">RFBClient</data>
       <data key="d4">Async RFB (Remote Framebuffer) protocol client.
 
-Implements a minimal subset of RFC 6143 sufficient for receiving
-raw framebuffer updates and sending pointer/key events.</data>
+Implements a minimal subset of RFC 6143 sufficient for receiving raw framebuffer updates and sending pointer/key events.</data>
     </node>
     <node id="src.intellicrack.ui.panels.vnc_widget._qt_key_to_x11">
       <data key="d0">function</data>
@@ -35177,10 +35275,9 @@ Args:
       <data key="d1">python</data>
       <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.x64dbg_panel</data>
-      <data key="d4">x64dbg debugger panel for Intellicrack.
+      <data key="d4">X64dbg debugger panel for Intellicrack.
 
-Provides disassembly, register inspection, breakpoint management,
-memory viewing, stack traces, and command console for interactive
+Provides disassembly, register inspection, breakpoint management, memory viewing, stack traces, and command console for interactive
 debugging via the X64DbgBridge backend.</data>
     </node>
     <node id="intellicrack.ui.win32_embed" />
@@ -35282,8 +35379,7 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Enable or disable debug buttons based on bridge plugin readiness.
 
-When prerequisites are not met, buttons are disabled and a
-diagnostic message is shown in the status label and console.</data>
+When prerequisites are not met, buttons are disabled and a diagnostic message is shown in the status label and console.</data>
     </node>
     <node id="src.intellicrack.ui.panels.x64dbg_panel.get_bridge">
       <data key="d0">function</data>
@@ -35799,10 +35895,8 @@ Returns:
       <data key="d3">src.intellicrack.ui.panels.__init__</data>
       <data key="d4">UI panels for Intellicrack analysis displays.
 
-This module provides specialized panels for bridge analysis,
-stack viewing, script management, Frida instrumentation, process
-management, binary hex viewing, sandbox control, and native tool
-panels (Ghidra, x64dbg, Cutter) within the main application.</data>
+This module provides specialized panels for bridge analysis, stack viewing, script management, Frida instrumentation, process management,
+binary hex viewing, sandbox control, and native tool panels (Ghidra, x64dbg, Cutter) within the main application.</data>
     </node>
     <node id="intellicrack.ui.panels.analysis_panel" />
     <node id="intellicrack.ui.panels.cutter_panel" />
@@ -36507,8 +36601,7 @@ Returns:
       <data key="d5">['self']</data>
       <data key="d4">Apply the pattern at the current cursor offset.
 
-Tries the HexPat interpreter first for direct execution, then
-falls back to compile-register-apply via the Rust backend.</data>
+Tries the HexPat interpreter first for direct execution, then falls back to compile-register-apply via the Rust backend.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._apply_via_interpreter">
       <data key="d0">function</data>
@@ -37551,8 +37644,7 @@ Args:
       <data key="d3">FontManager</data>
       <data key="d4">Singleton font manager for custom font loading and management.
 
-Handles loading custom fonts from the assets directory and provides
-font instances for code and UI elements.</data>
+Handles loading custom fonts from the assets directory and provides font instances for code and UI elements.</data>
     </node>
     <node id="src.intellicrack.ui.resources.font_manager.__init__">
       <data key="d0">function</data>
@@ -37765,9 +37857,8 @@ Provides centralized icon loading with caching and fallback support.</data>
       <data key="d3">IconManager</data>
       <data key="d4">Singleton icon manager with caching and fallback support.
 
-Provides centralized icon loading for the Intellicrack UI with
-performance optimization through caching and graceful degradation
-when icon files are not available.</data>
+Provides centralized icon loading for the Intellicrack UI with performance optimization through caching and graceful degradation when
+icon files are not available.</data>
     </node>
     <node id="src.intellicrack.ui.resources.icon_manager.__init__">
       <data key="d0">function</data>
@@ -38071,8 +38162,7 @@ Returns:
       <data key="d3">ThemeManager</data>
       <data key="d4">Singleton theme manager for application styling.
 
-Manages theme loading, switching, and application-wide stylesheet
-management.</data>
+Manages theme loading, switching, and application-wide stylesheet management.</data>
     </node>
     <node id="src.intellicrack.ui.resources.theme_manager.__init__">
       <data key="d0">function</data>
@@ -38211,8 +38301,7 @@ Returns:
       <data key="d3">src.intellicrack.ui.resources.__init__</data>
       <data key="d4">Resource management modules for Intellicrack UI.
 
-This package provides asset loading, icon management, font handling,
-and theme management for the Intellicrack application.</data>
+This package provides asset loading, icon management, font handling, and theme management for the Intellicrack application.</data>
     </node>
     <node id=".claude/statusline.cjs">
       <data key="d0">javascript</data>
@@ -48779,6 +48868,36 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\pdoc\build-index.js</data>
       <data key="d3">build-index.js</data>
     </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/labextension/static/340.330950829c5d59eca692.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\labextension\static\340.330950829c5d59eca692.js</data>
+      <data key="d3">340.330950829c5d59eca692.js</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/labextension/static/remoteEntry.bbf25df5110252151416.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\labextension\static\remoteEntry.bbf25df5110252151416.js</data>
+      <data key="d3">remoteEntry.bbf25df5110252151416.js</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/labextension/static/style.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\labextension\static\style.js</data>
+      <data key="d3">style.js</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/plotly.min.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\plotly.min.js</data>
+      <data key="d3">plotly.min.js</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/widgetbundle.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\widgetbundle.js</data>
+      <data key="d3">widgetbundle.js</data>
+    </node>
     <node id=".pixi/envs/default/Lib/site-packages/pyinstrument/renderers/html_resources/app.js">
       <data key="d0">javascript</data>
       <data key="d1">javascript</data>
@@ -50152,6 +50271,24 @@ and theme management for the Intellicrack application.</data>
       <data key="d1">javascript</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Library\usr\share\terminfo\78\xterm.js</data>
       <data key="d3">xterm.js</data>
+    </node>
+    <node id=".pixi/envs/default/share/jupyter/labextensions/jupyterlab-plotly/static/340.330950829c5d59eca692.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\share\jupyter\labextensions\jupyterlab-plotly\static\340.330950829c5d59eca692.js</data>
+      <data key="d3">340.330950829c5d59eca692.js</data>
+    </node>
+    <node id=".pixi/envs/default/share/jupyter/labextensions/jupyterlab-plotly/static/remoteEntry.bbf25df5110252151416.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\share\jupyter\labextensions\jupyterlab-plotly\static\remoteEntry.bbf25df5110252151416.js</data>
+      <data key="d3">remoteEntry.bbf25df5110252151416.js</data>
+    </node>
+    <node id=".pixi/envs/default/share/jupyter/labextensions/jupyterlab-plotly/static/style.js">
+      <data key="d0">javascript</data>
+      <data key="d1">javascript</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\share\jupyter\labextensions\jupyterlab-plotly\static\style.js</data>
+      <data key="d3">style.js</data>
     </node>
     <node id="tools/qemu/share/doc/searchindex.js">
       <data key="d0">javascript</data>
@@ -77810,6 +77947,76 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\__init__.meta.json</data>
       <data key="d3">__init__.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/credentials.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\credentials.data.json</data>
+      <data key="d3">credentials.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/credentials.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\credentials.meta.json</data>
+      <data key="d3">credentials.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/_helpers.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\_helpers.data.json</data>
+      <data key="d3">_helpers.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/_helpers.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\_helpers.meta.json</data>
+      <data key="d3">_helpers.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/__init__.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\__init__.data.json</data>
+      <data key="d3">__init__.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/__init__.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\__init__.meta.json</data>
+      <data key="d3">__init__.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/aiohttp.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\aiohttp.data.json</data>
+      <data key="d3">aiohttp.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/aiohttp.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\aiohttp.meta.json</data>
+      <data key="d3">aiohttp.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/mtls.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\mtls.data.json</data>
+      <data key="d3">mtls.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/mtls.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\mtls.meta.json</data>
+      <data key="d3">mtls.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/sessions.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\sessions.data.json</data>
+      <data key="d3">sessions.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/sessions.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\sessions.meta.json</data>
+      <data key="d3">sessions.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/__init__.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\__init__.data.json</data>
+      <data key="d3">__init__.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/auth/aio/transport/__init__.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\aio\transport\__init__.meta.json</data>
+      <data key="d3">__init__.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/google/auth/crypt/base.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\auth\crypt\base.data.json</data>
@@ -79499,6 +79706,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\_utils\_logs.meta.json</data>
       <data key="d3">_logs.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/_utils/_path.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\_utils\_path.data.json</data>
+      <data key="d3">_path.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/google/genai/_interactions/_utils/_path.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\google\genai\_interactions\_utils\_path.meta.json</data>
+      <data key="d3">_path.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/google/genai/_interactions/_utils/_proxy.data.json">
       <data key="d0">config</data>
@@ -81469,6 +81686,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\win32_embed.meta.json</data>
       <data key="d3">win32_embed.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/ui/xpu_status.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\xpu_status.data.json</data>
+      <data key="d3">xpu_status.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/intellicrack/ui/xpu_status.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\intellicrack\ui\xpu_status.meta.json</data>
+      <data key="d3">xpu_status.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/intellicrack/ui/_screen_compat.data.json">
       <data key="d0">config</data>
@@ -95230,6 +95457,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_input_done_event.meta.json</data>
       <data key="d3">response_custom_tool_call_input_done_event.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/openai/types/responses/response_custom_tool_call_item.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_item.data.json</data>
+      <data key="d3">response_custom_tool_call_item.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/openai/types/responses/response_custom_tool_call_item.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_item.meta.json</data>
+      <data key="d3">response_custom_tool_call_item.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/openai/types/responses/response_custom_tool_call_output.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_output.data.json</data>
@@ -95239,6 +95476,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_output.meta.json</data>
       <data key="d3">response_custom_tool_call_output.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/openai/types/responses/response_custom_tool_call_output_item.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_output_item.data.json</data>
+      <data key="d3">response_custom_tool_call_output_item.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/openai/types/responses/response_custom_tool_call_output_item.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\types\responses\response_custom_tool_call_output_item.meta.json</data>
+      <data key="d3">response_custom_tool_call_output_item.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/openai/types/responses/response_custom_tool_call_output_param.data.json">
       <data key="d0">config</data>
@@ -97359,6 +97606,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\_utils\_logs.meta.json</data>
       <data key="d3">_logs.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/openai/_utils/_path.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\_utils\_path.data.json</data>
+      <data key="d3">_path.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/openai/_utils/_path.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\openai\_utils\_path.meta.json</data>
+      <data key="d3">_path.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/openai/_utils/_proxy.data.json">
       <data key="d0">config</data>
@@ -101570,6 +101827,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\starlette\middleware\exceptions.meta.json</data>
       <data key="d3">exceptions.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/starlette/middleware/sessions.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\starlette\middleware\sessions.data.json</data>
+      <data key="d3">sessions.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/starlette/middleware/sessions.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\starlette\middleware\sessions.meta.json</data>
+      <data key="d3">sessions.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/starlette/middleware/__init__.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\starlette\middleware\__init__.data.json</data>
@@ -102370,6 +102637,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_hexcore_e2e\test_bridge_lifecycle.meta.json</data>
       <data key="d3">test_bridge_lifecycle.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/tests/test_hexcore_e2e/test_bridge_new_capabilities.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_hexcore_e2e\test_bridge_new_capabilities.data.json</data>
+      <data key="d3">test_bridge_new_capabilities.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/tests/test_hexcore_e2e/test_bridge_new_capabilities.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_hexcore_e2e\test_bridge_new_capabilities.meta.json</data>
+      <data key="d3">test_bridge_new_capabilities.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/tests/test_hexcore_e2e/test_bridge_patches.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_hexcore_e2e\test_bridge_patches.data.json</data>
@@ -103139,6 +103416,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_ui\test_win32_embed.meta.json</data>
       <data key="d3">test_win32_embed.meta.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/tests/test_ui/test_xpu_status.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_ui\test_xpu_status.data.json</data>
+      <data key="d3">test_xpu_status.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/tests/test_ui/test_xpu_status.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\tests\test_ui\test_xpu_status.meta.json</data>
+      <data key="d3">test_xpu_status.meta.json</data>
     </node>
     <node id=".mypy_cache/3.13/tests/test_ui/__init__.data.json">
       <data key="d0">config</data>
@@ -119630,6 +119917,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\xml\sax\__init__.meta.json</data>
       <data key="d3">__init__.meta.json</data>
     </node>
+    <node id=".mypy_cache/3.13/xxhash/__init__.data.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\xxhash\__init__.data.json</data>
+      <data key="d3">__init__.data.json</data>
+    </node>
+    <node id=".mypy_cache/3.13/xxhash/__init__.meta.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.mypy_cache\3.13\xxhash\__init__.meta.json</data>
+      <data key="d3">__init__.meta.json</data>
+    </node>
     <node id=".mypy_cache/3.13/yaml/composer.data.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.mypy_cache\3.13\yaml\composer.data.json</data>
@@ -120515,20 +120812,20 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\importlib_resources-6.5.2-pyhd8ed1ab_0.json</data>
       <data key="d3">importlib_resources-6.5.2-pyhd8ed1ab_0.json</data>
     </node>
-    <node id=".pixi/envs/default/conda-meta/just-1.47.1-h77a83cd_1.json">
+    <node id=".pixi/envs/default/conda-meta/just-1.48.1-h77a83cd_0.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\just-1.47.1-h77a83cd_1.json</data>
-      <data key="d3">just-1.47.1-h77a83cd_1.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\just-1.48.1-h77a83cd_0.json</data>
+      <data key="d3">just-1.48.1-h77a83cd_0.json</data>
     </node>
     <node id=".pixi/envs/default/conda-meta/libcapstone-5.0.7-hfd05255_0.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\libcapstone-5.0.7-hfd05255_0.json</data>
       <data key="d3">libcapstone-5.0.7-hfd05255_0.json</data>
     </node>
-    <node id=".pixi/envs/default/conda-meta/libexpat-2.7.4-hac47afa_0.json">
+    <node id=".pixi/envs/default/conda-meta/libexpat-2.7.5-hac47afa_0.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\libexpat-2.7.4-hac47afa_0.json</data>
-      <data key="d3">libexpat-2.7.4-hac47afa_0.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\libexpat-2.7.5-hac47afa_0.json</data>
+      <data key="d3">libexpat-2.7.5-hac47afa_0.json</data>
     </node>
     <node id=".pixi/envs/default/conda-meta/libffi-3.5.2-h3d046cb_0.json">
       <data key="d0">config</data>
@@ -120560,10 +120857,10 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\markdownlint-cli-0.48.0-he474a74_0.json</data>
       <data key="d3">markdownlint-cli-0.48.0-he474a74_0.json</data>
     </node>
-    <node id=".pixi/envs/default/conda-meta/nodejs-24.14.0-h80d1838_0.json">
+    <node id=".pixi/envs/default/conda-meta/nodejs-24.14.1-h80d1838_0.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\nodejs-24.14.0-h80d1838_0.json</data>
-      <data key="d3">nodejs-24.14.0-h80d1838_0.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\conda-meta\nodejs-24.14.1-h80d1838_0.json</data>
+      <data key="d3">nodejs-24.14.1-h80d1838_0.json</data>
     </node>
     <node id=".pixi/envs/default/conda-meta/openssl-3.6.1-hf411b9b_1.json">
       <data key="d0">config</data>
@@ -121810,9 +122107,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\docstring_parser_fork-0.0.14.dist-info\licenses\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/frida_tools-14.6.1.dist-info/uv_build.json">
+    <node id=".pixi/envs/default/Lib/site-packages/frida_tools-14.8.0.dist-info/uv_build.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\frida_tools-14.6.1.dist-info\uv_build.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\frida_tools-14.8.0.dist-info\uv_build.json</data>
       <data key="d3">uv_build.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/glom/test/data/test_invalid.toml">
@@ -122080,9 +122377,14 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\mkdocs_material_extensions-1.3.1.dist-info\licenses\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/nh3-0.3.3.dist-info/sboms/nh3.cyclonedx.json">
+    <node id=".pixi/envs/default/Lib/site-packages/narwhals-2.18.1.dist-info/licenses/LICENSE.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\narwhals-2.18.1.dist-info\licenses\LICENSE.md</data>
+      <data key="d3">LICENSE.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/nh3-0.3.4.dist-info/sboms/nh3.cyclonedx.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nh3-0.3.3.dist-info\sboms\nh3.cyclonedx.json</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\nh3-0.3.4.dist-info\sboms\nh3.cyclonedx.json</data>
       <data key="d3">nh3.cyclonedx.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/nltk-3.9.4.dist-info/licenses/AUTHORS.md">
@@ -122200,6 +122502,66 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\playhouse\README.md</data>
       <data key="d3">README.md</data>
     </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/labextension/package.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\labextension\package.json</data>
+      <data key="d3">package.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/ggplot2.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\ggplot2.json</data>
+      <data key="d3">ggplot2.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/gridon.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\gridon.json</data>
+      <data key="d3">gridon.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/plotly.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\plotly.json</data>
+      <data key="d3">plotly.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/plotly_dark.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\plotly_dark.json</data>
+      <data key="d3">plotly_dark.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/plotly_white.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\plotly_white.json</data>
+      <data key="d3">plotly_white.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/presentation.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\presentation.json</data>
+      <data key="d3">presentation.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/seaborn.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\seaborn.json</data>
+      <data key="d3">seaborn.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/simple_white.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\simple_white.json</data>
+      <data key="d3">simple_white.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/xgridoff.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\xgridoff.json</data>
+      <data key="d3">xgridoff.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/package_data/templates/ygridoff.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\package_data\templates\ygridoff.json</data>
+      <data key="d3">ygridoff.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/plotly/validators/_validators.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\plotly\validators\_validators.json</data>
+      <data key="d3">_validators.json</data>
+    </node>
     <node id=".pixi/envs/default/Lib/site-packages/poetry/core/json/schemas/dependency-groups-schema.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\poetry\core\json\schemas\dependency-groups-schema.json</data>
@@ -122254,6 +122616,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\pyparsing\ai\best_practices.md</data>
       <data key="d3">best_practices.md</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/pyproject_fmt-2.20.0.dist-info/sboms/pyproject-fmt.cyclonedx.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\pyproject_fmt-2.20.0.dist-info\sboms\pyproject-fmt.cyclonedx.json</data>
+      <data key="d3">pyproject-fmt.cyclonedx.json</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/PyQt6/bindings/QAxContainer/QAxContainer.toml">
       <data key="d0">config</data>
@@ -122995,9 +123362,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\sphinx\themes\traditional\theme.toml</data>
       <data key="d3">theme.toml</data>
     </node>
-    <node id=".pixi/envs/default/Lib/site-packages/starlette-0.52.1.dist-info/licenses/LICENSE.md">
+    <node id=".pixi/envs/default/Lib/site-packages/starlette-1.0.0.dist-info/licenses/LICENSE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\starlette-0.52.1.dist-info\licenses\LICENSE.md</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\starlette-1.0.0.dist-info\licenses\LICENSE.md</data>
       <data key="d3">LICENSE.md</data>
     </node>
     <node id=".pixi/envs/default/Lib/site-packages/stevedore/example/pyproject.toml">
@@ -123055,6 +123422,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\tox\tox.schema.json</data>
       <data key="d3">tox.schema.json</data>
     </node>
+    <node id=".pixi/envs/default/Lib/site-packages/untokenize-0.1.1.dist-info/uv_build.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\untokenize-0.1.1.dist-info\uv_build.json</data>
+      <data key="d3">uv_build.json</data>
+    </node>
     <node id=".pixi/envs/default/Lib/site-packages/uvicorn-0.42.0.dist-info/licenses/LICENSE.md">
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\uvicorn-0.42.0.dist-info\licenses\LICENSE.md</data>
@@ -123080,6 +123452,131 @@ and theme management for the Intellicrack application.</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject\plugins\setuptools.schema.json</data>
       <data key="d3">setuptools.schema.json</data>
     </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/black.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\black.schema.json</data>
+      <data key="d3">black.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/cibuildwheel.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\cibuildwheel.schema.json</data>
+      <data key="d3">cibuildwheel.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/extra.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\extra.json</data>
+      <data key="d3">extra.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/hatch.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\hatch.schema.json</data>
+      <data key="d3">hatch.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/maturin.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\maturin.schema.json</data>
+      <data key="d3">maturin.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/mypy.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\mypy.schema.json</data>
+      <data key="d3">mypy.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/partial-pdm-dockerize.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\partial-pdm-dockerize.schema.json</data>
+      <data key="d3">partial-pdm-dockerize.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/partial-tox.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\partial-tox.schema.json</data>
+      <data key="d3">partial-tox.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/pdm.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\pdm.schema.json</data>
+      <data key="d3">pdm.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/pixi.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\pixi.schema.json</data>
+      <data key="d3">pixi.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/poe.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\poe.schema.json</data>
+      <data key="d3">poe.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/poetry.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\poetry.schema.json</data>
+      <data key="d3">poetry.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/pyright.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\pyright.schema.json</data>
+      <data key="d3">pyright.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/pytest.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\pytest.schema.json</data>
+      <data key="d3">pytest.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/repo-review.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\repo-review.schema.json</data>
+      <data key="d3">repo-review.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/ruff.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\ruff.schema.json</data>
+      <data key="d3">ruff.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/scikit-build.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\scikit-build.schema.json</data>
+      <data key="d3">scikit-build.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/setuptools.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\setuptools.schema.json</data>
+      <data key="d3">setuptools.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/setuptools_scm.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\setuptools_scm.schema.json</data>
+      <data key="d3">setuptools_scm.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/taskipy.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\taskipy.schema.json</data>
+      <data key="d3">taskipy.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/tombi.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\tombi.schema.json</data>
+      <data key="d3">tombi.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/tool.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\tool.json</data>
+      <data key="d3">tool.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/tox.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\tox.schema.json</data>
+      <data key="d3">tox.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/ty.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\ty.schema.json</data>
+      <data key="d3">ty.schema.json</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/validate_pyproject_schema_store/resources/uv.schema.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\validate_pyproject_schema_store\resources\uv.schema.json</data>
+      <data key="d3">uv.schema.json</data>
+    </node>
     <node id=".pixi/envs/default/Lib/site-packages/wcmatch-8.5.2.dist-info/licenses/LICENSE.md">
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\wcmatch-8.5.2.dist-info\licenses\LICENSE.md</data>
@@ -123099,6 +123596,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\yamllint\conf\relaxed.yaml</data>
       <data key="d3">relaxed.yaml</data>
+    </node>
+    <node id=".pixi/envs/default/Lib/site-packages/zipp-3.23.0.dist-info/direct_url.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\Lib\site-packages\zipp-3.23.0.dist-info\direct_url.json</data>
+      <data key="d3">direct_url.json</data>
     </node>
     <node id=".pixi/envs/default/Library/etc/target-spec-json-schema.json">
       <data key="d0">config</data>
@@ -123219,6 +123721,16 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.pixi\envs\default\Menu\menu-windows.json</data>
       <data key="d3">menu-windows.json</data>
+    </node>
+    <node id=".pixi/envs/default/share/jupyter/labextensions/jupyterlab-plotly/install.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\share\jupyter\labextensions\jupyterlab-plotly\install.json</data>
+      <data key="d3">install.json</data>
+    </node>
+    <node id=".pixi/envs/default/share/jupyter/labextensions/jupyterlab-plotly/package.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.pixi\envs\default\share\jupyter\labextensions\jupyterlab-plotly\package.json</data>
+      <data key="d3">package.json</data>
     </node>
     <node id=".pixi/envs/default/Tools/i18n/.ruff.toml">
       <data key="d0">config</data>
@@ -125189,6 +125701,11 @@ and theme management for the Intellicrack application.</data>
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\reports\json\validate-pyproject_findings.json</data>
       <data key="d3">validate-pyproject_findings.json</data>
+    </node>
+    <node id="reports/json/vermin_findings.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\reports\json\vermin_findings.json</data>
+      <data key="d3">vermin_findings.json</data>
     </node>
     <node id="reports/json/vulture_findings.json">
       <data key="d0">config</data>
@@ -130572,6 +131089,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.core.transform_pipeline" target="src.intellicrack.core.transform_pipeline.TransformParamError">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.core.transform_pipeline" target="src.intellicrack.core.transform_pipeline.HexcoreUnavailableError">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.core.transform_pipeline" target="src.intellicrack.core.transform_pipeline._eval_ast_node">
       <data key="d6">defines</data>
     </edge>
@@ -132721,6 +133241,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">inherits</data>
     </edge>
     <edge source="src.intellicrack.core.transform_pipeline.TransformParamError" target="ValueError">
+      <data key="d6">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.core.transform_pipeline.HexcoreUnavailableError" target="RuntimeError">
       <data key="d6">inherits</data>
     </edge>
     <edge source="src.intellicrack.core.transform_pipeline.RustTransformNode" target="TransformNode">
@@ -136695,6 +137218,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.credentials.store">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.panels.async_bridge">
+      <data key="d6">imports</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.resources">
       <data key="d6">imports</data>
     </edge>
@@ -136995,7 +137521,16 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config.get_selected_model">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._load_store_credentials">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._discover">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._run_oauth">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.provider_config" target="src.intellicrack.ui.provider_config._fetch">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.sandbox_config" target="__future__">
@@ -139914,6 +140449,15 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._draw_minimap">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._draw_entropy_bars">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._entropy_to_color">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._draw_viewport_indicator">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget.mousePressEvent">
       <data key="d6">defines</data>
     </edge>
@@ -139953,6 +140497,9 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._paint_data_rows">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._paint_row_hex_groups">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._read_row_data">
       <data key="d6">defines</data>
     </edge>
@@ -139960,6 +140507,18 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._paint_hex_group">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._is_group_selected">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._find_group_highlight">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._paint_hex_group_background">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._set_hex_group_pen">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_editor_widget" target="src.intellicrack.ui.panels.hex_editor_widget._paint_hex_byte">
@@ -140097,9 +140656,6 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="struct">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="collections.abc">
-      <data key="d6">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="pathlib">
       <data key="d6">imports</data>
     </edge>
@@ -140124,6 +140680,12 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="intellicrack.ui.resources.theme_manager">
       <data key="d6">imports</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._AstEvalError">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._AstCallTypeError">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._ast_eval_node">
       <data key="d6">defines</data>
     </edge>
@@ -140144,6 +140706,9 @@ and theme management for the Intellicrack application.</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel.HexToolsPanel">
       <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="collections.abc">
+      <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="cxxfilt">
       <data key="d6">imports</data>
@@ -140185,6 +140750,12 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._build_calculator_tab">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._build_split_group">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._build_combine_group">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._build_file_splitter_tab">
@@ -140241,11 +140812,23 @@ and theme management for the Intellicrack application.</data>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._combine_move_down">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._split_at_offset">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._split_into_chunks">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._do_split_file">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel" target="src.intellicrack.ui.panels.hex_tools_panel._do_combine_files">
       <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel._AstEvalError" target="ValueError">
+      <data key="d6">inherits</data>
+    </edge>
+    <edge source="src.intellicrack.ui.panels.hex_tools_panel._AstCallTypeError" target="TypeError">
+      <data key="d6">inherits</data>
     </edge>
     <edge source="src.intellicrack.ui.panels.hex_tools_panel._IEEE754BitWidget" target="PyQt6.QtWidgets.QWidget">
       <data key="d6">inherits</data>
@@ -143647,6 +144230,9 @@ and theme management for the Intellicrack application.</data>
       <data key="d6">imports</data>
     </edge>
     <edge source=".pixi/envs/default/Lib/site-packages/mkdocs/contrib/search/lunr-language/lunr.zh.js" target="@node-rs/jieba">
+      <data key="d6">imports</data>
+    </edge>
+    <edge source=".pixi/envs/default/Lib/site-packages/plotly/package_data/widgetbundle.js" target="util">
       <data key="d6">imports</data>
     </edge>
     <edge source=".pixi/envs/default/Lib/site-packages/pytest_html/resources/app.js" target="./storage.js">

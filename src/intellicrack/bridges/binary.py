@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Binary operations bridge for direct file manipulation.
 
-"""Binary operations bridge for direct file manipulation.
-
-This module provides binary file analysis and patching capabilities
-using pefile, lief, and capstone without requiring external tools.
+This module provides binary file analysis and patching capabilities using pefile, lief, and capstone without requiring external tools.
 """
 
 from __future__ import annotations
@@ -48,7 +47,8 @@ if TYPE_CHECKING:
     _LiefParsedType = lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None
 
     def _lief_parse_raw(data: bytes) -> _LiefParsedType:
-        """Typed wrapper for lief.parse (type-checking only).
+        """
+        Typed wrapper for lief.parse (type-checking only).
 
         Args:
             data: Raw binary data to parse.
@@ -84,10 +84,10 @@ _MIN_HEADER_LEN = 4
 
 
 class BinaryBridge(BinaryOperationsBridge):
-    """Bridge for direct binary file operations.
+    """
+    Bridge for direct binary file operations.
 
-    Provides analysis and patching of PE, ELF, and Mach-O binaries
-    using pefile, lief, and capstone libraries.
+    Provides analysis and patching of PE, ELF, and Mach-O binaries using pefile, lief, and capstone libraries.
     """
 
     def __init__(self) -> None:
@@ -107,7 +107,8 @@ class BinaryBridge(BinaryOperationsBridge):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """
+        Get the tool's name.
 
         Returns:
             ToolName: ToolName.BINARY
@@ -116,7 +117,8 @@ class BinaryBridge(BinaryOperationsBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """
+        Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -392,7 +394,8 @@ class BinaryBridge(BinaryOperationsBridge):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """Initialize the binary operations bridge.
+        """
+        Initialize the binary operations bridge.
 
         Args:
             tool_path: Not used for this bridge.
@@ -422,7 +425,8 @@ class BinaryBridge(BinaryOperationsBridge):
 
     @override
     async def is_available(self) -> bool:
-        """Check if binary operations are available.
+        """
+        Check if binary operations are available.
 
         Returns:
             bool: Always True since this uses built-in libraries.
@@ -430,7 +434,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return True
 
     async def load_file(self, path: Path) -> BinaryInfo:
-        """Load a binary file for analysis.
+        """
+        Load a binary file for analysis.
 
         Args:
             path: Path to the binary file.
@@ -507,7 +512,8 @@ class BinaryBridge(BinaryOperationsBridge):
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     def _detect_format(self) -> str:
-        """Detect the binary format.
+        """
+        Detect the binary format.
 
         Returns:
             str: The binary format ('pe', 'elf', 'macho', or 'raw').
@@ -536,7 +542,8 @@ class BinaryBridge(BinaryOperationsBridge):
 
     @staticmethod
     def _parse_lief(data: bytes) -> lief.Binary | None:
-        """Parse binary data with lief.
+        """
+        Parse binary data with lief.
 
         Args:
             data: Raw binary data.
@@ -550,7 +557,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return None if isinstance(parsed, lief.COFF.Binary) else parsed
 
     def _detect_architecture(self) -> tuple[str, bool]:
-        """Detect the CPU architecture.
+        """
+        Detect the CPU architecture.
 
         Returns:
             tuple[str, bool]: Tuple of (architecture name, is_64bit).
@@ -581,7 +589,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return "unknown", False
 
     def _get_entry_point(self) -> int:
-        """Get the entry point address.
+        """
+        Get the entry point address.
 
         Returns:
             int: Entry point address or 0 if not found.
@@ -592,7 +601,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return self._lief_binary.entrypoint if self._lief_binary is not None else 0
 
     async def _get_sections_internal(self) -> list[SectionInfo]:
-        """Get section information.
+        """
+        Get section information.
 
         Returns:
             list[SectionInfo]: List of section info.
@@ -638,7 +648,8 @@ class BinaryBridge(BinaryOperationsBridge):
 
     @staticmethod
     def _calculate_entropy(data: bytes) -> float:
-        """Calculate Shannon entropy of data.
+        """
+        Calculate Shannon entropy of data.
 
         Args:
             data: Bytes to analyze.
@@ -661,7 +672,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return entropy
 
     async def _get_imports_internal(self) -> list[ImportInfo]:
-        """Get import information.
+        """
+        Get import information.
 
         Returns:
             list[ImportInfo]: List of import info.
@@ -698,7 +710,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return imports
 
     async def _get_exports_internal(self) -> list[ExportInfo]:
-        """Get export information.
+        """
+        Get export information.
 
         Returns:
             list[ExportInfo]: List of export info.
@@ -733,7 +746,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return exports
 
     async def read_bytes(self, offset: int, size: int) -> bytes:
-        """Read bytes from the binary.
+        """
+        Read bytes from the binary.
 
         Args:
             offset: File offset.
@@ -756,7 +770,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return bytes(self._data[offset:end])
 
     async def write_bytes(self, offset: int, data: bytes) -> None:
-        """Write bytes to the binary.
+        """
+        Write bytes to the binary.
 
         Args:
             offset: File offset.
@@ -780,7 +795,8 @@ class BinaryBridge(BinaryOperationsBridge):
         _logger.debug("bytes_written", length=len(data), offset=hex(offset))
 
     async def apply_patch(self, patch: PatchInfo) -> bool:
-        """Apply a patch to the binary.
+        """
+        Apply a patch to the binary.
 
         Args:
             patch: Patch information.
@@ -833,7 +849,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return True
 
     async def revert_patch(self, patch: PatchInfo) -> bool:
-        """Revert a previously applied patch.
+        """
+        Revert a previously applied patch.
 
         Args:
             patch: Patch to revert.
@@ -864,7 +881,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return False
 
     async def save(self, path: Path | None = None) -> Path:
-        """Save the binary to file.
+        """
+        Save the binary to file.
 
         Args:
             path: Optional new path. Uses original if None.
@@ -896,7 +914,8 @@ class BinaryBridge(BinaryOperationsBridge):
         start_offset: int = 0,
         max_results: int = 100,
     ) -> list[int]:
-        """Search for byte pattern in the binary.
+        """
+        Search for byte pattern in the binary.
 
         Args:
             pattern: Byte pattern to find.
@@ -938,7 +957,8 @@ class BinaryBridge(BinaryOperationsBridge):
         start_offset: int = 0,
         max_results: int = 100,
     ) -> list[int]:
-        """Search for hex pattern with wildcards.
+        """
+        Search for hex pattern with wildcards.
 
         Args:
             hex_pattern: Hex pattern like '48 8B ?? ?? 00'.
@@ -978,7 +998,8 @@ class BinaryBridge(BinaryOperationsBridge):
         offset: int,
         count: int = 10,
     ) -> str:
-        """Disassemble instructions at a file offset.
+        """
+        Disassemble instructions at a file offset.
 
         Args:
             offset: File offset.
@@ -1022,7 +1043,8 @@ class BinaryBridge(BinaryOperationsBridge):
         return "\n".join(lines)
 
     async def calculate_checksum(self, algorithm: str = "sha256") -> str:
-        """Calculate hash of the binary.
+        """
+        Calculate hash of the binary.
 
         Args:
             algorithm: Hash algorithm (md5, sha256).
@@ -1044,7 +1066,8 @@ class BinaryBridge(BinaryOperationsBridge):
         raise ToolError(_ERR_UNKNOWN_ALGO)
 
     async def rva_to_offset(self, rva: int) -> int:
-        """Convert RVA to file offset.
+        """
+        Convert RVA to file offset.
 
         Args:
             rva: Relative virtual address.
@@ -1067,7 +1090,8 @@ class BinaryBridge(BinaryOperationsBridge):
         raise ToolError(_ERR_RVA_NOT_AVAIL)
 
     async def offset_to_rva(self, offset: int) -> int:
-        """Convert file offset to RVA.
+        """
+        Convert file offset to RVA.
 
         Args:
             offset: File offset.
@@ -1091,7 +1115,8 @@ class BinaryBridge(BinaryOperationsBridge):
         raise ToolError(_ERR_OFFSET_NOT_AVAIL)
 
     async def get_strings(self, min_length: int = _MIN_STRING_LEN) -> list[tuple[int, str]]:
-        """Extract strings from the binary.
+        """
+        Extract strings from the binary.
 
         Args:
             min_length: Minimum string length.

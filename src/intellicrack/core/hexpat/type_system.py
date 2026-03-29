@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class HexPatType:
-    """A resolved primitive type.
+    """
+    A resolved primitive type.
 
     Attributes:
         name: The primitive type name, e.g. "u32" or "float".
@@ -64,7 +65,8 @@ class BuiltinTypes:
 
     @staticmethod
     def get(name: str) -> HexPatType | None:
-        """Return the built-in type for the given name, or None if not found.
+        """
+        Return the built-in type for the given name, or None if not found.
 
         Args:
             name: The primitive type name to look up.
@@ -76,7 +78,8 @@ class BuiltinTypes:
 
     @staticmethod
     def all_names() -> frozenset[str]:
-        """Return the frozenset of all built-in primitive type names.
+        """
+        Return the frozenset of all built-in primitive type names.
 
         Returns:
             A frozenset containing every supported primitive type name.
@@ -86,7 +89,8 @@ class BuiltinTypes:
 
 @dataclass
 class StructTypeInfo:
-    """Resolved struct type definition.
+    """
+    Resolved struct type definition.
 
     Attributes:
         name: The struct type name identifier.
@@ -101,7 +105,8 @@ class StructTypeInfo:
 
 @dataclass
 class UnionTypeInfo:
-    """Resolved union type definition.
+    """
+    Resolved union type definition.
 
     Attributes:
         name: The union type name identifier.
@@ -114,7 +119,8 @@ class UnionTypeInfo:
 
 @dataclass
 class EnumTypeInfo:
-    """Resolved enum type definition.
+    """
+    Resolved enum type definition.
 
     Attributes:
         name: The enum type name identifier.
@@ -131,7 +137,8 @@ class EnumTypeInfo:
 
 @dataclass
 class BitfieldTypeInfo:
-    """Resolved bitfield type definition.
+    """
+    Resolved bitfield type definition.
 
     Attributes:
         name: The bitfield type name identifier.
@@ -143,11 +150,11 @@ class BitfieldTypeInfo:
 
 
 class TypeRegistry:
-    """Resolves type names to their definitions during pattern evaluation.
+    """
+    Resolves type names to their definitions during pattern evaluation.
 
-    Maintains separate lookup tables for struct, union, enum, bitfield, and
-    alias type definitions. Alias resolution is performed transparently through
-    the resolve method.
+    Maintains separate lookup tables for struct, union, enum, bitfield, and alias type definitions. Alias resolution is performed
+    transparently through the resolve method.
     """
 
     def __init__(self) -> None:
@@ -160,7 +167,8 @@ class TypeRegistry:
         self._all_names: set[str] = set()
 
     def register_struct(self, decl: StructDecl) -> None:
-        """Register a struct type declaration.
+        """
+        Register a struct type declaration.
 
         Args:
             decl: The struct AST declaration to register.
@@ -170,7 +178,8 @@ class TypeRegistry:
         self._all_names.add(decl.name)
 
     def register_union(self, decl: UnionDecl) -> None:
-        """Register a union type declaration.
+        """
+        Register a union type declaration.
 
         Args:
             decl: The union AST declaration to register.
@@ -185,7 +194,8 @@ class TypeRegistry:
         backing: HexPatType,
         members: dict[str, int],
     ) -> None:
-        """Register an enum type declaration with its resolved backing type and member values.
+        """
+        Register an enum type declaration with its resolved backing type and member values.
 
         Args:
             decl: The enum AST declaration to register.
@@ -202,7 +212,8 @@ class TypeRegistry:
         self._all_names.add(decl.name)
 
     def register_bitfield(self, decl: BitfieldDecl) -> None:
-        """Register a bitfield type declaration.
+        """
+        Register a bitfield type declaration.
 
         Args:
             decl: The bitfield AST declaration to register.
@@ -212,7 +223,8 @@ class TypeRegistry:
         self._all_names.add(decl.name)
 
     def register_alias(self, alias: str, target_name: str) -> None:
-        """Register a type alias mapping alias to target_name.
+        """
+        Register a type alias mapping alias to target_name.
 
         Args:
             alias: The alias name to register.
@@ -222,7 +234,8 @@ class TypeRegistry:
         self._all_names.add(alias)
 
     def resolve(self, name: str) -> HexPatType | StructTypeInfo | UnionTypeInfo | EnumTypeInfo | BitfieldTypeInfo | None:
-        """Resolve a type name to its definition, following aliases.
+        """
+        Resolve a type name to its definition, following aliases.
 
         Checks built-in primitives, then user-defined structs, unions, enums,
         bitfields, and finally aliases. Alias chains are followed recursively up
@@ -260,7 +273,8 @@ class TypeRegistry:
         name: str,
         endian: str | None = None,
     ) -> HexPatType | None:
-        """Resolve a type name to a primitive HexPatType, optionally overriding endianness.
+        """
+        Resolve a type name to a primitive HexPatType, optionally overriding endianness.
 
         Follows aliases until a primitive type is found. Returns None if the
         resolved type is not a primitive.

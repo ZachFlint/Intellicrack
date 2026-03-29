@@ -45,7 +45,7 @@ class TestBridgeInit:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: bool = _run(bridge.is_available())
-        assert result is True
+        assert result
 
     def test_initialize_sets_connected_state(self, bridge: Any) -> None:
         """Verify that initialize marks the bridge as connected.
@@ -116,7 +116,7 @@ class TestBridgeFileOps:
         """
         _run(bridge.open_file(str(pe_binary)))
         closed: bool = _run(bridge.close_file())
-        assert closed is True
+        assert closed
 
     def test_close_file_returns_false_when_already_closed(self, bridge: Any) -> None:
         """Verify that close_file returns False when no file is open.
@@ -125,7 +125,7 @@ class TestBridgeFileOps:
             bridge: An initialized HexEditorBridge fixture.
         """
         closed: bool = _run(bridge.close_file())
-        assert closed is False
+        assert not closed
 
     def test_open_then_close_then_reopen_succeeds(self, bridge: Any, pe_binary: Path) -> None:
         """Verify that a file can be closed and reopened with consistent size.

@@ -2,13 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+UI panels for Intellicrack analysis displays.
 
-"""UI panels for Intellicrack analysis displays.
-
-This module provides specialized panels for bridge analysis,
-stack viewing, script management, Frida instrumentation, process
-management, binary hex viewing, sandbox control, and native tool
-panels (Ghidra, x64dbg, Cutter) within the main application.
+This module provides specialized panels for bridge analysis, stack viewing, script management, Frida instrumentation, process management,
+binary hex viewing, sandbox control, and native tool panels (Ghidra, x64dbg, Cutter) within the main application.
 """
 
 from __future__ import annotations

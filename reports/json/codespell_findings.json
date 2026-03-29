@@ -1,8 +1,8 @@
 {
   "tool": "codespell",
-  "generated": "2026-03-22T02:21:46.497150",
-  "total_findings": 94,
-  "total_files": 14,
+  "generated": "2026-03-28T15:30:08.730540",
+  "total_findings": 100,
+  "total_files": 18,
   "files": [
     {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-d86809d9b0b73174.d",
@@ -931,6 +931,84 @@
           "correction": "set",
           "message": "'ser' ==> 'set'",
           "raw": "src/intellicrack-hexcore\\target\\release\\deps\\serde_derive-4b52e8912be6d020.d:31: ser ==> set"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_hexcore_e2e\\test_bridge_encoding_decoding.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 75,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "caf",
+          "correction": "calf",
+          "message": "'caf' ==> 'calf'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_encoding_decoding.py:75: caf ==> calf"
+        },
+        {
+          "line": 92,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "caf",
+          "correction": "calf",
+          "message": "'caf' ==> 'calf'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_encoding_decoding.py:92: caf ==> calf"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_hexcore_e2e\\test_encodings.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 53,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "caf",
+          "correction": "calf",
+          "message": "'caf' ==> 'calf'",
+          "raw": "tests/test_hexcore_e2e\\test_encodings.py:53: caf ==> calf"
+        },
+        {
+          "line": 145,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "caf",
+          "correction": "calf",
+          "message": "'caf' ==> 'calf'",
+          "raw": "tests/test_hexcore_e2e\\test_encodings.py:145: caf ==> calf"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_hexcore_e2e\\test_bridge_new_capabilities.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 109,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "Caf",
+          "correction": "Calf",
+          "message": "'Caf' ==> 'Calf'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_new_capabilities.py:109: Caf ==> Calf"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_hexcore_e2e\\test_bridge_search.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 205,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "nore",
+          "correction": "nor, note, more, node",
+          "message": "'nore' ==> 'nor, note, more, node'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_search.py:205: nore ==> nor, note, more, node"
         }
       ]
     }

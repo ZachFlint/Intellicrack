@@ -54,8 +54,8 @@ class TestDiffBytes:
         data_b = b"\xff" * 64
         result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b)
         assert isinstance(result, dict)
-        similarity: float = result.get("similarity", 1.0)
         if not result.get("files_identical"):
+            similarity: float = result.get("similarity", 1.0)
             assert isinstance(similarity, float)
             assert similarity < 0.5
 

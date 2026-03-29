@@ -134,7 +134,7 @@ def _build_pe_binary() -> bytes:
         bytes: A byte string containing a valid PE structure.
     """
     data = bytearray(1024)
-    data[0:2] = b"MZ"
+    data[:2] = b"MZ"
     struct.pack_into("<H", data, 2, 0x0090)
     struct.pack_into("<I", data, PE_LFANEW_OFFSET, PE_SIGNATURE_OFFSET)
 
@@ -165,7 +165,7 @@ def _build_elf_binary() -> bytes:
         bytes: A byte string containing a valid ELF64 header.
     """
     data = bytearray(256)
-    data[0:4] = b"\x7fELF"
+    data[:4] = b"\x7fELF"
     data[4] = ELF_CLASS64
     data[5] = ELF_DATA_LSB
     data[6] = ELF_VERSION_CURRENT
