@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+JSON Schema generation for LLM tool calling.
 
-"""JSON Schema generation for LLM tool calling.
-
-This module provides centralized schema generation for converting Intellicrack
-tool definitions to provider-specific formats for LLM function calling.
-Supports Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter.
+This module provides centralized schema generation for converting Intellicrack tool definitions to provider-specific formats for LLM
+function calling. Supports Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter.
 """
 
 from __future__ import annotations
@@ -28,7 +27,8 @@ _logger = get_logger("bridges.schemas")
 
 
 def _assert_never(value: Never) -> Never:
-    """Assert that a code path is never reached.
+    """
+    Assert that a code path is never reached.
 
     Used for exhaustive enum matching to ensure all cases are handled.
 
@@ -143,7 +143,8 @@ class GoogleFunctionDeclaration(TypedDict):
 
 
 class ValidationError:
-    """Represents a validation error in a tool definition.
+    """
+    Represents a validation error in a tool definition.
 
     Args:
         message: Error description.
@@ -162,7 +163,8 @@ class ValidationError:
         self.severity = severity
 
     def __str__(self) -> str:
-        """Return string representation.
+        """
+        Return string representation.
 
         Returns:
             str: Formatted string showing severity, location, and message.
@@ -171,7 +173,8 @@ class ValidationError:
 
 
 def normalize_type(param_type: str) -> str:
-    """Normalize a parameter type to JSON Schema type.
+    """
+    Normalize a parameter type to JSON Schema type.
 
     Handles Python type names and ensures consistent type strings.
 
@@ -193,7 +196,8 @@ def build_schema_property(
     param: ToolParameter,
     uppercase_types: bool = False,
 ) -> JSONSchemaProperty | GoogleSchemaProperty:
-    """Build a JSON Schema property from a ToolParameter.
+    """
+    Build a JSON Schema property from a ToolParameter.
 
     Args:
         param: The tool parameter to convert.
@@ -223,7 +227,8 @@ def build_schema_property(
 def _build_json_schema_parameters(
     params: list[ToolParameter],
 ) -> JSONSchemaParameters:
-    """Build JSON Schema parameters for Anthropic/OpenAI/Ollama/OpenRouter.
+    """
+    Build JSON Schema parameters for Anthropic/OpenAI/Ollama/OpenRouter.
 
     Args:
         params: List of tool parameters.
@@ -250,7 +255,8 @@ def _build_json_schema_parameters(
 def _build_google_schema_parameters(
     params: list[ToolParameter],
 ) -> GoogleSchemaParameters:
-    """Build Google Gemini schema parameters with uppercase types.
+    """
+    Build Google Gemini schema parameters with uppercase types.
 
     Args:
         params: List of tool parameters.
@@ -289,7 +295,8 @@ def build_schema_parameters(
     params: list[ToolParameter],
     uppercase_types: bool = False,
 ) -> JSONSchemaParameters | GoogleSchemaParameters:
-    """Build complete parameter schema from list of parameters.
+    """
+    Build complete parameter schema from list of parameters.
 
     Args:
         params: List of tool parameters.
@@ -307,7 +314,8 @@ def validate_tool_parameter(
     param: ToolParameter,
     func_name: str,
 ) -> list[ValidationError]:
-    """Validate a single tool parameter.
+    """
+    Validate a single tool parameter.
 
     Args:
         param: The parameter to validate.
@@ -382,7 +390,8 @@ def validate_tool_parameter(
 
 
 def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
-    """Validate a tool function definition.
+    """
+    Validate a tool function definition.
 
     Args:
         func: The function to validate.
@@ -433,7 +442,8 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
 
 
 def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
-    """Validate a complete tool definition.
+    """
+    Validate a complete tool definition.
 
     Args:
         tool: The tool definition to validate.
@@ -476,7 +486,8 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
 
 
 def to_anthropic_schema(tool: ToolDefinition) -> list[AnthropicToolSchema]:
-    """Convert ToolDefinition to Anthropic Claude's tool format.
+    """
+    Convert ToolDefinition to Anthropic Claude's tool format.
 
     Args:
         tool: The tool definition to convert.
@@ -499,7 +510,8 @@ def to_anthropic_schema(tool: ToolDefinition) -> list[AnthropicToolSchema]:
 
 
 def to_openai_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
-    """Convert ToolDefinition to OpenAI's tool format.
+    """
+    Convert ToolDefinition to OpenAI's tool format.
 
     Args:
         tool: The tool definition to convert.
@@ -525,7 +537,8 @@ def to_openai_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
 
 
 def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
-    """Convert ToolDefinition to Google Gemini's tool format.
+    """
+    Convert ToolDefinition to Google Gemini's tool format.
 
     Google Gemini uses uppercase type names (STRING, INTEGER, OBJECT, etc.).
 
@@ -550,7 +563,8 @@ def to_google_schema(tool: ToolDefinition) -> list[GoogleFunctionDeclaration]:
 
 
 def to_ollama_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
-    """Convert ToolDefinition to Ollama's tool format.
+    """
+    Convert ToolDefinition to Ollama's tool format.
 
     Ollama uses OpenAI-compatible function calling format.
 
@@ -564,7 +578,8 @@ def to_ollama_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
 
 
 def to_openrouter_schema(tool: ToolDefinition) -> list[OpenAIToolSchema]:
-    """Convert ToolDefinition to OpenRouter's tool format.
+    """
+    Convert ToolDefinition to OpenRouter's tool format.
 
     OpenRouter uses OpenAI-compatible function calling format.
 
@@ -581,7 +596,8 @@ def get_schema_for_provider(
     tool: ToolDefinition,
     provider: ProviderName,
 ) -> list[dict[str, Any]]:
-    """Convert tool definition to provider-specific schema format.
+    """
+    Convert tool definition to provider-specific schema format.
 
     This is the high-level API for schema conversion. Use this when you
     need to convert a tool definition for a specific provider.
@@ -616,7 +632,8 @@ def get_all_schemas_for_provider(
     tools: list[ToolDefinition],
     provider: ProviderName,
 ) -> list[dict[str, Any]]:
-    """Convert multiple tool definitions to provider schemas.
+    """
+    Convert multiple tool definitions to provider schemas.
 
     Args:
         tools: List of tool definitions to convert.
@@ -636,7 +653,8 @@ def validate_and_convert(
     tool: ToolDefinition,
     provider: ProviderName,
 ) -> tuple[list[dict[str, Any]], list[ValidationError]]:
-    """Validate a tool definition and convert to provider schema.
+    """
+    Validate a tool definition and convert to provider schema.
 
     Combines validation and conversion in a single call.
 

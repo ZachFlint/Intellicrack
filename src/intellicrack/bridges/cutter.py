@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Cutter/Rizin bridge for static and dynamic analysis.
+"""
+Cutter/Rizin bridge for static and dynamic analysis.
 
-This module provides integration with Cutter/Rizin for disassembly,
-analysis, and debugging capabilities using r2pipe (wire-compatible
-with Rizin's pipe protocol).
+This module provides integration with Cutter/Rizin for disassembly, analysis, and debugging capabilities using r2pipe (wire-compatible with
+Rizin's pipe protocol).
 """
 
 from __future__ import annotations
@@ -69,7 +69,8 @@ _R2_COMMAND_TIMEOUT: float = 60.0
 
 
 def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
-    """Get a string value from a dictionary with type safety.
+    """
+    Get a string value from a dictionary with type safety.
 
     Args:
         data: Dictionary to get value from.
@@ -84,7 +85,8 @@ def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
 
 
 def _get_int(data: dict[str, Any], key: str, default: int = 0) -> int:
-    """Get an integer value from a dictionary with type safety.
+    """
+    Get an integer value from a dictionary with type safety.
 
     Args:
         data: Dictionary to get value from.
@@ -99,7 +101,8 @@ def _get_int(data: dict[str, Any], key: str, default: int = 0) -> int:
 
 
 def _get_float(data: dict[str, Any], key: str, default: float = 0.0) -> float:
-    """Get a float value from a dictionary with type safety.
+    """
+    Get a float value from a dictionary with type safety.
 
     Args:
         data: Dictionary to get value from.
@@ -114,7 +117,8 @@ def _get_float(data: dict[str, Any], key: str, default: float = 0.0) -> float:
 
 
 def _get_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
-    """Get a nested dictionary from a dictionary with type safety.
+    """
+    Get a nested dictionary from a dictionary with type safety.
 
     Args:
         data: Dictionary to get value from.
@@ -128,7 +132,8 @@ def _get_dict(data: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def _get_optional_str(data: dict[str, Any], key: str) -> str | None:
-    """Get an optional string value from a dictionary.
+    """
+    Get an optional string value from a dictionary.
 
     Args:
         data: Dictionary to get value from.
@@ -142,7 +147,8 @@ def _get_optional_str(data: dict[str, Any], key: str) -> str | None:
 
 
 def _get_optional_int(data: dict[str, Any], key: str) -> int | None:
-    """Get an optional integer value from a dictionary.
+    """
+    Get an optional integer value from a dictionary.
 
     Args:
         data: Dictionary to get value from.
@@ -156,7 +162,8 @@ def _get_optional_int(data: dict[str, Any], key: str) -> int | None:
 
 
 def _get_list(data: dict[str, Any], key: str) -> list[Any]:
-    """Get a list value from a dictionary with type safety.
+    """
+    Get a list value from a dictionary with type safety.
 
     Args:
         data: Dictionary to get value from.
@@ -170,10 +177,10 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
 
 
 class CutterBridge(StaticAnalysisBridge):
-    """Bridge for Cutter/Rizin reverse engineering framework.
+    """
+    Bridge for Cutter/Rizin reverse engineering framework.
 
-    Provides static analysis, disassembly, and debugging capabilities
-    using the r2pipe interface.
+    Provides static analysis, disassembly, and debugging capabilities using the r2pipe interface.
     """
 
     def __init__(self) -> None:
@@ -194,7 +201,8 @@ class CutterBridge(StaticAnalysisBridge):
         )
 
     async def _r2_cmd(self, command: str) -> str:
-        """Execute an r2 command and return a guaranteed string result.
+        """
+        Execute an r2 command and return a guaranteed string result.
 
         Args:
             command: The r2 command to execute.
@@ -220,11 +228,15 @@ class CutterBridge(StaticAnalysisBridge):
             )
             msg = f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}"
             raise ToolError(msg) from None
+        except Exception as e:
+            _logger.warning("r2_command_failed", command=command, error=str(e))
+            raise ToolError(f"{_ERR_CMD_FAILED}: {command}") from e
         return "" if result is None else result
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """
+        Get the tool's name.
 
         Returns:
             ToolName: ToolName.CUTTER
@@ -233,7 +245,8 @@ class CutterBridge(StaticAnalysisBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """
+        Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -550,7 +563,8 @@ class CutterBridge(StaticAnalysisBridge):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """Initialize the Cutter bridge.
+        """
+        Initialize the Cutter bridge.
 
         Args:
             tool_path: Optional path to Cutter/Rizin installation.
@@ -588,7 +602,8 @@ class CutterBridge(StaticAnalysisBridge):
 
     @override
     async def is_available(self) -> bool:
-        """Check if Cutter/Rizin is available.
+        """
+        Check if Cutter/Rizin is available.
 
         Returns:
             bool: True if Cutter/Rizin can be used.
@@ -620,7 +635,8 @@ class CutterBridge(StaticAnalysisBridge):
                 self._r2_pid = None
 
     def _register_rizin_process(self, path: Path) -> None:
-        """Register Rizin process with process manager.
+        """
+        Register Rizin process with process manager.
 
         Args:
             path: Path to the binary being analyzed.
@@ -647,7 +663,8 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("cutter_process_registered", pid=self._r2_pid)
 
     async def _extract_hashes(self) -> tuple[str, str]:
-        """Extract MD5 and SHA256 hashes from loaded binary.
+        """
+        Extract MD5 and SHA256 hashes from loaded binary.
 
         Returns:
             tuple[str, str]: Tuple of (md5, sha256) hash strings.
@@ -665,7 +682,8 @@ class CutterBridge(StaticAnalysisBridge):
         return md5, sha256
 
     async def _extract_binary_metadata(self) -> tuple[str, str, int, int]:
-        """Extract binary metadata from Rizin.
+        """
+        Extract binary metadata from Rizin.
 
         Returns:
             tuple[str, str, int, int]: Tuple of (file_type, arch, bits, entry_point).
@@ -685,7 +703,8 @@ class CutterBridge(StaticAnalysisBridge):
         return file_type, arch, bits, entry
 
     async def load_binary(self, path: Path) -> BinaryInfo:
-        """Load a binary file into Cutter/Rizin.
+        """
+        Load a binary file into Cutter/Rizin.
 
         Args:
             path: Path to the binary file.
@@ -698,6 +717,9 @@ class CutterBridge(StaticAnalysisBridge):
         """
         if not path.exists():
             raise ToolError(_ERR_FILE_NOT_FOUND)
+
+        if not await self.is_available():
+            raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
 
         try:
             await self._close_existing_r2()
@@ -743,7 +765,8 @@ class CutterBridge(StaticAnalysisBridge):
             raise ToolError(_ERR_LOAD_FAILED) from e
 
     async def analyze(self, level: str = "normal") -> None:
-        """Run analysis on the loaded binary.
+        """
+        Run analysis on the loaded binary.
 
         Args:
             level: Analysis level (quick, normal, deep).
@@ -770,7 +793,8 @@ class CutterBridge(StaticAnalysisBridge):
         self,
         filter_pattern: str | None = None,
     ) -> list[FunctionInfo]:
-        """Get all analyzed functions.
+        """
+        Get all analyzed functions.
 
         Args:
             filter_pattern: Optional regex to filter names.
@@ -814,7 +838,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def get_function(self, address: int) -> FunctionInfo | None:
-        """Get function at a specific address.
+        """
+        Get function at a specific address.
 
         Args:
             address: Function address.
@@ -888,7 +913,8 @@ class CutterBridge(StaticAnalysisBridge):
         )
 
     async def decompile(self, address: int) -> str:
-        """Decompile function at address.
+        """
+        Decompile function at address.
 
         Args:
             address: Function address.
@@ -921,7 +947,8 @@ class CutterBridge(StaticAnalysisBridge):
         address: int,
         count: int = 20,
     ) -> list[DisassemblyLine]:
-        """Disassemble instructions at address.
+        """
+        Disassemble instructions at address.
 
         Args:
             address: Start address.
@@ -962,7 +989,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
-        """Get cross-references to an address.
+        """
+        Get cross-references to an address.
 
         Args:
             address: Target address.
@@ -1005,7 +1033,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
-        """Get cross-references from an address.
+        """
+        Get cross-references from an address.
 
         Args:
             address: Source address.
@@ -1048,7 +1077,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def search_strings(self, pattern: str) -> list[StringInfo]:
-        """Search for strings matching pattern.
+        """
+        Search for strings matching pattern.
 
         Args:
             pattern: Regex pattern to match.
@@ -1096,7 +1126,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def search_bytes(self, pattern: bytes) -> list[int]:
-        """Search for byte pattern.
+        """
+        Search for byte pattern.
 
         Args:
             pattern: Byte sequence to find.
@@ -1120,7 +1151,8 @@ class CutterBridge(StaticAnalysisBridge):
         return addrs
 
     async def search_bytes_wildcard(self, hex_pattern: str) -> list[int]:
-        """Search for byte pattern with wildcards.
+        """
+        Search for byte pattern with wildcards.
 
         Args:
             hex_pattern: Hex pattern like '48 8B ?? ??'.
@@ -1144,7 +1176,8 @@ class CutterBridge(StaticAnalysisBridge):
         return addrs
 
     async def _get_sections_internal(self) -> list[SectionInfo]:
-        """Get section information.
+        """
+        Get section information.
 
         Returns:
             list[SectionInfo]: List of section info.
@@ -1168,7 +1201,8 @@ class CutterBridge(StaticAnalysisBridge):
         ]
 
     async def _get_imports_internal(self) -> list[ImportInfo]:
-        """Get import information.
+        """
+        Get import information.
 
         Returns:
             list[ImportInfo]: List of import info.
@@ -1190,7 +1224,8 @@ class CutterBridge(StaticAnalysisBridge):
         ]
 
     async def _get_exports_internal(self) -> list[ExportInfo]:
-        """Get export information.
+        """
+        Get export information.
 
         Returns:
             list[ExportInfo]: List of export info.
@@ -1212,7 +1247,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def get_imports(self) -> list[ImportInfo]:
-        """Get imported functions.
+        """
+        Get imported functions.
 
         Returns:
             list[ImportInfo]: List of import information.
@@ -1222,7 +1258,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def get_exports(self) -> list[ExportInfo]:
-        """Get exported functions.
+        """
+        Get exported functions.
 
         Returns:
             list[ExportInfo]: List of export information.
@@ -1232,7 +1269,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def get_sections(self) -> list[SectionInfo]:
-        """Get binary section information.
+        """
+        Get binary section information.
 
         Returns:
             list[SectionInfo]: List of section info.
@@ -1242,7 +1280,8 @@ class CutterBridge(StaticAnalysisBridge):
         return result
 
     async def rename_function(self, address: int, new_name: str) -> bool:
-        """Rename a function.
+        """
+        Rename a function.
 
         Args:
             address: Function address.
@@ -1269,7 +1308,8 @@ class CutterBridge(StaticAnalysisBridge):
         comment: str,
         comment_type: str = "EOL",
     ) -> bool:
-        """Add a comment at an address.
+        """
+        Add a comment at an address.
 
         Args:
             address: Address for comment.
@@ -1294,7 +1334,8 @@ class CutterBridge(StaticAnalysisBridge):
         return True
 
     async def write_bytes(self, address: int, data: bytes) -> None:
-        """Write bytes at an address.
+        """
+        Write bytes at an address.
 
         Args:
             address: Address to write at.
@@ -1311,7 +1352,8 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("bytes_written", length=len(data), address=hex(address))
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
-        """Assemble instruction at address.
+        """
+        Assemble instruction at address.
 
         Args:
             address: Target address.
@@ -1340,7 +1382,8 @@ class CutterBridge(StaticAnalysisBridge):
         return bytes.fromhex(result.strip())
 
     async def execute_command(self, command: str) -> str:
-        """Execute raw Rizin command.
+        """
+        Execute raw Rizin command.
 
         Args:
             command: Rizin command to execute.
@@ -1352,7 +1395,8 @@ class CutterBridge(StaticAnalysisBridge):
         return await self._r2_cmd(command)
 
     async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
-        """Execute command and parse JSON output.
+        """
+        Execute command and parse JSON output.
 
         Args:
             command: Command to execute.
@@ -1380,7 +1424,8 @@ class CutterBridge(StaticAnalysisBridge):
             return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
 
     async def seek(self, address: int) -> str:
-        """Seek to a specific address.
+        """
+        Seek to a specific address.
 
         Args:
             address: Target address.
@@ -1392,7 +1437,8 @@ class CutterBridge(StaticAnalysisBridge):
         return await self.execute_command(f"s {address}")
 
     async def get_function_graph(self, address: int) -> list[dict[str, Any]]:
-        """Get function control flow graph data for graph rendering.
+        """
+        Get function control flow graph data for graph rendering.
 
         Args:
             address: Address of the function to graph.
@@ -1418,7 +1464,8 @@ class CutterBridge(StaticAnalysisBridge):
         return []
 
     async def get_function_address(self, name: str) -> int | None:
-        """Get address of a function by name.
+        """
+        Get address of a function by name.
 
         Args:
             name: Function name.

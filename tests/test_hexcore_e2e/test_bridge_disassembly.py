@@ -75,7 +75,7 @@ class TestBridgeDisassembly:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         result: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="64"))
-        assert len(result) > 0
+        assert result
         assert result[0]["mnemonic"] == "int3"
 
     def test_disassemble_result_items_have_required_keys(self, bridge: Any, tmp_path: Path) -> None:
@@ -90,7 +90,7 @@ class TestBridgeDisassembly:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         result: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="64"))
-        assert len(result) > 0
+        assert result
         for insn in result:
             assert _EXPECTED_INSN_KEYS.issubset(insn.keys())
 

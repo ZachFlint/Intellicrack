@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Intel XPU detection and initialization utilities for Intel Arc B580.
+"""
+Intel XPU detection and initialization utilities for Intel Arc B580.
 
-This module provides utilities for detecting, initializing, and managing
-Intel XPU (eXtreme Performance Unit) devices using PyTorch 2.5+ native
-torch.xpu support. Specifically optimized for Intel Arc B580 GPU.
+This module provides utilities for detecting, initializing, and managing Intel XPU (eXtreme Performance Unit) devices using PyTorch 2.5+
+native torch.xpu support. Specifically optimized for Intel Arc B580 GPU.
 """
 
 from __future__ import annotations
@@ -66,7 +66,8 @@ class XPUDeviceInfo:
 
 
 def _import_torch() -> types.ModuleType | None:
-    """Safely import torch with XPU support.
+    """
+    Safely import torch with XPU support.
 
     Returns:
         types.ModuleType | None: The torch module if available with XPU support, None otherwise.
@@ -78,7 +79,8 @@ def _import_torch() -> types.ModuleType | None:
 
 
 def is_xpu_available() -> bool:
-    """Check if Intel XPU is available for computation.
+    """
+    Check if Intel XPU is available for computation.
 
     Uses PyTorch 2.5+ native torch.xpu.is_available() for detection.
     This function never raises exceptions - returns False on any error.
@@ -106,7 +108,8 @@ def is_xpu_available() -> bool:
 
 
 def get_xpu_device_count() -> int:
-    """Get the number of available XPU devices.
+    """
+    Get the number of available XPU devices.
 
     Returns:
         int: Number of XPU devices, 0 if XPU is not available.
@@ -127,7 +130,8 @@ def get_xpu_device_count() -> int:
 
 
 def _get_device_name_from_sycl(device_index: int) -> str:
-    """Get device name using SYCL if available.
+    """
+    Get device name using SYCL if available.
 
     Args:
         device_index: Index of the device.
@@ -153,7 +157,8 @@ def _get_device_name_from_sycl(device_index: int) -> str:
 
 
 def _get_windows_gpu_info() -> list[dict[str, str]]:
-    """Get GPU information on Windows using WMI.
+    """
+    Get GPU information on Windows using WMI.
 
     Returns:
         list[dict[str, str]]: List of dictionaries with GPU information.
@@ -198,7 +203,8 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
 
 
 def _parse_device_id_from_pnp(pnp_id: str) -> str:
-    r"""Parse device ID from PNP device ID string.
+    r"""
+    Parse device ID from PNP device ID string.
 
     Args:
         pnp_id: PNP device ID string (e.g., PCI\VEN_8086&DEV_E20B...).
@@ -212,7 +218,8 @@ def _parse_device_id_from_pnp(pnp_id: str) -> str:
 
 
 def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
-    """Get detailed information about a specific XPU device.
+    """
+    Get detailed information about a specific XPU device.
 
     Args:
         device_index: Index of the XPU device (0-based).
@@ -286,7 +293,8 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
 
 
 def _estimate_memory_from_name(device_name: str) -> int:
-    """Estimate device memory from device name.
+    """
+    Estimate device memory from device name.
 
     Args:
         device_name: Device name string.
@@ -317,7 +325,8 @@ def _estimate_memory_from_name(device_name: str) -> int:
 
 
 def _is_b580_device(device_name: str, device_id: str) -> bool:
-    """Check if device is an Intel Arc B580.
+    """
+    Check if device is an Intel Arc B580.
 
     Args:
         device_name: Device name string.
@@ -337,7 +346,8 @@ def _is_b580_device(device_name: str, device_id: str) -> bool:
 
 
 def is_arc_b580() -> bool:
-    """Check if an Intel Arc B580 is available.
+    """
+    Check if an Intel Arc B580 is available.
 
     Returns:
         bool: True if at least one Arc B580 device is detected.
@@ -358,7 +368,8 @@ def is_arc_b580() -> bool:
 
 
 def initialize_xpu(device_index: int = 0) -> torch.device:
-    """Initialize and return a torch.device for XPU.
+    """
+    Initialize and return a torch.device for XPU.
 
     Args:
         device_index: Index of the XPU device to use.
@@ -394,7 +405,8 @@ def initialize_xpu(device_index: int = 0) -> torch.device:
 
 
 def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> None:
-    """Validate that XPU device is operational.
+    """
+    Validate that XPU device is operational.
 
     Args:
         torch_mod: The torch module.
@@ -417,7 +429,8 @@ def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> N
 
 
 def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
-    """Get memory information for an XPU device.
+    """
+    Get memory information for an XPU device.
 
     Args:
         device_index: Index of the XPU device.
@@ -456,10 +469,10 @@ def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
 
 
 def clear_xpu_cache() -> None:
-    """Clear the XPU memory cache.
+    """
+    Clear the XPU memory cache.
 
-    Frees cached memory that is no longer in use. This does not free
-    tensors that are still referenced.
+    Frees cached memory that is no longer in use. This does not free tensors that are still referenced.
     """
     torch = _import_torch()
     if torch is None:
@@ -474,7 +487,8 @@ def clear_xpu_cache() -> None:
 
 
 def check_windows_requirements() -> tuple[bool, list[str]]:
-    """Check Windows-specific requirements for XPU acceleration.
+    """
+    Check Windows-specific requirements for XPU acceleration.
 
     Verifies:
     - Windows 10/11 version compatibility
@@ -517,7 +531,8 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
 
 
 def _check_intel_driver() -> tuple[bool, str]:
-    """Check Intel GPU driver status.
+    """
+    Check Intel GPU driver status.
 
     Returns:
         tuple[bool, str]: Tuple of (driver_ok, warning_message).
@@ -546,7 +561,8 @@ def _check_intel_driver() -> tuple[bool, str]:
 
 
 def _check_rebar_status() -> tuple[bool, str]:
-    """Check Resizable BAR status.
+    """
+    Check Resizable BAR status.
 
     Returns:
         tuple[bool, str]: Tuple of (rebar_enabled, warning_message).
@@ -577,7 +593,8 @@ def _check_rebar_status() -> tuple[bool, str]:
 
 
 def get_optimal_dtype_for_xpu() -> str:
-    """Get the optimal data type for XPU inference.
+    """
+    Get the optimal data type for XPU inference.
 
     Intel Arc B580 supports FP16 and BF16, but not FP64 on Windows.
 

@@ -22,7 +22,7 @@
       "mcp__dev-tools__mypy_check",
       "mcp__dev-tools__bandit_check",
       "mcp__dev-tools__pydocstyle_check",
-      "mcp__dev-tools__darglint_check",
+      "mcp__dev-tools__pydoclint_check",
       "mcp__dev-tools__pytest_run",
       "mcp__dev-tools__pytest_collect",
       "mcp__dev-tools__coverage_run",

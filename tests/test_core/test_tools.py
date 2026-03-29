@@ -21,7 +21,7 @@ from intellicrack.core.tools import ToolRegistry, ToolStatus
 from intellicrack.core.types import ToolError, ToolName
 
 
-_BRIDGE_COUNT_ALL: Final[int] = 7
+_BRIDGE_COUNT_ALL: Final[int] = 8
 
 
 @pytest.fixture

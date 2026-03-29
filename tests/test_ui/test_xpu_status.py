@@ -11,7 +11,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -36,6 +35,7 @@ from intellicrack.ui.xpu_status import XPUStatusDialog
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from PyQt6.QtCore import QTimer
     from PyQt6.QtWidgets import QApplication
 
 

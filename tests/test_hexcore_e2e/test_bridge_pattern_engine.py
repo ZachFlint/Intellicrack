@@ -70,7 +70,7 @@ class TestCompilePattern:
         source = "struct Header { u16 magic; u32 value; };"
         result: str = _run(bridge.compile_pattern(source))
         assert isinstance(result, str)
-        assert len(result) > 0
+        assert result != ""
 
     def test_compile_simple_struct_result_is_valid_json(self, bridge: Any) -> None:
         """Verify that compiling a valid struct produces parseable JSON.
@@ -140,7 +140,7 @@ class TestExecutePattern:
         source = "u32 value @ 0x00;"
         fields: list[dict[str, Any]] = _run(bridge.execute_pattern(source))
         assert isinstance(fields, list)
-        assert len(fields) >= 1
+        assert fields
 
     def test_execute_u32_field_has_correct_size(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that a u32 field extracted via execute_pattern has size 4.
@@ -178,7 +178,7 @@ class TestExecutePattern:
         _make_pattern_file(tmp_path, bridge)
         source = "struct Header { u16 magic; u32 value; };Header header @ 0x00;"
         fields: list[dict[str, Any]] = _run(bridge.execute_pattern(source))
-        assert len(fields) >= 1
+        assert fields
         all_names: list[str] = []
         for f in fields:
             all_names.append(f["name"])
@@ -210,7 +210,7 @@ class TestExecutePattern:
         _make_pattern_file(tmp_path, bridge)
         source = "u16 magic @ 0x00;"
         fields: list[dict[str, Any]] = _run(bridge.execute_pattern(source))
-        assert len(fields) >= 1
+        assert fields
         for f in fields:
             assert "name" in f
             assert "offset" in f
@@ -292,7 +292,7 @@ class TestExecutePatternFile:
         pat_file = tmp_path / "fields.hexpat"
         pat_file.write_text("u8 first @ 0x00; u8 second @ 0x01;", encoding="utf-8")
         fields: list[dict[str, Any]] = _run(bridge.execute_pattern_file(str(pat_file)))
-        assert len(fields) >= 1
+        assert fields
         for f in fields:
             assert "name" in f
             assert "offset" in f

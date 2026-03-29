@@ -167,7 +167,7 @@ class TestSearchBytes:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, int]] = _run(loaded_bridge.search_bytes("DEADBEEFCAFEBABE1234"))
-        assert results == []
+        assert not results
 
     def test_search_bytes_max_results_limits_output(self, bridge: Any, tmp_path: Path) -> None:
         """search_bytes must respect the max_results parameter.
@@ -348,7 +348,7 @@ class TestSearchTextEncodedPreference:
         _run(bridge.open_file(str(f)))
 
         results: list[dict[str, int]] = _run(bridge.search_text("TEST", "utf-16le"))
-        assert len(results) >= 1
+        assert results
         assert results[0]["offset"] == 32
 
     def test_search_text_encoded_available_on_document(self, bridge: Any, tmp_path: Path) -> None:
@@ -417,7 +417,7 @@ class TestDeadCodeRemoval:
         _run(bridge.write_bytes(0x10, "DEADBEEF"))
 
         patches_b64: str = _run(bridge.export_patches("ips"))
-        assert len(patches_b64) > 0
+        assert patches_b64 != ""
 
         _run(bridge.close_file())
         f.write_bytes(data)
@@ -488,7 +488,7 @@ class TestProcessMemoryBridge:
         regions: list[dict[str, int]] = _run(bridge.list_process_regions(pid))
 
         assert isinstance(regions, list)
-        assert len(regions) > 0
+        assert regions
         assert "base_address" in regions[0]
         assert "size" in regions[0]
         assert "protection" in regions[0]
@@ -506,7 +506,7 @@ class TestProcessMemoryBridge:
 
         mem_commit = 0x1000
         committed = [r for r in regions if r["state"] == mem_commit]
-        assert len(committed) > 0
+        assert committed
 
     @pytest.mark.skipif(os.name != "nt", reason="Windows-only process memory API")
     def test_open_process_memory_loads_document(self, bridge: Any) -> None:
@@ -526,7 +526,9 @@ class TestProcessMemoryBridge:
         readable_protections = {page_readonly, page_readwrite, page_execute_read, page_execute_readwrite}
 
         readable = [r for r in regions if r["state"] == mem_commit and r["protection"] in readable_protections]
-        assert len(readable) > 0, "Current process must have at least one readable committed region"
+        assert (
+            readable
+        ), "Current process must have at least one readable committed region"
 
         target = readable[0]
         read_size = min(target["size"], 4096)

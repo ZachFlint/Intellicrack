@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Session management for Intellicrack.
 
-"""Session management for Intellicrack.
-
-This module provides session state management including conversation history,
-binary analysis state, and persistence to SQLite database.
+This module provides session state management including conversation history, binary analysis state, and persistence to SQLite database.
 """
 
 from __future__ import annotations
@@ -53,7 +52,8 @@ _logger = get_logger("core.session")
 
 @dataclass
 class SessionMetadata:
-    """Metadata about a session.
+    """
+    Metadata about a session.
 
     Attributes:
         id: Unique session identifier.
@@ -78,7 +78,8 @@ class SessionMetadata:
 
 @dataclass
 class Session:
-    """Complete session state.
+    """
+    Complete session state.
 
     Attributes:
         id: Unique session identifier.
@@ -119,7 +120,8 @@ class Session:
         model: str,
         name: str | None = None,
     ) -> Session:
-        """Create a new session.
+        """
+        Create a new session.
 
         Args:
             provider: LLM provider to use.
@@ -143,7 +145,8 @@ class Session:
 
     @property
     def active_binary(self) -> BinaryInfo | None:
-        """Get the currently active binary.
+        """
+        Get the currently active binary.
 
         Returns:
             BinaryInfo | None: Active BinaryInfo or None.
@@ -153,7 +156,8 @@ class Session:
         return None
 
     def add_binary(self, binary: BinaryInfo) -> None:
-        """Add a binary to the session.
+        """
+        Add a binary to the session.
 
         Args:
             binary: Binary information to add.
@@ -163,7 +167,8 @@ class Session:
         self.updated_at = datetime.now()
 
     def add_message(self, message: Message) -> None:
-        """Add a message to the conversation.
+        """
+        Add a message to the conversation.
 
         Args:
             message: Message to add.
@@ -172,7 +177,8 @@ class Session:
         self.updated_at = datetime.now()
 
     def add_patch(self, patch: PatchInfo) -> None:
-        """Add a patch to the session.
+        """
+        Add a patch to the session.
 
         Args:
             patch: Patch information to add.
@@ -181,7 +187,8 @@ class Session:
         self.updated_at = datetime.now()
 
     def add_bridge_analysis(self, binary_name: str, analysis: BridgeAnalysisSummary) -> None:
-        """Add bridge analysis summary for a binary.
+        """
+        Add bridge analysis summary for a binary.
 
         Args:
             binary_name: Name of the analyzed binary.
@@ -191,7 +198,8 @@ class Session:
         self.updated_at = datetime.now()
 
     def get_bridge_analysis(self, binary_name: str) -> BridgeAnalysisSummary | None:
-        """Get bridge analysis summary for a binary.
+        """
+        Get bridge analysis summary for a binary.
 
         Args:
             binary_name: Name of the binary.
@@ -203,7 +211,8 @@ class Session:
 
 
 class SessionStore:
-    """SQLite-based session persistence.
+    """
+    SQLite-based session persistence.
 
     Handles storing and retrieving sessions from a SQLite database.
 
@@ -219,7 +228,8 @@ class SessionStore:
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
-        """Get a database connection.
+        """
+        Get a database connection.
 
         Yields:
             sqlite3.Connection: Active database connection with auto-commit/rollback.
@@ -277,7 +287,8 @@ class SessionStore:
             _logger.debug("database_schema_initialized", db_path=str(self._db_path))
 
     def save(self, session: Session) -> None:
-        """Save a session to the database.
+        """
+        Save a session to the database.
 
         Args:
             session: Session to save.
@@ -324,7 +335,8 @@ class SessionStore:
         _logger.debug("session_saved", session_id=session.id)
 
     def load(self, session_id: str) -> Session | None:
-        """Load a session from the database.
+        """
+        Load a session from the database.
 
         Args:
             session_id: Session identifier.
@@ -372,7 +384,8 @@ class SessionStore:
             return session
 
     def delete(self, session_id: str) -> bool:
-        """Delete a session from the database.
+        """
+        Delete a session from the database.
 
         Args:
             session_id: Session identifier.
@@ -394,7 +407,8 @@ class SessionStore:
         return deleted
 
     def list_all(self, limit: int = 100) -> list[SessionMetadata]:
-        """List all sessions.
+        """
+        List all sessions.
 
         Args:
             limit: Maximum number of sessions to return.
@@ -434,7 +448,8 @@ class SessionStore:
             return result
 
     def search_by_tag(self, tag: str) -> list[SessionMetadata]:
-        """Search sessions by tag.
+        """
+        Search sessions by tag.
 
         Args:
             tag: Tag to search for.
@@ -475,7 +490,8 @@ class SessionStore:
             return result
 
     def cleanup_old(self, days: int = 30) -> int:
-        """Delete sessions older than specified days.
+        """
+        Delete sessions older than specified days.
 
         Args:
             days: Number of days to keep.
@@ -504,7 +520,8 @@ class SessionStore:
 
     @staticmethod
     def _serialize_binary(binary: BinaryInfo) -> dict[str, Any]:
-        """Serialize BinaryInfo to dictionary.
+        """
+        Serialize BinaryInfo to dictionary.
 
         Args:
             binary: BinaryInfo instance to serialize.
@@ -529,7 +546,8 @@ class SessionStore:
 
     @staticmethod
     def _deserialize_binary(data: dict[str, Any]) -> BinaryInfo:
-        """Deserialize dictionary to BinaryInfo.
+        """
+        Deserialize dictionary to BinaryInfo.
 
         Args:
             data: Dictionary containing serialized binary information.
@@ -554,7 +572,8 @@ class SessionStore:
 
     @staticmethod
     def _serialize_message(message: Message) -> dict[str, Any]:
-        """Serialize Message to dictionary.
+        """
+        Serialize Message to dictionary.
 
         Args:
             message: Message instance to serialize.
@@ -587,7 +606,8 @@ class SessionStore:
 
     @staticmethod
     def _deserialize_message(data: dict[str, Any]) -> Message:
-        """Deserialize dictionary to Message.
+        """
+        Deserialize dictionary to Message.
 
         Args:
             data: Dictionary containing serialized message data.
@@ -613,7 +633,8 @@ class SessionStore:
 
     @staticmethod
     def _serialize_tool_state(state: ToolState) -> dict[str, Any]:
-        """Serialize ToolState to dictionary.
+        """
+        Serialize ToolState to dictionary.
 
         Args:
             state: ToolState instance to serialize.
@@ -631,7 +652,8 @@ class SessionStore:
 
     @staticmethod
     def _deserialize_tool_state(data: dict[str, Any]) -> ToolState:
-        """Deserialize dictionary to ToolState.
+        """
+        Deserialize dictionary to ToolState.
 
         Args:
             data: Dictionary containing serialized tool state data.
@@ -649,7 +671,8 @@ class SessionStore:
 
     @staticmethod
     def _serialize_patch(patch: PatchInfo) -> dict[str, Any]:
-        """Serialize PatchInfo to dictionary.
+        """
+        Serialize PatchInfo to dictionary.
 
         Args:
             patch: PatchInfo instance to serialize.
@@ -667,7 +690,8 @@ class SessionStore:
 
     @staticmethod
     def _deserialize_patch(data: dict[str, Any]) -> PatchInfo:
-        """Deserialize dictionary to PatchInfo.
+        """
+        Deserialize dictionary to PatchInfo.
 
         Args:
             data: Dictionary containing serialized patch data.
@@ -684,7 +708,8 @@ class SessionStore:
         )
 
     def export_to_json(self, session: Session, path: Path) -> None:
-        """Export a session to a JSON file.
+        """
+        Export a session to a JSON file.
 
         Args:
             session: Session to export.
@@ -718,7 +743,8 @@ class SessionStore:
         _logger.info("session_exported", session_id=session.id, path=str(path))
 
     def import_from_json(self, path: Path) -> Session:
-        """Import a session from a JSON file.
+        """
+        Import a session from a JSON file.
 
         Args:
             path: Path to the JSON file.
@@ -772,7 +798,8 @@ class SessionStore:
 
 
 class SessionManager:
-    """Manages session lifecycle and persistence.
+    """
+    Manages session lifecycle and persistence.
 
     Coordinates between the active session and the session store.
 
@@ -797,7 +824,8 @@ class SessionManager:
 
     @property
     def current(self) -> Session | None:
-        """Get the current session.
+        """
+        Get the current session.
 
         Returns:
             Session | None: Current session or None.
@@ -810,7 +838,8 @@ class SessionManager:
         model: str,
         name: str | None = None,
     ) -> Session:
-        """Create a new session.
+        """
+        Create a new session.
 
         Args:
             provider: LLM provider to use.
@@ -834,7 +863,8 @@ class SessionManager:
         return session
 
     async def load(self, session_id: str) -> Session | None:
-        """Load a session.
+        """
+        Load a session.
 
         Args:
             session_id: Session identifier.
@@ -855,7 +885,8 @@ class SessionManager:
         return session
 
     async def get(self, session_id: str) -> Session | None:
-        """Get a session by ID without making it current.
+        """
+        Get a session by ID without making it current.
 
         Args:
             session_id: Session identifier.
@@ -866,7 +897,8 @@ class SessionManager:
         return self._store.load(session_id)
 
     async def update(self, session: Session) -> None:
-        """Update a session in the store.
+        """
+        Update a session in the store.
 
         Args:
             session: Session to update.
@@ -891,7 +923,8 @@ class SessionManager:
             self._current = None
 
     async def delete(self, session_id: str) -> bool:
-        """Delete a session.
+        """
+        Delete a session.
 
         Args:
             session_id: Session identifier.
@@ -908,7 +941,8 @@ class SessionManager:
         return self._store.delete(session_id)
 
     def list_sessions(self, limit: int = 100) -> list[SessionMetadata]:
-        """List all sessions.
+        """
+        List all sessions.
 
         Args:
             limit: Maximum number to return.
@@ -919,7 +953,8 @@ class SessionManager:
         return self._store.list_all(limit)
 
     def search_by_tag(self, tag: str) -> list[SessionMetadata]:
-        """Search sessions by tag.
+        """
+        Search sessions by tag.
 
         Args:
             tag: Tag to search for.
@@ -930,7 +965,8 @@ class SessionManager:
         return self._store.search_by_tag(tag)
 
     async def cleanup(self, days: int = 30) -> int:
-        """Clean up old sessions.
+        """
+        Clean up old sessions.
 
         Args:
             days: Number of days to keep.
@@ -942,7 +978,8 @@ class SessionManager:
         return self._store.cleanup_old(days)
 
     async def export_json(self, session_id: str, path: Path) -> None:
-        """Export a session to a JSON file.
+        """
+        Export a session to a JSON file.
 
         Args:
             session_id: Session identifier to export.
@@ -959,7 +996,8 @@ class SessionManager:
         self._store.export_to_json(session, path)
 
     async def import_json(self, path: Path, replace: bool = False) -> Session:
-        """Import a session from a JSON file.
+        """
+        Import a session from a JSON file.
 
         Args:
             path: Path to the JSON file.
@@ -981,7 +1019,8 @@ class SessionManager:
         return session
 
     async def export_current(self, path: Path) -> None:
-        """Export the current session to a JSON file.
+        """
+        Export the current session to a JSON file.
 
         Args:
             path: Path to write the JSON file.

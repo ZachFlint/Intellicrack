@@ -9,7 +9,8 @@ from __future__ import annotations
 
 
 class HexPatError(Exception):
-    """Base error for the HexPat interpreter.
+    """
+    Base error for the HexPat interpreter.
 
     Attributes:
         message: Human-readable error description.
@@ -25,7 +26,8 @@ class HexPatError(Exception):
         column: int = 0,
         file: str = "",
     ) -> None:
-        """Initialize a HexPat error.
+        """
+        Initialize a HexPat error.
 
         Args:
             message: Human-readable error description.
@@ -61,7 +63,8 @@ class HexPatTypeError(HexPatError):
 
 
 class HexPatRuntimeError(HexPatError):
-    """Error during pattern evaluation against binary data.
+    """
+    Error during pattern evaluation against binary data.
 
     Attributes:
         offset: Byte offset in the binary data where the error occurred.
@@ -75,7 +78,8 @@ class HexPatRuntimeError(HexPatError):
         file: str = "",
         offset: int = 0,
     ) -> None:
-        """Initialize a runtime error.
+        """
+        Initialize a runtime error.
 
         Args:
             message: Human-readable error description.

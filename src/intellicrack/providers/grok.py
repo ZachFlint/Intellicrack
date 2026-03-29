@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""X.AI Grok API provider implementation.
+"""
+X.AI Grok API provider implementation.
 
-This module provides integration with X.AI's Grok models for
-chat completion and tool/function calling. Grok uses an OpenAI-compatible
-API, so this implementation leverages the OpenAI SDK with a custom base URL.
+This module provides integration with X.AI's Grok models for chat completion and tool/function calling. Grok uses an OpenAI-compatible API,
+so this implementation leverages the OpenAI SDK with a custom base URL.
 """
 
 from __future__ import annotations
@@ -72,7 +72,8 @@ class GrokMessage(TypedDict, total=False):
 
 
 class GrokProvider(LLMProviderBase):
-    """X.AI Grok API provider implementation.
+    """
+    X.AI Grok API provider implementation.
 
     Provides integration with X.AI's Grok models including
     support for tool/function calling and streaming responses.
@@ -92,7 +93,8 @@ class GrokProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """
+        Get the provider's name.
 
         Returns:
             ProviderName: ProviderName.GROK
@@ -100,7 +102,8 @@ class GrokProvider(LLMProviderBase):
         return ProviderName.GROK
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """Connect to X.AI Grok API.
+        """
+        Connect to X.AI Grok API.
 
         Args:
             credentials: Must contain api_key. Optionally api_base for custom URL.
@@ -149,7 +152,8 @@ class GrokProvider(LLMProviderBase):
 
     @staticmethod
     def _is_chat_model(model_id: str) -> bool:
-        """Determine if a model ID corresponds to a chat-capable model.
+        """
+        Determine if a model ID corresponds to a chat-capable model.
 
         Args:
             model_id: Grok model identifier.
@@ -166,7 +170,8 @@ class GrokProvider(LLMProviderBase):
 
     @staticmethod
     def _infer_context_window(model_id: str) -> int:
-        """Infer context window size from model ID prefix patterns.
+        """
+        Infer context window size from model ID prefix patterns.
 
         Args:
             model_id: Grok model identifier.
@@ -182,7 +187,8 @@ class GrokProvider(LLMProviderBase):
 
     @staticmethod
     def _infer_supports_vision(model_id: str) -> bool:
-        """Infer vision support from model ID.
+        """
+        Infer vision support from model ID.
 
         Args:
             model_id: Grok model identifier.
@@ -193,7 +199,8 @@ class GrokProvider(LLMProviderBase):
         return "vision" in model_id or "image" in model_id
 
     async def list_models(self) -> list[ModelInfo]:
-        """Dynamically fetch available models from Grok.
+        """
+        Dynamically fetch available models from Grok.
 
         Returns:
             list[ModelInfo]: List of available Grok models.
@@ -242,7 +249,8 @@ class GrokProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Send a chat completion request to Grok.
+        """
+        Send a chat completion request to Grok.
 
         Args:
             messages: Conversation history.
@@ -324,7 +332,8 @@ class GrokProvider(LLMProviderBase):
         tools: list[ChatCompletionToolParam] | None,
         tool_choice: ChatCompletionToolChoiceOptionParam | None = None,
     ) -> ChatCompletion:
-        """Execute the Grok API chat completion call with error handling.
+        """
+        Execute the Grok API chat completion call with error handling.
 
         Args:
             model: Model ID to use.
@@ -382,7 +391,8 @@ class GrokProvider(LLMProviderBase):
         self,
         response_message: ChatCompletionMessage,
     ) -> list[ToolCall]:
-        """Parse tool calls from a Grok API response message.
+        """
+        Parse tool calls from a Grok API response message.
 
         Args:
             response_message: The message from the Grok API response.
@@ -422,7 +432,8 @@ class GrokProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """Stream a chat completion response from Grok.
+        """
+        Stream a chat completion response from Grok.
 
         Args:
             messages: Conversation history.
@@ -537,7 +548,8 @@ class GrokProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """Convert internal messages to Grok/OpenAI format.
+        """
+        Convert internal messages to Grok/OpenAI format.
 
         Args:
             messages: List of Message objects.
@@ -552,7 +564,8 @@ class GrokProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """Convert internal tools to Grok/OpenAI format.
+        """
+        Convert internal tools to Grok/OpenAI format.
 
         Args:
             tools: List of ToolDefinition objects.

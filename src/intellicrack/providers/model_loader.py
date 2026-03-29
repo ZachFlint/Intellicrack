@@ -3,10 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Model loading utilities with quantization and caching for local transformers.
+"""
+Model loading utilities with quantization and caching for local transformers.
 
-This module provides model loading, caching, and memory management for
-HuggingFace Transformers models optimized for Intel XPU and CPU inference.
+This module provides model loading, caching, and memory management for HuggingFace Transformers models optimized for Intel XPU and CPU
+inference.
 """
 
 from __future__ import annotations
@@ -84,7 +85,8 @@ class LoadedModel:
 
 @dataclass
 class ModelConfig:
-    """Configuration for model loading.
+    """
+    Configuration for model loading.
 
     Attributes:
         model_id: HuggingFace model identifier or local path.
@@ -110,7 +112,8 @@ class ModelConfig:
 
 
 class ModelCache:
-    """LRU cache for loaded models with memory limit enforcement.
+    """
+    LRU cache for loaded models with memory limit enforcement.
 
     Maintains an LRU cache of loaded models, automatically evicting
     least recently used models when the memory limit is exceeded.
@@ -127,7 +130,8 @@ class ModelCache:
 
     @property
     def max_memory_bytes(self) -> int:
-        """Get the maximum memory limit.
+        """
+        Get the maximum memory limit.
 
         Returns:
             int: Maximum memory in bytes allowed for cached models.
@@ -136,7 +140,8 @@ class ModelCache:
 
     @max_memory_bytes.setter
     def max_memory_bytes(self, value: int) -> None:
-        """Set the maximum memory limit and evict if needed.
+        """
+        Set the maximum memory limit and evict if needed.
 
         Args:
             value: New maximum memory limit in bytes.
@@ -146,7 +151,8 @@ class ModelCache:
             self._evict_to_fit(0)
 
     def get(self, model_id: str, dtype: str, device_type: str) -> LoadedModel | None:
-        """Get a model from cache.
+        """
+        Get a model from cache.
 
         Args:
             model_id: The model identifier.
@@ -165,7 +171,8 @@ class ModelCache:
         return None
 
     def put(self, loaded_model: LoadedModel) -> None:
-        """Put a model into cache.
+        """
+        Put a model into cache.
 
         Args:
             loaded_model: The loaded model to cache.
@@ -192,7 +199,8 @@ class ModelCache:
             )
 
     def remove(self, model_id: str, dtype: str, device_type: str) -> bool:
-        """Remove a model from cache.
+        """
+        Remove a model from cache.
 
         Args:
             model_id: The model identifier.
@@ -222,7 +230,8 @@ class ModelCache:
         _logger.info("model_cache_cleared", cache_size=len(self._cache))
 
     def get_memory_usage(self) -> int:
-        """Get current memory usage.
+        """
+        Get current memory usage.
 
         Returns:
             int: Current memory usage in bytes.
@@ -232,7 +241,8 @@ class ModelCache:
 
     @staticmethod
     def _make_key(model_id: str, dtype: str, device_type: str) -> str:
-        """Create a cache key.
+        """
+        Create a cache key.
 
         Args:
             model_id: The model identifier.
@@ -245,7 +255,8 @@ class ModelCache:
         return f"{model_id}::{dtype}::{device_type}"
 
     def _evict_to_fit(self, required_bytes: int) -> None:
-        """Evict models until there's room for required_bytes.
+        """
+        Evict models until there's room for required_bytes.
 
         Args:
             required_bytes: Bytes needed for new model.
@@ -262,7 +273,8 @@ class ModelCache:
 
 
 def _unload_model(loaded_model: LoadedModel) -> None:
-    """Unload a model and free resources.
+    """
+    Unload a model and free resources.
 
     Args:
         loaded_model: The model to unload.
@@ -286,7 +298,8 @@ def estimate_model_memory(
     dtype: DtypeOption = "float16",
     include_activations: bool = True,
 ) -> int:
-    """Estimate memory required for a model.
+    """
+    Estimate memory required for a model.
 
     Args:
         model_id: HuggingFace model identifier or path.
@@ -327,7 +340,8 @@ def estimate_model_memory(
 
 
 def _estimate_parameter_count(model_id: str) -> int:
-    """Estimate parameter count from model ID.
+    """
+    Estimate parameter count from model ID.
 
     Args:
         model_id: HuggingFace model identifier.
@@ -404,7 +418,8 @@ def select_dtype_for_memory(
     available_memory_bytes: int,
     preferred_dtype: DtypeOption = "auto",
 ) -> DtypeOption:
-    """Select appropriate dtype to fit model in available memory.
+    """
+    Select appropriate dtype to fit model in available memory.
 
     Args:
         model_id: HuggingFace model identifier.
@@ -451,7 +466,8 @@ def load_model_for_xpu(
     config: ModelConfig,
     cache: ModelCache | None = None,
 ) -> LoadedModel:
-    """Load a model optimized for Intel XPU.
+    """
+    Load a model optimized for Intel XPU.
 
     Args:
         config: Model configuration.
@@ -565,7 +581,8 @@ def load_model_for_cpu(
     config: ModelConfig,
     cache: ModelCache | None = None,
 ) -> LoadedModel:
-    """Load a model for CPU inference.
+    """
+    Load a model for CPU inference.
 
     Args:
         config: Model configuration.
@@ -663,7 +680,8 @@ def load_model_for_cpu(
 
 
 def _get_torch_dtype(dtype_str: str) -> torch.dtype:
-    """Convert dtype string to torch.dtype.
+    """
+    Convert dtype string to torch.dtype.
 
     Args:
         dtype_str: String dtype name.
@@ -687,7 +705,8 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
 
 
 def _get_quantization_config(dtype_str: str) -> object:
-    """Get a BitsAndBytesConfig for quantized model loading.
+    """
+    Get a BitsAndBytesConfig for quantized model loading.
 
     Creates a properly typed ``BitsAndBytesConfig`` object that the
     ``transformers.AutoModelForCausalLM.from_pretrained`` method expects
@@ -742,7 +761,8 @@ _cache_lock = threading.Lock()
 
 
 def get_global_model_cache() -> ModelCache:
-    """Get the global model cache singleton.
+    """
+    Get the global model cache singleton.
 
     Returns:
         ModelCache: The global ModelCache instance.
@@ -754,7 +774,8 @@ def get_global_model_cache() -> ModelCache:
 
 
 def set_global_cache_size(max_memory_bytes: int) -> None:
-    """Set the global cache size limit.
+    """
+    Set the global cache size limit.
 
     Args:
         max_memory_bytes: Maximum memory for the cache.

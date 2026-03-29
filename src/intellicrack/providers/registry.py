@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Provider registry for managing LLM providers.
+"""
+Provider registry for managing LLM providers.
 
-This module provides a centralized registry for registering, connecting,
-and managing all LLM provider instances.
+This module provides a centralized registry for registering, connecting, and managing all LLM provider instances.
 """
 
 from __future__ import annotations
@@ -29,7 +29,8 @@ _MSG_NO_ACTIVE_PROVIDER = "No active provider"
 
 
 class ProviderRegistry:
-    """Registry for all LLM providers.
+    """
+    Registry for all LLM providers.
 
     Manages provider instances, connections, and provides a unified interface
     for accessing any configured LLM provider.
@@ -48,7 +49,8 @@ class ProviderRegistry:
         self._logger = get_logger("providers.registry")
 
     def register(self, provider: LLMProviderBase) -> None:
-        """Register a provider instance.
+        """
+        Register a provider instance.
 
         Args:
             provider: The provider instance to register.
@@ -64,7 +66,8 @@ class ProviderRegistry:
         self._logger.info("provider_registered", provider=name.value)
 
     def unregister(self, name: ProviderName) -> bool:
-        """Unregister a provider.
+        """
+        Unregister a provider.
 
         Args:
             name: The provider name to unregister.
@@ -81,7 +84,8 @@ class ProviderRegistry:
         return False
 
     def get(self, name: ProviderName) -> LLMProviderBase | None:
-        """Get a registered provider by name.
+        """
+        Get a registered provider by name.
 
         Args:
             name: The provider name.
@@ -92,7 +96,8 @@ class ProviderRegistry:
         return self._providers.get(name)
 
     def get_or_raise(self, name: ProviderName) -> LLMProviderBase:
-        """Get a registered provider by name, raising if not found.
+        """
+        Get a registered provider by name, raising if not found.
 
         Args:
             name: The provider name.
@@ -109,7 +114,8 @@ class ProviderRegistry:
         return provider
 
     def list_registered(self) -> list[ProviderName]:
-        """List all registered providers.
+        """
+        List all registered providers.
 
         Returns:
             list[ProviderName]: List of registered provider names.
@@ -117,7 +123,8 @@ class ProviderRegistry:
         return list(self._providers.keys())
 
     def list_connected(self) -> list[ProviderName]:
-        """List all connected providers.
+        """
+        List all connected providers.
 
         Returns:
             list[ProviderName]: List of connected provider names.
@@ -130,7 +137,8 @@ class ProviderRegistry:
         name: ProviderName,
         credentials: ProviderCredentials | None = None,
     ) -> bool:
-        """Connect a specific provider.
+        """
+        Connect a specific provider.
 
         Args:
             name: The provider to connect.
@@ -162,7 +170,8 @@ class ProviderRegistry:
             return True
 
     async def disconnect_provider(self, name: ProviderName) -> None:
-        """Disconnect a specific provider.
+        """
+        Disconnect a specific provider.
 
         Args:
             name: The provider to disconnect.
@@ -178,7 +187,8 @@ class ProviderRegistry:
             await self.disconnect_provider(name)
 
     def set_active(self, name: ProviderName) -> None:
-        """Set the active provider.
+        """
+        Set the active provider.
 
         Args:
             name: The provider to make active.
@@ -194,7 +204,8 @@ class ProviderRegistry:
 
     @property
     def active(self) -> LLMProviderBase | None:
-        """Get the currently active provider.
+        """
+        Get the currently active provider.
 
         Returns:
             LLMProviderBase | None: The active provider instance or None if none set.
@@ -205,7 +216,8 @@ class ProviderRegistry:
 
     @property
     def active_name(self) -> ProviderName | None:
-        """Get the name of the currently active provider.
+        """
+        Get the name of the currently active provider.
 
         Returns:
             ProviderName | None: The active provider name or None if none set.
@@ -213,7 +225,8 @@ class ProviderRegistry:
         return self._active_provider
 
     def has_connected_provider(self) -> bool:
-        """Check if any provider is connected.
+        """
+        Check if any provider is connected.
 
         Returns:
             bool: True if at least one provider is connected.
@@ -228,7 +241,8 @@ class _RegistryHolder:
 
 
 def get_provider_registry() -> ProviderRegistry:
-    """Get the global provider registry instance.
+    """
+    Get the global provider registry instance.
 
     Returns:
         ProviderRegistry: The singleton ProviderRegistry instance.

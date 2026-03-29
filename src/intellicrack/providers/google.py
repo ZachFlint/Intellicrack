@@ -3,10 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Google Gemini API provider implementation.
+"""
+Google Gemini API provider implementation.
 
-This module provides integration with Google's Gemini models for
-chat completion and tool/function calling using the modern google-genai SDK.
+This module provides integration with Google's Gemini models for chat completion and tool/function calling using the modern google-genai
+SDK.
 """
 
 from __future__ import annotations
@@ -58,10 +59,10 @@ _STREAM_SENTINEL: Final = object()
 
 
 class GoogleProvider(LLMProviderBase):
-    """Google Gemini API provider implementation.
+    """
+    Google Gemini API provider implementation.
 
-    Provides integration with Google's Gemini models including
-    support for tool/function calling and streaming responses.
+    Provides integration with Google's Gemini models including support for tool/function calling and streaming responses.
     """
 
     def __init__(self) -> None:
@@ -72,7 +73,8 @@ class GoogleProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """
+        Get the provider's name.
 
         Returns:
             ProviderName: The provider name enum value.
@@ -80,7 +82,8 @@ class GoogleProvider(LLMProviderBase):
         return ProviderName.GOOGLE
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """Connect to Google AI API.
+        """
+        Connect to Google AI API.
 
         Args:
             credentials: Provider credentials containing the API key.
@@ -126,7 +129,8 @@ class GoogleProvider(LLMProviderBase):
                 os.environ["GEMINI_API_KEY"] = saved_gemini_key
 
     async def disconnect(self) -> None:
-        """Disconnect from Google AI API.
+        """
+        Disconnect from Google AI API.
 
         Cleans up the client instance and resets connection state.
         """
@@ -140,7 +144,8 @@ class GoogleProvider(LLMProviderBase):
             self._connected = False
 
     async def list_models(self) -> list[ModelInfo]:
-        """Dynamically fetch available Gemini models from Google AI API.
+        """
+        Dynamically fetch available Gemini models from Google AI API.
 
         Uses the models.list() endpoint to retrieve the current list of
         available generative models.
@@ -217,7 +222,8 @@ class GoogleProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Send a chat completion request to Gemini.
+        """
+        Send a chat completion request to Gemini.
 
         Args:
             messages: List of conversation messages.
@@ -345,7 +351,8 @@ class GoogleProvider(LLMProviderBase):
         thinking: ThinkingConfig | None = None,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """Stream a chat completion response from Gemini.
+        """
+        Stream a chat completion response from Gemini.
 
         Args:
             messages: List of conversation messages.
@@ -454,7 +461,8 @@ class GoogleProvider(LLMProviderBase):
                 raise ProviderError(_MSG_STREAM_FAILED) from e
 
     async def cancel_request(self) -> None:
-        """Cancel any in-flight request.
+        """
+        Cancel any in-flight request.
 
         Sets the cancellation flag and cancels the current async task if present.
         """
@@ -471,7 +479,8 @@ class GoogleProvider(LLMProviderBase):
     def _extract_system_instruction(
         messages: list[Message],
     ) -> str | None:
-        """Extract and concatenate all system messages into a single instruction.
+        """
+        Extract and concatenate all system messages into a single instruction.
 
         Args:
             messages: List of Message objects to scan.
@@ -490,7 +499,8 @@ class GoogleProvider(LLMProviderBase):
         system_instruction: str | None = None,
         tool_choice: ToolChoice | None = None,
     ) -> types.GenerateContentConfig:
-        """Create a GenerateContentConfig with the given parameters.
+        """
+        Create a GenerateContentConfig with the given parameters.
 
         Args:
             temperature: Sampling temperature.
@@ -536,7 +546,8 @@ class GoogleProvider(LLMProviderBase):
     def _parse_response(
         response: GenerateContentResponse,
     ) -> tuple[str, list[ToolCall]]:
-        """Parse the Gemini response into content and tool calls.
+        """
+        Parse the Gemini response into content and tool calls.
 
         Args:
             response: The raw Gemini API response.
@@ -574,7 +585,8 @@ class GoogleProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """Convert internal messages to Gemini format.
+        """
+        Convert internal messages to Gemini format.
 
         System messages are excluded here because they are passed separately
         via the native system_instruction parameter in GenerateContentConfig.
@@ -647,7 +659,8 @@ class GoogleProvider(LLMProviderBase):
     def _build_tool_declarations(
         tools: list[ToolDefinition],
     ) -> list[types.Tool]:
-        """Build Gemini tool declarations from ToolDefinitions.
+        """
+        Build Gemini tool declarations from ToolDefinitions.
 
         Args:
             tools: List of ToolDefinition objects to convert.
@@ -677,7 +690,8 @@ class GoogleProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """Convert internal tools to Gemini dict format.
+        """
+        Convert internal tools to Gemini dict format.
 
         Args:
             tools: List of ToolDefinition objects to convert.

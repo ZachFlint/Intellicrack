@@ -623,7 +623,7 @@ class TestThreadSafety:
         for t in threads:
             t.join()
 
-        assert len(errors) == 0
+        assert not errors
 
         state.set_cursor(42)
 
@@ -649,7 +649,7 @@ class TestThreadSafety:
         for t in threads:
             t.join()
 
-        assert len(errors) == 0
+        assert not errors
 
     def test_unregister_while_concurrent_notify_does_not_raise(self) -> None:
         """Unregistering callbacks while events are being dispatched is safe."""
@@ -681,7 +681,7 @@ class TestThreadSafety:
         t1.join()
         t2.join()
 
-        assert len(errors) == 0
+        assert not errors
 
 
 def _trigger_document_opened(s: HexDocumentState) -> None:

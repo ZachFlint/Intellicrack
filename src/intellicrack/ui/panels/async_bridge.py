@@ -2,14 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Shared async-to-sync bridge runner for Qt UI panels.
 
-"""Shared async-to-sync bridge runner for Qt UI panels.
-
-Provides a coroutine runner that safely executes async bridge
-methods from synchronous Qt slots, using a persistent background
-event loop thread to preserve asyncio primitives across calls.
-Includes both blocking and non-blocking variants for different
-use cases.
+Provides a coroutine runner that safely executes async bridge methods from synchronous Qt slots, using a persistent background event loop
+thread to preserve asyncio primitives across calls. Includes both blocking and non-blocking variants for different use cases.
 """
 
 from __future__ import annotations
@@ -51,7 +48,8 @@ _state = _LoopState()
 
 
 def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
-    """Run the event loop forever in a background thread.
+    """
+    Run the event loop forever in a background thread.
 
     Args:
         loop: The event loop to run.
@@ -61,7 +59,8 @@ def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
 
 
 def _ensure_loop() -> asyncio.AbstractEventLoop:
-    """Lazily start and return the persistent background event loop.
+    """
+    Lazily start and return the persistent background event loop.
 
     Returns:
         asyncio.AbstractEventLoop: The running background event loop.
@@ -85,7 +84,8 @@ def _ensure_loop() -> asyncio.AbstractEventLoop:
 
 
 class BridgeCallWorker(QThread):
-    """Worker thread for non-blocking bridge coroutine execution.
+    """
+    Worker thread for non-blocking bridge coroutine execution.
 
     Submits a coroutine to the persistent bridge event loop and
     emits signals with the result on completion, allowing the Qt
@@ -130,7 +130,8 @@ _T = TypeVar("_T")
 
 
 def run_bridge_coroutine(coro: Coroutine[object, object, _T]) -> _T | None:
-    """Run an async bridge coroutine from a synchronous Qt context.
+    """
+    Run an async bridge coroutine from a synchronous Qt context.
 
     Uses a persistent background event loop thread to execute
     the coroutine, preserving asyncio primitives across calls.
@@ -170,7 +171,8 @@ def run_bridge_coroutine_async(
     on_error: Callable[[object], None] | None = None,
     parent: QObject | None = None,
 ) -> None:
-    """Run an async bridge coroutine without blocking the Qt main thread.
+    """
+    Run an async bridge coroutine without blocking the Qt main thread.
 
     Creates a ``BridgeCallWorker`` that executes the coroutine on the
     persistent background event loop.  Results and errors are delivered
@@ -191,10 +193,10 @@ def run_bridge_coroutine_async(
 
 
 def shutdown_bridge_loop() -> None:
-    """Shut down the persistent background event loop.
+    """
+    Shut down the persistent background event loop.
 
-    Should be called during application exit to cleanly stop
-    the background thread.
+    Should be called during application exit to cleanly stop the background thread.
     """
     if _state.loop is None:
         return
@@ -210,7 +212,8 @@ def shutdown_bridge_loop() -> None:
 
 
 def _log_task_exception(task: asyncio.Task[object]) -> None:
-    """Log exceptions from completed async bridge tasks.
+    """
+    Log exceptions from completed async bridge tasks.
 
     Args:
         task: The completed asyncio task to inspect.

@@ -7,7 +7,7 @@ description: |
   - Before code reviews to ensure documentation standards are met
   - When ruff flags missing docstrings or type annotations
   - Proactively after any code implementation to maintain documentation standards
-tools: Read, Edit, Glob, Grep, TodoWrite, mcp__dev-tools__ruff_check, mcp__dev-tools__ruff_fix, mcp__dev-tools__ruff_format, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__darglint_check
+tools: Read, Edit, Glob, Grep, TodoWrite, mcp__dev-tools__ruff_check, mcp__dev-tools__ruff_fix, mcp__dev-tools__ruff_format, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check
 model: inherit
 ---
 
@@ -26,7 +26,7 @@ You are a documentation specialist for the Intellicrack project. Your role is to
 1. Read the target file(s) to understand the code
 2. Add or improve docstrings following Google style
 3. Add missing type hints/annotations
-4. Run pydocstyle_check and darglint_check to validate docstrings
+4. Run pydocstyle_check and pydoclint_check to validate docstrings
 5. Run ruff_check and ruff_fix to ensure code quality
 6. Format with ruff_format
 

@@ -3,10 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""OAuth 2.0 flow handling for Intellicrack providers.
+"""
+OAuth 2.0 flow handling for Intellicrack providers.
 
-This module handles OAuth 2.0 authorization flows for providers that support it,
-including authorization code flow with PKCE, token refresh, and secure storage.
+This module handles OAuth 2.0 authorization flows for providers that support it, including authorization code flow with PKCE, token refresh,
+and secure storage.
 """
 
 from __future__ import annotations
@@ -91,7 +92,8 @@ _OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, ProviderName] = {
 
 
 def _oauth_provider_to_name(provider: OAuthProvider) -> ProviderName:
-    """Map an OAuthProvider to the corresponding ProviderName.
+    """
+    Map an OAuthProvider to the corresponding ProviderName.
 
     Args:
         provider: The OAuth provider enum value.
@@ -110,7 +112,8 @@ def _oauth_provider_to_name(provider: OAuthProvider) -> ProviderName:
 
 @dataclass(frozen=True)
 class OAuthConfig:
-    """OAuth 2.0 configuration for a provider.
+    """
+    OAuth 2.0 configuration for a provider.
 
     Attributes:
         provider: The OAuth provider.
@@ -137,7 +140,8 @@ class OAuthConfig:
 
 @dataclass
 class OAuthToken:
-    """OAuth 2.0 token data.
+    """
+    OAuth 2.0 token data.
 
     Attributes:
         access_token: The access token for API calls.
@@ -157,7 +161,8 @@ class OAuthToken:
 
     @property
     def is_expired(self) -> bool:
-        """Check if the access token is expired.
+        """
+        Check if the access token is expired.
 
         Returns:
             bool: True if expired or will expire within 5 minutes.
@@ -169,7 +174,8 @@ class OAuthToken:
 
     @property
     def needs_refresh(self) -> bool:
-        """Check if the token should be refreshed soon.
+        """
+        Check if the token should be refreshed soon.
 
         Returns:
             bool: True if token will expire within 10 minutes.
@@ -180,7 +186,8 @@ class OAuthToken:
         return datetime.now(UTC) >= (self.expires_at - buffer)
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert token to dictionary for storage.
+        """
+        Convert token to dictionary for storage.
 
         Returns:
             dict[str, Any]: Dictionary representation.
@@ -196,7 +203,8 @@ class OAuthToken:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OAuthToken:
-        """Create token from dictionary.
+        """
+        Create token from dictionary.
 
         Args:
             data: Dictionary with token data.
@@ -225,7 +233,8 @@ class OAuthToken:
 
 @dataclass
 class OAuthState:
-    """State for tracking an OAuth authorization flow.
+    """
+    State for tracking an OAuth authorization flow.
 
     Attributes:
         state: Random state parameter for CSRF protection.
@@ -245,7 +254,8 @@ class OAuthState:
 
     @property
     def is_expired(self) -> bool:
-        """Check if this state has expired (10 minute timeout).
+        """
+        Check if this state has expired (10 minute timeout).
 
         Returns:
             bool: True if the state is older than 10 minutes.
@@ -305,7 +315,8 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
             OAuthCallbackHandler.callback_event.set()
 
     def _send_response(self, status: int, message: str) -> None:
-        """Send an HTML response.
+        """
+        Send an HTML response.
 
         Args:
             status: HTTP status code.
@@ -332,7 +343,8 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(html.encode("utf-8"))
 
     def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
-        """Suppress default HTTP request logging.
+        """
+        Suppress default HTTP request logging.
 
         Args:
             code: HTTP status code (unused).
@@ -342,7 +354,8 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
 
 class OAuthCallbackServer:
-    """Local HTTP server for receiving OAuth callbacks.
+    """
+    Local HTTP server for receiving OAuth callbacks.
 
     Runs in a background thread and waits for the OAuth redirect.
 
@@ -377,7 +390,8 @@ class OAuthCallbackServer:
         _logger.info("oauth_callback_server_started", port=self._port)
 
     def wait_for_callback(self) -> tuple[str, str]:
-        """Wait for OAuth callback and return code and state.
+        """
+        Wait for OAuth callback and return code and state.
 
         Returns:
             tuple[str, str]: Tuple of (code, state) from callback.
@@ -419,7 +433,8 @@ class OAuthCallbackServer:
 
 
 class OAuthManager:
-    """Manages OAuth 2.0 flows for Intellicrack providers.
+    """
+    Manages OAuth 2.0 flows for Intellicrack providers.
 
     Handles authorization code flow with local callback server,
     token storage via CredentialStore, and automatic token refresh.
@@ -446,7 +461,8 @@ class OAuthManager:
         self._http_client: httpx.AsyncClient | None = None
 
     async def _get_http_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client.
+        """
+        Get or create HTTP client.
 
         Returns:
             httpx.AsyncClient: Shared HTTP client for OAuth token requests.
@@ -463,7 +479,8 @@ class OAuthManager:
 
     @staticmethod
     def _generate_state() -> str:
-        """Generate a cryptographically secure state parameter.
+        """
+        Generate a cryptographically secure state parameter.
 
         Returns:
             str: Random URL-safe state string.
@@ -472,7 +489,8 @@ class OAuthManager:
 
     @staticmethod
     def _generate_pkce_pair() -> tuple[str, str]:
-        """Generate PKCE code verifier and challenge.
+        """
+        Generate PKCE code verifier and challenge.
 
         Returns:
             tuple[str, str]: Tuple of (code_verifier, code_challenge).
@@ -483,7 +501,8 @@ class OAuthManager:
         return code_verifier, code_challenge
 
     def build_authorization_url(self, config: OAuthConfig) -> tuple[str, OAuthState]:
-        """Build authorization URL for OAuth flow.
+        """
+        Build authorization URL for OAuth flow.
 
         Args:
             config: OAuth configuration.
@@ -537,7 +556,8 @@ class OAuthManager:
         config: OAuthConfig,
         open_browser: bool = True,
     ) -> str:
-        """Start an OAuth authorization code flow.
+        """
+        Start an OAuth authorization code flow.
 
         Generates authorization URL and optionally opens browser.
 
@@ -565,7 +585,8 @@ class OAuthManager:
         code: str,
         state: str,
     ) -> OAuthToken:
-        """Handle the OAuth callback with authorization code.
+        """
+        Handle the OAuth callback with authorization code.
 
         Exchanges code for tokens and stores them.
 
@@ -607,7 +628,8 @@ class OAuthManager:
         code: str,
         code_verifier: str | None,
     ) -> OAuthToken:
-        """Exchange authorization code for tokens.
+        """
+        Exchange authorization code for tokens.
 
         Args:
             config: OAuth configuration.
@@ -673,7 +695,8 @@ class OAuthManager:
             return token
 
     async def _store_token(self, provider: OAuthProvider, token: OAuthToken) -> None:
-        """Store OAuth token in credential store.
+        """
+        Store OAuth token in credential store.
 
         Args:
             provider: OAuth provider.
@@ -706,7 +729,8 @@ class OAuthManager:
             _logger.exception("oauth_token_store_failed", provider=provider.value)
 
     async def _load_token(self, provider: OAuthProvider) -> OAuthToken | None:
-        """Load OAuth token from credential store.
+        """
+        Load OAuth token from credential store.
 
         Args:
             provider: OAuth provider.
@@ -739,7 +763,8 @@ class OAuthManager:
         config: OAuthConfig | None = None,
         auto_refresh: bool = True,
     ) -> OAuthToken | None:
-        """Get a valid OAuth token for a provider.
+        """
+        Get a valid OAuth token for a provider.
 
         Args:
             provider: The OAuth provider.
@@ -767,7 +792,8 @@ class OAuthManager:
         provider: OAuthProvider,
         config: OAuthConfig,
     ) -> OAuthToken:
-        """Refresh an OAuth token.
+        """
+        Refresh an OAuth token.
 
         Args:
             provider: The OAuth provider.
@@ -831,7 +857,8 @@ class OAuthManager:
             return new_token
 
     async def revoke_token(self, provider: OAuthProvider) -> bool:
-        """Revoke and delete OAuth token.
+        """
+        Revoke and delete OAuth token.
 
         Args:
             provider: The OAuth provider.
@@ -869,7 +896,8 @@ class OAuthManager:
         provider: OAuthProvider,
         config: OAuthConfig | None = None,
     ) -> ProviderCredentials | None:
-        """Convert OAuth token to ProviderCredentials.
+        """
+        Convert OAuth token to ProviderCredentials.
 
         Gets a valid token and creates ProviderCredentials with it.
 
@@ -890,7 +918,8 @@ class OAuthManager:
         self,
         config: OAuthConfig,
     ) -> OAuthToken:
-        """Run a complete authorization code flow.
+        """
+        Run a complete authorization code flow.
 
         Opens browser, waits for callback, and exchanges code for tokens.
 
@@ -933,7 +962,8 @@ _oauth_holder = _OAuthManagerHolder()
 
 
 def get_oauth_manager() -> OAuthManager:
-    """Get the global OAuth manager instance.
+    """
+    Get the global OAuth manager instance.
 
     Returns:
         OAuthManager: The singleton OAuthManager instance.
@@ -948,7 +978,8 @@ async def authorize_google(
     client_secret: str | None = None,
     scopes: tuple[str, ...] | None = None,
 ) -> ProviderCredentials:
-    """Authorize with Google and return provider credentials.
+    """
+    Authorize with Google and return provider credentials.
 
     Args:
         client_id: Google OAuth client ID.

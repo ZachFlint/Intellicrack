@@ -1,214 +1,209 @@
 56 findings in d:\Intellicrack\src\intellicrack\core\process_manager.py
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:168:17: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:175:17: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:274:13: [error] Type of "processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:283:13: [error] Type of "processes" is partially unknown
   Type of "processes" is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:274:30: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:283:30: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:274:30: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:283:30: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "__init__"
   Argument type is "dict_values[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:275:13: [error] Type of "external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:284:13: [error] Type of "external_pids" is partially unknown
   Type of "external_pids" is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:275:34: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:284:34: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:275:34: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:284:34: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "__init__"
   Argument type is "dict_keys[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:279:9: [error] Type of "root_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:288:9: [error] Type of "root_pids" is partially unknown
   Type of "root_pids" is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:279:22: [error] Type of "pid" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:288:22: [error] Type of "pid" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:279:32: [error] Type of "p" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:288:32: [error] Type of "p" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:279:50: [error] Type of "pid" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:288:50: [error] Type of "pid" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:281:13: [error] Type of "pid" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:290:13: [error] Type of "pid" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:283:39: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:292:39: [error] Argument type is unknown
   Argument corresponds to parameter "pid" in function "__init__"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:315:13: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:324:13: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:316:13: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:325:13: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:420:13: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:433:13: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:441:13: [error] Type of "tracked" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:455:13: [error] Type of "tracked" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:441:23: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:455:23: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:441:23: [error] Type of "pop" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:455:23: [error] Type of "pop" is partially unknown
   Type of "pop" is "Overload[(key: Unknown, /) -> Unknown, (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@pop, /) -> (Unknown | _T@pop)]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:446:30: [error] Type of "name" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:460:30: [error] Type of "name" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:450:16: [error] Return type is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:464:16: [error] Return type is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:462:20: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:477:20: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:462:20: [error] Type of "get" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:477:20: [error] Type of "get" is partially unknown
   Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:462:20: [error] Return type, "Unknown | None", is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:477:20: [error] Return type, "Unknown | None", is partially unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:471:25: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:487:25: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:471:25: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:487:25: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "__init__"
   Argument type is "dict_values[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:480:27: [error] Type of "p" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:497:27: [error] Type of "p" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:480:32: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:497:32: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:480:60: [error] Type of "is_running" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:497:60: [error] Type of "is_running" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:627:13: [error] Type of "pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:648:13: [error] Type of "pids" is partially unknown
   Type of "pids" is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:627:25: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:648:25: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:627:25: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:648:25: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "__init__"
   Argument type is "dict_keys[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:628:13: [error] Type of "external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:649:13: [error] Type of "external_pids" is partially unknown
   Type of "external_pids" is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:628:34: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:649:34: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:628:34: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:649:34: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "__init__"
   Argument type is "dict_keys[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:630:13: [error] Type of "pid" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:651:13: [error] Type of "pid" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:632:78: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:653:78: [error] Argument type is partially unknown
   Argument corresponds to parameter "obj" in function "len"
   Argument type is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:635:46: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:656:46: [error] Argument type is unknown
   Argument corresponds to parameter "pid" in function "terminate_process"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:639:13: [error] Type of "ext_pid" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:660:13: [error] Type of "ext_pid" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:642:70: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:663:70: [error] Argument type is unknown
   Argument corresponds to parameter "pid"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:647:13: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:668:13: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:679:24: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:702:24: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:679:24: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:702:24: [error] Argument type is partially unknown
   Argument corresponds to parameter "obj" in function "len"
   Argument type is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:689:29: [error] Type of "is_running" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:713:29: [error] Type of "is_running" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:689:29: [error] Argument type is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:713:29: [error] Argument type is unknown
   Argument corresponds to parameter "o" in function "__new__"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:689:47: [error] Type of "p" is unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:713:47: [error] Type of "p" is unknown
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:689:52: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:713:52: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:862:23: [error] Type of "_processes" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:890:23: [error] Type of "_processes" is partially unknown
   Type of "_processes" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:862:49: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:890:49: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:866:13: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:894:13: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:890:23: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:919:23: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:891:21: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:920:21: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:909:13: [error] Type of "info" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:939:13: [error] Type of "info" is partially unknown
   Type of "info" is "Unknown | None"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:909:20: [error] Type of "_external_pids" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:939:20: [error] Type of "_external_pids" is partially unknown
   Type of "_external_pids" is "dict[Unknown, Unknown]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:909:20: [error] Type of "get" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:939:20: [error] Type of "get" is partially unknown
   Type of "get" is "Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]"
 
-d:\Intellicrack\src\intellicrack\core\process_manager.py:910:13: [error] Type of "name" is partially unknown
+d:\Intellicrack\src\intellicrack\core\process_manager.py:940:13: [error] Type of "name" is partially unknown
   Type of "name" is "Unknown | str"
 
 
 9 findings in d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1483:17: [error] Type of "append" is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1787:17: [error] Type of "append" is partially unknown
   Type of "append" is "(object: Unknown, /) -> None"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1484:34: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1788:34: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "join"
   Argument type is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1492:21: [error] Type of "append" is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1796:21: [error] Type of "append" is partially unknown
   Type of "append" is "(object: Unknown, /) -> None"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1494:21: [error] Type of "append" is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1798:21: [error] Type of "append" is partially unknown
   Type of "append" is "(object: Unknown, /) -> None"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1495:47: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1799:47: [error] Argument type is partially unknown
   Argument corresponds to parameter "iterable" in function "join"
   Argument type is "list[Unknown]"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1566:46: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1872:46: [error] Argument type is partially unknown
   Argument corresponds to parameter "slot" in function "connect"
   Argument type is "(_checked: Unknown, k: str = fmt_key) -> None"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1566:53: [error] Type of parameter "_checked" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1872:53: [error] Type of parameter "_checked" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1595:46: [error] Argument type is partially unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1901:46: [error] Argument type is partially unknown
   Argument corresponds to parameter "slot" in function "connect"
   Argument type is "(_checked: Unknown, m: str = mode_key) -> None"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1595:53: [error] Type of parameter "_checked" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:1901:53: [error] Type of parameter "_checked" is unknown
 
 
 3 findings in d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py:52:37: [error] Type of "_cxxfilt_demangle" is unknown
+d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py:57:37: [error] Type of "_cxxfilt_demangle" is unknown
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py:287:9: [error] Method "paintEvent" overrides class "QWidget" in an incompatible manner
+d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py:345:9: [error] Method "paintEvent" overrides class "QWidget" in an incompatible manner
   Parameter 2 name mismatch: base parameter is named "a0", override parameter is named "event"
 
-d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py:450:46: [error] "setStretchLastSection" is not a known attribute of "None"
+d:\Intellicrack\src\intellicrack\ui\panels\hex_tools_panel.py:559:46: [error] "setStretchLastSection" is not a known attribute of "None"
 
 
 1 findings in d:\Intellicrack\src\intellicrack\providers\google.py
 
-d:\Intellicrack\src\intellicrack\providers\google.py:184:21: [error] Argument missing for parameter "supports_tools"
-
-
-1 findings in d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_base.py
-
-d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_base.py:67:12: [warning] Import "xxhash" could not be resolved
+d:\Intellicrack\src\intellicrack\providers\google.py:189:21: [error] Argument missing for parameter "supports_tools"

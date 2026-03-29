@@ -7,6 +7,55 @@ Line 7: Missing error handling (W025)
 Line 7: Unvalidated path traversal (SEC011)
 
 
+2 findings in D:\Intellicrack\.claude\worktrees\agent-a0defda8\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
+2 findings in D:\Intellicrack\.claude\worktrees\agent-a18bc8fe\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
+2 findings in D:\Intellicrack\.claude\worktrees\agent-a48b5b77\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
+2 findings in D:\Intellicrack\.claude\worktrees\agent-a57053be\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
+2 findings in D:\Intellicrack\.claude\worktrees\agent-a7aa5c92\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
+2 findings in D:\Intellicrack\.claude\worktrees\agent-aa29b28a\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
+2 findings in D:\Intellicrack\.claude\worktrees\agent-ad7f5752\scripts\build-cli-launcher.cmd
+
+Line 7: Missing error handling (W025)
+
+Line 7: Unvalidated path traversal (SEC011)
+
+
 1 findings in D:\Intellicrack\Intellicrack.cmd
 
 Line 1: Unix line endings detected (E018)

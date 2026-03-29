@@ -36,7 +36,7 @@ class TestSearchBytes:
         data = b"\x00" * 32
         doc = hexcore.HexDocument.open_bytes(data)
         results: list[tuple[int, int]] = doc.search_bytes(b"\xff\xfe", 100)
-        assert results == []
+        assert not results
 
     def test_max_results_limits_output(self, hexcore: Any) -> None:
         """Verify that search_bytes respects the max_results cap.
@@ -88,7 +88,7 @@ class TestSearchHex:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         results: list[tuple[int, int]] = doc.search_hex("4D 5A", 100)
-        assert len(results) >= 1
+        assert results
         assert results[0][0] == 0
 
     def test_wildcard_byte_matches_pe_header_sequence(self, hexcore: Any, pe_bytes: bytes) -> None:
@@ -106,7 +106,7 @@ class TestSearchHex:
             results: list[tuple[int, int]] = doc.search_hex("4D ?? 90", 100)
         except Exception:
             pytest.skip("wildcard hex search not supported by this build")
-        assert len(results) >= 1
+        assert results
         assert results[0][0] == 0
 
     def test_no_match_returns_empty(self, hexcore: Any) -> None:
@@ -118,7 +118,7 @@ class TestSearchHex:
         data = b"\x00" * 32
         doc = hexcore.HexDocument.open_bytes(data)
         results: list[tuple[int, int]] = doc.search_hex("FF FE FD", 100)
-        assert results == []
+        assert not results
 
     def test_max_results_limits_output(self, hexcore: Any) -> None:
         """Verify that search_hex respects the max_results cap.
@@ -140,7 +140,7 @@ class TestSearchHex:
         """
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         results: list[tuple[int, int]] = doc.search_hex("4d 5a", 100)
-        assert len(results) >= 1
+        assert results
         assert results[0][0] == 0
 
 
@@ -206,7 +206,7 @@ class TestSearchText:
         data = b"\x00" * 32
         doc = hexcore.HexDocument.open_bytes(data)
         results: list[tuple[int, int]] = doc.search_text("NOTHERE", "ascii", True, 100)
-        assert results == []
+        assert not results
 
     def test_max_results_limits_output(self, hexcore: Any) -> None:
         """Verify that search_text respects the max_results cap.
@@ -246,7 +246,7 @@ class TestSearchRegex:
         data = b"\x00" * 32
         doc = hexcore.HexDocument.open_bytes(data)
         results: list[tuple[int, int]] = doc.search_regex("[A-Z]{3}", 100)
-        assert results == []
+        assert not results
 
     def test_digit_pattern_matches_ascii_digits(self, hexcore: Any) -> None:
         """Verify that a digit regex finds an ASCII decimal sequence at the correct offset.
@@ -257,7 +257,7 @@ class TestSearchRegex:
         data = b"\x00" * 10 + b"123" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
         results: list[tuple[int, int]] = doc.search_regex("[0-9]+", 100)
-        assert len(results) >= 1
+        assert results
         assert results[0][0] == 10
 
     def test_max_results_limits_output(self, hexcore: Any) -> None:
@@ -359,7 +359,7 @@ class TestSearchNumeric:
         buf = bytearray(64)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric(0xDEADBEEF, 4, False, False, 1, 100)
-        assert results == []
+        assert not results
 
 
 class TestSearchNumericFloat:
@@ -390,7 +390,7 @@ class TestSearchNumericFloat:
         struct.pack_into("<f", buf, 20, 100.0)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric_float(200.0, 4, False, 0.001, 1, 100)
-        assert results == []
+        assert not results
 
     def test_finds_big_endian_f32_at_correct_offset(self, hexcore: Any) -> None:
         """Verify that search_numeric_float finds a big-endian float at the correct offset.
@@ -435,7 +435,7 @@ class TestSearchNumericRange:
         buf = bytearray(64)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric_range(100, 200, 4, False, False, 1, 100)
-        assert results == []
+        assert not results
 
     def test_signed_range_includes_negative_values(self, hexcore: Any) -> None:
         """Verify that search_numeric_range finds negative signed values within a range.
@@ -506,7 +506,7 @@ class TestReplaceBytes:
         doc = hexcore.HexDocument.open_bytes(data)
         doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
         remaining: list[tuple[int, int]] = doc.search_bytes(b"\xaa\xbb", 100)
-        assert remaining == []
+        assert not remaining
 
     def test_no_match_returns_zero(self, hexcore: Any) -> None:
         """Verify that replace_bytes returns 0 when the pattern is not present.

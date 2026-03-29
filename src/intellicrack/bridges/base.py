@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Base protocol for tool bridges.
 
-"""Base protocol for tool bridges.
-
-This module defines the abstract interface that all tool bridge implementations
-must follow, enabling consistent interaction across Ghidra, x64dbg, Frida,
-Cutter/Rizin, and other reverse engineering tools.
+This module defines the abstract interface that all tool bridge implementations must follow, enabling consistent interaction across Ghidra,
+x64dbg, Frida, Cutter/Rizin, and other reverse engineering tools.
 """
 
 from __future__ import annotations
@@ -61,7 +60,8 @@ _ERR_MUST_OVERRIDE = "must override method"
 
 @dataclass
 class DisassemblyLine:
-    """Single line of disassembly output.
+    """
+    Single line of disassembly output.
 
     Attributes:
         address: Virtual address of the instruction.
@@ -80,7 +80,8 @@ class DisassemblyLine:
 
 @dataclass
 class MemorySearchResult:
-    """Result from a memory pattern search.
+    """
+    Result from a memory pattern search.
 
     Attributes:
         address: Virtual address of the match.
@@ -97,7 +98,8 @@ class MemorySearchResult:
 
 @dataclass
 class StackFrame:
-    """Single stack frame in a call stack.
+    """
+    Single stack frame in a call stack.
 
     Attributes:
         index: Frame index (0 = top/current).
@@ -120,7 +122,8 @@ class StackFrame:
 
 @dataclass
 class WatchpointInfo:
-    """Memory watchpoint information.
+    """
+    Memory watchpoint information.
 
     Attributes:
         id: Watchpoint identifier.
@@ -141,7 +144,8 @@ class WatchpointInfo:
 
 @dataclass
 class BridgeCapabilities:
-    """Describes the capabilities of a tool bridge.
+    """
+    Describes the capabilities of a tool bridge.
 
     Attributes:
         supports_static_analysis: Whether the tool supports static analysis.
@@ -166,7 +170,8 @@ class BridgeCapabilities:
     supported_formats: list[str] = field(default_factory=list[str])
 
     def has_capability(self, capability: str) -> bool:
-        """Check if a specific capability is supported.
+        """
+        Check if a specific capability is supported.
 
         Args:
             capability: Name of the capability to check.
@@ -177,7 +182,8 @@ class BridgeCapabilities:
         return getattr(self, f"supports_{capability}", False)
 
     def supports_arch(self, arch: str) -> bool:
-        """Check if an architecture is supported.
+        """
+        Check if an architecture is supported.
 
         Args:
             arch: Architecture identifier to check.
@@ -188,7 +194,8 @@ class BridgeCapabilities:
         return arch in self.supported_architectures
 
     def supports_format(self, fmt: str) -> bool:
-        """Check if a binary format is supported.
+        """
+        Check if a binary format is supported.
 
         Args:
             fmt: Binary format identifier to check.
@@ -201,7 +208,8 @@ class BridgeCapabilities:
 
 @dataclass
 class BridgeState:
-    """Current state of a tool bridge.
+    """
+    Current state of a tool bridge.
 
     Attributes:
         connected: Whether connected to the tool.
@@ -222,7 +230,8 @@ class BridgeState:
     last_error: str | None = None
 
     def is_ready(self) -> bool:
-        """Check if bridge is connected and tool is running.
+        """
+        Check if bridge is connected and tool is running.
 
         Returns:
             bool: True if both connected and tool_running are True.
@@ -235,10 +244,10 @@ class BridgeState:
 
 
 class ToolBridgeBase(abc.ABC):
-    """Base class for tool bridges.
+    """
+    Base class for tool bridges.
 
-    All bridge implementations must inherit from this class and override
-    the methods defined here. This ensures a consistent interface for
+    All bridge implementations must inherit from this class and override the methods defined here. This ensures a consistent interface for
     the orchestrator to interact with any reverse engineering tool.
     """
 
@@ -250,7 +259,8 @@ class ToolBridgeBase(abc.ABC):
     @property
     @abc.abstractmethod
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """
+        Get the tool's name.
 
         Returns:
             ToolName: The tool's name enum value.
@@ -262,7 +272,8 @@ class ToolBridgeBase(abc.ABC):
 
     @property
     def state(self) -> BridgeState:
-        """Get current bridge state.
+        """
+        Get current bridge state.
 
         Returns:
             BridgeState: Current BridgeState instance.
@@ -271,7 +282,8 @@ class ToolBridgeBase(abc.ABC):
 
     @property
     def capabilities(self) -> BridgeCapabilities:
-        """Get bridge capabilities.
+        """
+        Get bridge capabilities.
 
         Returns:
             BridgeCapabilities: BridgeCapabilities describing what this tool can do.
@@ -281,7 +293,8 @@ class ToolBridgeBase(abc.ABC):
     @property
     @abc.abstractmethod
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """
+        Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: Tool definition with available functions.
@@ -293,7 +306,8 @@ class ToolBridgeBase(abc.ABC):
 
     @abc.abstractmethod
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """Initialize the tool bridge.
+        """
+        Initialize the tool bridge.
 
         Args:
             tool_path: Optional path to tool installation.
@@ -311,7 +325,8 @@ class ToolBridgeBase(abc.ABC):
 
     @abc.abstractmethod
     async def is_available(self) -> bool:
-        """Check if the tool is installed and available.
+        """
+        Check if the tool is installed and available.
 
         Returns:
             bool: True if the tool is ready.
@@ -323,10 +338,10 @@ class ToolBridgeBase(abc.ABC):
 
 
 class StaticAnalysisBridge(ToolBridgeBase):
-    """Base class for static analysis tools (Ghidra, Cutter/Rizin).
+    """
+    Base class for static analysis tools (Ghidra, Cutter/Rizin).
 
-    Provides interface for binary loading, disassembly, decompilation,
-    and cross-reference analysis without executing the target.
+    Provides interface for binary loading, disassembly, decompilation, and cross-reference analysis without executing the target.
     """
 
     def __init__(self) -> None:
@@ -340,7 +355,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def load_binary(self, path: Path) -> BinaryInfo:
-        """Load a binary for analysis.
+        """
+        Load a binary for analysis.
 
         Args:
             path: Path to the binary file.
@@ -355,7 +371,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def analyze(self) -> None:
-        """Run full analysis on loaded binary.
+        """
+        Run full analysis on loaded binary.
 
         Raises:
             RuntimeError: If the subclass does not override this method.
@@ -367,7 +384,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
         self,
         filter_pattern: str | None = None,
     ) -> list[FunctionInfo]:
-        """Get all analyzed functions.
+        """
+        Get all analyzed functions.
 
         Args:
             filter_pattern: Optional regex pattern to filter function names.
@@ -382,7 +400,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def get_function(self, address: int) -> FunctionInfo | None:
-        """Get function at specific address.
+        """
+        Get function at specific address.
 
         Args:
             address: Function address.
@@ -397,7 +416,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def decompile(self, address: int) -> str:
-        """Decompile function at address.
+        """
+        Decompile function at address.
 
         Args:
             address: Function address.
@@ -416,7 +436,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
         address: int,
         count: int = 20,
     ) -> list[DisassemblyLine]:
-        """Disassemble instructions at address.
+        """
+        Disassemble instructions at address.
 
         Args:
             address: Start address.
@@ -432,7 +453,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
-        """Get cross-references to an address.
+        """
+        Get cross-references to an address.
 
         Args:
             address: Target address.
@@ -447,7 +469,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
-        """Get cross-references from an address.
+        """
+        Get cross-references from an address.
 
         Args:
             address: Source address.
@@ -462,7 +485,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def search_strings(self, pattern: str) -> list[StringInfo]:
-        """Search for strings matching pattern.
+        """
+        Search for strings matching pattern.
 
         Args:
             pattern: Regex pattern to match.
@@ -477,7 +501,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def search_bytes(self, pattern: bytes) -> list[int]:
-        """Search for byte pattern.
+        """
+        Search for byte pattern.
 
         Args:
             pattern: Byte sequence to find.
@@ -492,7 +517,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def get_imports(self) -> list[ImportInfo]:
-        """Get all imported functions.
+        """
+        Get all imported functions.
 
         Returns:
             list[ImportInfo]: List of import information.
@@ -504,7 +530,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def get_exports(self) -> list[ExportInfo]:
-        """Get all exported functions.
+        """
+        Get all exported functions.
 
         Returns:
             list[ExportInfo]: List of export information.
@@ -516,7 +543,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def rename_function(self, address: int, new_name: str) -> bool:
-        """Rename a function.
+        """
+        Rename a function.
 
         Args:
             address: Function address.
@@ -537,7 +565,8 @@ class StaticAnalysisBridge(ToolBridgeBase):
         comment: str,
         comment_type: str = "EOL",
     ) -> bool:
-        """Add a comment at an address.
+        """
+        Add a comment at an address.
 
         Args:
             address: Address for comment.
@@ -554,10 +583,10 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
 
 class DynamicAnalysisBridge(ToolBridgeBase):
-    """Base class for dynamic analysis tools (x64dbg, Frida).
+    """
+    Base class for dynamic analysis tools (x64dbg, Frida).
 
-    Provides interface for process attachment, memory manipulation,
-    breakpoints, and runtime instrumentation.
+    Provides interface for process attachment, memory manipulation, breakpoints, and runtime instrumentation.
     """
 
     def __init__(self) -> None:
@@ -572,7 +601,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def attach(self, pid: int) -> None:
-        """Attach to a running process.
+        """
+        Attach to a running process.
 
         Args:
             pid: Process ID to attach to.
@@ -588,7 +618,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
         path: Path,
         args: Sequence[str] | None = None,
     ) -> int:
-        """Spawn a new process.
+        """
+        Spawn a new process.
 
         Args:
             path: Path to executable.
@@ -604,7 +635,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def detach(self) -> None:
-        """Detach from current process.
+        """
+        Detach from current process.
 
         Raises:
             RuntimeError: If the subclass does not override this method.
@@ -613,7 +645,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def read_memory(self, address: int, size: int) -> bytes:
-        """Read process memory.
+        """
+        Read process memory.
 
         Args:
             address: Memory address.
@@ -629,7 +662,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def write_memory(self, address: int, data: bytes) -> int:
-        """Write to process memory.
+        """
+        Write to process memory.
 
         Args:
             address: Memory address.
@@ -645,7 +679,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def get_memory_regions(self) -> list[MemoryRegion]:
-        """Get process memory map.
+        """
+        Get process memory map.
 
         Returns:
             list[MemoryRegion]: List of memory regions.
@@ -657,7 +692,8 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def scan_memory(self, pattern: bytes) -> list[MemorySearchResult]:
-        """Scan process memory for a pattern.
+        """
+        Scan process memory for a pattern.
 
         Args:
             pattern: Byte pattern to search for.
@@ -672,10 +708,10 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
 
 class DebuggerBridge(DynamicAnalysisBridge):
-    """Base class for full debuggers (x64dbg).
+    """
+    Base class for full debuggers (x64dbg).
 
-    Extends DynamicAnalysisBridge with breakpoints, stepping,
-    and register manipulation.
+    Extends DynamicAnalysisBridge with breakpoints, stepping, and register manipulation.
     """
 
     def __init__(self) -> None:
@@ -684,7 +720,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def run(self) -> None:
-        """Continue execution.
+        """
+        Continue execution.
 
         Raises:
             RuntimeError: If the subclass does not override this method.
@@ -693,7 +730,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def pause(self) -> None:
-        """Pause execution.
+        """
+        Pause execution.
 
         Raises:
             RuntimeError: If the subclass does not override this method.
@@ -702,7 +740,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def stop(self) -> None:
-        """Stop debugging (terminate process).
+        """
+        Stop debugging (terminate process).
 
         Raises:
             RuntimeError: If the subclass does not override this method.
@@ -711,7 +750,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def step_into(self) -> int:
-        """Single step into.
+        """
+        Single step into.
 
         Returns:
             int: New instruction pointer.
@@ -723,7 +763,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def step_over(self) -> int:
-        """Single step over.
+        """
+        Single step over.
 
         Returns:
             int: New instruction pointer.
@@ -735,7 +776,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def step_out(self) -> int:
-        """Step out of current function.
+        """
+        Step out of current function.
 
         Returns:
             int: New instruction pointer.
@@ -752,7 +794,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
         bp_type: Literal["software", "hardware", "memory"] = "software",
         condition: str | None = None,
     ) -> int:
-        """Set a breakpoint.
+        """
+        Set a breakpoint.
 
         Args:
             address: Address for breakpoint.
@@ -769,7 +812,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def remove_breakpoint(self, address: int) -> bool:
-        """Remove a breakpoint.
+        """
+        Remove a breakpoint.
 
         Args:
             address: Breakpoint address.
@@ -784,7 +828,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def get_breakpoints(self) -> list[BreakpointInfo]:
-        """Get all breakpoints.
+        """
+        Get all breakpoints.
 
         Returns:
             list[BreakpointInfo]: List of breakpoint information.
@@ -796,7 +841,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def get_registers(self) -> RegisterState:
-        """Get all register values.
+        """
+        Get all register values.
 
         Returns:
             RegisterState: Current register state.
@@ -808,7 +854,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def set_register(self, register: str, value: int) -> bool:
-        """Set a register value.
+        """
+        Set a register value.
 
         Args:
             register: Register name (rax, rbx, etc.).
@@ -824,7 +871,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def get_stack_trace(self) -> list[StackFrame]:
-        """Get current stack trace.
+        """
+        Get current stack trace.
 
         Returns:
             list[StackFrame]: List of stack frames.
@@ -840,7 +888,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
         address: int,
         count: int = 10,
     ) -> list[DisassemblyLine]:
-        """Disassemble at runtime address.
+        """
+        Disassemble at runtime address.
 
         Args:
             address: Start address.
@@ -856,7 +905,8 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def assemble_at(self, address: int, instruction: str) -> bytes:
-        """Assemble instruction at address.
+        """
+        Assemble instruction at address.
 
         Args:
             address: Target address.
@@ -872,10 +922,10 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
 
 class InstrumentationBridge(DynamicAnalysisBridge):
-    """Base class for instrumentation tools (Frida).
+    """
+    Base class for instrumentation tools (Frida).
 
-    Extends DynamicAnalysisBridge with function hooking
-    and script execution capabilities.
+    Extends DynamicAnalysisBridge with function hooking and script execution capabilities.
     """
 
     def __init__(self) -> None:
@@ -884,7 +934,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def enumerate_modules(self) -> list[ModuleInfo]:
-        """List all loaded modules in the process.
+        """
+        List all loaded modules in the process.
 
         Returns:
             list[ModuleInfo]: List of loaded module information.
@@ -896,7 +947,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def enumerate_exports(self, module_name: str) -> list[ExportInfo]:
-        """List exports of a module.
+        """
+        List exports of a module.
 
         Args:
             module_name: Name of the module.
@@ -916,7 +968,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         on_enter: str | None = None,
         on_leave: str | None = None,
     ) -> HookInfo:
-        """Attach a hook to a function by name or address.
+        """
+        Attach a hook to a function by name or address.
 
         Args:
             target: Function name (module!func) or hex address.
@@ -933,7 +986,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def remove_hook(self, hook_id: str) -> bool:
-        """Remove a previously installed hook.
+        """
+        Remove a previously installed hook.
 
         Args:
             hook_id: ID of the hook to remove.
@@ -948,7 +1002,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def get_hooks(self) -> list[HookInfo]:
-        """Get all active hooks.
+        """
+        Get all active hooks.
 
         Returns:
             list[HookInfo]: List of active hook information.
@@ -960,7 +1015,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def execute_script(self, script: str) -> str:
-        """Execute custom script code.
+        """
+        Execute custom script code.
 
         Args:
             script: Script code to execute.
@@ -975,7 +1031,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
-        """Intercept a function and replace its return value.
+        """
+        Intercept a function and replace its return value.
 
         Args:
             target: Function to hook.
@@ -995,7 +1052,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         address: int,
         args: Sequence[int] | None = None,
     ) -> int:
-        """Call a function in the target process.
+        """
+        Call a function in the target process.
 
         Args:
             address: Function address.
@@ -1011,7 +1069,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def enumerate_imports(self, module_name: str) -> list[ImportInfo]:
-        """List imports of a module.
+        """
+        List imports of a module.
 
         Args:
             module_name: Name of the module.
@@ -1026,7 +1085,8 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
     @abc.abstractmethod
     async def enumerate_threads(self) -> list[ThreadInfo]:
-        """List all threads in the attached process.
+        """
+        List all threads in the attached process.
 
         Returns:
             list[ThreadInfo]: List of thread information.
@@ -1038,10 +1098,10 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
 
 class BinaryOperationsBridge(ToolBridgeBase):
-    """Base class for direct binary file operations.
+    """
+    Base class for direct binary file operations.
 
-    Provides interface for reading, modifying, and patching
-    binary files without running a full analysis tool.
+    Provides interface for reading, modifying, and patching binary files without running a full analysis tool.
     """
 
     def __init__(self) -> None:
@@ -1055,7 +1115,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def load_file(self, path: Path) -> BinaryInfo:
-        """Load a binary file.
+        """
+        Load a binary file.
 
         Args:
             path: Path to the binary.
@@ -1070,7 +1131,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def read_bytes(self, offset: int, size: int) -> bytes:
-        """Read bytes from file.
+        """
+        Read bytes from file.
 
         Args:
             offset: File offset.
@@ -1086,7 +1148,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def write_bytes(self, offset: int, data: bytes) -> None:
-        """Write bytes to file.
+        """
+        Write bytes to file.
 
         Args:
             offset: File offset.
@@ -1099,7 +1162,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def apply_patch(self, patch: PatchInfo) -> bool:
-        """Apply a patch to the binary.
+        """
+        Apply a patch to the binary.
 
         Args:
             patch: Patch information.
@@ -1114,7 +1178,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def revert_patch(self, patch: PatchInfo) -> bool:
-        """Revert a previously applied patch.
+        """
+        Revert a previously applied patch.
 
         Args:
             patch: Patch to revert.
@@ -1129,7 +1194,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
     @abc.abstractmethod
     async def save(self, path: Path | None = None) -> Path:
-        """Save the binary to file.
+        """
+        Save the binary to file.
 
         Args:
             path: Optional new path. Uses original if None.
@@ -1149,7 +1215,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
         start_offset: int = 0,
         max_results: int = 100,
     ) -> list[int]:
-        """Search for byte pattern in file.
+        """
+        Search for byte pattern in file.
 
         Args:
             pattern: Byte pattern to find.
@@ -1169,7 +1236,8 @@ class BinaryOperationsBridge(ToolBridgeBase):
         self,
         algorithm: str = "sha256",
     ) -> str:
-        """Calculate file checksum.
+        """
+        Calculate file checksum.
 
         Args:
             algorithm: Hash algorithm (md5, sha256).

@@ -96,7 +96,8 @@ class HexEditorPanel(
     TemplatesMixin,
     AnalysisPanelBase,
 ):
-    """Hex editor panel with integrated side panels.
+    """
+    Hex editor panel with integrated side panels.
 
     Combines the custom HexEditorWidget with data inspector,
     bookmarks, sections, imports, exports, strings, statistics,
@@ -203,7 +204,8 @@ class HexEditorPanel(
         super().__init__(parent)
 
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """Add hex editor controls to the toolbar.
+        """
+        Add hex editor controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
@@ -262,7 +264,8 @@ class HexEditorPanel(
         toolbar.addWidget(self._file_info_label)
 
     def _create_content(self) -> QWidget:
-        """Create the main content with hex widget, side panels, and pattern editor.
+        """
+        Create the main content with hex widget, side panels, and pattern editor.
 
         Returns:
             QWidget: Vertical splitter containing hex editor area and pattern editor.
@@ -470,7 +473,8 @@ class HexEditorPanel(
 
     @staticmethod
     def _make_tree(headers: list[str]) -> QTreeWidget:
-        """Create a QTreeWidget with the given column headers.
+        """
+        Create a QTreeWidget with the given column headers.
 
         Args:
             headers: Column header labels.
@@ -485,7 +489,8 @@ class HexEditorPanel(
         return tree
 
     def load_file(self, file_path: Path | str) -> bool:
-        """Load a binary file into the hex editor.
+        """
+        Load a binary file into the hex editor.
 
         Args:
             file_path: Path to the file to open.
@@ -604,7 +609,8 @@ class HexEditorPanel(
             goto_fn(offset)
 
     def goto_offset(self, offset: int) -> None:
-        """Navigate the hex widget to a specific offset.
+        """
+        Navigate the hex widget to a specific offset.
 
         Args:
             offset: Target byte offset.
@@ -615,7 +621,8 @@ class HexEditorPanel(
                 goto_fn(offset)
 
     def _on_cursor_moved(self, offset: int) -> None:
-        """Handle cursor movement to update side panels.
+        """
+        Handle cursor movement to update side panels.
 
         Args:
             offset: New cursor byte offset.
@@ -633,7 +640,8 @@ class HexEditorPanel(
         self._update_patches()
 
     def _on_edit_mode_changed(self, mode: str) -> None:
-        """Handle edit mode toggle.
+        """
+        Handle edit mode toggle.
 
         Args:
             mode: New mode string ("overwrite" or "insert").
@@ -699,7 +707,8 @@ class HexEditorPanel(
             self._on_data_changed()
 
     def set_state_holder(self, state_holder: HexDocumentState) -> None:
-        """Attach a shared state holder for bridge-GUI synchronization.
+        """
+        Attach a shared state holder for bridge-GUI synchronization.
 
         Args:
             state_holder: The shared HexDocumentState instance.
@@ -744,7 +753,8 @@ class HexEditorPanel(
         state_holder.register_callback(on_state_event, source_id="panel")
 
     def _on_selection_changed(self, start: int, end: int) -> None:
-        """Handle selection range changes from the hex widget.
+        """
+        Handle selection range changes from the hex widget.
 
         Updates the data inspector, hash display, and stored selection
         range for use by sub-panels.
@@ -759,7 +769,8 @@ class HexEditorPanel(
             self._update_data_inspector(start)
 
     def _on_encoding_changed(self, text: str) -> None:
-        """Handle encoding combo box selection changes.
+        """
+        Handle encoding combo box selection changes.
 
         Skips separator entries and forwards the encoding name to the
         hex widget for ASCII column rendering.
@@ -773,7 +784,8 @@ class HexEditorPanel(
             self._hex_widget.set_encoding(text.lower().replace("-", ""))
 
     def has_unsaved_changes(self) -> bool:
-        """Check whether the current document has unsaved modifications.
+        """
+        Check whether the current document has unsaved modifications.
 
         Returns:
             bool: True if unsaved changes exist.
@@ -781,12 +793,11 @@ class HexEditorPanel(
         if self._document is None:
             return False
         is_modified = getattr(self._document, "is_modified", None)
-        if callable(is_modified):
-            return bool(is_modified())
-        return False
+        return bool(is_modified()) if callable(is_modified) else False
 
     def save(self) -> bool:
-        """Save the current document.
+        """
+        Save the current document.
 
         Returns:
             bool: True if the save completed successfully.

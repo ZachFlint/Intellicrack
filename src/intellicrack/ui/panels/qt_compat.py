@@ -2,8 +2,8 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
-"""Qt method compatibility layer for PyQt6 SIP-generated bindings.
+"""
+Qt method compatibility layer for PyQt6 SIP-generated bindings.
 
 Provides snake_case wrapper functions that delegate to PyQt6 camelCase
 methods via dynamic attribute dispatch. These wrappers exist because the
@@ -52,7 +52,8 @@ _GET_DATA = "data"
 
 
 def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
-    """Resolve a method on a Qt object, raising a clear error if absent.
+    """
+    Resolve a method on a Qt object, raising a clear error if absent.
 
     Args:
         obj: The Qt widget or item instance.
@@ -75,7 +76,8 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
 
 
 def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None:
-    """Toggle sorting on a QTableWidget or QTreeWidget.
+    """
+    Toggle sorting on a QTableWidget or QTreeWidget.
 
     Args:
         table: The table or tree widget.
@@ -85,7 +87,8 @@ def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None
 
 
 def set_selection_mode(widget: QTableWidget | QTreeWidget, mode: QAbstractItemView.SelectionMode) -> None:
-    """Set the selection mode on a QTableWidget or QTreeWidget.
+    """
+    Set the selection mode on a QTableWidget or QTreeWidget.
 
     Args:
         widget: The table or tree widget.
@@ -95,7 +98,8 @@ def set_selection_mode(widget: QTableWidget | QTreeWidget, mode: QAbstractItemVi
 
 
 def connect_cell_changed(table: QTableWidget, slot: Callable[..., object]) -> None:
-    """Connect a slot to QTableWidget.cellChanged signal.
+    """
+    Connect a slot to QTableWidget.cellChanged signal.
 
     Args:
         table: The table widget.
@@ -109,7 +113,8 @@ def connect_cell_changed(table: QTableWidget, slot: Callable[..., object]) -> No
 
 
 def set_header_labels(tree: QTreeWidget, labels: list[str]) -> None:
-    """Set column header labels on a QTreeWidget by dispatching to its native method.
+    """
+    Set column header labels on a QTreeWidget by dispatching to its native method.
 
     Args:
         tree: The tree widget.
@@ -119,7 +124,8 @@ def set_header_labels(tree: QTreeWidget, labels: list[str]) -> None:
 
 
 def set_max_block_count(editor: QPlainTextEdit, maximum: int) -> None:
-    """Set maximum block count on a QPlainTextEdit by dispatching to its native method.
+    """
+    Set maximum block count on a QPlainTextEdit by dispatching to its native method.
 
     Args:
         editor: The plain text editor widget.
@@ -129,7 +135,8 @@ def set_max_block_count(editor: QPlainTextEdit, maximum: int) -> None:
 
 
 def edit_table_item(table: QTableWidget, item: QTableWidgetItem | None) -> None:
-    """Begin editing a cell in a QTableWidget by dispatching to its native method.
+    """
+    Begin editing a cell in a QTableWidget by dispatching to its native method.
 
     Args:
         table: The table widget.
@@ -139,7 +146,8 @@ def edit_table_item(table: QTableWidget, item: QTableWidgetItem | None) -> None:
 
 
 def get_current_tree_item(tree: QTreeWidget) -> QTreeWidgetItem | None:
-    """Return the currently selected QTreeWidgetItem, or None if nothing is selected.
+    """
+    Return the currently selected QTreeWidgetItem, or None if nothing is selected.
 
     Args:
         tree: The tree widget.
@@ -156,7 +164,8 @@ def tree_item_set_data(
     role: Qt.ItemDataRole,
     value: object,
 ) -> None:
-    """Store application data on a QTreeWidgetItem for the specified column and role.
+    """
+    Store application data on a QTreeWidgetItem for the specified column and role.
 
     Args:
         item: The tree widget item.
@@ -172,7 +181,8 @@ def tree_item_data(
     column: int,
     role: Qt.ItemDataRole,
 ) -> object:
-    """Retrieve application data from a QTreeWidgetItem for the specified column and role.
+    """
+    Retrieve application data from a QTreeWidgetItem for the specified column and role.
 
     Args:
         item: The tree widget item.
@@ -186,7 +196,8 @@ def tree_item_data(
 
 
 def wheel_angle_delta_y(event: QWheelEvent) -> int:
-    """Get the vertical scroll angle delta from a wheel event.
+    """
+    Get the vertical scroll angle delta from a wheel event.
 
     Args:
         event: The wheel event.
@@ -199,7 +210,8 @@ def wheel_angle_delta_y(event: QWheelEvent) -> int:
 
 
 def key_event_key(event: QKeyEvent) -> int:
-    """Get the key code from a key event.
+    """
+    Get the key code from a key event.
 
     Args:
         event: The key event.
@@ -216,7 +228,8 @@ _KEY_ENUM = "Key"
 
 
 def qt_key_page_up() -> int:
-    """Return Qt.Key.Key_PageUp constant value.
+    """
+    Return Qt.Key.Key_PageUp constant value.
 
     Returns:
         int: Integer value of Qt.Key.Key_PageUp.
@@ -227,7 +240,8 @@ def qt_key_page_up() -> int:
 
 
 def qt_key_page_down() -> int:
-    """Return Qt.Key.Key_PageDown constant value.
+    """
+    Return Qt.Key.Key_PageDown constant value.
 
     Returns:
         int: Integer value of Qt.Key.Key_PageDown.
@@ -238,7 +252,8 @@ def qt_key_page_down() -> int:
 
 
 def tree_add_child(parent: QTreeWidgetItem, child: QTreeWidgetItem) -> None:
-    """Add a child item to a QTreeWidgetItem.
+    """
+    Add a child item to a QTreeWidgetItem.
 
     Args:
         parent: The parent tree item.

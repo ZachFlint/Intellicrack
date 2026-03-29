@@ -14,6 +14,7 @@ import csv
 import io
 import json
 import re
+import sqlite3
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -1640,9 +1641,87 @@ def _build_sarif_output(
     }
 
 
+def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process vermin Python version compatibility checker text output.
+
+    Vermin ``-vvv`` output format::
+
+        !2, 3.11     path/file.py
+          L13 C5: '__future__' module requires 2.1, 3.0
+          L19 C5: 'datetime.UTC' member requires !2, 3.11
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    header_pattern = re.compile(r"^[~!]?\d.*\s+(\S+\.py)$")
+    finding_pattern = re.compile(r"^\s+L(\d+)\s+C(\d+):\s+(.+)$")
+    current_file = ""
+
+    for line in text_output.strip().split("\n"):
+        if not line.strip():
+            continue
+        header_match = header_pattern.match(line)
+        if header_match:
+            current_file = header_match.group(1)
+            continue
+        finding_match = finding_pattern.match(line)
+        if finding_match and current_file:
+            line_num = int(finding_match.group(1))
+            col_num = int(finding_match.group(2))
+            message = finding_match.group(3).strip()
+            grouped[current_file].append({
+                "line": line_num,
+                "column": col_num,
+                "code": "VERMIN",
+                "message": message,
+                "raw": f"{current_file}:{line_num}:{col_num}: {message}",
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_docformatter_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process docformatter ``--check --diff`` text output.
+
+    Docformatter diff output format::
+
+        path/file.py
+        --- before/path/file.py
+        +++ after/path/file.py
+        @@ -2,12 +2,11 @@
+
+    Each file with diffs counts as one finding.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    diff_header_pattern = re.compile(r"^---\s+.+?/(.+\.py)$")
+    hunk_pattern = re.compile(r"^@@\s+-(\d+)")
+    current_file = ""
+    files_seen: set[str] = set()
+
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        diff_match = diff_header_pattern.match(stripped)
+        if diff_match:
+            current_file = diff_match.group(1)
+            continue
+        hunk_match = hunk_pattern.match(stripped)
+        if hunk_match and current_file and current_file not in files_seen:
+            files_seen.add(current_file)
+            line_num = int(hunk_match.group(1))
+            grouped[current_file].append({
+                "line": line_num,
+                "column": None,
+                "code": "DOCFMT",
+                "message": "Docstring formatting needs correction",
+                "raw": f"{current_file}:{line_num}: Docstring formatting needs correction",
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def write_outputs(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int) -> None:
     """Write findings to TXT, JSON, and XML files, sorted by file (descending by count)."""
-    for subdir in ("txt", "json", "xml", "csv", "sarif"):
+    for subdir in ("txt", "json", "xml", "csv", "sarif", "sql"):
         Path(f"reports/{subdir}").mkdir(parents=True, exist_ok=True)
 
     sorted_files = sorted(grouped.keys(), key=lambda x: len(grouped[x]), reverse=True)
@@ -1698,7 +1777,107 @@ def write_outputs(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int)
         json.dumps(sarif_obj, indent=2), encoding="utf-8",
     )
 
+    write_sql_output(tool, grouped, cnt, ts)
+
     print(f"[{tool.upper()}] {cnt} findings")
+
+
+def write_sql_output(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int, ts: str) -> None:
+    """Write findings to a SQLite database file.
+
+    Args:
+        tool: Name of the lint tool.
+        grouped: Findings grouped by file path.
+        cnt: Total number of findings.
+        ts: ISO 8601 timestamp string.
+    """
+    sql_dir = Path("reports/sql")
+    sql_dir.mkdir(parents=True, exist_ok=True)
+    db_path = sql_dir / f"{tool}_findings.db"
+
+    conn = sqlite3.connect(str(db_path))
+    cur = conn.cursor()
+
+    cur.execute("DROP TABLE IF EXISTS findings")
+    cur.execute("DROP TABLE IF EXISTS summary")
+
+    cur.execute("""
+        CREATE TABLE findings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file TEXT,
+            line INTEGER,
+            column_ INTEGER,
+            severity TEXT,
+            code TEXT,
+            rule TEXT,
+            message TEXT,
+            raw TEXT,
+            confidence TEXT,
+            complexity TEXT,
+            rank TEXT,
+            name TEXT,
+            entity_type TEXT,
+            category TEXT,
+            function TEXT,
+            variable TEXT,
+            crate TEXT,
+            vulnerability TEXT,
+            misspelling TEXT,
+            correction TEXT
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE summary (
+            tool TEXT,
+            generated TEXT,
+            total_findings INTEGER,
+            total_files INTEGER
+        )
+    """)
+
+    for fp, findings in grouped.items():
+        for f in findings:
+            cur.execute(
+                """INSERT INTO findings (
+                    file, line, column_, severity, code, rule, message, raw,
+                    confidence, complexity, rank, name, entity_type, category,
+                    function, variable, crate, vulnerability, misspelling, correction
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    fp,
+                    f.get("line"),
+                    f.get("column"),
+                    f.get("severity", ""),
+                    f.get("code", f.get("rule", "")),
+                    f.get("rule", f.get("code", "")),
+                    f.get("message", ""),
+                    f.get("raw", ""),
+                    f.get("confidence", ""),
+                    f.get("complexity", ""),
+                    f.get("rank", ""),
+                    f.get("name", ""),
+                    f.get("entity_type", ""),
+                    f.get("category", ""),
+                    f.get("function", ""),
+                    f.get("variable", ""),
+                    f.get("crate", ""),
+                    f.get("vulnerability", ""),
+                    f.get("misspelling", ""),
+                    f.get("correction", ""),
+                ),
+            )
+
+    cur.execute(
+        "INSERT INTO summary (tool, generated, total_findings, total_files) VALUES (?, ?, ?, ?)",
+        (tool, ts, cnt, len(grouped)),
+    )
+
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_file ON findings (file)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_code ON findings (code)")
+
+    conn.commit()
+    conn.close()
 
 
 def load_json_file(input_file: str) -> dict[str, Any] | list[Any]:
@@ -1805,6 +1984,8 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "mixed_line_ending": process_mixed_line_ending_text,
     "file-encoding": process_file_encoding_text,
     "file_encoding": process_file_encoding_text,
+    "vermin": process_vermin_text,
+    "docformatter": process_docformatter_text,
 }
 
 
@@ -2251,6 +2432,64 @@ def generate_report(input_dir: str, output_path: str, title: str) -> None:
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(html_content, encoding="utf-8")
+
+    sql_dir = Path("reports/sql")
+    if sql_dir.exists():
+        consolidated_path = sql_dir / "all_findings.db"
+        conn = sqlite3.connect(str(consolidated_path))
+        cur = conn.cursor()
+        cur.execute("DROP TABLE IF EXISTS findings")
+        cur.execute("DROP TABLE IF EXISTS summary")
+        cur.execute("""
+            CREATE TABLE findings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tool TEXT,
+                file TEXT,
+                line INTEGER,
+                column_ INTEGER,
+                severity TEXT,
+                code TEXT,
+                rule TEXT,
+                message TEXT
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE summary (
+                tool TEXT,
+                generated TEXT,
+                total_findings INTEGER,
+                total_files INTEGER
+            )
+        """)
+        for db_file in sql_dir.glob("*_findings.db"):
+            if db_file.name == "all_findings.db":
+                continue
+            try:
+                src_conn = sqlite3.connect(str(db_file))
+                src_cur = src_conn.cursor()
+                src_cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='findings'")
+                if not src_cur.fetchone():
+                    src_conn.close()
+                    continue
+                src_cur.execute("SELECT file, line, column_, severity, code, rule, message FROM findings")
+                tool_name = db_file.stem.replace("_findings", "")
+                for row in src_cur.fetchall():
+                    cur.execute(
+                        "INSERT INTO findings (tool, file, line, column_, severity, code, rule, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (tool_name, *row),
+                    )
+                src_cur.execute("SELECT * FROM summary")
+                for srow in src_cur.fetchall():
+                    cur.execute("INSERT INTO summary (tool, generated, total_findings, total_files) VALUES (?, ?, ?, ?)", srow)
+                src_conn.close()
+            except sqlite3.Error:
+                continue
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_tool ON findings (tool)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_file ON findings (file)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_code ON findings (code)")
+        conn.commit()
+        conn.close()
+
     total = len(dashboard_data["findings"])
     tools_count = len(dashboard_data["tools"])
     print(f"[REPORT] Dashboard generated: {output_path}")

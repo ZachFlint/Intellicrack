@@ -185,7 +185,7 @@ class TestDataModifiedEvent:
         _run(bridge.write_bytes(8, "90 91"))
 
         modified = [e for e in events if e[0] == HexDocumentEvent.DATA_MODIFIED]
-        assert len(modified) >= 1
+        assert modified
         assert modified[0][1]["offset"] == 8
 
 
@@ -395,7 +395,7 @@ class TestCallbackSourceFiltering:
 
         _run(bridge.set_display_mode("hex8"))
 
-        assert len(events_filtered) == 0
+        assert not events_filtered
 
     def test_non_bridge_source_callback_receives_bridge_events(self, bridge: Any) -> None:
         """A callback registered with source_id='gui' receives bridge-sourced events.

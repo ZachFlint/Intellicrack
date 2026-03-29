@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Syntax highlighting for code display.
+"""
+Syntax highlighting for code display.
 
-This module provides syntax highlighters for C/C++ decompiled code,
-x86/x64 assembly disassembly, and HexPat binary pattern definitions.
+This module provides syntax highlighters for C/C++ decompiled code, x86/x64 assembly disassembly, and HexPat binary pattern definitions.
 """
 
 from __future__ import annotations
@@ -34,7 +34,8 @@ _DELIM_STATE_MAP = (_BLOCK_STATE_DOUBLE_QUOTE, _BLOCK_STATE_SINGLE_QUOTE)
 
 
 class HighlightRule:
-    """A syntax highlighting rule.
+    """
+    A syntax highlighting rule.
 
     Args:
         pattern: Regular expression pattern.
@@ -49,7 +50,8 @@ class HighlightRule:
 
 
 class CSyntaxHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for C/C++ code.
+    """
+    Syntax highlighter for C/C++ code.
 
     Highlights keywords, types, strings, numbers, comments,
     and function calls in decompiled C code.
@@ -165,7 +167,8 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
-        """Create a text format with specified style.
+        """
+        Create a text format with specified style.
 
         Args:
             color: Hex color string.
@@ -219,7 +222,8 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
 
     @override
     def highlightBlock(self, text: str | None) -> None:
-        """Apply highlighting to a block of text.
+        """
+        Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
@@ -263,7 +267,8 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class AssemblySyntaxHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for x86/x64 assembly.
+    """
+    Syntax highlighter for x86/x64 assembly.
 
     Highlights instructions, registers, addresses, and comments
     in disassembly output.
@@ -513,7 +518,8 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
-        """Create a text format with specified style.
+        """
+        Create a text format with specified style.
 
         Args:
             color: Hex color string.
@@ -567,7 +573,8 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
 
     @override
     def highlightBlock(self, text: str | None) -> None:
-        """Apply highlighting to a block of text.
+        """
+        Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
@@ -586,7 +593,8 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
 
 
 class PythonSyntaxHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for Python code.
+    """
+    Syntax highlighter for Python code.
 
     Highlights Python keywords, built-ins, strings, numbers,
     and comments in Python scripts.
@@ -717,7 +725,8 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
-        """Create a text format with specified style.
+        """
+        Create a text format with specified style.
 
         Args:
             color: Hex color string.
@@ -774,7 +783,8 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 
     @override
     def highlightBlock(self, text: str | None) -> None:
-        """Apply highlighting to a block of text.
+        """
+        Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
@@ -794,7 +804,8 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         self._highlight_triple_quotes(text)
 
     def _highlight_triple_quotes(self, text: str) -> None:
-        """Handle multi-line triple-quoted string highlighting.
+        """
+        Handle multi-line triple-quoted string highlighting.
 
         Uses QSyntaxHighlighter block state to track whether we are
         inside a triple-quoted string across lines.
@@ -860,7 +871,8 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for JavaScript code.
+    """
+    Syntax highlighter for JavaScript code.
 
     Highlights JavaScript/Frida script keywords, functions,
     strings, numbers, and comments.
@@ -957,7 +969,8 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
-        """Create a text format with specified style.
+        """
+        Create a text format with specified style.
 
         Args:
             color: Hex color string.
@@ -1005,7 +1018,8 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
 
     @override
     def highlightBlock(self, text: str | None) -> None:
-        """Apply highlighting to a block of text.
+        """
+        Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
@@ -1049,7 +1063,8 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class HexPatSyntaxHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for the HexPat pattern definition language.
+    """
+    Syntax highlighter for the HexPat pattern definition language.
 
     Highlights keywords (structural, control flow, namespace), primitive types
     (including 128-bit and char16/str), endianness prefixes, annotations,
@@ -1132,7 +1147,8 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
-        """Create a text format with specified style.
+        """
+        Create a text format with specified style.
 
         Args:
             color: Hex color string.
@@ -1197,7 +1213,8 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
 
     @override
     def highlightBlock(self, text: str | None) -> None:
-        """Apply highlighting to a block of text.
+        """
+        Apply highlighting to a block of text.
 
         Args:
             text: The text block to highlight.
@@ -1244,7 +1261,8 @@ def get_highlighter_for_language(
     language: str,
     parent: QTextDocument | None = None,
 ) -> QSyntaxHighlighter | None:
-    """Get the appropriate syntax highlighter for a language.
+    """
+    Get the appropriate syntax highlighter for a language.
 
     Args:
         language: Language name (c, cpp, asm, python, javascript, frida, hexpat, pattern, hexpattern).

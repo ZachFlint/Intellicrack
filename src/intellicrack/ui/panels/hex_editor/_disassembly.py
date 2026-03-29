@@ -49,7 +49,8 @@ class DisassemblyMixin:
     def goto_offset(self, offset: int) -> None: ...
 
     def _create_disassembly_tab(self) -> QWidget:
-        """Create the Disassembly side panel tab widget.
+        """
+        Create the Disassembly side panel tab widget.
 
         Returns:
             QWidget: Container widget with disassembly toolbar and table.
@@ -208,7 +209,8 @@ class DisassemblyMixin:
         logger.debug("disasm_complete", instruction_count=len(instructions))
 
     def _on_cursor_moved_disasm(self, offset: int) -> None:
-        """Auto-disassemble when Follow Cursor is active.
+        """
+        Auto-disassemble when Follow Cursor is active.
 
         Args:
             offset: New cursor byte offset.
@@ -218,7 +220,8 @@ class DisassemblyMixin:
             self._on_disassemble()
 
     def _on_disasm_row_double_clicked(self, row: int, column: int) -> None:
-        """Navigate the hex view to the instruction address on double-click.
+        """
+        Navigate the hex view to the instruction address on double-click.
 
         Args:
             row: The double-clicked row index.

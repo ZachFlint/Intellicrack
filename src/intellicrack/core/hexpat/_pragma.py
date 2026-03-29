@@ -11,7 +11,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class PragmaInfo:
-    """Collected #pragma directives from a .hexpat source file.
+    """
+    Collected #pragma directives from a .hexpat source file.
 
     Attributes:
         endian: Default byte order — ``"little"``, ``"big"``, or None.

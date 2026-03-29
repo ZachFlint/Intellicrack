@@ -2,8 +2,8 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
-"""Bridge analysis panel for displaying aggregated analysis results.
+"""
+Bridge analysis panel for displaying aggregated analysis results.
 
 Provides a tabbed UI for displaying real bridge data: strings, imports,
 exports, functions, sections, and analysis notes.
@@ -44,7 +44,8 @@ _HEADER_SPACING: Final[int] = 4
 
 
 class BridgeAnalysisPanel(QWidget):
-    """Panel for displaying aggregated bridge analysis results.
+    """
+    Panel for displaying aggregated bridge analysis results.
 
     Shows data from connected bridges in tabbed tables: strings, imports,
     exports, functions, sections, and notes.
@@ -133,7 +134,8 @@ class BridgeAnalysisPanel(QWidget):
         self._sections_table.cellDoubleClicked.connect(self._on_sections_cell_clicked)
 
     def _create_table(self, headers: list[str]) -> QTableWidget:
-        """Create a styled table widget with given column headers.
+        """
+        Create a styled table widget with given column headers.
 
         Args:
             headers: Column header labels.
@@ -160,7 +162,8 @@ class BridgeAnalysisPanel(QWidget):
         return table
 
     def _on_strings_cell_clicked(self, row: int, _col: int) -> None:
-        """Handle double-click on a strings table cell.
+        """
+        Handle double-click on a strings table cell.
 
         Args:
             row: Row index.
@@ -169,7 +172,8 @@ class BridgeAnalysisPanel(QWidget):
         self._on_address_cell(self._strings_table, row, 0)
 
     def _on_imports_cell_clicked(self, row: int, _col: int) -> None:
-        """Handle double-click on an imports table cell.
+        """
+        Handle double-click on an imports table cell.
 
         Args:
             row: Row index.
@@ -178,7 +182,8 @@ class BridgeAnalysisPanel(QWidget):
         self._on_address_cell(self._imports_table, row, 3)
 
     def _on_exports_cell_clicked(self, row: int, _col: int) -> None:
-        """Handle double-click on an exports table cell.
+        """
+        Handle double-click on an exports table cell.
 
         Args:
             row: Row index.
@@ -187,7 +192,8 @@ class BridgeAnalysisPanel(QWidget):
         self._on_address_cell(self._exports_table, row, 2)
 
     def _on_functions_cell_clicked(self, row: int, _col: int) -> None:
-        """Handle double-click on a functions table cell.
+        """
+        Handle double-click on a functions table cell.
 
         Args:
             row: Row index.
@@ -196,7 +202,8 @@ class BridgeAnalysisPanel(QWidget):
         self._on_address_cell(self._functions_table, row, 0)
 
     def _on_sections_cell_clicked(self, row: int, _col: int) -> None:
-        """Handle double-click on a sections table cell.
+        """
+        Handle double-click on a sections table cell.
 
         Args:
             row: Row index.
@@ -205,7 +212,8 @@ class BridgeAnalysisPanel(QWidget):
         self._on_address_cell(self._sections_table, row, 1)
 
     def _on_address_cell(self, table: QTableWidget, row: int, col: int) -> None:
-        """Handle double-click on an address cell.
+        """
+        Handle double-click on an address cell.
 
         Args:
             table: The table widget containing the cell.
@@ -223,7 +231,8 @@ class BridgeAnalysisPanel(QWidget):
                 _logger.debug("invalid_hex_address", text=text)
 
     def set_analysis(self, analysis: BridgeAnalysisSummary) -> None:
-        """Populate the panel with bridge analysis data.
+        """
+        Populate the panel with bridge analysis data.
 
         Args:
             analysis: The aggregated analysis summary to display.
@@ -257,7 +266,8 @@ class BridgeAnalysisPanel(QWidget):
         )
 
     def _populate_strings(self, analysis: BridgeAnalysisSummary) -> None:
-        """Fill the strings table.
+        """
+        Fill the strings table.
 
         Args:
             analysis: The analysis summary containing string data.
@@ -270,7 +280,8 @@ class BridgeAnalysisPanel(QWidget):
             self._strings_table.setItem(i, 3, QTableWidgetItem(s.section))
 
     def _populate_imports(self, analysis: BridgeAnalysisSummary) -> None:
-        """Fill the imports table.
+        """
+        Fill the imports table.
 
         Args:
             analysis: The analysis summary containing import data.
@@ -284,7 +295,8 @@ class BridgeAnalysisPanel(QWidget):
             self._set_addr_item(self._imports_table, i, 3, imp.address)
 
     def _populate_exports(self, analysis: BridgeAnalysisSummary) -> None:
-        """Fill the exports table.
+        """
+        Fill the exports table.
 
         Args:
             analysis: The analysis summary containing export data.
@@ -296,7 +308,8 @@ class BridgeAnalysisPanel(QWidget):
             self._set_addr_item(self._exports_table, i, 2, exp.address)
 
     def _populate_functions(self, analysis: BridgeAnalysisSummary) -> None:
-        """Fill the functions table.
+        """
+        Fill the functions table.
 
         Args:
             analysis: The analysis summary containing function data.
@@ -310,7 +323,8 @@ class BridgeAnalysisPanel(QWidget):
             self._functions_table.setItem(i, 4, QTableWidgetItem(fn.return_type))
 
     def _populate_sections(self, analysis: BridgeAnalysisSummary) -> None:
-        """Fill the sections table.
+        """
+        Fill the sections table.
 
         Args:
             analysis: The analysis summary containing section data.
@@ -325,7 +339,8 @@ class BridgeAnalysisPanel(QWidget):
             self._sections_table.setItem(i, 5, QTableWidgetItem(f"{sec.entropy:.2f}"))
 
     def _set_addr_item(self, table: QTableWidget, row: int, col: int, address: int) -> None:
-        """Set a table cell with a formatted hex address.
+        """
+        Set a table cell with a formatted hex address.
 
         Args:
             table: Target table widget.
@@ -339,7 +354,8 @@ class BridgeAnalysisPanel(QWidget):
         table.setItem(row, col, item)
 
     def get_current_analysis(self) -> BridgeAnalysisSummary | None:
-        """Get the currently displayed analysis summary.
+        """
+        Get the currently displayed analysis summary.
 
         Returns:
             BridgeAnalysisSummary | None: The current BridgeAnalysisSummary or None if not set.

@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Core module for Intellicrack.
 
-"""Core module for Intellicrack.
-
-This module contains the fundamental types, configuration, session management,
-and the main orchestrator that coordinates AI-driven tool operations.
+This module contains the fundamental types, configuration, session management, and the main orchestrator that coordinates AI-driven tool
+operations.
 """
 
 from __future__ import annotations

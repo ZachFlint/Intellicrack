@@ -40,7 +40,7 @@ class TestListProcessMemoryRegions:
         """
         pid = os.getpid()
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
-        assert len(regions) > 0
+        assert regions
 
     def test_list_regions_each_entry_has_four_elements(self, hexcore: Any) -> None:
         """Verify that every region tuple has exactly 4 integer elements.
@@ -97,7 +97,7 @@ class TestFromProcessMemory:
         """
         pid = os.getpid()
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
-        assert len(regions) > 0
+        assert regions
 
         readable_region: tuple[int, int, int, int] | None = None
         for region in regions:

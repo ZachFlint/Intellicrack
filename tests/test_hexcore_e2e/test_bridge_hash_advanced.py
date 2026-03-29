@@ -110,7 +110,7 @@ class TestCalculateHashRange:
         _run(bridge.open_file(str(pe_binary)))
         result: str = _run(bridge.calculate_hash_range(0, _FIRST_16_BYTES, "sha256"))
         assert isinstance(result, str)
-        assert len(result) > 0
+        assert result != ""
         bytes.fromhex(result)
 
     def test_sha256_result_matches_hashlib_on_same_slice(self, bridge: Any, tmp_path: Path) -> None:
@@ -299,7 +299,7 @@ class TestCalculateHashCustomCrc:
         _run(bridge.open_file(str(pe_binary)))
         result: str = _run(bridge.calculate_hash_custom_crc(0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, False, False, 0x0000))
         assert isinstance(result, str)
-        assert len(result) >= 1
+        assert result
         bytes.fromhex(result)
 
     def test_crc8_smbus_matches_reference_implementation(self, bridge: Any, tmp_path: Path) -> None:
@@ -327,7 +327,7 @@ class TestCalculateHashCustomCrc:
         self._open_payload(bridge, tmp_path, payload, "crc8_fmt.bin")
         result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x07, 0x00, 8, False, False, 0x00))
         assert isinstance(result, str)
-        assert len(result) > 0
+        assert result != ""
         bytes.fromhex(result)
 
     def test_crc32_result_is_8_hex_chars(self, bridge: Any, tmp_path: Path) -> None:

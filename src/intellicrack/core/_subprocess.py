@@ -2,16 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Subprocess utilities wrapper.
 
-"""Subprocess utilities wrapper.
+Centralizes subprocess access to a single auditable location. All modules that need subprocess functionality should import from this module
+rather than importing directly from the subprocess standard library module.
 
-Centralizes subprocess access to a single auditable location. All modules
-that need subprocess functionality should import from this module rather
-than importing directly from the subprocess standard library module.
-
-Uses a runtime-constructed module name to avoid triggering the B404 bandit
-rule at static analysis time. Type information is provided by the companion
-.pyi type definition file.
+Uses a runtime-constructed module name to avoid triggering the B404 bandit rule at static analysis time. Type information is provided by the
+companion .pyi type definition file.
 """
 
 from __future__ import annotations

@@ -31,7 +31,7 @@ class TestGetPatches:
         """
         patches: list[tuple[int, bytes]] = sample_doc_from_bytes.get_patches()
         assert isinstance(patches, list)
-        assert len(patches) == 0
+        assert not patches
 
     def test_write_bytes_produces_patch_entry(self, sample_doc_from_bytes: Any) -> None:
         """Verify that write_bytes() causes get_patches() to return a non-empty list.
@@ -41,7 +41,7 @@ class TestGetPatches:
         """
         sample_doc_from_bytes.write_bytes(10, b"\xaa\xbb\xcc\xdd")
         patches: list[tuple[int, bytes]] = sample_doc_from_bytes.get_patches()
-        assert len(patches) > 0
+        assert patches
 
     def test_patch_entry_has_correct_offset_and_data(self, sample_doc_from_bytes: Any) -> None:
         """Verify that the patch entry records the correct offset and written bytes.

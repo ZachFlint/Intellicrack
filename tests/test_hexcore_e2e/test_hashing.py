@@ -332,7 +332,7 @@ class TestCustomCRC:
         doc_length: int = sample_doc_from_bytes.length()
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, True, True, 0xFFFFFFFF)
         assert isinstance(result, str)
-        assert len(result) > 0
+        assert result != ""
         assert all(c in "0123456789abcdefABCDEF" for c in result)
 
     def test_crc32_single_byte_range(self, sample_doc_from_bytes: Any, sample_bytes: bytes) -> None:

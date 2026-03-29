@@ -1789,9 +1789,7 @@ class ToolOutputPanel(QFrame):
                 if no tab is active.
         """
         index = self._tab_widget.currentIndex()
-        if index < 0:
-            return None
-        return self.detach_tab(index)
+        return None if index < 0 else self.detach_tab(index)
 
     def close_detached_windows(self) -> None:
         """Close all detached panel windows and re-dock their panels."""
@@ -1817,10 +1815,10 @@ class ToolOutputPanel(QFrame):
         Returns:
             int: Tab index, or -1 if not found.
         """
-        for i in range(self._tab_widget.count()):
-            if self._tab_widget.tabText(i) == title:
-                return i
-        return -1
+        return next(
+            (i for i in range(self._tab_widget.count()) if self._tab_widget.tabText(i) == title),
+            -1,
+        )
 
     def get_bridge_for_tool(self, tool_id: str) -> object | None:
         """Get the bridge instance for a specific tool.
@@ -2172,9 +2170,7 @@ class ToolOutputPanel(QFrame):
         if self._hex_editor_panel is None:
             return False
         has_changes_fn = getattr(self._hex_editor_panel, "has_unsaved_changes", None)
-        if callable(has_changes_fn):
-            return bool(has_changes_fn())
-        return False
+        return bool(has_changes_fn()) if callable(has_changes_fn) else False
 
     def save_hex_editor(self) -> bool:
         """Delegate save to the hex editor panel.
@@ -2185,6 +2181,4 @@ class ToolOutputPanel(QFrame):
         if self._hex_editor_panel is None:
             return False
         save_fn = getattr(self._hex_editor_panel, "save", None)
-        if callable(save_fn):
-            return bool(save_fn())
-        return False
+        return bool(save_fn()) if callable(save_fn) else False

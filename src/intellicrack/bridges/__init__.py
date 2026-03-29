@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Tool bridges for external reverse engineering tools.
 
-"""Tool bridges for external reverse engineering tools.
-
-This package provides bridge interfaces for controlling external tools
-including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct binary/process manipulation.
+This package provides bridge interfaces for controlling external tools including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct
+binary/process manipulation.
 """
 
 from __future__ import annotations

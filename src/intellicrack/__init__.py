@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Intellicrack: AI-powered reverse engineering orchestration platform.
 
 This package provides a unified interface for controlling reverse engineering tools
@@ -54,7 +53,8 @@ if TYPE_CHECKING:
 
 
 def __getattr__(name: str) -> object:
-    """Lazy import for main components.
+    """
+    Lazy import for main components.
 
     This allows importing frequently used components directly from
     the intellicrack namespace without loading all dependencies upfront.

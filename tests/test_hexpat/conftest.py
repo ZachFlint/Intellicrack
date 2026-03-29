@@ -22,7 +22,7 @@ def interp() -> HexPatInterpreter:
 def pe_header_bytes() -> bytes:
     """Build a minimal PE file header (128 bytes) with valid DOS + PE structures."""
     data = bytearray(128)
-    data[0:2] = b"MZ"
+    data[:2] = b"MZ"
     struct.pack_into("<H", data, 2, 0x0090)
     struct.pack_into("<I", data, 60, 0x50)
     data[0x50:0x54] = b"PE\x00\x00"
@@ -36,7 +36,7 @@ def pe_header_bytes() -> bytes:
 def elf_header_bytes() -> bytes:
     """Build a minimal 64-bit ELF header (64 bytes)."""
     data = bytearray(64)
-    data[0:4] = b"\x7fELF"
+    data[:4] = b"\x7fELF"
     data[4] = 2
     data[5] = 1
     data[6] = 1
@@ -52,7 +52,7 @@ def elf_header_bytes() -> bytes:
 def bmp_header_bytes() -> bytes:
     """Build a minimal 24-bit BMP file (1x1 pixel, 58 bytes)."""
     data = bytearray(58)
-    data[0:2] = b"BM"
+    data[:2] = b"BM"
     struct.pack_into("<I", data, 2, 58)
     struct.pack_into("<I", data, 10, 54)
     struct.pack_into("<I", data, 14, 40)
@@ -69,7 +69,7 @@ def bmp_header_bytes() -> bytes:
 def zip_local_header_bytes() -> bytes:
     """Build a minimal ZIP local file header."""
     data = bytearray(64)
-    data[0:4] = b"PK\x03\x04"
+    data[:4] = b"PK\x03\x04"
     struct.pack_into("<H", data, 4, 20)
     struct.pack_into("<H", data, 6, 0)
     struct.pack_into("<H", data, 8, 0)

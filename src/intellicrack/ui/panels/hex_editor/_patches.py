@@ -77,7 +77,8 @@ class PatchesMixin:
                     self._patches_tree.addTopLevelItem(patch_item)
 
     def _cache_original_byte(self, offset: int) -> None:
-        """Cache the original byte value before first modification.
+        """
+        Cache the original byte value before first modification.
 
         Args:
             offset: Byte offset to cache.

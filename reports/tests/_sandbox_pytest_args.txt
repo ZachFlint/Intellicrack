@@ -1,1 +1,1 @@
-tests/test_hexcore_e2e/ -q --timeout=60 --deselect tests/test_hexcore_e2e/test_hexpat_preprocessor.py::TestDefineExpansion::test_single_define_expands_in_expression
+tests/test_core/test_tools.py -x -q --tb=short --no-header

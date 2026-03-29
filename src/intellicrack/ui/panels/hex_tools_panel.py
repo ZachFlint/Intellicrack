@@ -16,12 +16,15 @@ import ast
 import operator
 import re
 import struct
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Final, override
+from typing import TYPE_CHECKING, Any, Final, override
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPaintEvent, QPen
+from PyQt6.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -54,6 +57,9 @@ try:
     from cxxfilt import demangle as _cxxfilt_demangle
 except ImportError:
     _logger.debug("cxxfilt_unavailable")
+
+_ASCII_SPACE: Final[int] = 32
+_ASCII_DEL: Final[int] = 127
 
 _MSVC_TYPES: dict[str, str] = {
     "C": "signed char",
@@ -156,6 +162,20 @@ _AST_SAFE_NAMES: dict[str, Any] = {
 }
 
 
+class _AstEvalError(ValueError):
+    """Raised when an AST expression uses a disallowed construct."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+
+
+class _AstCallTypeError(TypeError):
+    """Raised when an AST call node uses a non-Name form."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+
+
 def _ast_eval_node(node: ast.expr) -> Any:
     """Evaluate a single AST expression node without using ``eval()``.
 
@@ -169,35 +189,35 @@ def _ast_eval_node(node: ast.expr) -> Any:
         Any: The computed result.
 
     Raises:
-        ValueError: When the node type is not permitted.
-        TypeError: When operator arguments are the wrong type.
+        _AstEvalError: When the node type is not permitted.
+        _AstCallTypeError: When a call node is not a simple name.
     """
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Name):
         if node.id in _AST_SAFE_NAMES:
             return _AST_SAFE_NAMES[node.id]
-        raise ValueError(f"Name not allowed: {node.id!r}")
+        raise _AstEvalError(node.id)
     if isinstance(node, ast.UnaryOp):
         op_fn = _AST_UNARY_OPS.get(type(node.op))
         if op_fn is None:
-            raise ValueError(f"Unary op not allowed: {type(node.op).__name__}")
+            raise _AstEvalError(type(node.op).__name__)
         return op_fn(_ast_eval_node(node.operand))
     if isinstance(node, ast.BinOp):
         op_fn = _AST_BIN_OPS.get(type(node.op))
         if op_fn is None:
-            raise ValueError(f"Binary op not allowed: {type(node.op).__name__}")
+            raise _AstEvalError(type(node.op).__name__)
         return op_fn(_ast_eval_node(node.left), _ast_eval_node(node.right))
     if isinstance(node, ast.Call):
         if not isinstance(node.func, ast.Name):
-            raise ValueError("Only simple function calls are allowed")
+            raise _AstCallTypeError(type(node.func).__name__)
         fn = _AST_SAFE_NAMES.get(node.func.id)
         if not callable(fn):
-            raise ValueError(f"Function not allowed: {node.func.id!r}")
+            raise _AstCallTypeError(node.func.id)
         args = [_ast_eval_node(a) for a in node.args]
         kwargs = {kw.arg: _ast_eval_node(kw.value) for kw in node.keywords if kw.arg is not None}
         return fn(*args, **kwargs)
-    raise ValueError(f"Expression type not allowed: {type(node).__name__}")
+    raise _AstEvalError(type(node).__name__)
 
 
 def _safe_eval_expr(source: str) -> Any:
@@ -224,6 +244,10 @@ _F32_EXP_BITS = 8
 _F32_MAN_BITS = 23
 _F64_EXP_BITS = 11
 _F64_MAN_BITS = 52
+
+_MIN_MSVC_PARTS: Final[int] = 2
+_MSVC_TYPE_CODE_LEN: Final[int] = 2
+_HEX_BYTE_ALIGNMENT: Final[int] = 2
 
 _BIT_BOX_WIDTH: Final[int] = 14
 _BIT_BOX_HEIGHT: Final[int] = 24
@@ -262,9 +286,7 @@ def _get_swatch_border_color() -> str:
     Returns:
         str: CSS color string for swatch borders.
     """
-    if ThemeManager.get_instance().is_dark_theme():
-        return "#555"
-    return "#ccc"
+    return "#555" if ThemeManager.get_instance().is_dark_theme() else "#ccc"
 
 
 def _set_hint(widget: QWidget, text: str) -> None:
@@ -449,16 +471,16 @@ class HexToolsPanel(QWidget):
         hex_str = data.hex().upper()
         self._base_input.setText(f"0x{hex_str}")
         self._swap_input.setText(hex_str)
-        _f32_size = 4
-        _f64_size = 8
-        if len(data) == _f32_size:
+        f32_size = 4
+        f64_size = 8
+        if len(data) == f32_size:
             try:
                 float_val = struct.unpack("<f", data)[0]
                 self._ieee754_type_combo.setCurrentIndex(0)
                 self._ieee754_input.setText(f"{float_val!r}")
             except struct.error:
                 pass
-        elif len(data) == _f64_size:
+        elif len(data) == f64_size:
             try:
                 double_val = struct.unpack("<d", data)[0]
                 self._ieee754_type_combo.setCurrentIndex(1)
@@ -543,7 +565,8 @@ class HexToolsPanel(QWidget):
 
         return widget
 
-    def _populate_ascii_table(self, table: QTableWidget) -> None:
+    @staticmethod
+    def _populate_ascii_table(table: QTableWidget) -> None:
         """Fill all 256 rows of the ASCII table with character data.
 
         Args:
@@ -561,15 +584,15 @@ class HexToolsPanel(QWidget):
             if code in _CTRL_CHARS:
                 char_item = QTableWidgetItem("")
                 desc_item = QTableWidgetItem(_CTRL_CHARS[code])
-            elif code == 32:
+            elif code == _ASCII_SPACE:
                 char_item = QTableWidgetItem(" ")
                 desc_item = QTableWidgetItem("Space")
-            elif code < 127:
+            elif code < _ASCII_DEL:
                 char_item = QTableWidgetItem(chr(code))
                 desc_item = QTableWidgetItem("Printable")
-            elif code == 127:
+            elif code == _ASCII_DEL:
                 char_item = QTableWidgetItem("")
-                desc_item = QTableWidgetItem(_CTRL_CHARS[127])
+                desc_item = QTableWidgetItem(_CTRL_CHARS[_ASCII_DEL])
             else:
                 char_item = QTableWidgetItem(f"\\x{code:02x}")
                 desc_item = QTableWidgetItem("Extended")
@@ -786,17 +809,12 @@ class HexToolsPanel(QWidget):
 
         return widget
 
-    def _build_file_splitter_tab(self) -> QWidget:
-        """Build the file splitter and combiner sub-tab.
+    def _build_split_group(self) -> QGroupBox:
+        """Build the file split controls group box.
 
         Returns:
-            QWidget: The file splitter/combiner tab widget.
+            QGroupBox: The split file group box.
         """
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
-        layout.setSpacing(_SPACING_MEDIUM)
-
         split_group = QGroupBox("Split File")
         split_layout = QFormLayout(split_group)
 
@@ -837,13 +855,18 @@ class HexToolsPanel(QWidget):
         split_btn.clicked.connect(self._do_split_file)
         split_layout.addRow("", split_btn)
 
-        layout.addWidget(split_group)
+        return split_group
 
+    def _build_combine_group(self) -> QGroupBox:
+        """Build the file combine controls group box.
+
+        Returns:
+            QGroupBox: The combine files group box.
+        """
         combine_group = QGroupBox("Combine Files")
         combine_layout = QVBoxLayout(combine_group)
 
-        list_label = QLabel("Files to combine (in order):")
-        combine_layout.addWidget(list_label)
+        combine_layout.addWidget(QLabel("Files to combine (in order):"))
 
         self._combine_files_list = QListWidget()
         combine_layout.addWidget(self._combine_files_list)
@@ -878,7 +901,21 @@ class HexToolsPanel(QWidget):
         combine_btn.clicked.connect(self._do_combine_files)
         combine_layout.addWidget(combine_btn)
 
-        layout.addWidget(combine_group)
+        return combine_group
+
+    def _build_file_splitter_tab(self) -> QWidget:
+        """Build the file splitter and combiner sub-tab.
+
+        Returns:
+            QWidget: The file splitter/combiner tab widget.
+        """
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_SPACING_MEDIUM)
+
+        layout.addWidget(self._build_split_group())
+        layout.addWidget(self._build_combine_group())
 
         return widget
 
@@ -900,7 +937,7 @@ class HexToolsPanel(QWidget):
 
         body = mangled[1:]
         at_parts = body.split("@")
-        if len(at_parts) < 2:
+        if len(at_parts) < _MIN_MSVC_PARTS:
             return mangled
 
         func_name = at_parts[0]
@@ -917,12 +954,10 @@ class HexToolsPanel(QWidget):
         suffix_match = re.search(r"@@([A-Z_]+)(.*)$", mangled)
         ret_type = ""
         if suffix_match:
-            type_code = suffix_match[2][:2].strip("@")
+            type_code = suffix_match[_MSVC_TYPE_CODE_LEN][:_MSVC_TYPE_CODE_LEN].strip("@")
             ret_type = _MSVC_TYPES.get(type_code, "")
 
-        if ret_type:
-            return f"{ret_type} {qualified}(...)"
-        return f"{qualified}(...)"
+        return f"{ret_type} {qualified}(...)" if ret_type else f"{qualified}(...)"
 
     @staticmethod
     def _demangle_rust(mangled: str) -> str:
@@ -963,7 +998,8 @@ class HexToolsPanel(QWidget):
 
         return mangled
 
-    def _demangle_symbol(self, mangled: str) -> str:
+    @staticmethod
+    def _demangle_symbol(mangled: str) -> str:
         """Demangle a symbol using the appropriate strategy.
 
         Tries cxxfilt first for Itanium/GCC mangling, then falls back to
@@ -988,14 +1024,14 @@ class HexToolsPanel(QWidget):
                 pass
 
         if mangled.startswith("?"):
-            return self._demangle_msvc(mangled)
+            return HexToolsPanel._demangle_msvc(mangled)
 
         if mangled.startswith(("_ZN", "_ZL", "_Z")):
-            rust_result = self._demangle_rust(mangled)
+            rust_result = HexToolsPanel._demangle_rust(mangled)
             if rust_result != mangled:
                 return rust_result
 
-        return self._demangle_rust(mangled) if mangled.startswith("_R") else mangled
+        return HexToolsPanel._demangle_rust(mangled) if mangled.startswith("_R") else mangled
 
     def _do_demangle(self) -> None:
         """Demangle the symbol from the input field and display the result."""
@@ -1184,7 +1220,7 @@ class HexToolsPanel(QWidget):
             self._swap_64_output.setText("")
             return
 
-        if len(text) % 2 != 0:
+        if len(text) % _HEX_BYTE_ALIGNMENT != 0:
             text = f"0{text}"
 
         try:
@@ -1287,9 +1323,7 @@ class HexToolsPanel(QWidget):
             self._combine_files_list.insertItem(row + 1, item)
             self._combine_files_list.setCurrentRow(row + 1)
 
-    def _split_at_offset(
-        self, data: bytes, offset: int, outdir: Path, src_path: Path
-    ) -> None:
+    def _split_at_offset(self, data: bytes, offset: int, outdir: Path, src_path: Path) -> None:
         """Split file data into two parts at the given byte offset.
 
         Args:
@@ -1300,9 +1334,7 @@ class HexToolsPanel(QWidget):
         """
         file_size = len(data)
         if offset >= file_size:
-            QMessageBox.warning(
-                self, "Split File", f"Offset {offset} is beyond file size {file_size}."
-            )
+            QMessageBox.warning(self, "Split File", f"Offset {offset} is beyond file size {file_size}.")
             return
         stem = src_path.stem
         suffix = src_path.suffix
@@ -1317,9 +1349,7 @@ class HexToolsPanel(QWidget):
             f"Split into 2 parts at offset {offset}:\n{part1_path}\n{part2_path}",
         )
 
-    def _split_into_chunks(
-        self, data: bytes, chunk_size: int, outdir: Path, src_path: Path
-    ) -> None:
+    def _split_into_chunks(self, data: bytes, chunk_size: int, outdir: Path, src_path: Path) -> None:
         """Split file data into equal-size chunks with a possible remainder.
 
         Args:

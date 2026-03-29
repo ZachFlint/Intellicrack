@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Template file management for the hex editor pattern system.
+"""
+Template file management for the hex editor pattern system.
 
-Manages template storage, loading, saving, and directory structure
-for both built-in and user-defined binary structure templates.
+Manages template storage, loading, saving, and directory structure for both built-in and user-defined binary structure templates.
 """
 
 from __future__ import annotations
@@ -35,7 +35,8 @@ except Exception:
 
 @dataclass(frozen=True)
 class TemplateInfo:
-    """Metadata about a template file.
+    """
+    Metadata about a template file.
 
     Args:
         name: Template name.
@@ -58,7 +59,8 @@ _BUILTIN_CATEGORIES: tuple[str, ...] = ("pe", "elf", "macho", "zip", "common")
 
 
 class TemplateManager:
-    """Manages template files on disk for the hex editor.
+    """
+    Manages template files on disk for the hex editor.
 
     Maintains a directory structure under config_dir/templates/ with
     builtin and user subdirectories.
@@ -83,7 +85,8 @@ class TemplateManager:
         _logger.debug("template_directories_ensured", path=str(self._templates_dir))
 
     def bootstrap_builtins(self, document: Any) -> None:
-        """Export all built-in templates as JSON files.
+        """
+        Export all built-in templates as JSON files.
 
         Only runs if the builtin directory has no existing JSON files.
         Uses the HexDocument's export_template_json and
@@ -133,7 +136,8 @@ class TemplateManager:
         _logger.info("builtin_templates_bootstrapped", count=exported)
 
     def list_all_templates(self) -> list[TemplateInfo]:
-        """List all available templates (built-in and user).
+        """
+        List all available templates (built-in and user).
 
         Returns:
             list[TemplateInfo]: List of template metadata sorted by name.
@@ -157,7 +161,8 @@ class TemplateManager:
 
     @staticmethod
     def _sanitize_name(name: str) -> str:
-        """Convert a template name to a safe filesystem filename.
+        """
+        Convert a template name to a safe filesystem filename.
 
         Args:
             name: Template name.
@@ -180,7 +185,8 @@ class TemplateManager:
         json_str: str,
         dsl_source: str | None = None,
     ) -> Path:
-        """Save a user-defined template.
+        """
+        Save a user-defined template.
 
         Args:
             name: Template name.
@@ -210,7 +216,8 @@ class TemplateManager:
 
     @staticmethod
     def load_template(path: Path) -> str:
-        """Load a template JSON from disk.
+        """
+        Load a template JSON from disk.
 
         Args:
             path: Path to the JSON template file.
@@ -227,7 +234,8 @@ class TemplateManager:
         return path.read_text(encoding="utf-8")
 
     def delete_user_template(self, name: str) -> bool:
-        """Delete a user-defined template.
+        """
+        Delete a user-defined template.
 
         Args:
             name: Template name.
@@ -261,7 +269,8 @@ class TemplateManager:
         is_builtin: bool,
         dsl_path: Path | None = None,
     ) -> TemplateInfo | None:
-        """Parse a template JSON file to extract metadata.
+        """
+        Parse a template JSON file to extract metadata.
 
         Args:
             json_path: Path to the JSON file.
@@ -295,7 +304,8 @@ class TemplateManager:
 
     @property
     def patterns_dir(self) -> Path:
-        """Get the community .hexpat patterns directory.
+        """
+        Get the community .hexpat patterns directory.
 
         Returns:
             Path: The vendor community patterns directory path.
@@ -304,7 +314,8 @@ class TemplateManager:
         return project_root / "vendor" / "community-patterns" / "patterns"
 
     def get_pattern_registry(self) -> Any | None:
-        """Get or create the PatternRegistry for .hexpat pattern discovery.
+        """
+        Get or create the PatternRegistry for .hexpat pattern discovery.
 
         Returns:
             Any | None: A PatternRegistry instance, or None if unavailable.
@@ -325,7 +336,8 @@ class TemplateManager:
         return self._pattern_registry
 
     def list_hexpat_patterns(self) -> list[dict[str, str]]:
-        """List all discovered .hexpat patterns with metadata.
+        """
+        List all discovered .hexpat patterns with metadata.
 
         Returns:
             list[dict[str, str]]: List of dicts with name, description,
@@ -347,7 +359,8 @@ class TemplateManager:
         ]
 
     def list_hexpat_by_category(self) -> dict[str, list[dict[str, str]]]:
-        """List .hexpat patterns grouped by category.
+        """
+        List .hexpat patterns grouped by category.
 
         Returns:
             dict[str, list[dict[str, str]]]: Category name to list of pattern dicts.
@@ -357,9 +370,8 @@ class TemplateManager:
             return {}
 
         by_cat = registry.list_by_category()
-        result: dict[str, list[dict[str, str]]] = {}
-        for category, patterns in by_cat.items():
-            result[category] = [
+        result: dict[str, list[dict[str, str]]] = {
+            category: [
                 {
                     "name": p.name,
                     "description": p.description or "",
@@ -367,4 +379,6 @@ class TemplateManager:
                 }
                 for p in patterns
             ]
+            for category, patterns in by_cat.items()
+        }
         return result

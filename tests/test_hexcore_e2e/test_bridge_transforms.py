@@ -63,8 +63,7 @@ class TestBridgeListTransforms:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        result: list[dict[str, str]] = _run(bridge.list_transforms())
-        if result:
+        if result := _run(bridge.list_transforms()):
             for item in result:
                 assert "name" in item
                 assert "category" in item

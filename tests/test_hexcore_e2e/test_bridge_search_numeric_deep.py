@@ -204,7 +204,7 @@ class TestSearchNumericDeep:
         self._open_pattern_data(bridge, tmp_path, pattern_data)
         absent_value: int = 0x13572468
         results: list[dict[str, int]] = _run(bridge.search_numeric(absent_value, size=4, value_type="uint", endianness="little"))
-        assert results == []
+        assert not results
 
     def test_search_max_results_caps_returned_matches(self, bridge: Any, tmp_path: Path) -> None:
         """Verify that max_results=1 returns at most 1 result even with multiple matches.
@@ -248,7 +248,7 @@ class TestSearchNumericDeep:
         """
         self._open_pattern_data(bridge, tmp_path, pattern_data)
         results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U32_VALUE, size=4, value_type="uint", endianness="little"))
-        assert len(results) >= 1
+        assert results
         for r in results:
             assert r["length"] == 4
 

@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""
+Splash screen for Intellicrack application startup.
 
-"""Splash screen for Intellicrack application startup.
-
-Provides a custom splash screen with progress indication and status
-messages during application initialization.
+Provides a custom splash screen with progress indication and status messages during application initialization.
 """
 
 from __future__ import annotations
@@ -57,7 +56,8 @@ _SUBTITLE_COLOR: Final[str] = "#888888"
 
 @final
 class SplashScreen(QSplashScreen):
-    """Custom splash screen with progress bar and status messages.
+    """
+    Custom splash screen with progress bar and status messages.
 
     Displays the Intellicrack splash image during application startup
     with real-time progress updates and status messages.
@@ -96,7 +96,8 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _compute_dpi_scale() -> float:
-        """Compute DPI scale factor from the primary screen.
+        """
+        Compute DPI scale factor from the primary screen.
 
         Returns:
             float: DPI scale factor (defaults to 1.0 if unavailable).
@@ -111,7 +112,8 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _load_splash_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
-        """Load the splash screen image or create fallback.
+        """
+        Load the splash screen image or create fallback.
 
         Args:
             width: Target pixmap width.
@@ -144,7 +146,8 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _create_fallback_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
-        """Create a fallback splash screen pixmap.
+        """
+        Create a fallback splash screen pixmap.
 
         Args:
             width: Pixmap width.
@@ -259,7 +262,8 @@ class SplashScreen(QSplashScreen):
         self._fade_animation.start()
 
     def finish_animated(self, window: QWidget) -> None:
-        """Finish the splash screen with a fade-out animation.
+        """
+        Finish the splash screen with a fade-out animation.
 
         Args:
             window: Main window to show after fade-out completes.
@@ -281,7 +285,8 @@ class SplashScreen(QSplashScreen):
         self.close()
 
     def set_progress(self, value: int, message: str = "") -> None:
-        """Update the progress bar and status message.
+        """
+        Update the progress bar and status message.
 
         Args:
             value: Progress value (0-100).
@@ -314,7 +319,8 @@ class SplashScreen(QSplashScreen):
             app.processEvents()
 
     def _on_progress_updated(self, value: int, message: str) -> None:
-        """Handle progress update signal.
+        """
+        Handle progress update signal.
 
         Args:
             value: Progress value.
@@ -324,7 +330,8 @@ class SplashScreen(QSplashScreen):
 
     @override
     def resizeEvent(self, a0: QResizeEvent | None) -> None:
-        """Handle resize events to adjust overlay.
+        """
+        Handle resize events to adjust overlay.
 
         Args:
             a0: Resize event from Qt.
@@ -335,7 +342,8 @@ class SplashScreen(QSplashScreen):
 
     @property
     def progress(self) -> int:
-        """Get current progress value.
+        """
+        Get current progress value.
 
         Returns:
             int: Current progress (0-100).
@@ -344,7 +352,8 @@ class SplashScreen(QSplashScreen):
 
     @property
     def status(self) -> str:
-        """Get current status message.
+        """
+        Get current status message.
 
         Returns:
             str: Current status message.
@@ -353,7 +362,8 @@ class SplashScreen(QSplashScreen):
 
     @property
     def dpi_scale(self) -> float:
-        """Get the DPI scale factor.
+        """
+        Get the DPI scale factor.
 
         Returns:
             float: DPI scale factor used for this splash screen.
@@ -362,7 +372,8 @@ class SplashScreen(QSplashScreen):
 
     @property
     def version(self) -> str:
-        """Get the version string.
+        """
+        Get the version string.
 
         Returns:
             str: Version string displayed on the splash screen.

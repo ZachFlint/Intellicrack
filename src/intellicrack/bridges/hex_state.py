@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Shared hex document state manager for bridge-GUI synchronization.
+"""
+Shared hex document state manager for bridge-GUI synchronization.
 
-Provides an observer-based state holder that bridges the HexEditorBridge
-(AI/programmatic control) and the HexEditorPanel (GUI display) by
-maintaining the canonical document reference, cursor position, selection,
-and file path, and notifying registered listeners of state changes.
+Provides an observer-based state holder that bridges the HexEditorBridge (AI/programmatic control) and the HexEditorPanel (GUI display) by
+maintaining the canonical document reference, cursor position, selection, and file path, and notifying registered listeners of state
+changes.
 """
 
 from __future__ import annotations
@@ -30,7 +30,8 @@ _logger = get_logger("bridges.hex_state")
 
 
 class HexDocumentEvent(enum.Enum):
-    """Event types emitted by HexDocumentState.
+    """
+    Event types emitted by HexDocumentState.
 
     Attributes:
         DOCUMENT_OPENED: A new document was loaded.
@@ -66,7 +67,8 @@ StateCallbackFn = Callable[[HexDocumentEvent, dict[str, Any]], None]
 
 @dataclass(slots=True)
 class _CallbackEntry:
-    """Internal storage for a registered callback with its source_id.
+    """
+    Internal storage for a registered callback with its source_id.
 
     Attributes:
         fn: The callback callable.
@@ -78,12 +80,11 @@ class _CallbackEntry:
 
 
 class HexDocumentState:
-    """Thread-safe shared state holder for a hex document.
+    """
+    Thread-safe shared state holder for a hex document.
 
-    Maintains the canonical document instance, cursor offset, selection
-    range, and file path.  Registered callbacks are notified on state
-    changes, enabling the bridge and GUI to stay in sync without direct
-    coupling.
+    Maintains the canonical document instance, cursor offset, selection range, and file path.  Registered callbacks are notified on state
+    changes, enabling the bridge and GUI to stay in sync without direct coupling.
     """
 
     def __init__(self) -> None:
@@ -99,7 +100,8 @@ class HexDocumentState:
 
     @property
     def document(self) -> Any | None:
-        """Get the active HexDocument instance.
+        """
+        Get the active HexDocument instance.
 
         Returns:
             Any | None: Active HexDocument or None if no document is open.
@@ -108,7 +110,8 @@ class HexDocumentState:
 
     @property
     def file_path(self) -> Path | None:
-        """Get the path to the currently loaded file.
+        """
+        Get the path to the currently loaded file.
 
         Returns:
             Path | None: File path or None if no file is loaded.
@@ -117,7 +120,8 @@ class HexDocumentState:
 
     @property
     def cursor_offset(self) -> int:
-        """Get the current cursor offset.
+        """
+        Get the current cursor offset.
 
         Returns:
             int: Current byte offset of the cursor.
@@ -126,7 +130,8 @@ class HexDocumentState:
 
     @property
     def selection(self) -> tuple[int, int] | None:
-        """Get the current selection range.
+        """
+        Get the current selection range.
 
         Returns:
             tuple[int, int] | None: Tuple of (start, end) offsets or None if no selection.
@@ -134,7 +139,8 @@ class HexDocumentState:
         return self._selection
 
     def get_current_state(self) -> dict[str, Any]:
-        """Get a consistent snapshot of all document state.
+        """
+        Get a consistent snapshot of all document state.
 
         Takes the lock to ensure an atomic read of all fields.
 
@@ -157,7 +163,8 @@ class HexDocumentState:
         callback: StateCallbackFn,
         source_id: str = "",
     ) -> None:
-        """Register an observer callback for state change notifications.
+        """
+        Register an observer callback for state change notifications.
 
         Args:
             callback: Callable receiving (event_type, data) arguments.
@@ -170,7 +177,8 @@ class HexDocumentState:
         _logger.debug("callback_registered", source_id=source_id)
 
     def unregister_callback(self, callback: StateCallbackFn) -> None:
-        """Remove a previously registered callback.
+        """
+        Remove a previously registered callback.
 
         Args:
             callback: The callback to remove.
@@ -185,7 +193,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Set or clear the active document.
+        """
+        Set or clear the active document.
 
         Args:
             document: HexDocument instance, or None to close.
@@ -210,7 +219,8 @@ class HexDocumentState:
             self._notify(HexDocumentEvent.DOCUMENT_CLOSED, {}, source=source)
 
     def set_cursor(self, offset: int, *, source: str = "") -> None:
-        """Update the cursor position.
+        """
+        Update the cursor position.
 
         Args:
             offset: New cursor byte offset.
@@ -230,7 +240,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Update the selection range.
+        """
+        Update the selection range.
 
         Args:
             start: Selection start offset.
@@ -245,7 +256,8 @@ class HexDocumentState:
         )
 
     def clear_selection(self, *, source: str = "") -> None:
-        """Clear the current selection.
+        """
+        Clear the current selection.
 
         Args:
             source: Identifier of the caller for loop-guard filtering.
@@ -258,7 +270,8 @@ class HexDocumentState:
         )
 
     def get_highlight_rules(self) -> dict[str, dict[str, Any]]:
-        """Get a copy of all stored highlight rules.
+        """
+        Get a copy of all stored highlight rules.
 
         Returns:
             dict[str, dict[str, Any]]: Copy of the highlight rules dict keyed by rule ID.
@@ -267,7 +280,8 @@ class HexDocumentState:
             return dict(self._highlight_rules)
 
     def set_highlight_rule(self, rule_id: str, rule: dict[str, Any]) -> None:
-        """Store a highlight rule in state.
+        """
+        Store a highlight rule in state.
 
         Args:
             rule_id: Unique identifier for the rule.
@@ -277,7 +291,8 @@ class HexDocumentState:
             self._highlight_rules[rule_id] = rule
 
     def remove_highlight_rule_state(self, rule_id: str) -> bool:
-        """Remove a highlight rule from state.
+        """
+        Remove a highlight rule from state.
 
         Args:
             rule_id: The rule ID to remove.
@@ -292,7 +307,8 @@ class HexDocumentState:
             return False
 
     def get_display_mode(self) -> str:
-        """Get the stored display mode.
+        """
+        Get the stored display mode.
 
         Returns:
             str: Current display mode string.
@@ -300,7 +316,8 @@ class HexDocumentState:
         return self._display_mode
 
     def set_display_mode_state(self, mode: str) -> None:
-        """Store the display mode in state.
+        """
+        Store the display mode in state.
 
         Named with ``_state`` suffix to avoid collision with the notification
         method ``notify_display_mode_changed``.
@@ -317,7 +334,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that document data was modified.
+        """
+        Notify observers that document data was modified.
 
         Args:
             offset: Start offset of the modification.
@@ -331,7 +349,8 @@ class HexDocumentState:
         )
 
     def notify_document_saved(self, path: str, *, source: str = "") -> None:
-        """Notify observers that the document was saved.
+        """
+        Notify observers that the document was saved.
 
         Args:
             path: Path where the document was saved.
@@ -349,7 +368,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that a template was registered.
+        """
+        Notify observers that a template was registered.
 
         Args:
             template_name: Name of the registered template.
@@ -367,7 +387,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that a template was removed.
+        """
+        Notify observers that a template was removed.
 
         Args:
             template_name: Name of the removed template.
@@ -385,7 +406,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that a highlight rule was added.
+        """
+        Notify observers that a highlight rule was added.
 
         Args:
             rule: Rule dict with id, condition_type, condition_params, color.
@@ -403,7 +425,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that a highlight rule was removed.
+        """
+        Notify observers that a highlight rule was removed.
 
         Args:
             rule_id: ID of the removed rule.
@@ -421,7 +444,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that the hex display mode changed.
+        """
+        Notify observers that the hex display mode changed.
 
         Args:
             mode: New display mode string (e.g. ``"hex8"``, ``"hex16_le"``).
@@ -440,7 +464,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Notify observers that a .hexpat pattern was executed.
+        """
+        Notify observers that a .hexpat pattern was executed.
 
         Args:
             pattern_name: Name of the executed pattern.
@@ -460,7 +485,8 @@ class HexDocumentState:
         *,
         source: str = "",
     ) -> None:
-        """Dispatch a state change notification to all registered callbacks.
+        """
+        Dispatch a state change notification to all registered callbacks.
 
         Uses a reentrancy guard under the lock to prevent infinite
         notification loops and TOCTOU races.  Callbacks whose source_id
