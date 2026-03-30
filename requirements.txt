@@ -349,7 +349,7 @@ wcwidth==0.6.0
 websockets==13.1
 wemake_python_styleguide==1.6.1
 wheel==0.46.3
-wheel_filename==1.4.2
+wheel_filename==2.1.0
 wily==1.12.2
 wrapt==2.1.2
 xenon==0.9.3
