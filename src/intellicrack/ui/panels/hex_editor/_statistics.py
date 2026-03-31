@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Statistics mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -80,12 +79,12 @@ class StatisticsWorker(QThread):
 
     def __init__(
         self,
-        document: Any,
+        document: object,
         entropy_block_size: int,
         parent: QThread | None = None,
     ) -> None:
         super().__init__(parent)
-        self._document: Any = document
+        self.document: Any = document
         self._entropy_block_size: int = entropy_block_size
         _: object = self.finished.connect(self.deleteLater)
 
@@ -95,7 +94,7 @@ class StatisticsWorker(QThread):
         try:
             result = self._compute()
             self.stats_finished.emit(result)
-        except Exception as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             logger.debug("statistics_worker_failed", error=str(exc))
             self.stats_error.emit(exc)
 
@@ -106,7 +105,7 @@ class StatisticsWorker(QThread):
         Returns:
             _StatisticsResult: Computed statistics data.
         """
-        stats: list[tuple[int, int]] = list(self._document.byte_statistics())
+        stats: list[tuple[int, int]] = list(self.document.byte_statistics())
         total: int = sum(s[1] for s in stats)
 
         entropy: float = 0.0
@@ -135,7 +134,7 @@ class StatisticsWorker(QThread):
         Returns:
             list[float] | None: Per-block entropy values, or None if unavailable.
         """
-        entropy_map_fn: Any = getattr(self._document, "entropy_map", None)
+        entropy_map_fn: Any = getattr(self.document, "entropy_map", None)
         if not callable(entropy_map_fn):
             return None
         try:
@@ -152,7 +151,7 @@ class StatisticsWorker(QThread):
         Returns:
             list[int] | None: Byte frequency counts, or None if unavailable.
         """
-        dist_fn: Any = getattr(self._document, "byte_distribution_full", None)
+        dist_fn: Any = getattr(self.document, "byte_distribution_full", None)
         if not callable(dist_fn):
             return None
         try:
@@ -169,7 +168,7 @@ class StatisticsWorker(QThread):
         Returns:
             tuple[int, ...] | None: Byte type counts, or None if unavailable.
         """
-        type_fn: Any = getattr(self._document, "byte_type_distribution", None)
+        type_fn: Any = getattr(self.document, "byte_type_distribution", None)
         if not callable(type_fn):
             return None
         try:
@@ -186,7 +185,7 @@ class StatisticsWorker(QThread):
         Returns:
             list[int] | None: Classification values per block, or None if unavailable.
         """
-        class_fn: Any = getattr(self._document, "content_classification", None)
+        class_fn: Any = getattr(self.document, "content_classification", None)
         if not callable(class_fn):
             return None
         try:
@@ -201,6 +200,7 @@ class StatisticsMixin:
     """Mixin providing statistics and analysis for the hex editor panel."""
 
     _document: Any | None
+    document: Any | None
     _statistics_tree: QTreeWidget | None
     _entropy_graph: EntropyGraphWidget | None
     _byte_dist_widget: ByteDistributionWidget | None
@@ -221,7 +221,7 @@ class StatisticsMixin:
         the Qt main thread.  UI widgets display "Computing..." status text
         until the worker completes.
         """
-        if self._document is None:
+        if self.document is None:
             return
 
         worker_attr: StatisticsWorker | None = getattr(self, "_statistics_worker", None)
@@ -238,7 +238,7 @@ class StatisticsMixin:
         self._set_statistics_computing()
 
         parent_obj: QThread | None = self if isinstance(self, QThread) else None
-        worker = StatisticsWorker(self._document, ENTROPY_BLOCK_SIZE, parent_obj)
+        worker = StatisticsWorker(self.document, ENTROPY_BLOCK_SIZE, parent_obj)
         _ = worker.stats_finished.connect(self._on_statistics_computed)
         _ = worker.stats_error.connect(self._on_statistics_error)
         self._statistics_worker = worker

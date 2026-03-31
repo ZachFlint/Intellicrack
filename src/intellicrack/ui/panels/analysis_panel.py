@@ -89,15 +89,15 @@ class BridgeAnalysisPanel(QWidget):
         header_layout.setSpacing(_HEADER_SPACING)
 
         self._binary_label = QLabel("No binary loaded")
-        self._binary_label.setProperty("heading", True)
+        self._binary_label.setProperty("heading", value=True)
         header_layout.addWidget(self._binary_label, 0, 0, 1, 2)
 
         self._format_label = QLabel("")
-        self._format_label.setProperty("muted", True)
+        self._format_label.setProperty("muted", value=True)
         header_layout.addWidget(self._format_label, 1, 0)
 
         self._arch_label = QLabel("")
-        self._arch_label.setProperty("muted", True)
+        self._arch_label.setProperty("muted", value=True)
         header_layout.addWidget(self._arch_label, 1, 1)
 
         self._bridges_label = QLabel("")
@@ -105,8 +105,8 @@ class BridgeAnalysisPanel(QWidget):
 
         layout.addWidget(header)
 
-        self._tab_widget = QTabWidget()
-        self._tab_widget.setObjectName("analysis_tabs")
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setObjectName("analysis_tabs")
 
         self._strings_table = self._create_table(["Address", "Value", "Encoding", "Section"])
         self._imports_table = self._create_table(["DLL", "Function", "Ordinal", "Address"])
@@ -114,18 +114,18 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table = self._create_table(["Address", "Name", "Size", "Convention", "Return Type"])
         self._sections_table = self._create_table(["Name", "VA", "VSize", "RawSize", "Characteristics", "Entropy"])
         self._notes_edit = QTextEdit()
-        self._notes_edit.setReadOnly(True)
+        self._notes_edit.setReadOnly(ro=True)
         self._notes_edit.setFont(self._mono_font)
         self._notes_edit.setObjectName("code_preview_text")
 
-        self._tab_widget.addTab(self._strings_table, "Strings")
-        self._tab_widget.addTab(self._imports_table, "Imports")
-        self._tab_widget.addTab(self._exports_table, "Exports")
-        self._tab_widget.addTab(self._functions_table, "Functions")
-        self._tab_widget.addTab(self._sections_table, "Sections")
-        self._tab_widget.addTab(self._notes_edit, "Notes")
+        self.tab_widget.addTab(self._strings_table, "Strings")
+        self.tab_widget.addTab(self._imports_table, "Imports")
+        self.tab_widget.addTab(self._exports_table, "Exports")
+        self.tab_widget.addTab(self._functions_table, "Functions")
+        self.tab_widget.addTab(self._sections_table, "Sections")
+        self.tab_widget.addTab(self._notes_edit, "Notes")
 
-        layout.addWidget(self._tab_widget)
+        layout.addWidget(self.tab_widget)
 
         self._strings_table.cellDoubleClicked.connect(self._on_strings_cell_clicked)
         self._imports_table.cellDoubleClicked.connect(self._on_imports_cell_clicked)
@@ -146,17 +146,17 @@ class BridgeAnalysisPanel(QWidget):
         table = QTableWidget()
         table.setColumnCount(len(headers))
         table.setHorizontalHeaderLabels(headers)
-        table.setAlternatingRowColors(True)
+        table.setAlternatingRowColors(enable=True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         v_header = table.verticalHeader()
         if v_header is not None:
-            v_header.setVisible(False)
+            v_header.setVisible(v=False)
         table.setFont(self._mono_font)
 
         h_header = table.horizontalHeader()
         if h_header is not None:
-            h_header.setStretchLastSection(True)
+            h_header.setStretchLastSection(stretch=True)
             h_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         return table

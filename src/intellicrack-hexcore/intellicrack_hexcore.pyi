@@ -1,4 +1,7 @@
-"""Type stubs for the intellicrack_hexcore Rust extension module."""
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
 
 from typing import Any
 
@@ -9,7 +12,6 @@ class Bookmark:
     color: str
 
     def __init__(self, offset: int, length: int, label: str, color: str) -> None: ...
-    def __repr__(self) -> str: ...
 
 class HexDocument:
     def __init__(self) -> None: ...

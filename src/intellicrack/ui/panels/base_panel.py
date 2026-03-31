@@ -66,7 +66,7 @@ class AnalysisPanelBase(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._status_label: QLabel | None = None
+        self.status_label: QLabel | None = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -86,7 +86,7 @@ class AnalysisPanelBase(QWidget):
             QToolBar: Toolbar populated by ``_populate_toolbar``.
         """
         toolbar = QToolBar()
-        toolbar.setMovable(False)
+        toolbar.setMovable(movable=False)
         toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
         self._populate_toolbar(toolbar)
         return toolbar
@@ -250,8 +250,8 @@ class AnalysisPanelBase(QWidget):
         Args:
             text: New status text.
         """
-        if self._status_label is not None:
-            self._status_label.setText(text)
+        if self.status_label is not None:
+            self.status_label.setText(text)
 
     def _run_async(
         self,

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for process cleanup and leak detection."""
 
 import asyncio
@@ -102,7 +107,7 @@ time.sleep(60)
 
     # 5. Call sync cleanup (simulating atexit)
     # We run it in a thread because it's blocking
-    await asyncio.to_thread(pm._sync_cleanup)
+    await asyncio.to_thread(pm.sync_cleanup)
 
     # 6. Verify
     await asyncio.sleep(0.5)

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
+    import types
     from pathlib import Path
 
 
@@ -31,7 +32,7 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 class TestDiffBytes:
     """Tests covering the diff_bytes() module-level function."""
 
-    def test_identical_bytes_reports_identical(self, hexcore: Any) -> None:
+    def test_identical_bytes_reports_identical(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes on two identical payloads reports equality.
 
         Args:
@@ -44,7 +45,7 @@ class TestDiffBytes:
         similarity: float | None = result.get("similarity")
         assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
 
-    def test_completely_different_bytes_shows_low_similarity(self, hexcore: Any) -> None:
+    def test_completely_different_bytes_shows_low_similarity(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes on disjoint payloads reports low similarity.
 
         Args:
@@ -59,7 +60,7 @@ class TestDiffBytes:
             assert isinstance(similarity, float)
             assert similarity < 0.5
 
-    def test_diff_bytes_result_is_dict(self, hexcore: Any) -> None:
+    def test_diff_bytes_result_is_dict(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes always returns a dict regardless of input.
 
         Args:
@@ -68,7 +69,7 @@ class TestDiffBytes:
         result: dict[str, Any] = hexcore.diff_bytes(b"\x01\x02", b"\x03\x04")
         assert isinstance(result, dict)
 
-    def test_diff_bytes_partial_difference_has_modifications(self, hexcore: Any) -> None:
+    def test_diff_bytes_partial_difference_has_modifications(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes identifies modification regions for partially differing data.
 
         Args:
@@ -82,7 +83,7 @@ class TestDiffBytes:
         files_identical: bool = result.get("files_identical", False)
         assert not files_identical or modifications == 0
 
-    def test_diff_empty_vs_empty_is_identical(self, hexcore: Any) -> None:
+    def test_diff_empty_vs_empty_is_identical(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes on two empty byte strings reports files as identical.
 
         Args:
@@ -98,7 +99,7 @@ class TestDiffBytes:
 class TestDiffFiles:
     """Tests covering the diff_files() module-level function."""
 
-    def test_diff_identical_files_reports_identical(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_identical_files_reports_identical(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files on two identical files reports equality.
 
         Args:
@@ -114,7 +115,7 @@ class TestDiffFiles:
         similarity: float | None = result.get("similarity")
         assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
 
-    def test_diff_files_result_has_expected_keys(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_files_result_has_expected_keys(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files returns a dict containing at least one recognized key.
 
         Args:
@@ -139,7 +140,7 @@ class TestDiffFiles:
         assert isinstance(result, dict)
         assert len(recognized & set(result.keys())) > 0
 
-    def test_diff_files_detects_known_modification_region(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_files_detects_known_modification_region(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files identifies the modified region at offset 50.
 
         Args:
@@ -156,7 +157,7 @@ class TestDiffFiles:
         assert isinstance(similarity, float)
         assert similarity < 1.0
 
-    def test_diff_files_on_different_sizes(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_files_on_different_sizes(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files handles files of different lengths without error.
 
         Args:
@@ -171,7 +172,7 @@ class TestDiffFiles:
         assert isinstance(result, dict)
         assert not result.get("files_identical")
 
-    def test_diff_empty_files(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_empty_files(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files on two empty files reports files as identical.
 
         Args:
@@ -186,7 +187,7 @@ class TestDiffFiles:
         similarity: float | None = result.get("similarity")
         assert files_identical is True or (similarity is not None and similarity >= 0.99)
 
-    def test_diff_files_single_byte_change(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_files_single_byte_change(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files detects a single differing byte.
 
         Args:
@@ -202,7 +203,7 @@ class TestDiffFiles:
         assert isinstance(result, dict)
         assert not result.get("files_identical")
 
-    def test_diff_files_uses_string_paths(self, hexcore: Any, tmp_path: Path) -> None:
+    def test_diff_files_uses_string_paths(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files accepts string paths and returns a valid dict.
 
         Args:

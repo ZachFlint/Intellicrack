@@ -78,7 +78,7 @@ class SandboxPanel(AnalysisPanelBase):
         super().__init__(parent)
         self._sandbox: SandboxBase | None = None
         self._sandbox_manager: SandboxManager | None = None
-        self._sandbox_id: str | None = None
+        self.sandbox_id: str | None = None
         self._pending_binary: Path = Path()
         self._pending_args: list[str] = []
         self._pending_snapshot_id: str = "unknown"
@@ -100,23 +100,23 @@ class SandboxPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._create_btn = self._add_tool_button(toolbar, "Create", self._on_create)
-        self._destroy_btn = self._add_danger_button(toolbar, "Destroy", self._on_destroy, enabled=False)
-        self._restart_btn = self._add_tool_button(toolbar, "Restart", self._on_restart, enabled=False)
+        self.create_btn = self._add_tool_button(toolbar, "Create", self._on_create)
+        self.destroy_btn = self._add_danger_button(toolbar, "Destroy", self._on_destroy, enabled=False)
+        self.restart_btn = self._add_tool_button(toolbar, "Restart", self._on_restart, enabled=False)
 
         toolbar.addSeparator()
 
-        self._snapshot_btn = self._add_tool_button(toolbar, "Take Snapshot", self._on_take_snapshot, enabled=False)
-        self._restore_btn = self._add_tool_button(toolbar, "Restore Snapshot", self._on_restore_snapshot, enabled=False)
+        self.snapshot_btn = self._add_tool_button(toolbar, "Take Snapshot", self._on_take_snapshot, enabled=False)
+        self.restore_btn = self._add_tool_button(toolbar, "Restore Snapshot", self._on_restore_snapshot, enabled=False)
 
         toolbar.addSeparator()
 
         self._add_toolbar_label(toolbar, "Type:")
 
-        self._sandbox_type_combo = QComboBox()
-        self._sandbox_type_combo.addItems(["Windows Sandbox", "QEMU"])
-        self._sandbox_type_combo.setMinimumWidth(120)
-        toolbar.addWidget(self._sandbox_type_combo)
+        self.sandbox_type_combo = QComboBox()
+        self.sandbox_type_combo.addItems(["Windows Sandbox", "QEMU"])
+        self.sandbox_type_combo.setMinimumWidth(120)
+        toolbar.addWidget(self.sandbox_type_combo)
 
     @override
     def _create_content(self) -> QWidget:
@@ -175,7 +175,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(fm.get_code_font(9))
-        self._console_output.setReadOnly(True)
+        self._console_output.setReadOnly(ro=True)
         set_max_block_count(self._console_output, 10000)
         output_tabs.addTab(self._console_output, "Console")
 
@@ -197,7 +197,11 @@ class SandboxPanel(AnalysisPanelBase):
 
         vnc_w = VNCWidget()
         self._vnc_widget = vnc_w
-        vnc_w.connection_status_changed.connect(self._on_vnc_status_changed)
+
+        def _vnc_status_slot(c: int) -> None:
+            self._on_vnc_status_changed(connected=bool(c))
+
+        vnc_w.connection_status_changed.connect(_vnc_status_slot)
         output_tabs.addTab(vnc_w, "VM Display")
 
         main_splitter.addWidget(output_tabs)
@@ -210,7 +214,7 @@ class SandboxPanel(AnalysisPanelBase):
         """Stop the status poll timer, disconnect VNC, and shut down the sandbox."""
         self._disconnect_vnc_display()
         self._status_poll_timer.stop()
-        if self._sandbox is not None and self._sandbox_id is not None:
+        if self._sandbox is not None and self.sandbox_id is not None:
             try:
                 run_bridge_coroutine(self._sandbox.stop())
             except (RuntimeError, ConnectionError, OSError):
@@ -262,19 +266,19 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._console_output.appendPlainText(message)
 
-    def _set_sandbox_controls_active(self, active: bool) -> None:
+    def _set_sandbox_controls_active(self, *, active: bool) -> None:
         """
         Enable or disable controls based on sandbox state.
 
         Args:
             active: True to enable sandbox-active controls.
         """
-        self._create_btn.setEnabled(not active)
-        self._destroy_btn.setEnabled(active)
-        self._restart_btn.setEnabled(active)
+        self.create_btn.setEnabled(not active)
+        self.destroy_btn.setEnabled(active)
+        self.restart_btn.setEnabled(active)
         self._run_btn.setEnabled(active)
-        self._snapshot_btn.setEnabled(active)
-        self._restore_btn.setEnabled(active)
+        self.snapshot_btn.setEnabled(active)
+        self.restore_btn.setEnabled(active)
 
     def _selected_sandbox_type(self) -> SandboxType:
         """
@@ -283,7 +287,7 @@ class SandboxPanel(AnalysisPanelBase):
         Returns:
             SandboxType: Sandbox type literal: ``"windows"`` or ``"qemu"``.
         """
-        combo_text = self._sandbox_type_combo.currentText()
+        combo_text = self.sandbox_type_combo.currentText()
         return "qemu" if combo_text == "QEMU" else "windows"
 
     def _on_create(self) -> None:
@@ -291,7 +295,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox_manager is not None:
             sandbox_type = self._selected_sandbox_type()
             _logger.debug("sandbox_create_via_manager", sandbox_type=sandbox_type)
-            self._create_btn.setEnabled(False)
+            self.create_btn.setEnabled(False)
             self._run_async(
                 self._sandbox_manager.create(sandbox_type=sandbox_type, auto_start=True),
                 on_success=self._on_mgr_create_success,
@@ -308,7 +312,7 @@ class SandboxPanel(AnalysisPanelBase):
         enable_vnc_fn = getattr(self._sandbox, "enable_vnc_display", None)
         if callable(enable_vnc_fn):
             enable_vnc_fn()
-        self._create_btn.setEnabled(False)
+        self.create_btn.setEnabled(False)
         self._run_async(
             self._sandbox.start(),
             on_success=self._on_create_success,
@@ -329,7 +333,7 @@ class SandboxPanel(AnalysisPanelBase):
         instance_id = getattr(result, "id", "active")
         if sandbox is not None:
             self._sandbox = sandbox
-        self._sandbox_id = str(instance_id)
+        self.sandbox_id = str(instance_id)
         self._on_create_success(result)
 
     def _on_create_success(self, _result: object) -> None:
@@ -339,16 +343,16 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             _result: Bridge call result (unused).
         """
-        if self._sandbox_id is None:
-            self._sandbox_id = "active"
+        if self.sandbox_id is None:
+            self.sandbox_id = "active"
         self._log("[+] Sandbox created")
         self._status_indicator.setText("Active")
-        self._set_sandbox_controls_active(True)
-        self._create_btn.setEnabled(False)
+        self._set_sandbox_controls_active(active=True)
+        self.create_btn.setEnabled(False)
         self._status_poll_timer.start(5000)
-        self.sandbox_created.emit(self._sandbox_id)
+        self.sandbox_created.emit(self.sandbox_id)
         self.tool_started.emit()
-        _logger.info("sandbox_created", sandbox_id=self._sandbox_id)
+        _logger.info("sandbox_created", sandbox_id=self.sandbox_id)
 
         QTimer.singleShot(2000, self._connect_vnc_display)
 
@@ -360,7 +364,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._log(f"[-] Failed to create sandbox: {exc}")
-        self._create_btn.setEnabled(True)
+        self.create_btn.setEnabled(True)
         _logger.warning("sandbox_create_failed", error=str(exc))
 
     def _on_cleanup_stale_success(self, result: object) -> None:
@@ -390,8 +394,8 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox is None:
             return
 
-        _logger.debug("sandbox_destroy_started", sandbox_id=self._sandbox_id)
-        self._destroy_btn.setEnabled(False)
+        _logger.debug("sandbox_destroy_started", sandbox_id=self.sandbox_id)
+        self.destroy_btn.setEnabled(False)
         self._run_async(
             self._sandbox.stop(),
             on_success=self._on_destroy_success,
@@ -407,12 +411,12 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._disconnect_vnc_display()
         self._log("[+] Sandbox destroyed")
-        self._sandbox_id = None
+        self.sandbox_id = None
         self._status_indicator.setText("Inactive")
-        self._set_sandbox_controls_active(False)
+        self._set_sandbox_controls_active(active=False)
         self._status_poll_timer.stop()
         self.tool_closed.emit()
-        _logger.info("sandbox_destroyed", sandbox_id=self._sandbox_id)
+        _logger.info("sandbox_destroyed", sandbox_id=self.sandbox_id)
 
     def _on_destroy_error(self, exc: object) -> None:
         """
@@ -422,9 +426,9 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._log(f"[-] Failed to destroy sandbox: {exc}")
-        self._sandbox_id = None
+        self.sandbox_id = None
         self._status_indicator.setText("Inactive")
-        self._set_sandbox_controls_active(False)
+        self._set_sandbox_controls_active(active=False)
         self._status_poll_timer.stop()
         self.tool_closed.emit()
         _logger.warning("sandbox_destroy_failed", error=str(exc))
@@ -434,8 +438,8 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox is None:
             return
 
-        _logger.debug("sandbox_restart_started", sandbox_id=self._sandbox_id)
-        self._restart_btn.setEnabled(False)
+        _logger.debug("sandbox_restart_started", sandbox_id=self.sandbox_id)
+        self.restart_btn.setEnabled(False)
         self._run_async(
             self._sandbox.restart(),
             on_success=self._on_restart_success,
@@ -451,8 +455,8 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log("[+] Sandbox restarted")
         self._clear_report_tabs()
-        self._restart_btn.setEnabled(True)
-        _logger.info("sandbox_restarted", sandbox_id=self._sandbox_id)
+        self.restart_btn.setEnabled(True)
+        _logger.info("sandbox_restarted", sandbox_id=self.sandbox_id)
 
     def _on_restart_error(self, exc: object) -> None:
         """
@@ -462,7 +466,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._log(f"[-] Failed to restart sandbox: {exc}")
-        self._restart_btn.setEnabled(True)
+        self.restart_btn.setEnabled(True)
         _logger.warning("sandbox_restart_failed", error=str(exc))
 
     def _on_browse_binary(self) -> None:
@@ -558,7 +562,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self._sandbox is None:
             return
 
-        self._snapshot_btn.setEnabled(False)
+        self.snapshot_btn.setEnabled(False)
         self._run_async(
             self._sandbox.take_snapshot("manual_snapshot"),
             on_success=self._on_take_snapshot_success,
@@ -576,7 +580,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(f"[+] Snapshot taken: {snapshot_id}")
         item = QTreeWidgetItem([snapshot_id, "manual_snapshot", "now"])
         self._snapshots_tree.addTopLevelItem(item)
-        self._snapshot_btn.setEnabled(True)
+        self.snapshot_btn.setEnabled(True)
         _logger.info("sandbox_snapshot_taken", snapshot_id=snapshot_id)
 
     def _on_take_snapshot_error(self, exc: object) -> None:
@@ -587,7 +591,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._log(f"[-] Snapshot failed: {exc}")
-        self._snapshot_btn.setEnabled(True)
+        self.snapshot_btn.setEnabled(True)
         _logger.warning("sandbox_snapshot_failed", error=str(exc))
 
     def _on_restore_snapshot(self) -> None:
@@ -601,7 +605,7 @@ class SandboxPanel(AnalysisPanelBase):
             return
 
         snapshot_id = selected.text(0)
-        self._restore_btn.setEnabled(False)
+        self.restore_btn.setEnabled(False)
         self._pending_snapshot_id = snapshot_id
         self._run_async(
             self._sandbox.restore_snapshot(snapshot_id),
@@ -619,7 +623,7 @@ class SandboxPanel(AnalysisPanelBase):
         snapshot_id = getattr(self, "_pending_snapshot_id", "unknown")
         self._log(f"[+] Restored snapshot: {snapshot_id}")
         self._clear_report_tabs()
-        self._restore_btn.setEnabled(True)
+        self.restore_btn.setEnabled(True)
         _logger.info("sandbox_snapshot_restored", snapshot_id=snapshot_id)
 
     def _on_restore_snapshot_error(self, exc: object) -> None:
@@ -631,7 +635,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         snapshot_id = getattr(self, "_pending_snapshot_id", "unknown")
         self._log(f"[-] Restore failed: {exc}")
-        self._restore_btn.setEnabled(True)
+        self.restore_btn.setEnabled(True)
         _logger.warning("sandbox_snapshot_restore_failed", snapshot_id=snapshot_id, error=str(exc))
 
     def _poll_status(self) -> None:
@@ -647,7 +651,7 @@ class SandboxPanel(AnalysisPanelBase):
             _logger.exception("sandbox_status_query_failed")
             self._status_indicator.setText("Active (status unavailable)")
 
-    def _on_vnc_status_changed(self, connected: bool) -> None:
+    def _on_vnc_status_changed(self, *, connected: bool) -> None:
         """
         Handle VNC connection status changes.
 
@@ -722,7 +726,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(
             f"[+] Execution report loaded: {len(report.file_changes)} file changes, "
             f"{len(report.registry_changes)} registry changes, "
-            f"{len(report.network_activity)} network events"
+            f"{len(report.network_activity)} network events",
         )
         _logger.info(
             "execution_report_loaded",

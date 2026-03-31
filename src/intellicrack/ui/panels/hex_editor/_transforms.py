@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Transforms mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -55,6 +54,7 @@ class TransformsMixin:
     """Mixin providing data transforms and pipeline execution for the hex editor panel."""
 
     _document: Any | None
+    document: Any | None
     _hex_widget: Any | None
     _transform_node_combo: QComboBox | None
     _transform_params_form: QFormLayout | None
@@ -112,7 +112,7 @@ class TransformsMixin:
         layout.addLayout(action_row)
 
         self._transform_preview_pane = QPlainTextEdit()
-        self._transform_preview_pane.setReadOnly(True)
+        self._transform_preview_pane.setReadOnly(ro=True)
         preview_font = self._transform_preview_pane.font()
         preview_font.setFamily("Consolas")
         preview_font.setPointSize(9)
@@ -194,8 +194,8 @@ class TransformsMixin:
         if not param_names and node.description:
             self._transform_params_form.addRow(
                 QLabel(
-                    node.description[:DESCRIPTION_TRUNCATE_LEN] if len(node.description) > DESCRIPTION_TRUNCATE_LEN else node.description
-                )
+                    node.description[:DESCRIPTION_TRUNCATE_LEN] if len(node.description) > DESCRIPTION_TRUNCATE_LEN else node.description,
+                ),
             )
 
         for param_name in param_names:
@@ -252,7 +252,7 @@ class TransformsMixin:
 
     def _on_transform_preview(self) -> None:
         """Apply the selected transform to the cursor region and show a hex dump preview."""
-        if self._document is None or self._transform_preview_pane is None:
+        if self.document is None or self._transform_preview_pane is None:
             return
 
         cursor_offset = 0
@@ -261,11 +261,11 @@ class TransformsMixin:
 
         preview_len = PREVIEW_BYTES
         try:
-            doc_len: int = self._document.length()
+            doc_len: int = self.document.length()
             read_len = min(preview_len, doc_len - cursor_offset)
             if read_len <= 0:
                 return
-            raw: object = self._document.read(cursor_offset, read_len)
+            raw: object = self.document.read(cursor_offset, read_len)
             if isinstance(raw, (list, bytearray)):
                 data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
             elif isinstance(raw, bytes):
@@ -291,7 +291,7 @@ class TransformsMixin:
 
     def _on_transform_apply(self) -> None:
         """Apply the selected transform to the current selection or cursor region and write to document."""
-        if self._document is None:
+        if self.document is None:
             return
 
         cursor_offset = 0
@@ -305,11 +305,11 @@ class TransformsMixin:
                 apply_len = sel_end - sel_start
 
         try:
-            doc_len: int = self._document.length()
+            doc_len: int = self.document.length()
             read_len = min(apply_len, doc_len - cursor_offset)
             if read_len <= 0:
                 return
-            raw: object = self._document.read(cursor_offset, read_len)
+            raw: object = self.document.read(cursor_offset, read_len)
             if isinstance(raw, (list, bytearray)):
                 data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
             elif isinstance(raw, bytes):
@@ -333,7 +333,7 @@ class TransformsMixin:
                 f"Transform output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
         try:
-            self._document.write_bytes(cursor_offset, result[:write_len])
+            self.document.write_bytes(cursor_offset, result[:write_len])
         except (AttributeError, ValueError) as exc:
             logger.debug("transform_apply_write_failed", error=str(exc))
         else:
@@ -427,7 +427,7 @@ class TransformsMixin:
 
     def _on_pipeline_execute(self) -> None:
         """Execute all pipeline steps on the current document region and write results."""
-        if self._document is None or self._transform_pipeline is None:
+        if self.document is None or self._transform_pipeline is None:
             return
 
         if self._pipeline_step_count() == 0:
@@ -444,11 +444,11 @@ class TransformsMixin:
                 apply_len = sel_end - sel_start
 
         try:
-            doc_len: int = self._document.length()
+            doc_len: int = self.document.length()
             read_len = min(apply_len, doc_len - cursor_offset)
             if read_len <= 0:
                 return
-            raw: object = self._document.read(cursor_offset, read_len)
+            raw: object = self.document.read(cursor_offset, read_len)
             if isinstance(raw, (list, bytearray)):
                 data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
             elif isinstance(raw, bytes):
@@ -486,7 +486,7 @@ class TransformsMixin:
                 f"Pipeline output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
         try:
-            self._document.write_bytes(cursor_offset, result[:write_len])
+            self.document.write_bytes(cursor_offset, result[:write_len])
         except (AttributeError, ValueError) as exc:
             logger.debug("pipeline_write_failed", error=str(exc))
         else:

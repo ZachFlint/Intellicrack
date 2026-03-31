@@ -30,6 +30,21 @@
 .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
+6 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
 6 findings in .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-dispatch.yml
 
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
@@ -43,6 +58,21 @@
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
+6 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
 6 findings in .\.claude\worktrees\agent-a48b5b77\.github\workflows\gemini-dispatch.yml
@@ -60,6 +90,21 @@
 .\.claude\worktrees\agent-a48b5b77\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
+6 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
 6 findings in .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-dispatch.yml
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
@@ -73,6 +118,21 @@
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
+6 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
 6 findings in .\.claude\worktrees\agent-a7aa5c92\.github\workflows\gemini-dispatch.yml
@@ -105,6 +165,36 @@
 .\.claude\worktrees\agent-aa29b28a\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
+6 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
+6 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
 6 findings in .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-dispatch.yml
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
@@ -118,6 +208,21 @@
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
+6 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
 6 findings in .\.github\workflows\gemini-dispatch.yml
@@ -161,6 +266,19 @@
 .\.claude\worktrees\agent-a0defda8\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
+5 findings in .\.claude\worktrees\agent-a1127576\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-a1127576\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
 5 findings in .\.claude\worktrees\agent-a18bc8fe\.pre-commit-config.yaml
 
 .\.claude\worktrees\agent-a18bc8fe\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
@@ -172,6 +290,19 @@
 .\.claude\worktrees\agent-a18bc8fe\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a18bc8fe\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
+5 findings in .\.claude\worktrees\agent-a1c30ab0\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-a1c30ab0\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
 5 findings in .\.claude\worktrees\agent-a48b5b77\.pre-commit-config.yaml
@@ -187,6 +318,19 @@
 .\.claude\worktrees\agent-a48b5b77\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
+5 findings in .\.claude\worktrees\agent-a54bd3a3\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-a54bd3a3\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
 5 findings in .\.claude\worktrees\agent-a57053be\.pre-commit-config.yaml
 
 .\.claude\worktrees\agent-a57053be\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
@@ -198,6 +342,19 @@
 .\.claude\worktrees\agent-a57053be\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a57053be\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
+5 findings in .\.claude\worktrees\agent-a7106281\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-a7106281\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
 5 findings in .\.claude\worktrees\agent-a7aa5c92\.pre-commit-config.yaml
@@ -226,6 +383,32 @@
 .\.claude\worktrees\agent-aa29b28a\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
+5 findings in .\.claude\worktrees\agent-aca90621\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-aca90621\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
+5 findings in .\.claude\worktrees\agent-ad44f135\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-ad44f135\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
 5 findings in .\.claude\worktrees\agent-ad7f5752\.pre-commit-config.yaml
 
 .\.claude\worktrees\agent-ad7f5752\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
@@ -239,6 +422,19 @@
 .\.claude\worktrees\agent-ad7f5752\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
+5 findings in .\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml
+
+.\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
 4 findings in .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-triage.yml
 
 .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -248,6 +444,17 @@
 .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+4 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
 4 findings in .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-triage.yml
@@ -261,6 +468,17 @@
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
+4 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
 4 findings in .\.claude\worktrees\agent-a48b5b77\.github\workflows\gemini-triage.yml
 
 .\.claude\worktrees\agent-a48b5b77\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -272,6 +490,17 @@
 .\.claude\worktrees\agent-a48b5b77\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
+4 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
 4 findings in .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-triage.yml
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -281,6 +510,17 @@
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+4 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
 4 findings in .\.claude\worktrees\agent-a7aa5c92\.github\workflows\gemini-triage.yml
@@ -305,6 +545,28 @@
 .\.claude\worktrees\agent-aa29b28a\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
+4 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+4 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
 4 findings in .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-triage.yml
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -314,6 +576,17 @@
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+4 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
 4 findings in .\.github\workflows\gemini-triage.yml
@@ -401,6 +674,69 @@
 .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
+3 findings in .\.claude\worktrees\agent-a1127576\.sourcery.yaml
+
+.\.claude\worktrees\agent-a1127576\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
 3 findings in .\.claude\worktrees\agent-a18bc8fe\.sourcery.yaml
 
 .\.claude\worktrees\agent-a18bc8fe\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
@@ -462,6 +798,69 @@
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.sourcery.yaml
+
+.\.claude\worktrees\agent-a1c30ab0\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
 3 findings in .\.claude\worktrees\agent-a48b5b77\.sourcery.yaml
@@ -527,6 +926,69 @@
 .\.claude\worktrees\agent-a48b5b77\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.sourcery.yaml
+
+.\.claude\worktrees\agent-a54bd3a3\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
 3 findings in .\.claude\worktrees\agent-a57053be\.sourcery.yaml
 
 .\.claude\worktrees\agent-a57053be\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
@@ -588,6 +1050,69 @@
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.sourcery.yaml
+
+.\.claude\worktrees\agent-a7106281\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
 3 findings in .\.claude\worktrees\agent-a7aa5c92\.sourcery.yaml
@@ -716,6 +1241,132 @@
 .\.claude\worktrees\agent-aa29b28a\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
+3 findings in .\.claude\worktrees\agent-aca90621\.sourcery.yaml
+
+.\.claude\worktrees\agent-aca90621\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.sourcery.yaml
+
+.\.claude\worktrees\agent-ad44f135\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
 3 findings in .\.claude\worktrees\agent-ad7f5752\.sourcery.yaml
 
 .\.claude\worktrees\agent-ad7f5752\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
@@ -777,6 +1428,69 @@
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.sourcery.yaml
+
+.\.claude\worktrees\agent-adcc5316\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.sourcery.yaml:1:17: [error] wrong new line character: expected \n  (new-lines)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\ci.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\claude-code-review.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\claude.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-invoke.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-review.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-scheduled-triage.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
 3 findings in .\.github\workflows\ci.yml
@@ -847,11 +1561,25 @@
 .\.claude\worktrees\agent-a0defda8\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
+2 findings in .\.claude\worktrees\agent-a1127576\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1127576\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
 2 findings in .\.claude\worktrees\agent-a18bc8fe\.github\workflows\qodana_code_quality.yml
 
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
 
 .\.claude\worktrees\agent-a18bc8fe\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
+2 findings in .\.claude\worktrees\agent-a1c30ab0\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a1c30ab0\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
 2 findings in .\.claude\worktrees\agent-a48b5b77\.github\workflows\qodana_code_quality.yml
@@ -861,11 +1589,25 @@
 .\.claude\worktrees\agent-a48b5b77\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
+2 findings in .\.claude\worktrees\agent-a54bd3a3\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a54bd3a3\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
 2 findings in .\.claude\worktrees\agent-a57053be\.github\workflows\qodana_code_quality.yml
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
 
 .\.claude\worktrees\agent-a57053be\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
+2 findings in .\.claude\worktrees\agent-a7106281\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-a7106281\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
 2 findings in .\.claude\worktrees\agent-a7aa5c92\.github\workflows\qodana_code_quality.yml
@@ -882,11 +1624,32 @@
 .\.claude\worktrees\agent-aa29b28a\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
+2 findings in .\.claude\worktrees\agent-aca90621\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-aca90621\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
+2 findings in .\.claude\worktrees\agent-ad44f135\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-ad44f135\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
 2 findings in .\.claude\worktrees\agent-ad7f5752\.github\workflows\qodana_code_quality.yml
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
 
 .\.claude\worktrees\agent-ad7f5752\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+
+
+2 findings in .\.claude\worktrees\agent-adcc5316\.github\workflows\qodana_code_quality.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
+
+.\.claude\worktrees\agent-adcc5316\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
 2 findings in .\.github\workflows\qodana_code_quality.yml
@@ -952,6 +1715,26 @@
 .\.claude\worktrees\agent-a0defda8\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
+1 findings in .\.claude\worktrees\agent-a1127576\.readthedocs.yaml
+
+.\.claude\worktrees\agent-a1127576\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1127576\.yarnrc.yml
+
+.\.claude\worktrees\agent-a1127576\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1127576\qodana.yaml
+
+.\.claude\worktrees\agent-a1127576\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1127576\.github\dependabot.yml
+
+.\.claude\worktrees\agent-a1127576\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
 1 findings in .\.claude\worktrees\agent-a18bc8fe\.readthedocs.yaml
 
 .\.claude\worktrees\agent-a18bc8fe\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
@@ -970,6 +1753,26 @@
 1 findings in .\.claude\worktrees\agent-a18bc8fe\.github\dependabot.yml
 
 .\.claude\worktrees\agent-a18bc8fe\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1c30ab0\.readthedocs.yaml
+
+.\.claude\worktrees\agent-a1c30ab0\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1c30ab0\.yarnrc.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1c30ab0\qodana.yaml
+
+.\.claude\worktrees\agent-a1c30ab0\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a1c30ab0\.github\dependabot.yml
+
+.\.claude\worktrees\agent-a1c30ab0\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
 1 findings in .\.claude\worktrees\agent-a48b5b77\.readthedocs.yaml
@@ -992,6 +1795,26 @@
 .\.claude\worktrees\agent-a48b5b77\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
+1 findings in .\.claude\worktrees\agent-a54bd3a3\.readthedocs.yaml
+
+.\.claude\worktrees\agent-a54bd3a3\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a54bd3a3\.yarnrc.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a54bd3a3\qodana.yaml
+
+.\.claude\worktrees\agent-a54bd3a3\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a54bd3a3\.github\dependabot.yml
+
+.\.claude\worktrees\agent-a54bd3a3\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
 1 findings in .\.claude\worktrees\agent-a57053be\.readthedocs.yaml
 
 .\.claude\worktrees\agent-a57053be\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
@@ -1010,6 +1833,26 @@
 1 findings in .\.claude\worktrees\agent-a57053be\.github\dependabot.yml
 
 .\.claude\worktrees\agent-a57053be\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a7106281\.readthedocs.yaml
+
+.\.claude\worktrees\agent-a7106281\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a7106281\.yarnrc.yml
+
+.\.claude\worktrees\agent-a7106281\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a7106281\qodana.yaml
+
+.\.claude\worktrees\agent-a7106281\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-a7106281\.github\dependabot.yml
+
+.\.claude\worktrees\agent-a7106281\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
 1 findings in .\.claude\worktrees\agent-a7aa5c92\.readthedocs.yaml
@@ -1052,6 +1895,46 @@
 .\.claude\worktrees\agent-aa29b28a\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
+1 findings in .\.claude\worktrees\agent-aca90621\.readthedocs.yaml
+
+.\.claude\worktrees\agent-aca90621\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-aca90621\.yarnrc.yml
+
+.\.claude\worktrees\agent-aca90621\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-aca90621\qodana.yaml
+
+.\.claude\worktrees\agent-aca90621\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-aca90621\.github\dependabot.yml
+
+.\.claude\worktrees\agent-aca90621\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-ad44f135\.readthedocs.yaml
+
+.\.claude\worktrees\agent-ad44f135\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-ad44f135\.yarnrc.yml
+
+.\.claude\worktrees\agent-ad44f135\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-ad44f135\qodana.yaml
+
+.\.claude\worktrees\agent-ad44f135\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-ad44f135\.github\dependabot.yml
+
+.\.claude\worktrees\agent-ad44f135\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
 1 findings in .\.claude\worktrees\agent-ad7f5752\.readthedocs.yaml
 
 .\.claude\worktrees\agent-ad7f5752\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
@@ -1070,6 +1953,26 @@
 1 findings in .\.claude\worktrees\agent-ad7f5752\.github\dependabot.yml
 
 .\.claude\worktrees\agent-ad7f5752\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-adcc5316\.readthedocs.yaml
+
+.\.claude\worktrees\agent-adcc5316\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-adcc5316\.yarnrc.yml
+
+.\.claude\worktrees\agent-adcc5316\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-adcc5316\qodana.yaml
+
+.\.claude\worktrees\agent-adcc5316\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.claude\worktrees\agent-adcc5316\.github\dependabot.yml
+
+.\.claude\worktrees\agent-adcc5316\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
 1 findings in .\.github\dependabot.yml

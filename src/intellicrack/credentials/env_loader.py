@@ -17,8 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from ..core.logging import get_logger
-from ..core.types import ProviderCredentials, ProviderName
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ProviderCredentials, ProviderName
 
 
 _logger = get_logger("credentials.env_loader")
@@ -179,7 +179,7 @@ class CredentialLoader:
             r"([A-Za-z_][A-Za-z0-9_]*)"
             r"\s*=\s*"
             r'(?:"([^"]*)"|\'([^\']*)\'|(.*))'
-            r"\s*$"
+            r"\s*$",
         )
 
         loaded_count = 0

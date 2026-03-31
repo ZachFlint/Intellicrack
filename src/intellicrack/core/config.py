@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Configuration management for Intellicrack.
 
@@ -18,8 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .logging import get_logger
-from .types import ConfirmationLevel, ProviderName, ToolName
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
 
 
 _logger = get_logger("core.config")
@@ -499,6 +498,58 @@ class Config:
             session=session,
             log=log,
         )
+
+    @staticmethod
+    def parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
+        """
+        Parse providers configuration section.
+
+        Args:
+            providers_data: Dictionary with provider configuration values.
+
+        Returns:
+            dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their configurations.
+        """
+        return Config._parse_providers(providers_data)
+
+    @staticmethod
+    def parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
+        """
+        Parse tools configuration section.
+
+        Args:
+            tools_data: Dictionary with tool configuration values.
+
+        Returns:
+            dict[ToolName, ToolConfig]: Dictionary mapping tool names to their configurations.
+        """
+        return Config._parse_tools(tools_data)
+
+    @staticmethod
+    def parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
+        """
+        Parse sandbox, UI, session, and log configuration sections.
+
+        Args:
+            data: Full configuration dictionary.
+
+        Returns:
+            tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]: Tuple of (sandbox, ui, session, log) configurations.
+        """
+        return Config._parse_sub_configs(data)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Config:
+        """
+        Create Config from dictionary.
+
+        Args:
+            data: Dictionary with configuration values.
+
+        Returns:
+            Config: Config instance with values from dict and defaults for missing.
+        """
+        return cls._from_dict(data)
 
     def save(self, path: Path) -> None:
         """

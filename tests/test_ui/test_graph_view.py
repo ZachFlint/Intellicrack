@@ -189,7 +189,7 @@ class TestCFGGraphScene:
         """Verify load_graph creates BasicBlockItem for each block."""
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
-        assert len(scene._block_items) == len(SAMPLE_BLOCKS)
+        assert len(scene.block_items) == len(SAMPLE_BLOCKS)
 
     @staticmethod
     def test_load_graph_stores_correct_addresses() -> None:
@@ -197,7 +197,7 @@ class TestCFGGraphScene:
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
         expected = {BLOCK_ADDR_ENTRY, BLOCK_ADDR_TRUE, BLOCK_ADDR_FALSE, BLOCK_ADDR_RET}
-        assert set(scene._block_items.keys()) == expected
+        assert set(scene.block_items.keys()) == expected
 
     @staticmethod
     def test_load_graph_positions_blocks() -> None:
@@ -205,7 +205,7 @@ class TestCFGGraphScene:
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
         has_nonzero = False
-        for item in scene._block_items.values():
+        for item in scene.block_items.values():
             pos = item.pos()
             if abs(pos.x()) > FLOAT_EPSILON or abs(pos.y()) > FLOAT_EPSILON:
                 has_nonzero = True
@@ -234,16 +234,16 @@ class TestCFGGraphScene:
         """Verify load_graph handles empty block list gracefully."""
         scene = CFGGraphScene()
         scene.load_graph([])
-        assert len(scene._block_items) == 0
+        assert len(scene.block_items) == 0
 
     @staticmethod
     def test_load_graph_clears_previous() -> None:
         """Verify load_graph clears previous blocks before loading new."""
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
-        assert len(scene._block_items) == EXPECTED_SAMPLE_BLOCK_COUNT
+        assert len(scene.block_items) == EXPECTED_SAMPLE_BLOCK_COUNT
         scene.load_graph(LINEAR_BLOCKS)
-        assert len(scene._block_items) == EXPECTED_LINEAR_BLOCK_COUNT
+        assert len(scene.block_items) == EXPECTED_LINEAR_BLOCK_COUNT
 
     @staticmethod
     def test_compute_layers_linear() -> None:
@@ -253,7 +253,7 @@ class TestCFGGraphScene:
             LAYOUT_BLOCK_ADDR_B: {"jump": LAYOUT_BLOCK_ADDR_C},
             LAYOUT_BLOCK_ADDR_C: {},
         }
-        layers = CFGGraphScene._compute_layers(block_map)
+        layers = CFGGraphScene.compute_layers(block_map)
         assert len(layers) == EXPECTED_LINEAR_LAYERS
         assert layers[0] == [LAYOUT_BLOCK_ADDR_A]
         assert layers[1] == [LAYOUT_BLOCK_ADDR_B]
@@ -267,7 +267,7 @@ class TestCFGGraphScene:
             LAYOUT_BLOCK_ADDR_B: {},
             LAYOUT_BLOCK_ADDR_C: {},
         }
-        layers = CFGGraphScene._compute_layers(block_map)
+        layers = CFGGraphScene.compute_layers(block_map)
         assert len(layers) == EXPECTED_BRANCH_LAYERS
         assert LAYOUT_BLOCK_ADDR_A in layers[0]
         layer1 = set(layers[1])
@@ -277,7 +277,7 @@ class TestCFGGraphScene:
     @staticmethod
     def test_compute_layers_empty() -> None:
         """Verify empty block map returns empty layers."""
-        layers = CFGGraphScene._compute_layers({})
+        layers = CFGGraphScene.compute_layers({})
         assert layers == {}
 
     @staticmethod
@@ -286,7 +286,7 @@ class TestCFGGraphScene:
         scene = CFGGraphScene()
         blocks: list[dict[str, Any]] = [{"offset": LAYOUT_BLOCK_ADDR_A}]
         scene.load_graph(blocks)
-        assert LAYOUT_BLOCK_ADDR_A in scene._block_items
+        assert LAYOUT_BLOCK_ADDR_A in scene.block_items
 
     @staticmethod
     def test_blocks_with_non_list_ops() -> None:
@@ -294,7 +294,7 @@ class TestCFGGraphScene:
         scene = CFGGraphScene()
         blocks: list[dict[str, Any]] = [{"offset": LAYOUT_BLOCK_ADDR_A, "ops": "invalid"}]
         scene.load_graph(blocks)
-        assert LAYOUT_BLOCK_ADDR_A in scene._block_items
+        assert LAYOUT_BLOCK_ADDR_A in scene.block_items
 
 
 @pytest.mark.usefixtures("qapp")

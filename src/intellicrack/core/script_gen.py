@@ -27,7 +27,7 @@ import ast
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar, Literal
@@ -319,7 +319,7 @@ class Script:
     verified: bool = False
     execution_results: dict[str, Any] = field(default_factory=_empty_str_any_dict)
 
-    def add_execution_result(self, tool_name: str, result: Any) -> None:
+    def add_execution_result(self, tool_name: str, result: object) -> None:
         """
         Add or update an execution result record.
 
@@ -328,7 +328,7 @@ class Script:
             result: The result object or data.
         """
         self.execution_results[tool_name] = result
-        self.execution_results["last_run"] = datetime.now().isoformat()
+        self.execution_results["last_run"] = datetime.now(tz=UTC).isoformat()
 
     def save(self, path: Path) -> None:
         """
@@ -424,10 +424,10 @@ class ScriptValidator:
         except FileNotFoundError:
             _logger.debug("node_not_found", reason="node binary not available, skipping validation")
             return True, None
-        except Exception as exc:
-            if isinstance(exc, TimeoutExpired):
-                _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
-                return False, "Validation timed out"
+        except TimeoutExpired:
+            _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
+            return False, "Validation timed out"
+        except (OSError, RuntimeError, ValueError) as exc:
             _logger.debug("validation_exception", language="javascript", error=str(exc))
             return True, None
 
@@ -504,7 +504,7 @@ class ScriptManager:
         self.scripts = {}
         self._validator = ScriptValidator()
 
-    def add_script(self, script: Script, validate: bool = True) -> bool:
+    def add_script(self, script: Script, *, validate: bool = True) -> bool:
         """
         Add a script to the manager.
 
@@ -690,7 +690,7 @@ class ScriptManager:
             return True
         return False
 
-    def record_execution(self, script_name: str, tool_name: str, result: Any) -> bool:
+    def record_execution(self, script_name: str, tool_name: str, result: object) -> bool:
         """
         Record an execution result for a script.
 
@@ -731,13 +731,8 @@ def get_frida_api_reference() -> dict[str, str]:
     return {
         "process": ("Process.findModuleByName(name), Process.enumerateModules(), Process.enumerateRanges(protection)"),
         "module": ("Module.findExportByName(module, name), module.base, module.size, module.enumerateExports(), module.enumerateImports()"),
-        "memory": (
-            "Memory.readByteArray(addr, length), Memory.writeByteArray(addr, bytes), "
-            "Memory.protect(addr, size, protection), Memory.scanSync(addr, size, pattern)"
-        ),
-        "interceptor": (
-            "Interceptor.attach(target, {onEnter, onLeave}), Interceptor.replace(target, replacement), Interceptor.revert(target)"
-        ),
+        "memory": "Memory.readByteArray(addr, length), Memory.writeByteArray(addr, bytes), Memory.protect(addr, size, protection), Memory.scanSync(addr, size, pattern)",
+        "interceptor": "Interceptor.attach(target, {onEnter, onLeave}), Interceptor.replace(target, replacement), Interceptor.revert(target)",
         "native_function": ("new NativeFunction(addr, retType, argTypes), new NativeCallback(func, retType, argTypes)"),
         "stalker": ("Stalker.follow(threadId, {events, onReceive, transform}), Stalker.unfollow(threadId)"),
     }

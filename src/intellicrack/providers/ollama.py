@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Ollama LLM provider implementation with dual local/cloud support.
 
@@ -22,8 +21,8 @@ from typing import TYPE_CHECKING, Any, cast, override
 
 import httpx
 
-from ..core.logging import get_logger, log_provider_request
-from ..core.types import (
+from intellicrack.core.logging import get_logger, log_provider_request
+from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
@@ -34,7 +33,7 @@ from ..core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_openai_tool_schema
+from intellicrack.providers.base import LLMProviderBase, create_openai_tool_schema
 
 
 if TYPE_CHECKING:
@@ -144,7 +143,7 @@ class OllamaProvider(LLMProviderBase):
             raise ProviderError(_ERR_CONNECT_BOTH_FAILED)
 
         self._credentials = credentials
-        self._connected = True
+        self.connected = True
 
     async def _connect_local(self) -> None:
         """Attempt to connect to local Ollama instance."""
@@ -154,7 +153,7 @@ class OllamaProvider(LLMProviderBase):
             response.raise_for_status()
             self._local_available = True
             self._logger.info("local_ollama_connected", url=self._local_url)
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._local_available = False
             self._logger.debug("local_ollama_unavailable", error=str(e))
             if self._local_client:
@@ -189,7 +188,7 @@ class OllamaProvider(LLMProviderBase):
             if self._cloud_client:
                 await self._cloud_client.aclose()
                 self._cloud_client = None
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._cloud_available = False
             self._logger.warning(
                 "cloud_ollama_unavailable",
@@ -214,9 +213,9 @@ class OllamaProvider(LLMProviderBase):
             self._local_available = False
             self._cloud_available = False
             self._logger.info("ollama_disconnected", provider="ollama")
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self._connected = False
+            self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """
@@ -230,7 +229,7 @@ class OllamaProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected.
         """
-        if not self._connected:
+        if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._logger.debug("ollama_listing_models")
@@ -285,9 +284,9 @@ class OllamaProvider(LLMProviderBase):
                         supports_streaming=True,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
-                    )
+                    ),
                 )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._logger.warning("local_models_list_failed", error=str(e))
 
         return models
@@ -330,9 +329,9 @@ class OllamaProvider(LLMProviderBase):
                         supports_streaming=True,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
-                    )
+                    ),
                 )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._logger.warning("cloud_models_list_failed", error=str(e))
 
         return models
@@ -408,10 +407,11 @@ class OllamaProvider(LLMProviderBase):
                 template: str = show_data.get("template", "")
                 if re.search(r"\{\{-?\s*\.Tools\s*-?\}\}", template):
                     has_tools = True
-            except Exception:
+            except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as show_exc:
                 self._logger.debug(
                     "ollama_show_failed",
                     model=name,
+                    error=str(show_exc),
                 )
             return name, ctx_window, has_tools
 
@@ -427,6 +427,7 @@ class OllamaProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -450,7 +451,7 @@ class OllamaProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected:
+        if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -462,7 +463,7 @@ class OllamaProvider(LLMProviderBase):
             self._logger.debug("ollama_cache_ignored")
 
         client, base_url, actual_model = self._get_client_and_model(model)
-        ollama_messages = self._convert_messages_to_provider_format(messages)
+        ollama_messages = self.convert_messages_to_provider_format(messages)
 
         log_provider_request(
             provider="ollama",
@@ -481,7 +482,7 @@ class OllamaProvider(LLMProviderBase):
             },
         }
         if tools:
-            request_body["tools"] = self._convert_tools_to_provider_format(tools)
+            request_body["tools"] = self.convert_tools_to_provider_format(tools)
 
         start_time = time.perf_counter()
         data = await self._make_ollama_api_call(
@@ -533,7 +534,7 @@ class OllamaProvider(LLMProviderBase):
         except httpx.HTTPStatusError as e:
             _logger.warning("ollama_api_error", error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             _logger.warning("ollama_request_failed", error=str(e))
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
@@ -588,6 +589,7 @@ class OllamaProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -613,7 +615,7 @@ class OllamaProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected:
+        if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -639,7 +641,7 @@ class OllamaProvider(LLMProviderBase):
             return
 
         client, base_url, actual_model = self._get_client_and_model(model)
-        ollama_messages = self._convert_messages_to_provider_format(messages)
+        ollama_messages = self.convert_messages_to_provider_format(messages)
 
         try:
             request_body: dict[str, object] = {
@@ -677,7 +679,7 @@ class OllamaProvider(LLMProviderBase):
                     last_chunk_data,
                 )
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             if not self._cancel_requested:
                 self._logger.warning("ollama_stream_failed", error=str(e))
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
@@ -762,6 +764,6 @@ class OllamaProvider(LLMProviderBase):
                         except json.JSONDecodeError:
                             self._logger.warning("pull_status_json_decode_failed")
                             continue
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._logger.warning("ollama_pull_failed", model=actual_model, error=str(e))
             raise ProviderError(_ERR_PULL_FAILED % (actual_model, e)) from e

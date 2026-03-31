@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Tool configuration dialog for Intellicrack.
 
@@ -46,11 +45,10 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core._subprocess import TimeoutExpired
-
-from ..core.config import get_config_file
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager
-from .resources import IconManager
+from intellicrack.core.config import get_config_file
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager
+from intellicrack.ui.resources import IconManager
 
 
 if TYPE_CHECKING:
@@ -125,14 +123,16 @@ class ToolInstallWorker(QThread):
         """Run the installation in a separate thread."""
         try:
             self._install_tool()
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError) as e:
             _logger.exception("tool_install_failed", error=str(e))
-            self.install_finished.emit(False, f"Installation failed: {e}")
+            success = False
+            self.install_finished.emit(success, f"Installation failed: {e}")
 
     def _install_tool(self) -> None:
         """Download and install the tool."""
         if self._tool_id not in self.DOWNLOAD_URLS:
-            self.install_finished.emit(False, f"No download URL for {self._tool_id}")
+            success = False
+            self.install_finished.emit(success, f"No download URL for {self._tool_id}")
             return
 
         tool_info = self.DOWNLOAD_URLS[self._tool_id]
@@ -155,8 +155,9 @@ class ToolInstallWorker(QThread):
                     client.stream("GET", url, follow_redirects=True) as response,
                 ):
                     if response.status_code != HTTP_OK:
+                        success = False
                         self.install_finished.emit(
-                            False,
+                            success,
                             f"Download failed: HTTP {response.status_code}",
                         )
                         return
@@ -164,7 +165,7 @@ class ToolInstallWorker(QThread):
                     total = int(response.headers.get("content-length", 0))
                     downloaded = 0
 
-                    with open(zip_path, "wb") as f:
+                    with zip_path.open("wb") as f:
                         for chunk in response.iter_bytes(chunk_size=8192):
                             f.write(chunk)
                             downloaded += len(chunk)
@@ -174,11 +175,13 @@ class ToolInstallWorker(QThread):
 
             except httpx.TimeoutException as exc:
                 _logger.exception("tool_download_timeout", tool_id=self._tool_id, error=str(exc))
-                self.install_finished.emit(False, "Download timed out")
+                success = False
+                self.install_finished.emit(success, "Download timed out")
                 return
             except httpx.ConnectError as exc:
                 _logger.exception("tool_download_connect_error", tool_id=self._tool_id, error=str(exc))
-                self.install_finished.emit(False, "Could not connect to download server")
+                success = False
+                self.install_finished.emit(success, "Could not connect to download server")
                 return
 
             self.progress.emit(85)
@@ -188,7 +191,8 @@ class ToolInstallWorker(QThread):
                     zf.extractall(self._install_path)
             except zipfile.BadZipFile as exc:
                 _logger.exception("tool_extraction_bad_zip", tool_id=self._tool_id, error=str(exc))
-                self.install_finished.emit(False, "Downloaded file is not a valid ZIP archive")
+                success = False
+                self.install_finished.emit(success, "Downloaded file is not a valid ZIP archive")
                 return
 
             self.progress.emit(95)
@@ -199,7 +203,8 @@ class ToolInstallWorker(QThread):
                 self._post_install_cutter()
 
             self.progress.emit(100)
-            self.install_finished.emit(True, f"{name} installed successfully")
+            success = True
+            self.install_finished.emit(success, f"{name} installed successfully")
 
     def _post_install_ghidra(self) -> None:
         """
@@ -383,9 +388,10 @@ class ToolStatusCheckWorker(QThread):
             is_available, message = self._check_tool()
             _logger.debug("tool_status_check_completed", tool_id=self._tool_id, available=is_available, status_message=message)
             self.status_checked.emit(self._tool_id, is_available, message)
-        except Exception as e:
+        except (RuntimeError, OSError, ImportError) as e:
             _logger.exception("tool_status_check_failed", tool_id=self._tool_id, error=str(e))
-            self.status_checked.emit(self._tool_id, False, f"Check failed: {e}")
+            is_available = False
+            self.status_checked.emit(self._tool_id, is_available, f"Check failed: {e}")
 
     def _check_tool(self) -> tuple[bool, str]:
         """
@@ -599,7 +605,7 @@ class ToolConfigDialog(QDialog):
         layout.addWidget(splitter, stretch=1)
 
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply,
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
@@ -750,9 +756,9 @@ class ToolSettingsWidget(QFrame):
         self._status_icon.setFixedSize(20, 20)
         status_row.addWidget(self._status_icon)
 
-        self._status_label = QLabel("Unknown")
-        self._status_label.setObjectName("status_label")
-        status_row.addWidget(self._status_label)
+        self.status_label = QLabel("Unknown")
+        self.status_label.setObjectName("status_label")
+        status_row.addWidget(self.status_label)
         status_row.addStretch()
 
         status_layout.addRow("Status:", status_row)
@@ -850,7 +856,7 @@ class ToolSettingsWidget(QFrame):
             return {}
 
         try:
-            with open(self._config_path, encoding="utf-8") as f:
+            with self._config_path.open(encoding="utf-8") as f:
                 all_settings: dict[str, Any] = json.load(f)
                 result: dict[str, Any] = all_settings.get(self._tool_id, {})
                 return result
@@ -871,7 +877,7 @@ class ToolSettingsWidget(QFrame):
         """Check the tool installation status."""
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
-        self._status_label.setText("Checking...")
+        self.status_label.setText("Checking...")
         self._check_status_btn.setEnabled(False)
 
         self._status_worker = ToolStatusCheckWorker(
@@ -879,10 +885,14 @@ class ToolSettingsWidget(QFrame):
             self._path_input.text().strip(),
             self,
         )
-        self._status_worker.status_checked.connect(self._on_status_checked)
+
+        def _status_slot(tid: str, avail: int, msg: str) -> None:
+            self._on_status_checked(tid, is_available=bool(avail), message=msg)
+
+        self._status_worker.status_checked.connect(_status_slot)
         self._status_worker.start()
 
-    def _on_status_checked(self, tool_id: str, is_available: bool, message: str) -> None:
+    def _on_status_checked(self, tool_id: str, *, is_available: bool, message: str) -> None:
         """
         Handle status check completion.
 
@@ -898,7 +908,7 @@ class ToolSettingsWidget(QFrame):
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
         else:
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
-        self._status_label.setText(message)
+        self.status_label.setText(message)
         self.status_changed.emit(tool_id, is_available)
 
     def _install_tool(self) -> None:
@@ -938,10 +948,14 @@ class ToolSettingsWidget(QFrame):
 
             self._install_worker = ToolInstallWorker(self._tool_id, install_path, self)
             self._install_worker.progress.connect(self._install_progress.setValue)
-            self._install_worker.install_finished.connect(self._on_install_finished)
+
+            def _install_slot(s: int, m: str) -> None:
+                self._on_install_finished(success=bool(s), message=m)
+
+            self._install_worker.install_finished.connect(_install_slot)
             self._install_worker.start()
 
-    def _on_install_finished(self, success: bool, message: str) -> None:
+    def _on_install_finished(self, *, success: bool, message: str) -> None:
         """
         Handle installation completion.
 
@@ -979,7 +993,7 @@ class ToolSettingsWidget(QFrame):
         all_settings: dict[str, dict[str, Any]] = {}
         if self._config_path.exists():
             try:
-                with open(self._config_path, encoding="utf-8") as f:
+                with self._config_path.open(encoding="utf-8") as f:
                     all_settings = json.load(f)
             except (json.JSONDecodeError, OSError):
                 _logger.warning("tool_settings_load_for_save_failed", tool_id=self._tool_id)
@@ -988,7 +1002,7 @@ class ToolSettingsWidget(QFrame):
         all_settings[self._tool_id] = self.get_settings()
 
         try:
-            with open(self._config_path, "w", encoding="utf-8") as f:
+            with self._config_path.open("w", encoding="utf-8") as f:
                 json.dump(all_settings, f, indent=2)
         except OSError as e:
             _logger.warning("tool_settings_save_failed", tool_id=self._tool_id, error=str(e))
@@ -1019,7 +1033,7 @@ class ToolCapabilitiesWidget(QFrame):
 
         self._name_label = QLabel("Select a tool")
         self._name_label.setObjectName("bold_label")
-        self._name_label.setProperty("heading", True)
+        self._name_label.setProperty("heading", value=True)
         layout.addWidget(self._name_label)
 
         caps_group = QGroupBox("Capabilities")
@@ -1039,7 +1053,7 @@ class ToolCapabilitiesWidget(QFrame):
 
         for cap_id, cap_name in capabilities:
             indicator = QLabel("\u25cb")
-            indicator.setProperty("muted", True)
+            indicator.setProperty("muted", value=True)
             self._cap_labels[cap_id] = indicator
             caps_layout.addRow(cap_name, indicator)
 
@@ -1049,7 +1063,7 @@ class ToolCapabilitiesWidget(QFrame):
         arch_layout = QVBoxLayout(arch_group)
         self._arch_label = QLabel("--")
         self._arch_label.setWordWrap(True)
-        self._arch_label.setProperty("muted", True)
+        self._arch_label.setProperty("muted", value=True)
         arch_layout.addWidget(self._arch_label)
         layout.addWidget(arch_group)
 
@@ -1057,7 +1071,7 @@ class ToolCapabilitiesWidget(QFrame):
         fmt_layout = QVBoxLayout(fmt_group)
         self._fmt_label = QLabel("--")
         self._fmt_label.setWordWrap(True)
-        self._fmt_label.setProperty("muted", True)
+        self._fmt_label.setProperty("muted", value=True)
         fmt_layout.addWidget(self._fmt_label)
         layout.addWidget(fmt_group)
 
@@ -1089,10 +1103,10 @@ class ToolCapabilitiesWidget(QFrame):
             if label := self._cap_labels.get(cap_id):
                 if capabilities.get(cap_key):
                     label.setText("\u25cf")
-                    label.setProperty("success", True)
+                    label.setProperty("success", value=True)
                 else:
                     label.setText("\u25cb")
-                    label.setProperty("muted", True)
+                    label.setProperty("muted", value=True)
 
         self._arch_label.setText(", ".join(archs) if archs else "--")
         self._fmt_label.setText(", ".join(formats) if formats else "--")
@@ -1285,7 +1299,7 @@ class ToolStatusDialog(QDialog):
             return {}
 
         try:
-            with open(self._config_path, encoding="utf-8") as f:
+            with self._config_path.open(encoding="utf-8") as f:
                 result: dict[str, dict[str, Any]] = json.load(f)
                 return result
         except (json.JSONDecodeError, OSError):
@@ -1317,11 +1331,15 @@ class ToolStatusDialog(QDialog):
             tool_path = tool_settings.get("path", "")
 
             worker = ToolStatusCheckWorker(tool_id, tool_path, self)
-            worker.status_checked.connect(self._on_tool_status_received)
+
+            def _tool_status_slot(tid: str, avail: int, msg: str) -> None:
+                self._on_tool_status_received(tid, is_available=bool(avail), message=msg)
+
+            worker.status_checked.connect(_tool_status_slot)
             self._status_workers.append(worker)
             worker.start()
 
-    def _on_tool_status_received(self, tool_id: str, is_available: bool, message: str) -> None:
+    def _on_tool_status_received(self, tool_id: str, *, is_available: bool, message: str) -> None:
         """
         Handle status check completion for a single tool.
 

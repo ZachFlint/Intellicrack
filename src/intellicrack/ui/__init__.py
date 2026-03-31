@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 User interface components for Intellicrack.
 
@@ -12,10 +11,10 @@ dialogs.
 
 from __future__ import annotations
 
-from .app import AsyncWorker, MainWindow
-from .chat import ChatInput, ChatPanel, MessageBubble
-from .dialogs import SplashScreen
-from .highlighter import (
+from intellicrack.ui.app import AsyncWorker, MainWindow
+from intellicrack.ui.chat import ChatInput, ChatPanel, MessageBubble
+from intellicrack.ui.dialogs import SplashScreen
+from intellicrack.ui.highlighter import (
     AssemblySyntaxHighlighter,
     CSyntaxHighlighter,
     HighlightRule,
@@ -23,26 +22,26 @@ from .highlighter import (
     PythonSyntaxHighlighter,
     get_highlighter_for_language,
 )
-from .provider_config import (
+from intellicrack.ui.provider_config import (
     ModelSelectionDialog,
     ProviderConfigDialog,
     ProviderSettingsWidget,
 )
-from .resources import FontManager, IconManager, ThemeManager, get_assets_path, get_resource_path
-from .sandbox_config import (
+from intellicrack.ui.resources import FontManager, IconManager, ThemeManager, get_assets_path, get_resource_path
+from intellicrack.ui.sandbox_config import (
     SandboxConfigDialog,
     SandboxMonitorWidget,
 )
-from .session_manager import (
+from intellicrack.ui.session_manager import (
     NewSessionDialog,
     SessionManagerDialog,
 )
-from .tool_config import (
+from intellicrack.ui.tool_config import (
     ToolConfigDialog,
     ToolSettingsWidget,
     ToolStatusDialog,
 )
-from .tools import (
+from intellicrack.ui.tools import (
     CodeDisplay,
     FunctionListPanel,
     ToolOutputPanel,

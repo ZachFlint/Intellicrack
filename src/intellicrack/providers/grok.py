@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 X.AI Grok API provider implementation.
 
@@ -17,8 +16,8 @@ from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
 
-from ..core.logging import get_logger, log_provider_request
-from ..core.types import (
+from intellicrack.core.logging import get_logger, log_provider_request
+from intellicrack.core.types import (
     AuthenticationError,
     Message,
     ModelInfo,
@@ -31,7 +30,7 @@ from ..core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+from intellicrack.providers.base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
 
 
 _ERR_KEY_REQUIRED = "Grok API key is required"
@@ -87,7 +86,7 @@ class GrokProvider(LLMProviderBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self._client: openai.AsyncOpenAI | None = None
+        self.client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None
         self._logger = get_logger("providers.grok").bind(provider="grok")
 
@@ -118,13 +117,13 @@ class GrokProvider(LLMProviderBase):
         base_url = credentials.api_base or self.BASE_URL
 
         try:
-            self._client = openai.AsyncOpenAI(
+            self.client = openai.AsyncOpenAI(
                 api_key=credentials.api_key,
                 base_url=base_url,
             )
-            await self._client.models.list()
+            await self.client.models.list()
             self._credentials = credentials
-            self._connected = True
+            self.connected = True
             self._logger.info("grok_api_connected", base_url=base_url)
         except openai.AuthenticationError as e:
             self._logger.warning("grok_auth_failed", error=str(e))
@@ -135,7 +134,7 @@ class GrokProvider(LLMProviderBase):
             if "api key" in error_str or "incorrect" in error_str:
                 raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
             raise ProviderError(_ERR_API_REQUEST % e) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError) as e:
             self._logger.warning("grok_connect_failed", error=str(e))
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
@@ -143,12 +142,12 @@ class GrokProvider(LLMProviderBase):
         """Disconnect from Grok API."""
         try:
             await super().disconnect()
-            self._client = None
+            self.client = None
             self._current_task = None
             self._logger.info("grok_disconnected", provider="grok")
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self._connected = False
+            self.connected = False
 
     @staticmethod
     def _is_chat_model(model_id: str) -> bool:
@@ -208,11 +207,11 @@ class GrokProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            response = await self._client.models.list()
+            response = await self.client.models.list()
             models: list[ModelInfo] = []
 
             for model_data in response.data:
@@ -230,11 +229,11 @@ class GrokProvider(LLMProviderBase):
                         supports_streaming=True,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
-                    )
+                    ),
                 )
 
             return sorted(models, key=lambda m: m.id, reverse=True)
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self._logger.warning("grok_list_models_failed", error=str(e))
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
 
@@ -247,6 +246,7 @@ class GrokProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -268,17 +268,17 @@ class GrokProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
 
-        grok_messages_raw = self._convert_messages_to_provider_format(messages)
+        grok_messages_raw = self.convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
 
         grok_tools_typed: list[ChatCompletionToolParam] | None = None
         if tools:
-            grok_tools_raw = self._convert_tools_to_provider_format(tools)
+            grok_tools_raw = self.convert_tools_to_provider_format(tools)
             grok_tools_typed = cast("list[ChatCompletionToolParam]", grok_tools_raw)
 
         tool_choice_param: ChatCompletionToolChoiceOptionParam | None = None
@@ -350,12 +350,12 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If the API call fails.
             RateLimitError: If rate limited.
         """
-        if self._client is None:
+        if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
             if tools and tool_choice is not None:
-                return await self._client.chat.completions.create(
+                return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
                     temperature=temperature,
@@ -364,14 +364,14 @@ class GrokProvider(LLMProviderBase):
                     tool_choice=tool_choice,
                 )
             if tools:
-                return await self._client.chat.completions.create(
+                return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     tools=tools,
                 )
-            return await self._client.chat.completions.create(
+            return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=temperature,
@@ -383,7 +383,7 @@ class GrokProvider(LLMProviderBase):
         except openai.APIError as e:
             self._logger.warning("grok_chat_api_error", error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             self._logger.warning("grok_chat_request_failed", error=str(e))
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
@@ -430,6 +430,7 @@ class GrokProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -452,7 +453,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limit is exceeded.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -461,12 +462,12 @@ class GrokProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("grok_stream_cache_ignored")
 
-        grok_messages_raw = self._convert_messages_to_provider_format(messages)
+        grok_messages_raw = self.convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
 
         grok_tools_typed: list[ChatCompletionToolParam] | None = None
         if tools:
-            grok_tools_raw = self._convert_tools_to_provider_format(tools)
+            grok_tools_raw = self.convert_tools_to_provider_format(tools)
             grok_tools_typed = cast("list[ChatCompletionToolParam]", grok_tools_raw)
 
         tool_choice_value: ChatCompletionToolChoiceOptionParam | None = None
@@ -478,7 +479,7 @@ class GrokProvider(LLMProviderBase):
 
         try:
             if grok_tools_typed and tool_choice_value is not None:
-                stream = await self._client.chat.completions.create(
+                stream = await self.client.chat.completions.create(
                     model=model,
                     messages=grok_messages_typed,
                     temperature=temperature,
@@ -488,7 +489,7 @@ class GrokProvider(LLMProviderBase):
                     tool_choice=tool_choice_value,
                 )
             elif grok_tools_typed:
-                stream = await self._client.chat.completions.create(
+                stream = await self.client.chat.completions.create(
                     model=model,
                     messages=grok_messages_typed,
                     temperature=temperature,
@@ -497,7 +498,7 @@ class GrokProvider(LLMProviderBase):
                     tools=grok_tools_typed,
                 )
             else:
-                stream = await self._client.chat.completions.create(
+                stream = await self.client.chat.completions.create(
                     model=model,
                     messages=grok_messages_typed,
                     temperature=temperature,
@@ -532,7 +533,7 @@ class GrokProvider(LLMProviderBase):
         except openai.APIError as e:
             self._logger.warning("grok_stream_api_error", error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             if not self._cancel_requested:
                 self._logger.warning("grok_stream_failed", error=str(e))
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e

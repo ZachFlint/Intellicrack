@@ -613,7 +613,7 @@ class TestThreadSafety:
         def register(cb: StateCallbackFn) -> None:
             try:
                 state.register_callback(cb)
-            except Exception as exc:
+            except RuntimeError as exc:
                 with lock:
                     errors.append(exc)
 
@@ -639,7 +639,7 @@ class TestThreadSafety:
         def do_set_cursor(offset: int) -> None:
             try:
                 state.set_cursor(offset)
-            except Exception as exc:
+            except RuntimeError as exc:
                 with lock:
                     errors.append(exc)
 
@@ -663,14 +663,14 @@ class TestThreadSafety:
             for i in range(100):
                 try:
                     state.set_cursor(i)
-                except Exception as exc:
+                except RuntimeError as exc:
                     with lock:
                         errors.append(exc)
 
         def unregister() -> None:
             try:
                 state.unregister_callback(cb)
-            except Exception as exc:
+            except RuntimeError as exc:
                 with lock:
                     errors.append(exc)
 

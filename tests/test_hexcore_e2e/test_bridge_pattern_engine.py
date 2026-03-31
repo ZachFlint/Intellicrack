@@ -14,19 +14,22 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -39,7 +42,7 @@ def _run(coro: Any) -> Any:
     return loop.run_until_complete(coro)
 
 
-def _make_pattern_file(tmp_path: Path, bridge: Any) -> Any:
+def _make_pattern_file(tmp_path: Path, bridge: HexEditorBridge) -> HexEditorBridge:
     """Write pattern data to disk, open it in the bridge, and return the bridge.
 
     Args:
@@ -47,7 +50,7 @@ def _make_pattern_file(tmp_path: Path, bridge: Any) -> Any:
         bridge: An initialized HexEditorBridge fixture.
 
     Returns:
-        Any: The bridge with data loaded.
+        HexEditorBridge: The bridge with data loaded.
     """
     data = bytearray(512)
     struct.pack_into("<H", data, 0, 0x1234)
@@ -61,7 +64,7 @@ def _make_pattern_file(tmp_path: Path, bridge: Any) -> Any:
 class TestCompilePattern:
     """Tests for compile_pattern producing valid JSON from HexPat source."""
 
-    def test_compile_simple_struct_returns_nonempty_string(self, bridge: Any) -> None:
+    def test_compile_simple_struct_returns_nonempty_string(self, bridge: HexEditorBridge) -> None:
         """Verify that compiling a valid struct produces a non-empty string.
 
         Args:
@@ -70,9 +73,9 @@ class TestCompilePattern:
         source = "struct Header { u16 magic; u32 value; };"
         result: str = _run(bridge.compile_pattern(source))
         assert isinstance(result, str)
-        assert result != ""
+        assert result
 
-    def test_compile_simple_struct_result_is_valid_json(self, bridge: Any) -> None:
+    def test_compile_simple_struct_result_is_valid_json(self, bridge: HexEditorBridge) -> None:
         """Verify that compiling a valid struct produces parseable JSON.
 
         Args:
@@ -83,16 +86,16 @@ class TestCompilePattern:
         parsed = json.loads(result)
         assert isinstance(parsed, dict)
 
-    def test_compile_syntax_error_raises_value_error(self, bridge: Any) -> None:
+    def test_compile_syntax_error_raises_value_error(self, bridge: HexEditorBridge) -> None:
         """Verify that a syntactically invalid pattern raises ValueError.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"(?i)parse|syntax|unexpected|unterminated"):
             _run(bridge.compile_pattern("struct { u32 x;"))
 
-    def test_compile_complex_struct_with_nested_types_is_valid_json(self, bridge: Any) -> None:
+    def test_compile_complex_struct_with_nested_types_is_valid_json(self, bridge: HexEditorBridge) -> None:
         """Verify that compiling a struct with multiple primitive types produces valid JSON.
 
         Args:
@@ -103,7 +106,7 @@ class TestCompilePattern:
         parsed = json.loads(result)
         assert isinstance(parsed, dict)
 
-    def test_compile_enum_produces_valid_json(self, bridge: Any) -> None:
+    def test_compile_enum_produces_valid_json(self, bridge: HexEditorBridge) -> None:
         """Verify that compiling an enum declaration produces valid JSON.
 
         Args:
@@ -114,7 +117,7 @@ class TestCompilePattern:
         parsed = json.loads(result)
         assert isinstance(parsed, dict)
 
-    def test_compile_union_produces_valid_json(self, bridge: Any) -> None:
+    def test_compile_union_produces_valid_json(self, bridge: HexEditorBridge) -> None:
         """Verify that compiling a union declaration produces valid JSON.
 
         Args:
@@ -129,7 +132,7 @@ class TestCompilePattern:
 class TestExecutePattern:
     """Tests for execute_pattern running HexPat source against an open document."""
 
-    def test_execute_u32_field_returns_field_list(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_u32_field_returns_field_list(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that executing a single u32 field returns a non-empty list.
 
         Args:
@@ -142,7 +145,7 @@ class TestExecutePattern:
         assert isinstance(fields, list)
         assert fields
 
-    def test_execute_u32_field_has_correct_size(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_u32_field_has_correct_size(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a u32 field extracted via execute_pattern has size 4.
 
         Args:
@@ -155,7 +158,7 @@ class TestExecutePattern:
         u32_field = next(f for f in fields if f["name"] == "value")
         assert u32_field["size"] == 4
 
-    def test_execute_u32_field_has_correct_offset(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_u32_field_has_correct_offset(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a u32 field placed at 0x00 has offset 0.
 
         Args:
@@ -168,7 +171,7 @@ class TestExecutePattern:
         u32_field = next(f for f in fields if f["name"] == "value")
         assert u32_field["offset"] == 0
 
-    def test_execute_struct_with_multiple_fields_returns_multiple_results(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_struct_with_multiple_fields_returns_multiple_results(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a struct with two fields yields at least one field entry.
 
         Args:
@@ -187,7 +190,7 @@ class TestExecutePattern:
                 all_names.extend(str(c["name"]) for c in cast("list[dict[str, Any]]", children))
         assert "magic" in all_names or "header" in all_names
 
-    def test_execute_at_nonzero_offset(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_at_nonzero_offset(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a u32 field placed at 0x04 has offset 4.
 
         Args:
@@ -200,7 +203,7 @@ class TestExecutePattern:
         u32_field = next(f for f in fields if f["name"] == "value")
         assert u32_field["offset"] == 4
 
-    def test_execute_pattern_field_has_required_keys(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_pattern_field_has_required_keys(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that each field dict from execute_pattern contains name, offset, and size.
 
         Args:
@@ -216,7 +219,7 @@ class TestExecutePattern:
             assert "offset" in f
             assert "size" in f
 
-    def test_execute_pattern_with_no_document_raises_runtime_error(self, bridge: Any) -> None:
+    def test_execute_pattern_with_no_document_raises_runtime_error(self, bridge: HexEditorBridge) -> None:
         """Verify that calling execute_pattern without an open document raises RuntimeError.
 
         Args:
@@ -225,7 +228,7 @@ class TestExecutePattern:
         with pytest.raises(RuntimeError):
             _run(bridge.execute_pattern("u32 x @ 0x00;"))
 
-    def test_execute_u16_field_correct_size(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_u16_field_correct_size(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a u16 field has size 2.
 
         Args:
@@ -242,7 +245,7 @@ class TestExecutePattern:
 class TestExecutePatternFile:
     """Tests for execute_pattern_file running patterns from disk."""
 
-    def test_execute_pattern_file_matches_inline_result(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_pattern_file_matches_inline_result(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that executing a pattern from a file yields the same field count as inline.
 
         Args:
@@ -257,7 +260,7 @@ class TestExecutePatternFile:
         file_fields: list[dict[str, Any]] = _run(bridge.execute_pattern_file(str(pat_file)))
         assert len(file_fields) == len(inline_fields)
 
-    def test_execute_pattern_file_nonexistent_raises_file_not_found(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_pattern_file_nonexistent_raises_file_not_found(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that passing a missing file path raises FileNotFoundError.
 
         Args:
@@ -269,7 +272,7 @@ class TestExecutePatternFile:
         with pytest.raises(FileNotFoundError):
             _run(bridge.execute_pattern_file(missing))
 
-    def test_execute_pattern_file_with_no_document_raises_runtime_error(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_pattern_file_with_no_document_raises_runtime_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that calling execute_pattern_file without an open document raises RuntimeError.
 
         Args:
@@ -281,7 +284,7 @@ class TestExecutePatternFile:
         with pytest.raises(RuntimeError):
             _run(bridge.execute_pattern_file(str(pat_file)))
 
-    def test_execute_pattern_file_field_has_required_keys(self, bridge: Any, tmp_path: Path) -> None:
+    def test_execute_pattern_file_field_has_required_keys(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that fields from execute_pattern_file contain name, offset, and size.
 
         Args:
@@ -302,7 +305,7 @@ class TestExecutePatternFile:
 class TestListAndAutoDetect:
     """Tests for list_hexpat_patterns and auto_detect_pattern operations."""
 
-    def test_list_hexpat_patterns_returns_list(self, bridge: Any) -> None:
+    def test_list_hexpat_patterns_returns_list(self, bridge: HexEditorBridge) -> None:
         """Verify that list_hexpat_patterns always returns a list.
 
         Args:
@@ -311,7 +314,7 @@ class TestListAndAutoDetect:
         result: list[dict[str, str]] = _run(bridge.list_hexpat_patterns())
         assert isinstance(result, list)
 
-    def test_list_hexpat_patterns_items_have_required_keys(self, bridge: Any) -> None:
+    def test_list_hexpat_patterns_items_have_required_keys(self, bridge: HexEditorBridge) -> None:
         """Verify that each entry from list_hexpat_patterns has name, description, and category.
 
         Args:
@@ -323,7 +326,7 @@ class TestListAndAutoDetect:
             assert "description" in entry
             assert "category" in entry
 
-    def test_auto_detect_with_no_document_raises_runtime_error(self, bridge: Any) -> None:
+    def test_auto_detect_with_no_document_raises_runtime_error(self, bridge: HexEditorBridge) -> None:
         """Verify that auto_detect_pattern without an open document raises RuntimeError.
 
         Args:
@@ -332,7 +335,7 @@ class TestListAndAutoDetect:
         with pytest.raises(RuntimeError):
             _run(bridge.auto_detect_pattern())
 
-    def test_auto_detect_with_pe_file_returns_list(self, loaded_bridge: Any) -> None:
+    def test_auto_detect_with_pe_file_returns_list(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that auto_detect_pattern with a PE file open returns a list.
 
         Args:

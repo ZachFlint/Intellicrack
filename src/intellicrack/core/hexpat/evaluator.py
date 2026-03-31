@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Core tree-walking evaluator for the HexPat .hexpat pattern language."""
 
 from __future__ import annotations
@@ -88,17 +87,11 @@ class _ReturnSignalError(Exception):
     """
     Internal control-flow error raised by a return statement.
 
-    Attributes:
-        value: The value being returned.
+    Args:
+        value: The PatternValue being returned from the function.
     """
 
     def __init__(self, value: PatternValue) -> None:
-        """
-        Initialize with the returned value.
-
-        Args:
-            value: The PatternValue being returned from the function.
-        """
         super().__init__()
         self.value: PatternValue = value
 
@@ -145,18 +138,11 @@ class EvalScope:
     """
     Lexical scope with parent-chain variable resolution.
 
-    Attributes:
-        _bindings: The variable bindings defined in this scope level.
-        _parent: The enclosing parent scope, or None for the root scope.
+    Args:
+        parent: The enclosing parent scope, or None for root scope.
     """
 
     def __init__(self, parent: EvalScope | None = None) -> None:
-        """
-        Initialize a new scope, optionally nested inside a parent scope.
-
-        Args:
-            parent: The enclosing parent scope, or None for root scope.
-        """
         self._bindings: dict[str, PatternValue] = {}
         self._parent: EvalScope | None = parent
 
@@ -168,7 +154,7 @@ class EvalScope:
             name: The variable name to look up.
 
         Returns:
-            The PatternValue bound to the name, or None if not found.
+            PatternValue | None: The PatternValue bound to the name, or None if not found.
         """
         if name in self._bindings:
             return self._bindings[name]
@@ -183,7 +169,7 @@ class EvalScope:
             value: The new PatternValue to assign.
 
         Returns:
-            True if the variable was found and updated, False otherwise.
+            bool: True if the variable was found and updated, False otherwise.
         """
         if name in self._bindings:
             self._bindings[name] = value
@@ -206,7 +192,7 @@ class EvalScope:
         Public read-only view of the current scope's variable bindings.
 
         Returns:
-            The dictionary of variable bindings in this scope level.
+            dict[str, PatternValue]: The dictionary of variable bindings in this scope level.
         """
         return self._bindings
 
@@ -235,7 +221,7 @@ def _make_parsed_field(
         description: Optional description annotation.
 
     Returns:
-        A dictionary conforming to the Intellicrack parsed-field schema.
+        dict[str, Any]: A dictionary conforming to the Intellicrack parsed-field schema.
     """
     return {
         "name": name,
@@ -259,20 +245,12 @@ class HexPatEvaluator:
     display in the Intellicrack hex-editor UI.
 
     Attributes:
-        _data: The binary data reader.
-        _types: The type registry for resolving user-defined types.
-        _pragma: Compilation-unit pragma settings.
-        _offset: Current read cursor position in the data source.
-        _scope: Current variable scope.
-        _results: Accumulated top-level parsed field results.
-        _depth: Current recursion depth counter.
-        _pattern_count: Total number of patterns placed so far.
-        _array_index_stack: Stack of current array index values.
-        _default_endian: Default endianness from pragma or "little".
-        _color_index: Index into FIELD_COLORS for the next color assignment.
-        _pointer_size: Size of a pointer in bytes (4 or 8).
-        _namespace_stack: Stack of active namespace names for qualified registration.
-        _builtins: Table of built-in function names to callable wrappers.
+        FIELD_COLORS: Color palette for field highlighting in the hex editor.
+
+    Args:
+        data_reader: Byte-access wrapper over the binary data.
+        type_registry: Registry of all user-defined types.
+        pragma: Parsed pragma directives controlling evaluation behaviour.
     """
 
     _POINTER_SIZE: ClassVar[int] = 8
@@ -296,14 +274,6 @@ class HexPatEvaluator:
         type_registry: TypeRegistry,
         pragma: PragmaInfo,
     ) -> None:
-        """
-        Initialize the evaluator with data, type registry, and pragma settings.
-
-        Args:
-            data_reader: Byte-access wrapper over the binary data.
-            type_registry: Registry of all user-defined types.
-            pragma: Parsed pragma directives controlling evaluation behaviour.
-        """
         self._data: DataReader = data_reader
         self._types: TypeRegistry = type_registry
         self._pragma: PragmaInfo = pragma
@@ -325,7 +295,7 @@ class HexPatEvaluator:
         The current top-level evaluation scope.
 
         Returns:
-            The current EvalScope used for variable bindings.
+            EvalScope: The current EvalScope used for variable bindings.
         """
         return self._scope
 
@@ -339,7 +309,7 @@ class HexPatEvaluator:
                 ("little", "big"), or None.
 
         Returns:
-            Normalized endianness string ("little" or "big"), or None.
+            str | None: Normalized endianness string ("little" or "big"), or None.
         """
         if endian == "le":
             return "little"
@@ -356,7 +326,7 @@ class HexPatEvaluator:
             program: The ordered list of top-level AST nodes.
 
         Returns:
-            A list of parsed-field dictionaries, one per top-level placement.
+            list[dict[str, Any]]: A list of parsed-field dictionaries, one per top-level placement.
         """
         for node in program:
             if isinstance(
@@ -373,7 +343,7 @@ class HexPatEvaluator:
         Return the next colour from the rotation and advance the index.
 
         Returns:
-            A hex colour string such as "#E06C75".
+            str: A hex colour string such as "#E06C75".
         """
         color = self.FIELD_COLORS[self._color_index % len(self.FIELD_COLORS)]
         self._color_index += 1
@@ -392,7 +362,7 @@ class HexPatEvaluator:
             type_info: Optional type metadata for formatting decisions.
 
         Returns:
-            A formatted string representation of the value.
+            str: A formatted string representation of the value.
         """
         if value is None:
             return "null"
@@ -422,9 +392,6 @@ class HexPatEvaluator:
 
         Args:
             node: The declaration AST node to process.
-
-        Raises:
-            HexPatTypeError: If a backing type for an enum cannot be resolved.
         """
         if isinstance(node, StructDecl):
             self._types.register_struct(node)
@@ -752,11 +719,10 @@ class HexPatEvaluator:
             endianness: Optional endianness override.
 
         Returns:
-            A parsed-field dictionary, or None if no data was consumed.
+            dict[str, Any] | None: A parsed-field dictionary, or None if no data was consumed.
 
         Raises:
             HexPatTypeError: If the type cannot be resolved.
-            HexPatRuntimeError: If the array limit is exceeded.
         """
         eff_endian = endianness or self._default_endian
 
@@ -789,7 +755,7 @@ class HexPatEvaluator:
         if isinstance(type_node, PointerType):
             ptr_type = self._types.resolve_primitive("u64", eff_endian)
             if ptr_type is None:
-                ptr_type = HexPatType("u64", self._pointer_size, False, eff_endian)
+                ptr_type = HexPatType("u64", self._pointer_size, signed=False, endian=eff_endian)
             pv = self._read_primitive(ptr_type, offset)
             raw = self._data.read(offset, self._pointer_size)
             display = self._format_value(pv.value, ptr_type)
@@ -816,7 +782,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary, or None if no data was consumed.
+            dict[str, Any] | None: A parsed-field dictionary, or None if no data was consumed.
 
         Raises:
             HexPatTypeError: If the type name cannot be resolved.
@@ -859,7 +825,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary with children for each struct member.
+            dict[str, Any]: A parsed-field dictionary with children for each struct member.
 
         Raises:
             HexPatRuntimeError: If recursion depth is exceeded.
@@ -919,7 +885,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary with children for each union alternative.
+            dict[str, Any]: A parsed-field dictionary with children for each union alternative.
 
         Raises:
             HexPatRuntimeError: If recursion depth is exceeded.
@@ -972,7 +938,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary with a display value showing the member name.
+            dict[str, Any]: A parsed-field dictionary with a display value showing the member name.
         """
         backing = type_info.backing_type
         pv = self._read_primitive(backing, offset)
@@ -1009,7 +975,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary with bit-field children.
+            dict[str, Any]: A parsed-field dictionary with bit-field children.
 
         Raises:
             HexPatTypeError: If a bit-width expression is not a valid integer.
@@ -1045,7 +1011,7 @@ class HexPatEvaluator:
                     [],
                     color,
                     "",
-                )
+                ),
             )
             bit_pos += width
 
@@ -1072,7 +1038,7 @@ class HexPatEvaluator:
             endianness: Effective endianness for element reads.
 
         Returns:
-            A parsed-field dictionary containing one child per element, or None.
+            dict[str, Any] | None: A parsed-field dictionary containing one child per element, or None.
 
         Raises:
             HexPatRuntimeError: If the array limit is exceeded.
@@ -1148,7 +1114,7 @@ class HexPatEvaluator:
             _parent_offset: The starting offset of the enclosing composite type.
 
         Returns:
-            A parsed-field dictionary for this field, or None for padding.
+            dict[str, Any] | None: A parsed-field dictionary for this field, or None for padding.
         """
         eff_endian = self._normalize_endian(node.endianness) or self._default_endian
         target_offset = self._offset
@@ -1188,11 +1154,11 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary for this pointer field.
+            dict[str, Any]: A parsed-field dictionary for this pointer field.
         """
         ptr_type = self._types.resolve_primitive("u64", eff_endian)
         if ptr_type is None:
-            ptr_type = HexPatType("u64", self._pointer_size, False, eff_endian)
+            ptr_type = HexPatType("u64", self._pointer_size, signed=False, endian=eff_endian)
         pv = self._read_primitive(ptr_type, target_offset)
         raw = self._data.read(target_offset, self._pointer_size)
         display = f"*{self._format_value(pv.value, ptr_type)}"
@@ -1222,7 +1188,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary for this array field, or None.
+            dict[str, Any] | None: A parsed-field dictionary for this array field, or None.
         """
         array_type_node = ArrayType(
             element=node.type_node,
@@ -1258,7 +1224,7 @@ class HexPatEvaluator:
             description: Optional description annotation.
 
         Returns:
-            A parsed-field dictionary for this field, or None.
+            dict[str, Any] | None: A parsed-field dictionary for this field, or None.
         """
         result = self._instantiate_type(node.type_node, node.name, target_offset, color, description, eff_endian)
         if result is not None:
@@ -1286,6 +1252,11 @@ class HexPatEvaluator:
         Args:
             stmt: The statement AST node to evaluate.
             children: The list to append produced field dicts to.
+
+        Raises:
+            _BreakSignalError: When a break statement is encountered.
+            _ContinueSignalError: When a continue statement is encountered.
+            _ReturnSignalError: When a return statement is encountered.
         """
         if isinstance(stmt, FieldDecl):
             result = self._eval_field(stmt, self._offset)
@@ -1332,7 +1303,7 @@ class HexPatEvaluator:
             offset: Byte offset in the data source.
 
         Returns:
-            A PatternValue containing the decoded value.
+            PatternValue: A PatternValue containing the decoded value.
 
         Raises:
             HexPatTypeError: If the type name is not a recognised primitive.
@@ -1399,11 +1370,7 @@ class HexPatEvaluator:
             node: The expression AST node to evaluate.
 
         Returns:
-            A PatternValue representing the result of the expression.
-
-        Raises:
-            HexPatRuntimeError: For undefined variables, bad operations, etc.
-            HexPatTypeError: For type mismatches.
+            PatternValue: A PatternValue representing the result of the expression.
         """
         if isinstance(node, (NumberLiteral, FloatLiteral, StringLiteral, CharLiteral, BoolLiteral)):
             return PatternValue(value=node.value)
@@ -1451,7 +1418,7 @@ class HexPatEvaluator:
             node: The identifier expression AST node.
 
         Returns:
-            The PatternValue bound to the identifier name.
+            PatternValue: The PatternValue bound to the identifier name.
 
         Raises:
             HexPatRuntimeError: If the identifier is not defined in any scope.
@@ -1473,7 +1440,7 @@ class HexPatEvaluator:
             node: The binary expression AST node.
 
         Returns:
-            A PatternValue with the result of applying the operator.
+            PatternValue: A PatternValue with the result of applying the operator.
 
         Raises:
             HexPatRuntimeError: For division by zero or unsupported operations.
@@ -1511,8 +1478,8 @@ class HexPatEvaluator:
     @staticmethod
     def _apply_numeric_op(
         op: str,
-        lv: int | float,
-        rv: int | float,
+        lv: float,
+        rv: float,
         line: int,
         column: int,
     ) -> int | float | bool:
@@ -1527,7 +1494,7 @@ class HexPatEvaluator:
             column: Source column for error reporting.
 
         Returns:
-            The numeric or boolean result of applying the operator.
+            int | float | bool: The numeric or boolean result of applying the operator.
 
         Raises:
             HexPatRuntimeError: For division by zero or unsupported operators.
@@ -1583,7 +1550,7 @@ class HexPatEvaluator:
             node: The unary expression AST node.
 
         Returns:
-            A PatternValue with the result of the unary operation.
+            PatternValue: A PatternValue with the result of the unary operation.
 
         Raises:
             HexPatRuntimeError: For unsupported unary operators.
@@ -1609,7 +1576,7 @@ class HexPatEvaluator:
             node: The function call AST node.
 
         Returns:
-            The PatternValue returned by the called function.
+            PatternValue: The PatternValue returned by the called function.
 
         Raises:
             HexPatRuntimeError: If the callee is not callable.
@@ -1639,7 +1606,7 @@ class HexPatEvaluator:
             args: The evaluated argument values.
 
         Returns:
-            The PatternValue returned by the function, or null if no return.
+            PatternValue: The PatternValue returned by the function, or null if no return.
         """
         fn_scope = EvalScope(parent=self._scope)
         for i, param in enumerate(decl.params):
@@ -1668,7 +1635,7 @@ class HexPatEvaluator:
             node: The member access AST node.
 
         Returns:
-            The PatternValue for the accessed member.
+            PatternValue: The PatternValue for the accessed member.
 
         Raises:
             HexPatRuntimeError: If the member is not found on the object.
@@ -1687,7 +1654,7 @@ class HexPatEvaluator:
             node: The namespace access AST node.
 
         Returns:
-            The PatternValue for the accessed namespace member.
+            PatternValue: The PatternValue for the accessed namespace member.
 
         Raises:
             HexPatRuntimeError: If the namespace or member is not found.
@@ -1712,7 +1679,7 @@ class HexPatEvaluator:
             node: The array subscript AST node.
 
         Returns:
-            The PatternValue for the indexed element.
+            PatternValue: The PatternValue for the indexed element.
 
         Raises:
             HexPatRuntimeError: If the index is out of range or not applicable.
@@ -1740,7 +1707,7 @@ class HexPatEvaluator:
             node: The assignment expression AST node.
 
         Returns:
-            The PatternValue that was assigned.
+            PatternValue: The PatternValue that was assigned.
 
         Raises:
             HexPatRuntimeError: If the assignment target is unsupported.
@@ -1796,7 +1763,7 @@ class HexPatEvaluator:
             column: Source column for error reporting.
 
         Returns:
-            The resulting PatternValue after applying the compound operation.
+            PatternValue: The resulting PatternValue after applying the compound operation.
 
         Raises:
             HexPatRuntimeError: For unsupported operators or type mismatches.
@@ -1818,7 +1785,7 @@ class HexPatEvaluator:
             node: The sizeof expression AST node.
 
         Returns:
-            A PatternValue containing the size in bytes as an integer.
+            PatternValue: A PatternValue containing the size in bytes as an integer.
         """
         target = node.target
         if isinstance(target, (PrimitiveType, NamedType, PointerType, ArrayType, PaddingType, AutoType)):
@@ -1835,7 +1802,7 @@ class HexPatEvaluator:
             type_node: The type node to compute the size of.
 
         Returns:
-            The size in bytes, or 0 for variable-size or unknown types.
+            int: The size in bytes, or 0 for variable-size or unknown types.
         """
         if isinstance(type_node, PrimitiveType):
             ptype = self._types.resolve_primitive(type_node.name)
@@ -1862,7 +1829,7 @@ class HexPatEvaluator:
             info: The resolved struct type info.
 
         Returns:
-            The sum of all field sizes in bytes.
+            int: The sum of all field sizes in bytes.
         """
         return sum(self._sizeof_type_node(stmt.type_node) for stmt in info.decl.body if isinstance(stmt, FieldDecl))
 
@@ -1874,7 +1841,7 @@ class HexPatEvaluator:
             info: The resolved union type info.
 
         Returns:
-            The size of the largest field in bytes.
+            int: The size of the largest field in bytes.
         """
         max_size = 0
         for stmt in info.decl.body:
@@ -1891,7 +1858,7 @@ class HexPatEvaluator:
             info: The resolved bitfield type info.
 
         Returns:
-            The total size rounded up to the nearest byte.
+            int: The total size rounded up to the nearest byte.
         """
         total_bits = 0
         for entry in info.decl.entries:
@@ -1908,7 +1875,7 @@ class HexPatEvaluator:
             node: The cast expression AST node.
 
         Returns:
-            A PatternValue with the value coerced to the target type.
+            PatternValue: A PatternValue with the value coerced to the target type.
         """
         value = self._eval_expr(node.expr)
         target_prim = self._resolve_type_node_to_primitive(node.target_type)
@@ -1918,12 +1885,11 @@ class HexPatEvaluator:
         if target_prim.name in {"float", "double"}:
             if isinstance(raw, (int, float)) and not isinstance(raw, bool):
                 return PatternValue(value=float(raw), type_info=target_prim)
-            else:
-                return (
-                    PatternValue(value=float(int(raw)), type_info=target_prim)
-                    if isinstance(raw, bool)
-                    else PatternValue(value=raw, type_info=target_prim)
-                )
+            return (
+                PatternValue(value=float(int(raw)), type_info=target_prim)
+                if isinstance(raw, bool)
+                else PatternValue(value=raw, type_info=target_prim)
+            )
         if target_prim.name == "bool":
             return PatternValue(value=bool(raw), type_info=target_prim)
         if isinstance(raw, bool):
@@ -1952,7 +1918,7 @@ class HexPatEvaluator:
             type_node: The type node to resolve.
 
         Returns:
-            A HexPatType if the node is or resolves to a primitive, else None.
+            HexPatType | None: A HexPatType if the node is or resolves to a primitive, else None.
         """
         if isinstance(type_node, PrimitiveType):
             return self._types.resolve_primitive(type_node.name, type_node.endianness)
@@ -1973,7 +1939,7 @@ class HexPatEvaluator:
             annotations: Tuple of (name, value_expr) annotation pairs.
 
         Returns:
-            The description string, or empty string if not present.
+            str: The description string, or empty string if not present.
         """
         for ann_name, ann_expr in annotations:
             if ann_name == "comment" and ann_expr is not None:
@@ -1987,7 +1953,7 @@ class HexPatEvaluator:
         Construct the built-in function table.
 
         Returns:
-            A dict mapping function name to a BuiltinCallable wrapper.
+            dict[str, BuiltinCallable]: A dict mapping function name to a BuiltinCallable wrapper.
         """
         evaluator = self
 
@@ -2005,8 +1971,10 @@ class HexPatEvaluator:
 
         def builtin_assert(*args: PatternValue) -> PatternValue:
             if args and not _truthy(args[0]):
-                msg = args[1].value if len(args) > 1 else "assertion failed"
-                raise HexPatRuntimeError(str(msg) if msg is not None else "assertion failed")
+                assert_default = "assertion failed"
+                error_msg = args[1].value if len(args) > 1 else assert_default
+                resolved = str(error_msg) if error_msg is not None else assert_default
+                raise HexPatRuntimeError(resolved)
             return PatternValue(value=None)
 
         def builtin_print(*_args: PatternValue) -> PatternValue:
@@ -2115,7 +2083,7 @@ def _truthy(value: PatternValue) -> bool:
         value: The PatternValue to test.
 
     Returns:
-        True if the value is considered truthy, False otherwise.
+        bool: True if the value is considered truthy, False otherwise.
     """
     v = value.value
     if v is None:
@@ -2136,7 +2104,7 @@ def _values_equal(a: PatternValue, b: PatternValue) -> bool:
         b: The second value to compare.
 
     Returns:
-        True if both values are equal, False otherwise.
+        bool: True if both values are equal, False otherwise.
     """
     av = a.value
     bv = b.value

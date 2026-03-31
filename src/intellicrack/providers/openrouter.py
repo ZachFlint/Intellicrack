@@ -13,13 +13,13 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast, override
 
 import httpx
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
-from ..core.types import (
+from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
+from intellicrack.core.types import (
     AuthenticationError,
     Message,
     ModelInfo,
@@ -32,7 +32,7 @@ from ..core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from .base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+from intellicrack.providers.base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
 
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ class OpenRouterProvider(LLMProviderBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self._client: httpx.AsyncClient | None = None
+        self.client: httpx.AsyncClient | None = None
         self._api_key: str | None = None
         self._logger = get_logger("providers.openrouter").bind(provider="openrouter")
 
@@ -99,7 +99,7 @@ class OpenRouterProvider(LLMProviderBase):
 
         try:
             self._api_key = credentials.api_key
-            self._client = httpx.AsyncClient(
+            self.client = httpx.AsyncClient(
                 timeout=httpx.Timeout(credentials.timeout or 120.0),
                 headers={
                     "Authorization": f"Bearer {credentials.api_key}",
@@ -108,11 +108,11 @@ class OpenRouterProvider(LLMProviderBase):
                 },
             )
 
-            response = await self._client.get(f"{self.BASE_URL}/models")
+            response = await self.client.get(f"{self.BASE_URL}/models")
             response.raise_for_status()
 
             self._credentials = credentials
-            self._connected = True
+            self.connected = True
             self._logger.info(
                 "openrouter_connected",
                 has_custom_base=credentials.api_base is not None,
@@ -125,7 +125,7 @@ class OpenRouterProvider(LLMProviderBase):
             if e.response.status_code == HTTP_UNAUTHORIZED:
                 raise AuthenticationError(_ERR_INVALID_KEY % e) from e
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._logger.warning("openrouter_connect_failed", error=str(e))
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
@@ -133,14 +133,14 @@ class OpenRouterProvider(LLMProviderBase):
         """Disconnect from OpenRouter API."""
         try:
             await super().disconnect()
-            if self._client:
-                await self._client.aclose()
-                self._client = None
+            if self.client:
+                await self.client.aclose()
+                self.client = None
             self._api_key = None
             self._logger.info("openrouter_disconnected", was_connected=True)
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self._connected = False
+            self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """
@@ -152,11 +152,11 @@ class OpenRouterProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            response = await self._client.get(f"{self.BASE_URL}/models")
+            response = await self.client.get(f"{self.BASE_URL}/models")
             response.raise_for_status()
             data = response.json()
 
@@ -203,7 +203,7 @@ class OpenRouterProvider(LLMProviderBase):
                         supports_streaming=True,
                         input_cost_per_1m_tokens=input_cost,
                         output_cost_per_1m_tokens=output_cost,
-                    )
+                    ),
                 )
 
             sorted_models = sorted(models, key=lambda m: m.id)
@@ -211,7 +211,7 @@ class OpenRouterProvider(LLMProviderBase):
                 "openrouter_models_listed",
                 count=len(sorted_models),
             )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             self._logger.warning(
                 "openrouter_list_models_failed",
                 error=str(e),
@@ -229,6 +229,7 @@ class OpenRouterProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -251,12 +252,12 @@ class OpenRouterProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
 
-        openrouter_messages = self._convert_messages_to_provider_format(messages)
+        openrouter_messages = self.convert_messages_to_provider_format(messages)
 
         tools_count = len(tools) if tools else 0
         self._logger.info(
@@ -285,7 +286,7 @@ class OpenRouterProvider(LLMProviderBase):
         }
 
         if tools:
-            request_body["tools"] = self._convert_tools_to_provider_format(tools)
+            request_body["tools"] = self.convert_tools_to_provider_format(tools)
         if tool_choice is not None and tools:
             request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
         if thinking is not None and thinking.enabled:
@@ -294,7 +295,7 @@ class OpenRouterProvider(LLMProviderBase):
             self._logger.debug("openrouter_cache_ignored")
 
         try:
-            response = await self._client.post(
+            response = await self.client.post(
                 f"{self.BASE_URL}/chat/completions",
                 json=request_body,
             )
@@ -338,7 +339,7 @@ class OpenRouterProvider(LLMProviderBase):
             role="assistant",
             content=content,
             tool_calls=tool_calls or None,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         log_provider_response(
@@ -396,6 +397,7 @@ class OpenRouterProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -417,7 +419,7 @@ class OpenRouterProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -426,7 +428,7 @@ class OpenRouterProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("openrouter_stream_cache_ignored")
 
-        openrouter_messages = self._convert_messages_to_provider_format(messages)
+        openrouter_messages = self.convert_messages_to_provider_format(messages)
 
         tools_count = len(tools) if tools else 0
         self._logger.info(
@@ -450,11 +452,11 @@ class OpenRouterProvider(LLMProviderBase):
             }
 
             if tools:
-                request_body["tools"] = self._convert_tools_to_provider_format(tools)
+                request_body["tools"] = self.convert_tools_to_provider_format(tools)
             if tool_choice is not None and tools:
                 request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
 
-            async with self._client.stream(
+            async with self.client.stream(
                 "POST",
                 f"{self.BASE_URL}/chat/completions",
                 json=request_body,
@@ -500,7 +502,7 @@ class OpenRouterProvider(LLMProviderBase):
                 chunks_yielded=chunks_yielded,
             )
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             if not self._cancel_requested:
                 self._logger.warning(
                     "openrouter_chat_stream_failed",
@@ -513,7 +515,7 @@ class OpenRouterProvider(LLMProviderBase):
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
         self._cancel_requested = True
-        self._logger.info("openrouter_request_cancelled", connected=self._connected)
+        self._logger.info("openrouter_request_cancelled", connected=self.connected)
 
     @override
     def _convert_messages_to_provider_format(
@@ -568,7 +570,7 @@ class OpenRouterProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._logger.info(
@@ -577,7 +579,7 @@ class OpenRouterProvider(LLMProviderBase):
         )
 
         try:
-            response = await self._client.get(
+            response = await self.client.get(
                 f"{self.BASE_URL}/generation",
                 params={"id": generation_id},
             )
@@ -587,7 +589,7 @@ class OpenRouterProvider(LLMProviderBase):
                 "openrouter_get_generation_completed",
                 generation_id=generation_id,
             )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             self._logger.warning(
                 "openrouter_get_generation_failed",
                 generation_id=generation_id,

@@ -7,23 +7,24 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -39,7 +40,7 @@ def _run(coro: Any) -> Any:
 class TestBridgeExportPatches:
     """Tests covering IPS/IPS32 patch export from a modified document."""
 
-    def test_export_patches_returns_string(self, bridge: Any, tmp_path: Path) -> None:
+    def test_export_patches_returns_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that export_patches returns a string.
 
         Args:
@@ -53,9 +54,9 @@ class TestBridgeExportPatches:
         _run(bridge.write_bytes(0, "AA BB CC DD"))
         result: str = _run(bridge.export_patches("ips"))
         assert isinstance(result, str)
-        assert result != ""
+        assert result
 
-    def test_export_patches_ips_decodes_to_bytes_starting_with_patch(self, bridge: Any, tmp_path: Path) -> None:
+    def test_export_patches_ips_decodes_to_bytes_starting_with_patch(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that decoded IPS data begins with the PATCH magic header.
 
         Args:
@@ -71,7 +72,7 @@ class TestBridgeExportPatches:
         decoded = base64.b64decode(b64_result)
         assert decoded[:5] == b"PATCH"
 
-    def test_export_patches_ips32_returns_valid_base64(self, bridge: Any, tmp_path: Path) -> None:
+    def test_export_patches_ips32_returns_valid_base64(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that ips32 export result is valid base64.
 
         Args:
@@ -91,7 +92,7 @@ class TestBridgeExportPatches:
 class TestBridgeImportPatches:
     """Tests covering IPS patch import into a fresh document."""
 
-    def test_import_patches_returns_integer_count(self, bridge: Any, tmp_path: Path) -> None:
+    def test_import_patches_returns_integer_count(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that import_patches returns a non-negative integer.
 
         Args:
@@ -119,7 +120,7 @@ class TestBridgeImportPatches:
 class TestBridgePatchRoundtrip:
     """Tests covering full modify-export-import-verify roundtrip."""
 
-    def test_patch_roundtrip_data_matches(self, bridge: Any, tmp_path: Path) -> None:
+    def test_patch_roundtrip_data_matches(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that bytes written before export match bytes after import.
 
         Args:

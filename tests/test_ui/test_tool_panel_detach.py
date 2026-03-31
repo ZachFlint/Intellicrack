@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for ToolOutputPanel detach and reattach functionality.
 
 Verifies tab detachment into floating windows, reattachment back
@@ -35,7 +40,7 @@ def _add_plain_tab(panel: ToolOutputPanel, title: str) -> QWidget:
         QWidget: The widget added as the tab content.
     """
     widget = QWidget()
-    panel._tab_widget.addTab(widget, title)
+    panel.tab_widget.addTab(widget, title)
     return widget
 
 
@@ -48,29 +53,29 @@ class TestDetachTab:
         """Verify detaching a tab decreases count and returns a window."""
         panel = ToolOutputPanel()
         _add_plain_tab(panel, _TAB_A)
-        assert panel._tab_widget.count() == 1
+        assert panel.tab_widget.count() == 1
 
         window = panel.detach_tab(0)
 
         assert window is not None
         assert isinstance(window, DetachedPanelWindow)
-        assert panel._tab_widget.count() == 0
+        assert panel.tab_widget.count() == 0
 
     @staticmethod
     def test_reattach_panel() -> None:
         """Verify detach then reattach restores the tab count."""
         panel = ToolOutputPanel()
         widget = _add_plain_tab(panel, _TAB_A)
-        assert panel._tab_widget.count() == 1
+        assert panel.tab_widget.count() == 1
 
         window = panel.detach_tab(0)
         assert window is not None
-        assert panel._tab_widget.count() == 0
+        assert panel.tab_widget.count() == 0
 
-        panel._reattach_panel(widget, _TAB_A)
+        panel.reattach_panel(widget, _TAB_A)
 
-        assert panel._tab_widget.count() == 1
-        assert panel._tab_widget.tabText(0) == _TAB_A
+        assert panel.tab_widget.count() == 1
+        assert panel.tab_widget.tabText(0) == _TAB_A
 
     @staticmethod
     def test_detach_invalid_index_negative() -> None:
@@ -103,14 +108,14 @@ class TestDetachCurrentTab:
         panel = ToolOutputPanel()
         _add_plain_tab(panel, _TAB_A)
         _add_plain_tab(panel, _TAB_B)
-        panel._tab_widget.setCurrentIndex(1)
+        panel.tab_widget.setCurrentIndex(1)
 
         window = panel.detach_current_tab()
 
         assert window is not None
         assert isinstance(window, DetachedPanelWindow)
         assert window.panel_title == _TAB_B
-        assert panel._tab_widget.count() == 1
+        assert panel.tab_widget.count() == 1
 
     @staticmethod
     def test_detach_current_tab_empty() -> None:
@@ -133,12 +138,12 @@ class TestCloseOtherAndAllTabs:
         _add_plain_tab(panel, _TAB_A)
         widget_b = _add_plain_tab(panel, _TAB_B)
         _add_plain_tab(panel, _TAB_C)
-        assert panel._tab_widget.count() == _EXPECTED_THREE_TABS
+        assert panel.tab_widget.count() == _EXPECTED_THREE_TABS
 
-        panel._close_other_tabs(1)
+        panel.close_other_tabs(1)
 
-        assert panel._tab_widget.count() == 1
-        assert panel._tab_widget.widget(0) is widget_b
+        assert panel.tab_widget.count() == 1
+        assert panel.tab_widget.widget(0) is widget_b
 
     @staticmethod
     def test_close_all_tabs() -> None:
@@ -147,11 +152,11 @@ class TestCloseOtherAndAllTabs:
         _add_plain_tab(panel, _TAB_A)
         _add_plain_tab(panel, _TAB_B)
         _add_plain_tab(panel, _TAB_C)
-        assert panel._tab_widget.count() == _EXPECTED_THREE_TABS
+        assert panel.tab_widget.count() == _EXPECTED_THREE_TABS
 
-        panel._close_all_tabs()
+        panel.close_all_tabs()
 
-        assert panel._tab_widget.count() == 0
+        assert panel.tab_widget.count() == 0
 
 
 @pytest.mark.usefixtures("qapp")
@@ -205,7 +210,7 @@ class TestTabBarConfiguration:
     def test_tab_bar_movable() -> None:
         """Verify tab bar has isMovable() == True."""
         panel = ToolOutputPanel()
-        tab_bar = panel._tab_widget.tabBar()
+        tab_bar = panel.tab_widget.tabBar()
         assert tab_bar is not None
         assert tab_bar.isMovable() is True
 
@@ -213,6 +218,6 @@ class TestTabBarConfiguration:
     def test_tab_context_menu_policy() -> None:
         """Verify tab bar contextMenuPolicy() is CustomContextMenu."""
         panel = ToolOutputPanel()
-        tab_bar = panel._tab_widget.tabBar()
+        tab_bar = panel.tab_widget.tabBar()
         assert tab_bar is not None
         assert tab_bar.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu

@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Win32 window embedding utilities for Intellicrack.
 
@@ -14,7 +13,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QWindow
@@ -35,6 +34,8 @@ _EMBED_MIN_HEIGHT: Final[int] = 150
 
 _GW_OWNER: Final[int] = 4
 _MAX_TITLE_LEN: Final[int] = 256
+GW_OWNER: Final[int] = _GW_OWNER
+MAX_TITLE_LEN: Final[int] = _MAX_TITLE_LEN
 
 
 def find_window_by_pid(pid: int) -> int | None:
@@ -53,8 +54,8 @@ def find_window_by_pid(pid: int) -> int | None:
     if not hasattr(ctypes, "windll"):
         return None
 
-    windll: Any = ctypes.windll
-    user32: Any = windll.user32
+    windll: object = ctypes.windll
+    user32: object = windll.user32
     result_hwnd: list[int] = []
 
     enum_func_type = ctypes.WINFUNCTYPE(
@@ -113,7 +114,7 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
         QWidget | None: The container QWidget wrapping the embedded window, or None on failure.
     """
     try:
-        foreign_window: Any = QWindow.fromWinId(voidptr(hwnd))
+        foreign_window: object = QWindow.fromWinId(voidptr(hwnd))
         if foreign_window is None:
             _logger.warning("win32_embed_from_winid_failed", hwnd=hex(hwnd))
             return None
@@ -121,7 +122,7 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
         container: QWidget = QWidget.createWindowContainer(foreign_window, parent)
         container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)
 
-    except Exception:
+    except (RuntimeError, OSError, ValueError):
         _logger.exception("win32_embed_failed", hwnd=hex(hwnd))
         return None
 

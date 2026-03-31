@@ -27,8 +27,9 @@ import lief.OAT
 import lief.PE
 import pefile
 
-from ..core.logging import get_logger, log_binary_operation
-from ..core.types import (
+from intellicrack.bridges.base import BinaryOperationsBridge, BridgeCapabilities, BridgeState
+from intellicrack.core.logging import get_logger, log_binary_operation
+from intellicrack.core.types import (
     BinaryInfo,
     ExportInfo,
     ImportInfo,
@@ -40,7 +41,6 @@ from ..core.types import (
     ToolName,
     ToolParameter,
 )
-from .base import BinaryOperationsBridge, BridgeCapabilities, BridgeState
 
 
 if TYPE_CHECKING:
@@ -401,7 +401,7 @@ class BinaryBridge(BinaryOperationsBridge):
             tool_path: Not used for this bridge.
         """
         del tool_path
-        self._state = BridgeState(
+        self.state = BridgeState(
             connected=True,
             tool_running=True,
             binary_loaded=False,
@@ -446,13 +446,14 @@ class BinaryBridge(BinaryOperationsBridge):
         Raises:
             ToolError: If file cannot be loaded.
         """
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             raise ToolError(_ERR_FILE_NOT_FOUND)
 
-        log_binary_operation("load", path, size=path.stat().st_size)
+        file_stat = await asyncio.to_thread(path.stat)
+        log_binary_operation("load", path, size=file_stat.st_size)
         try:
-            self._binary_path = path.resolve()
-            self._data = bytearray(path.read_bytes())
+            self._binary_path = await asyncio.to_thread(path.resolve)
+            self._data = bytearray(await asyncio.to_thread(path.read_bytes))
             self._modified = False
             self._patches = []
 
@@ -485,10 +486,10 @@ class BinaryBridge(BinaryOperationsBridge):
             imports = await self._get_imports_internal()
             exports = await self._get_exports_internal()
 
-            self._state.connected = True
-            self._state.tool_running = True
-            self._state.binary_loaded = True
-            self._state.target_path = self._binary_path
+            self.state.connected = True
+            self.state.tool_running = True
+            self.state.binary_loaded = True
+            self.state.target_path = self._binary_path
 
             _logger.info("binary_loaded", path=str(path.name), file_type=file_type, arch=arch)
 
@@ -507,7 +508,7 @@ class BinaryBridge(BinaryOperationsBridge):
                 exports=exports,
             )
 
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError) as e:
             _logger.warning("binary_load_failed", path=str(self._binary_path), error=str(e))
             raise ToolError(_ERR_LOAD_FAILED) from e
 
@@ -621,7 +622,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         raw_size=int(section.SizeOfRawData),
                         characteristics=int(section.Characteristics),
                         entropy=entropy,
-                    )
+                    ),
                 )
 
         elif self._lief_binary is not None:
@@ -641,7 +642,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         raw_size=len(section_data),
                         characteristics=0,
                         entropy=entropy,
-                    )
+                    ),
                 )
 
         return sections
@@ -691,7 +692,7 @@ class BinaryBridge(BinaryOperationsBridge):
                             function=name,
                             ordinal=None if imp.name else int(imp.ordinal),
                             address=int(imp.address),
-                        )
+                        ),
                     )
 
         elif self._lief_binary is not None and hasattr(self._lief_binary, "imported_functions"):
@@ -704,7 +705,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         function=func_name,
                         ordinal=None,
                         address=func.address,
-                    )
+                    ),
                 )
 
         return imports
@@ -726,7 +727,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         name=name,
                         ordinal=int(exp.ordinal),
                         address=int(exp.address),
-                    )
+                    ),
                 )
 
         elif self._lief_binary is not None and hasattr(self._lief_binary, "exported_functions"):
@@ -740,7 +741,7 @@ class BinaryBridge(BinaryOperationsBridge):
                         name=export_name,
                         ordinal=idx,
                         address=func.address,
-                    )
+                    ),
                 )
 
         return exports
@@ -900,7 +901,7 @@ class BinaryBridge(BinaryOperationsBridge):
         if save_path is None:
             raise ToolError(_ERR_NO_SAVE_PATH)
 
-        save_path.write_bytes(bytes(self._data))
+        await asyncio.to_thread(save_path.write_bytes, bytes(self._data))
         _logger.info("binary_saved", path=str(save_path))
 
         if save_path == self._binary_path:

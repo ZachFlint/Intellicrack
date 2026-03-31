@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """API coverage tests for X64DbgBridge.
 
 These tests ensure that all API methods are callable and implemented,
@@ -29,7 +34,11 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 def bridge() -> X64DbgBridge:
-    """Create a bridge instance."""
+    """Create a bridge instance.
+
+    Returns:
+        X64DbgBridge: A new bridge instance.
+    """
     return X64DbgBridge()
 
 
@@ -64,7 +73,7 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_breakpoint(_ADDR_BREAKPOINT, "software")
 
-    bridge._breakpoints[_ADDR_BREAKPOINT] = BreakpointInfo(
+    bridge.breakpoints[_ADDR_BREAKPOINT] = BreakpointInfo(
         id=1,
         address=_ADDR_BREAKPOINT,
         bp_type="software",
@@ -139,9 +148,9 @@ async def test_process_info_real(bridge: X64DbgBridge) -> None:
     # command line might be None depending on permissions/implementation, but method should run
 
     # Check threads
-    threads = await bridge._get_threads()
+    threads = await bridge.get_threads()
     assert len(threads) > 0
 
     # Check modules
-    modules = await bridge._get_modules()
+    modules = await bridge.get_modules()
     assert len(modules) > 0

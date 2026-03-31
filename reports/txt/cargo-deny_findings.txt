@@ -1,0 +1,6 @@
+1 findings in D:\Intellicrack\src\intellicrack-hexcore\deny.toml
+
+error[unexpected-value]: expected '["all", "workspace", "transitive", "none"]'
+
+
+0 findings in Cargo.toml

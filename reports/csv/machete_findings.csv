@@ -1,0 +1,3 @@
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+machete,Cargo.toml,,,warning,,,Unused dependency: cipher,,,,,,,,,,,,
+machete,Cargo.toml,,,warning,,,Unused dependency: md-5,,,,,,,,,,,,

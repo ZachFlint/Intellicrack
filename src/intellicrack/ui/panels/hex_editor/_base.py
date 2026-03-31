@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Shared constants, utility functions, and dynamic imports for the hex editor package."""
 
 from __future__ import annotations
@@ -189,6 +188,7 @@ def compute_custom_crc(
     width: int,
     poly: int,
     init: int,
+    *,
     ref_in: bool,
     ref_out: bool,
     xor_out: int,
@@ -315,15 +315,23 @@ def _compute_hash_checksums(algo: str, data: bytes) -> str | None:
     if algo == "Adler32":
         return f"{zlib.adler32(data) & 0xFFFFFFFF:08x}"
     if algo == "CRC-8":
-        crc = compute_custom_crc(data, 8, 0x07, 0x00, False, False, 0x00)
+        crc = compute_custom_crc(data, 8, 0x07, 0x00, ref_in=False, ref_out=False, xor_out=0x00)
         return f"{crc:02x}"
     if algo == "CRC-16":
-        crc = compute_custom_crc(data, 16, 0x8005, 0x0000, True, True, 0x0000)
+        crc = compute_custom_crc(data, 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000)
         return f"{crc:04x}"
     if algo == "CRC-32":
         return f"{zlib.crc32(data) & 0xFFFFFFFF:08x}"
     if algo == "CRC-64":
-        crc = compute_custom_crc(data, 64, 0x42F0E1EBA9EA3693, 0xFFFFFFFFFFFFFFFF, False, False, 0xFFFFFFFFFFFFFFFF)
+        crc = compute_custom_crc(
+            data,
+            64,
+            0x42F0E1EBA9EA3693,
+            0xFFFFFFFFFFFFFFFF,
+            ref_in=False,
+            ref_out=False,
+            xor_out=0xFFFFFFFFFFFFFFFF,
+        )
         return f"{crc:016x}"
     return None
 
@@ -394,7 +402,7 @@ def compute_hash(algo: str, data: bytes) -> str:
         if result is not None:
             return result
         result = _compute_hash_fnv(algo, data)
-    except Exception as exc:
+    except (ValueError, TypeError, OSError, RuntimeError, ImportError) as exc:
         return f"Error: {exc}"
     else:
         return result if result is not None else f"Error: unknown algorithm {algo}"

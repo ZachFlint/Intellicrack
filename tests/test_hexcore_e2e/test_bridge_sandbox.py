@@ -6,22 +6,26 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
 
 
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 pytest.importorskip("intellicrack_hexcore")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -37,14 +41,11 @@ def _run(coro: Any) -> Any:
 class _MinimalRegistry:
     """Minimal stub registry that returns None for all bridge lookups."""
 
-    def get(self, _name: Any) -> None:
+    def get(self, _name: str) -> None:
         """Return None for any bridge name.
 
         Args:
             _name: Bridge name to look up.
-
-        Returns:
-            None: Always None, simulating missing sandbox bridge.
         """
         return
 
@@ -52,7 +53,7 @@ class _MinimalRegistry:
 class TestSaveToSandboxErrorPaths:
     """Tests covering save_to_sandbox validation error paths."""
 
-    def test_save_to_sandbox_no_document_raises_runtime_error(self, bridge: Any) -> None:
+    def test_save_to_sandbox_no_document_raises_runtime_error(self, bridge: HexEditorBridge) -> None:
         """Verify save_to_sandbox raises RuntimeError when no document is open.
 
         Args:
@@ -61,17 +62,17 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_no_tool_registry_raises_runtime_error(self, loaded_bridge: Any) -> None:
+    def test_save_to_sandbox_no_tool_registry_raises_runtime_error(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify save_to_sandbox raises RuntimeError when tool registry is not set.
 
         Args:
             loaded_bridge: HexEditorBridge with a PE file already opened.
         """
-        loaded_bridge._tool_registry = None
+        loaded_bridge.tool_registry = None
         with pytest.raises(RuntimeError, match="tool registry"):
             _run(loaded_bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_no_sandbox_bridge_raises_runtime_error(self, loaded_bridge: Any) -> None:
+    def test_save_to_sandbox_no_sandbox_bridge_raises_runtime_error(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify save_to_sandbox raises RuntimeError when sandbox bridge is absent.
 
         Args:
@@ -81,7 +82,7 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="sandbox bridge not available"):
             _run(loaded_bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_document_required_before_registry(self, bridge: Any) -> None:
+    def test_save_to_sandbox_document_required_before_registry(self, bridge: HexEditorBridge) -> None:
         """Verify save_to_sandbox checks for open document before registry access.
 
         The no-document check must fire before any registry lookup.
@@ -93,7 +94,7 @@ class TestSaveToSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.save_to_sandbox("/sandbox/target.bin"))
 
-    def test_save_to_sandbox_sandbox_type_forwarded(self, loaded_bridge: Any) -> None:
+    def test_save_to_sandbox_sandbox_type_forwarded(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify save_to_sandbox fails on missing bridge even with custom sandbox_type.
 
         Args:
@@ -107,7 +108,7 @@ class TestSaveToSandboxErrorPaths:
 class TestTestInSandboxErrorPaths:
     """Tests covering test_in_sandbox validation error paths."""
 
-    def test_test_in_sandbox_no_document_raises_runtime_error(self, bridge: Any) -> None:
+    def test_test_in_sandbox_no_document_raises_runtime_error(self, bridge: HexEditorBridge) -> None:
         """Verify test_in_sandbox raises RuntimeError when no document is open.
 
         Args:
@@ -116,7 +117,7 @@ class TestTestInSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.test_in_sandbox())
 
-    def test_test_in_sandbox_no_tool_registry_raises_runtime_error(self, loaded_bridge: Any) -> None:
+    def test_test_in_sandbox_no_tool_registry_raises_runtime_error(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify test_in_sandbox raises RuntimeError when tool registry is not set.
 
         The method reaches the save_to_sandbox step first, which checks the registry.
@@ -124,11 +125,11 @@ class TestTestInSandboxErrorPaths:
         Args:
             loaded_bridge: HexEditorBridge with a PE file already opened.
         """
-        loaded_bridge._tool_registry = None
+        loaded_bridge.tool_registry = None
         with pytest.raises(RuntimeError, match="tool registry"):
             _run(loaded_bridge.test_in_sandbox())
 
-    def test_test_in_sandbox_no_sandbox_bridge_raises_runtime_error(self, loaded_bridge: Any) -> None:
+    def test_test_in_sandbox_no_sandbox_bridge_raises_runtime_error(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify test_in_sandbox raises RuntimeError when sandbox bridge is absent.
 
         Args:
@@ -138,7 +139,7 @@ class TestTestInSandboxErrorPaths:
         with pytest.raises(RuntimeError, match="sandbox bridge not available"):
             _run(loaded_bridge.test_in_sandbox())
 
-    def test_test_in_sandbox_with_args_still_requires_document(self, bridge: Any) -> None:
+    def test_test_in_sandbox_with_args_still_requires_document(self, bridge: HexEditorBridge) -> None:
         """Verify test_in_sandbox raises RuntimeError for no-document even with args set.
 
         Args:
@@ -151,7 +152,7 @@ class TestTestInSandboxErrorPaths:
 class TestSetToolRegistry:
     """Tests covering the set_tool_registry method."""
 
-    def test_set_tool_registry_method_exists(self, bridge: Any) -> None:
+    def test_set_tool_registry_method_exists(self, bridge: HexEditorBridge) -> None:
         """Verify the bridge exposes set_tool_registry as a callable.
 
         Args:
@@ -159,7 +160,7 @@ class TestSetToolRegistry:
         """
         assert callable(getattr(bridge, "set_tool_registry", None))
 
-    def test_set_tool_registry_stores_registry(self, bridge: Any) -> None:
+    def test_set_tool_registry_stores_registry(self, bridge: HexEditorBridge) -> None:
         """Verify that set_tool_registry persists the provided registry.
 
         Args:
@@ -167,4 +168,4 @@ class TestSetToolRegistry:
         """
         registry = _MinimalRegistry()
         bridge.set_tool_registry(registry)
-        assert bridge._tool_registry is registry
+        assert bridge.tool_registry is registry

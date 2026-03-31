@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Provider registry for managing LLM providers.
 
@@ -13,13 +12,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..core.logging import get_logger
-from ..core.types import ProviderCredentials, ProviderError, ProviderName
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ProviderCredentials, ProviderError, ProviderName
 
 
 if TYPE_CHECKING:
-    from ..credentials.env_loader import CredentialLoader
-    from .base import LLMProviderBase
+    from intellicrack.credentials.env_loader import CredentialLoader
+    from intellicrack.providers.base import LLMProviderBase
 
 
 _MSG_NOT_REGISTERED = "Not registered"
@@ -150,7 +149,11 @@ class ProviderRegistry:
 
         Raises:
             ProviderError: If provider not registered or no credentials.
-            Exception: If connection fails (re-raised from provider).
+            ConnectionError: If network connection fails.
+            TimeoutError: If connection times out.
+            OSError: If an OS-level I/O error occurs.
+            RuntimeError: If the provider encounters a runtime failure.
+            ValueError: If an invalid value is encountered during connection.
         """
         provider = self.get_or_raise(name)
 
@@ -163,8 +166,8 @@ class ProviderRegistry:
         try:
             await provider.connect(credentials)
             self._logger.info("provider_connected", provider=name.value)
-        except Exception:
-            self._logger.exception("provider_connection_failed", provider=name.value)
+        except (ConnectionError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
+            self._logger.warning("provider_connection_failed", provider=name.value, error=str(exc))
             raise
         else:
             return True

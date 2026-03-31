@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Pattern registry for discovering, indexing, and matching .hexpat files."""
 
 from __future__ import annotations
 
+import operator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -53,18 +53,11 @@ class PatternRegistry:
     Scans specified directories for .hexpat files, extracts metadata from
     #pragma directives, and provides file-format matching via magic bytes.
 
-    Attributes:
+    Args:
         pattern_dirs: Directories to scan for .hexpat files.
     """
 
     def __init__(self, pattern_dirs: list[Path] | None = None) -> None:
-        """
-        Initialize the pattern registry.
-
-        Args:
-            pattern_dirs: Directories to scan for .hexpat files.
-                Defaults to an empty list.
-        """
         self._pattern_dirs: list[Path] = list(pattern_dirs) if pattern_dirs else []
         self._patterns: list[PatternMetadata] = []
         self._by_name: dict[str, PatternMetadata] = {}
@@ -105,7 +98,7 @@ class PatternRegistry:
         List all discovered patterns.
 
         Returns:
-            A list of PatternMetadata for all indexed .hexpat files,
+            list[PatternMetadata]: A list of PatternMetadata for all indexed .hexpat files,
             sorted by name.
         """
         if not self._scanned:
@@ -117,7 +110,7 @@ class PatternRegistry:
         List patterns grouped by category.
 
         Returns:
-            A dict mapping category names to lists of PatternMetadata.
+            dict[str, list[PatternMetadata]]: A dict mapping category names to lists of PatternMetadata.
         """
         if not self._scanned:
             self.scan()
@@ -136,7 +129,7 @@ class PatternRegistry:
             name: The pattern name to look up.
 
         Returns:
-            The PatternMetadata if found, None otherwise.
+            PatternMetadata | None: The PatternMetadata if found, None otherwise.
         """
         if not self._scanned:
             self.scan()
@@ -153,7 +146,7 @@ class PatternRegistry:
             data_reader: DataReader wrapping the binary data to match.
 
         Returns:
-            A list of matching PatternMetadata, sorted by specificity
+            list[PatternMetadata]: A list of matching PatternMetadata, sorted by specificity
             (longer magic sequences first).
         """
         if not self._scanned:
@@ -190,7 +183,7 @@ class PatternRegistry:
             if all_match:
                 matches.append((total_magic_len, pattern))
 
-        matches.sort(key=lambda x: x[0], reverse=True)
+        matches.sort(key=operator.itemgetter(0), reverse=True)
         return [m[1] for m in matches]
 
     @staticmethod
@@ -202,10 +195,7 @@ class PatternRegistry:
             metadata: The pattern metadata with the file path.
 
         Returns:
-            The full .hexpat source code as a string.
-
-        Raises:
-            FileNotFoundError: If the pattern file does not exist.
+            str: The full .hexpat source code as a string.
         """
         return metadata.file_path.read_text(encoding="utf-8", errors="replace")
 
@@ -218,7 +208,7 @@ class PatternRegistry:
             path: Path to the .hexpat file.
 
         Returns:
-            PatternMetadata if extraction succeeds, None on read errors.
+            PatternMetadata | None: PatternMetadata if extraction succeeds, None on read errors.
         """
         try:
             source = path.read_text(encoding="utf-8", errors="replace")

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Integration tests for OllamaProvider model listing.
 
 These tests require Ollama to be running locally at http://localhost:11434.
@@ -146,6 +151,7 @@ class TestOllamaConnection:
     @pytest.mark.asyncio
     @staticmethod
     async def test_connection_with_custom_base_url(
+        *,
         has_ollama_available: bool,
     ) -> None:
         """Test connection with custom base URL."""
@@ -187,6 +193,7 @@ class TestOllamaConnection:
     @pytest.mark.asyncio
     @staticmethod
     async def test_disconnect_clears_connection_state(
+        *,
         has_ollama_available: bool,
     ) -> None:
         """Test disconnect properly clears connection state."""

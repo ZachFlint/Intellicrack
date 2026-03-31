@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """End-to-end tests for FridaBridge native parity features.
 
 Tests run against real Frida runtime attached to real Windows processes.
@@ -11,11 +16,11 @@ import logging
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Coroutine, Generator
 
 import pytest
 
@@ -63,14 +68,14 @@ _NOTEPAD_MIN_REGIONS: Final[int] = 20
 _NTDLL_BASE_MIN: Final[int] = 0x70000000
 
 
-def _run_async(coro: Any) -> Any:
+def _run_async(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously for test use.
 
     Args:
         coro: Awaitable coroutine to execute.
 
     Returns:
-        The coroutine's return value.
+        object: The coroutine's return value.
     """
     loop = asyncio.new_event_loop()
     try:
@@ -308,7 +313,7 @@ def notepad_process() -> Generator[subprocess.Popen[bytes]]:
     """Spawn a real notepad.exe for Frida to attach to.
 
     Yields:
-        The running notepad process.
+        Generator[subprocess.Popen[bytes]]: The running notepad process.
     """
     proc = subprocess.Popen(
         ["notepad.exe"],
@@ -329,7 +334,7 @@ def frida_bridge(notepad_process: subprocess.Popen[bytes]) -> Generator[FridaBri
         notepad_process: The running notepad process fixture.
 
     Yields:
-        An initialized and attached FridaBridge instance.
+        Generator[FridaBridge]: An initialized and attached FridaBridge instance.
     """
     bridge = FridaBridge()
     _run_async(bridge.initialize())
@@ -389,7 +394,7 @@ def worker_thread(frida_bridge: FridaBridge) -> Generator[int]:
         frida_bridge: Attached FridaBridge instance.
 
     Yields:
-        The thread ID of the busy worker thread.
+        Generator[int]: The thread ID of the busy worker thread.
     """
     tids_before: set[int] = {t.tid for t in cast("list[ThreadInfo]", _run_async(frida_bridge.enumerate_threads()))}
     script_id: str = _run_async(frida_bridge.execute_persistent_script(_WORKER_THREAD_JS))
@@ -409,7 +414,7 @@ def unattached_bridge() -> Generator[FridaBridge]:
     """Create a FridaBridge that is initialized but not attached.
 
     Yields:
-        An initialized FridaBridge instance.
+        Generator[FridaBridge]: An initialized FridaBridge instance.
     """
     bridge = FridaBridge()
     _run_async(bridge.initialize())
@@ -627,7 +632,7 @@ def test_stalker_follow_and_unfollow(
             thread_id=worker_thread,
             events="call",
             limit=_STALKER_LIMIT,
-        )
+        ),
     )
     assert isinstance(trace_id, str)
     assert trace_id

@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """YARA scanning mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -51,6 +50,7 @@ class YaraMixin:
     """Mixin providing YARA scanning for the hex editor panel."""
 
     _document: Any | None
+    document: Any | None
     _hex_widget: Any | None
     _yara_rule_files: list[str]
     _yara_file_count_label: QLabel | None
@@ -94,7 +94,7 @@ class YaraMixin:
 
         self._yara_results_tree = QTreeWidget()
         self._yara_results_tree.setHeaderLabels(["Rule", "Offset", "Identifier", "Match Data"])
-        self._yara_results_tree.setAlternatingRowColors(True)
+        self._yara_results_tree.setAlternatingRowColors(enable=True)
         self._yara_results_tree.itemDoubleClicked.connect(self._on_yara_result_double_clicked)
         layout.addWidget(self._yara_results_tree)
 
@@ -117,7 +117,7 @@ class YaraMixin:
 
     def _on_yara_scan(self) -> None:
         """Compile YARA rules and scan the current document."""
-        if self._document is None or self._yara_results_tree is None:
+        if self.document is None or self._yara_results_tree is None:
             return
 
         if not yara_scanner_available or YaraScanner_cls is None:
@@ -152,8 +152,8 @@ class YaraMixin:
             else:
                 return
 
-            doc_len: int = self._document.length()
-            raw: object = self._document.read(0, doc_len)
+            doc_len: int = self.document.length()
+            raw: object = self.document.read(0, doc_len)
             if isinstance(raw, (list, bytearray)):
                 data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
             elif isinstance(raw, bytes):
@@ -163,7 +163,7 @@ class YaraMixin:
 
             matches = scanner.scan_data(data, compiled_rules)
 
-        except Exception as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             logger.debug("yara_scan_failed", error=str(exc))
             return
 
@@ -186,7 +186,7 @@ class YaraMixin:
                 ])
                 rule_item.addChild(child)
                 all_match_offsets.append((string_match.offset, len(string_match.data)))
-            rule_item.setExpanded(True)
+            rule_item.setExpanded(aexpand=True)
 
         if all_match_offsets and self._hex_widget is not None:
             highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)

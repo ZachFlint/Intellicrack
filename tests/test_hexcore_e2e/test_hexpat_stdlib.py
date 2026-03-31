@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import math
 import struct
 
 import pytest
@@ -268,7 +269,7 @@ class TestMathFunctions:
         data = bytes(4)
         reader = DataReader.from_bytes(data)
         builtin = BuiltinFunctions(reader)
-        assert abs(getattr(builtin, "_math_abs")(-3.14) - 3.14) < 1e-6
+        assert abs(getattr(builtin, "_math_abs")(-math.pi) - math.pi) < 1e-6
 
     def test_math_min_integers(self) -> None:
         """_math_min returns the smaller of two integers."""

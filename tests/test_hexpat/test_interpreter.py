@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import math
 import struct
 
 import pytest
@@ -15,7 +16,11 @@ from intellicrack.core.hexpat.interpreter import HexPatInterpreter
 
 @pytest.fixture
 def interp() -> HexPatInterpreter:
-    """Create a fresh HexPatInterpreter instance for each test."""
+    """Create a fresh HexPatInterpreter instance for each test.
+
+    Returns:
+        HexPatInterpreter: A new interpreter instance.
+    """
     return HexPatInterpreter()
 
 
@@ -49,13 +54,13 @@ class TestPrimitiveReads:
 
     def test_float(self, interp: HexPatInterpreter) -> None:
         """Verify reading a 32-bit floating point value."""
-        data = struct.pack("<f", 3.14)
+        data = struct.pack("<f", math.pi)
         results = interp.execute_bytes("float v @ 0;", data)
         assert results[0]["display_value"].startswith("3.14")
 
     def test_double(self, interp: HexPatInterpreter) -> None:
         """Verify reading a 64-bit double precision value."""
-        data = struct.pack("<d", 2.71828)
+        data = struct.pack("<d", math.e)
         results = interp.execute_bytes("double v @ 0;", data)
         assert "2.718" in results[0]["display_value"]
 

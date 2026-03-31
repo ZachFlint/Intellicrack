@@ -156,7 +156,7 @@ class AnalysisAggregator:
                 for addr, value in raw_strings
             )
             source_bridges.append("binary")
-        except Exception as exc:
+        except (OSError, RuntimeError, ToolError) as exc:
             _logger.warning(
                 "binary_bridge_strings_failed",
                 error=str(exc),
@@ -197,7 +197,7 @@ class AnalysisAggregator:
             bridge_strings = await bridge.search_strings("")
             strings.extend(bridge_strings)
             contributed = True
-        except Exception as exc:
+        except (OSError, RuntimeError, ToolError) as exc:
             _logger.warning(
                 "static_bridge_strings_failed",
                 bridge=bridge_name,
@@ -209,7 +209,7 @@ class AnalysisAggregator:
             bridge_imports = await bridge.get_imports()
             imports.extend(bridge_imports)
             contributed = True
-        except Exception as exc:
+        except (OSError, RuntimeError, ToolError) as exc:
             _logger.warning(
                 "static_bridge_imports_failed",
                 bridge=bridge_name,
@@ -221,7 +221,7 @@ class AnalysisAggregator:
             bridge_exports = await bridge.get_exports()
             exports.extend(bridge_exports)
             contributed = True
-        except Exception as exc:
+        except (OSError, RuntimeError, ToolError) as exc:
             _logger.warning(
                 "static_bridge_exports_failed",
                 bridge=bridge_name,
@@ -233,7 +233,7 @@ class AnalysisAggregator:
             bridge_functions = await bridge.get_functions()
             functions.extend(bridge_functions)
             contributed = True
-        except Exception as exc:
+        except (OSError, RuntimeError, ToolError) as exc:
             _logger.warning(
                 "static_bridge_functions_failed",
                 bridge=bridge_name,

@@ -4,10 +4,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Generate git commit messages using Google Gemini API.
+"""Generate git commit messages using Google Gemini API via Vertex AI.
 
-Uses ``GOOGLE_API_KEY`` from ``.env`` to call the Gemini API directly.
-Supports map-reduce batching for diffs that exceed Paid Tier 1 token limits.
+Uses Application Default Credentials and ``GOOGLE_CLOUD_PROJECT`` from
+``.env`` to call the Gemini API through Vertex AI. Billing flows through
+GCP project credits. Supports map-reduce batching for diffs that exceed
+Paid Tier 1 token limits.
 
 The script reads a git diff from stdin and generates a conventional commit
 message. For large diffs (>900K tokens), it splits the diff into chunks,
@@ -57,7 +59,7 @@ _load_env()
 
 
 API_KEY_MODEL: Final[str] = os.environ.get(
-    "GEMINI_COMMIT_MODEL", "gemini-3.1-flash-lite-preview",
+    "GEMINI_COMMIT_MODEL", "gemini-2.5-flash",
 )
 SINGLE_CALL_TOKEN_LIMIT: Final[int] = 900_000
 CHUNK_TOKEN_TARGET: Final[int] = 800_000
@@ -556,12 +558,13 @@ def main() -> int:
     if not diff_input.strip():
         return _fail("No diff input provided on stdin")
 
-    api_key = os.environ.get("GOOGLE_API_KEY", "").strip()
-    if not api_key:
-        return _fail("GOOGLE_API_KEY not set")
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1").strip()
+    if not project:
+        return _fail("GOOGLE_CLOUD_PROJECT not set")
 
-    _log(f"API key loaded ({len(api_key)} chars, ends ...{api_key[-4:]})")
-    client = genai.Client(api_key=api_key)
+    _log(f"Vertex AI: project={project}, location={location}")
+    client = genai.Client(vertexai=True, project=project, location=location)
 
     stat_section, diff_body = _extract_stat_section(diff_input)
 

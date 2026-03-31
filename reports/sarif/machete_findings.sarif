@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "machete",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "general",
+              "shortDescription": {
+                "text": "Unused dependency: cipher"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused dependency: cipher"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused dependency: md-5"
+          }
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2026-03-31T03:24:00.191267+00:00"
+        }
+      ]
+    }
+  ]
+}

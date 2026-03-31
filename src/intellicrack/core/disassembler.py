@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Multi-architecture disassembler module for the hex editor.
 
@@ -117,7 +116,6 @@ class HexDisassembler:
     """
 
     def __init__(self) -> None:
-        """Initialise the disassembler using module-level capstone import."""
         self._cs_mod: ModuleType | None = _capstone_mod
         if self._cs_mod is not None:
             version: str = str(getattr(self._cs_mod, "__version__", "unknown"))
@@ -253,7 +251,7 @@ class HexDisassembler:
                     mnemonic=insn.mnemonic,
                     op_str=insn.op_str,
                     size=insn.size,
-                )
+                ),
             )
             if len(instructions) >= count:
                 break
@@ -281,10 +279,6 @@ class HexDisassembler:
 
         Returns:
             list[DisassemblyLine]: Decoded instructions as bridge lines.
-
-        Raises:
-            ValueError: If capstone is not available or the
-                architecture/mode combination is unsupported.
         """
         raw = self.disassemble(data, base_addr, arch, mode, count)
         return [_to_disassembly_line(insn) for insn in raw]
@@ -414,7 +408,7 @@ class HexDisassembler:
                 cs_arch, cs_mode = self._resolve_arch_mode(entry["arch"], entry["mode"])
                 _ = cs.Cs(cs_arch, cs_mode)
                 supported.append(entry)
-            except Exception:
+            except (ValueError, OSError, AttributeError):
                 _logger.debug(
                     "arch_not_supported",
                     arch=entry["arch"],

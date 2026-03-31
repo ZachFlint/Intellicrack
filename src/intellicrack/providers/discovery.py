@@ -16,17 +16,17 @@ import json
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from ..core.logging import get_logger
-from ..core.types import ModelInfo, ProviderName
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ModelInfo, ProviderName
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .registry import ProviderRegistry
+    from intellicrack.providers.registry import ProviderRegistry
 
 
 @dataclass
@@ -227,12 +227,13 @@ class DiscoveryCache:
                         }
 
                 data["entries"] = entries_dict
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+                await asyncio.to_thread(path.parent.mkdir, parents=True, exist_ok=True)
+                json_text = json.dumps(data, indent=2)
+                await asyncio.to_thread(path.write_text, json_text, "utf-8")
                 self._logger.info("cache_saved", path=str(path))
 
-            except Exception:
-                self._logger.exception("cache_save_failed", cache_path=str(path))
+            except (OSError, ValueError, TypeError) as exc:
+                self._logger.warning("cache_save_failed", cache_path=str(path), error=str(exc))
 
     async def load_from_disk(self, path: Path) -> None:
         """
@@ -242,12 +243,13 @@ class DiscoveryCache:
             path: File path to load cache from.
         """
         async with self._lock:
-            if not path.exists():
+            exists = await asyncio.to_thread(path.exists)
+            if not exists:
                 self._logger.debug("cache_file_not_found", path=str(path))
                 return
 
             try:
-                content = path.read_text(encoding="utf-8")
+                content = await asyncio.to_thread(path.read_text, "utf-8")
                 data = json.loads(content)
 
                 if data.get("version") != 1:
@@ -293,8 +295,8 @@ class DiscoveryCache:
 
             except json.JSONDecodeError:
                 self._logger.exception("cache_parse_failed", cache_path=str(path))
-            except Exception:
-                self._logger.exception("cache_load_failed", cache_path=str(path))
+            except (OSError, ValueError, TypeError) as exc:
+                self._logger.warning("cache_load_failed", cache_path=str(path), error=str(exc))
 
 
 class ModelDiscovery:
@@ -335,6 +337,7 @@ class ModelDiscovery:
 
     async def discover_all(
         self,
+        *,
         use_cache: bool = True,
         force_refresh: bool = False,
     ) -> dict[ProviderName, list[ModelInfo]]:
@@ -372,7 +375,7 @@ class ModelDiscovery:
                         cached,
                         DiscoveryEvent(
                             provider=provider_name,
-                            timestamp=datetime.now(),
+                            timestamp=datetime.now(tz=UTC),
                             model_count=len(cached),
                             success=True,
                             error_message=None,
@@ -387,7 +390,7 @@ class ModelDiscovery:
                     [],
                     DiscoveryEvent(
                         provider=provider_name,
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(tz=UTC),
                         model_count=0,
                         success=False,
                         error_message="Provider not connected",
@@ -416,7 +419,7 @@ class ModelDiscovery:
                     models,
                     DiscoveryEvent(
                         provider=provider_name,
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(tz=UTC),
                         model_count=len(models),
                         success=True,
                         new_models=new_model_ids,
@@ -433,7 +436,7 @@ class ModelDiscovery:
                     [],
                     DiscoveryEvent(
                         provider=provider_name,
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(tz=UTC),
                         model_count=0,
                         success=False,
                         error_message=f"Timeout after {self._timeout}s",
@@ -441,7 +444,7 @@ class ModelDiscovery:
                     ),
                 )
 
-            except Exception as e:
+            except (ConnectionError, OSError, RuntimeError, ValueError) as e:
                 duration_ms = (time.time() - start_time) * 1000
                 self._logger.warning("discovery_failed", provider=provider_name.value, error=str(e))
                 return (
@@ -449,7 +452,7 @@ class ModelDiscovery:
                     [],
                     DiscoveryEvent(
                         provider=provider_name,
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(tz=UTC),
                         model_count=0,
                         success=False,
                         error_message=str(e),
@@ -479,6 +482,7 @@ class ModelDiscovery:
     async def discover_provider(
         self,
         provider: ProviderName,
+        *,
         use_cache: bool = True,
     ) -> list[ModelInfo]:
         """
@@ -519,8 +523,8 @@ class ModelDiscovery:
                 timeout_seconds=self._timeout,
             )
             return []
-        except Exception:
-            self._logger.exception("discovery_failed", provider=provider.value)
+        except (ConnectionError, OSError, RuntimeError, ValueError) as exc:
+            self._logger.warning("discovery_failed", provider=provider.value, error=str(exc))
             return []
         else:
             duration_ms = (time.time() - start_time) * 1000
@@ -533,7 +537,7 @@ class ModelDiscovery:
 
             event = DiscoveryEvent(
                 provider=provider,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
                 model_count=len(models),
                 success=True,
                 new_models=list(new_ids - old_ids),

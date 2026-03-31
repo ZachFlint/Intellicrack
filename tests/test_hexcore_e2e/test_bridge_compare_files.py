@@ -12,19 +12,23 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
+
 
 pytest.importorskip("intellicrack_hexcore")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -56,7 +60,7 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 class TestBridgeCompareFiles:
     """Tests covering HexEditorBridge.compare_files() byte-comparison logic."""
 
-    def test_identical_files_reports_identical(self, bridge: Any, tmp_path: Path) -> None:
+    def test_identical_files_reports_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that identical files are reported as equal.
 
         Args:
@@ -72,7 +76,7 @@ class TestBridgeCompareFiles:
         similarity: float | None = result.get("similarity")
         assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
 
-    def test_identical_files_have_zero_differences(self, bridge: Any, tmp_path: Path) -> None:
+    def test_identical_files_have_zero_differences(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that identical files report zero total differences.
 
         Args:
@@ -93,7 +97,7 @@ class TestBridgeCompareFiles:
         elif mods is not None:
             assert mods == 0
 
-    def test_single_byte_difference_detected(self, bridge: Any, tmp_path: Path) -> None:
+    def test_single_byte_difference_detected(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a single changed byte causes files to differ.
 
         Args:
@@ -109,7 +113,7 @@ class TestBridgeCompareFiles:
         assert isinstance(result, dict)
         assert not result.get("files_identical")
 
-    def test_single_byte_difference_has_nonempty_regions(self, bridge: Any, tmp_path: Path) -> None:
+    def test_single_byte_difference_has_nonempty_regions(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a single-byte diff produces at least one difference region.
 
         Args:
@@ -136,7 +140,7 @@ class TestBridgeCompareFiles:
             )
             assert has_diff_info
 
-    def test_multiple_region_differences_detected(self, bridge: Any, tmp_path: Path) -> None:
+    def test_multiple_region_differences_detected(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that multiple distinct changed regions are reported.
 
         Args:
@@ -154,7 +158,7 @@ class TestBridgeCompareFiles:
         assert isinstance(result, dict)
         assert not result.get("files_identical")
 
-    def test_different_size_files_not_identical(self, bridge: Any, tmp_path: Path) -> None:
+    def test_different_size_files_not_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that files with different sizes are not reported as identical.
 
         Args:
@@ -167,7 +171,7 @@ class TestBridgeCompareFiles:
         assert isinstance(result, dict)
         assert not result.get("files_identical")
 
-    def test_empty_files_are_identical(self, bridge: Any, tmp_path: Path) -> None:
+    def test_empty_files_are_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that two empty files are reported as identical.
 
         Args:
@@ -182,7 +186,7 @@ class TestBridgeCompareFiles:
         similarity: float | None = result.get("similarity")
         assert files_identical is True or (similarity is not None and similarity >= 0.99)
 
-    def test_same_path_twice_is_identical(self, bridge: Any, tmp_path: Path) -> None:
+    def test_same_path_twice_is_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that comparing a file to itself reports identity.
 
         Args:
@@ -196,7 +200,7 @@ class TestBridgeCompareFiles:
         similarity: float | None = result.get("similarity")
         assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
 
-    def test_pe_vs_elf_not_identical(self, bridge: Any, pe_binary: Path, elf_binary: Path) -> None:
+    def test_pe_vs_elf_not_identical(self, bridge: HexEditorBridge, pe_binary: Path, elf_binary: Path) -> None:
         """Verify that comparing a PE file to an ELF file reports differences.
 
         Args:
@@ -208,7 +212,7 @@ class TestBridgeCompareFiles:
         assert isinstance(result, dict)
         assert not result.get("files_identical")
 
-    def test_return_type_is_dict_with_recognized_keys(self, bridge: Any, tmp_path: Path) -> None:
+    def test_return_type_is_dict_with_recognized_keys(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that compare_files returns a dict containing at least one recognized key.
 
         Args:

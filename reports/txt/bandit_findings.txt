@@ -1,1 +1,3 @@
-No findings.
+1 findings in src/intellicrack/ui\dialogs\splash_screen.py
+
+src/intellicrack/ui\dialogs\splash_screen.py:221: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes.

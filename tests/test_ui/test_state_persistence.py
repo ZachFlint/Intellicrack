@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for ToolOutputPanel window state persistence.
 
 Verifies tab state capture (names, active index, splitter sizes),
@@ -31,7 +36,7 @@ def clean_settings() -> Generator[QSettings]:
     """Provide a QSettings instance and clear it on teardown.
 
     Yields:
-        QSettings: Temporary settings store for testing.
+        Generator[QSettings]: Temporary settings store for testing.
     """
     settings = QSettings(_SETTINGS_ORG, _SETTINGS_APP)
     yield settings
@@ -49,8 +54,8 @@ class TestSaveTabState:
         panel = ToolOutputPanel()
         widget_a = QWidget()
         widget_b = QWidget()
-        panel._tab_widget.addTab(widget_a, _TAB_A)
-        panel._tab_widget.addTab(widget_b, _TAB_B)
+        panel.tab_widget.addTab(widget_a, _TAB_A)
+        panel.tab_widget.addTab(widget_b, _TAB_B)
 
         state = panel.save_tab_state()
         tab_names = state["tab_names"]
@@ -65,9 +70,9 @@ class TestSaveTabState:
         panel = ToolOutputPanel()
         widget_a = QWidget()
         widget_b = QWidget()
-        panel._tab_widget.addTab(widget_a, _TAB_A)
-        panel._tab_widget.addTab(widget_b, _TAB_B)
-        panel._tab_widget.setCurrentIndex(1)
+        panel.tab_widget.addTab(widget_a, _TAB_A)
+        panel.tab_widget.addTab(widget_b, _TAB_B)
+        panel.tab_widget.setCurrentIndex(1)
 
         state = panel.save_tab_state()
 
@@ -99,10 +104,10 @@ class TestRestoreTabState:
         widget_a = QWidget()
         widget_b = QWidget()
         widget_c = QWidget()
-        panel._tab_widget.addTab(widget_a, _TAB_A)
-        panel._tab_widget.addTab(widget_b, _TAB_B)
-        panel._tab_widget.addTab(widget_c, "Extra")
-        panel._tab_widget.setCurrentIndex(2)
+        panel.tab_widget.addTab(widget_a, _TAB_A)
+        panel.tab_widget.addTab(widget_b, _TAB_B)
+        panel.tab_widget.addTab(widget_c, "Extra")
+        panel.tab_widget.setCurrentIndex(2)
 
         state: dict[str, object] = {
             "tab_names": [],
@@ -112,13 +117,13 @@ class TestRestoreTabState:
 
         panel.restore_tab_state(state)
 
-        assert panel._tab_widget.currentIndex() == 1
+        assert panel.tab_widget.currentIndex() == 1
 
     @staticmethod
     def test_restore_tab_state_sets_splitter() -> None:
         """Verify splitter sizes are restored from saved state dict."""
         panel = ToolOutputPanel()
-        default_sizes = list(panel._main_splitter.sizes())
+        default_sizes = list(panel.main_splitter.sizes())
 
         state: dict[str, object] = {
             "tab_names": [],
@@ -128,7 +133,7 @@ class TestRestoreTabState:
 
         panel.restore_tab_state(state)
 
-        sizes = panel._main_splitter.sizes()
+        sizes = panel.main_splitter.sizes()
         assert len(sizes) == 2
         assert abs(sizes[0] - sizes[1]) <= 1
         assert sizes != default_sizes or default_sizes == [400, 400]
@@ -157,7 +162,7 @@ class TestRestoreTabState:
         }
         panel.restore_tab_state(state)
 
-        assert panel._tab_widget.currentIndex() >= -1
+        assert panel.tab_widget.currentIndex() >= -1
         for key in expected_keys:
             idx = panel.find_tab_by_title(key)
             assert isinstance(idx, int)
@@ -191,9 +196,9 @@ class TestDetachedState:
         """Verify detached tab title appears in get_detached_state."""
         panel = ToolOutputPanel()
         widget = QWidget()
-        panel._tab_widget.addTab(widget, _TAB_A)
+        panel.tab_widget.addTab(widget, _TAB_A)
 
-        tab_index = panel._tab_widget.indexOf(widget)
+        tab_index = panel.tab_widget.indexOf(widget)
         panel.detach_tab(tab_index)
 
         detached = panel.get_detached_state()
@@ -217,8 +222,8 @@ class TestDetachedState:
         panel = ToolOutputPanel()
         widget_a = QWidget()
         widget_b = QWidget()
-        panel._tab_widget.addTab(widget_a, _TAB_A)
-        panel._tab_widget.addTab(widget_b, _TAB_B)
+        panel.tab_widget.addTab(widget_a, _TAB_A)
+        panel.tab_widget.addTab(widget_b, _TAB_B)
 
         panel.detach_tab(1)
         panel.detach_tab(0)

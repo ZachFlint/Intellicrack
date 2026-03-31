@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Centralized process management for Intellicrack.
 
@@ -19,10 +18,10 @@ import sys
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from types import FrameType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
 
 import psutil
 
@@ -51,6 +50,15 @@ class ProcessType(Enum):
     EXTERNAL_TOOL = "external_tool"
     SANDBOX = "sandbox"
     DEBUGGER = "debugger"
+
+
+class _ExternalPidInfo(TypedDict):
+    """Type structure for external PID tracking entries."""
+
+    name: str
+    process_type: ProcessType
+    metadata: dict[str, Any]
+    registered_at: datetime
 
 
 @dataclass
@@ -119,26 +127,28 @@ class ProcessManager:
 
     _instance: ProcessManager | None = None
     _lock: threading.Lock = threading.Lock()
+    _processes: dict[int, TrackedProcess]
+    _external_pids: dict[int, _ExternalPidInfo]
 
     DEFAULT_GRACEFUL_TIMEOUT: float = 5.0
     DEFAULT_FORCE_TIMEOUT: float = 3.0
 
     _SignalHandler = Callable[[int, FrameType | None], Any] | int | None
 
-    def __new__(cls) -> ProcessManager:
+    def __new__(cls) -> Self:
         """
         Create or return the singleton instance.
 
         Returns:
-            ProcessManager: The singleton ProcessManager instance.
+            Self: The singleton ProcessManager instance.
         """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     instance = super().__new__(cls)
-                    instance._initialized = False
+                    object.__setattr__(instance, "_initialized", False)
                     cls._instance = instance
-        return cls._instance
+        return cast("Self", cls._instance)
 
     def __init__(self) -> None:
         if self._initialized:
@@ -150,8 +160,8 @@ class ProcessManager:
         self._cleanup_in_progress = False
         self._original_sigint_handler: ProcessManager._SignalHandler = None
         self._original_sigterm_handler: ProcessManager._SignalHandler = None
-        self._atexit_registered = False
-        self._shutdown_event = threading.Event()
+        self.atexit_registered = False
+        self.shutdown_event = threading.Event()
         self._initialized = True
         _module_logger.debug("process_manager_initialized")
 
@@ -170,10 +180,15 @@ class ProcessManager:
         """Reset the singleton instance (for testing)."""
         _module_logger.debug("process_manager_resetting")
         with cls._lock:
-            if cls._instance is not None:
-                cls._instance._cleanup_in_progress = False
-                cls._instance._processes.clear()
+            inst = cls._instance
+            if inst is not None:
+                inst.prepare_for_teardown()
             cls._instance = None
+
+    def prepare_for_teardown(self) -> None:
+        """Reset internal state in preparation for singleton teardown."""
+        self._cleanup_in_progress = False
+        self._processes.clear()
 
     @staticmethod
     def _get_logger() -> structlog.stdlib.BoundLogger:
@@ -191,11 +206,11 @@ class ProcessManager:
 
         This should be called once during application startup, typically in main.py before any processes are spawned.
         """
-        if self._atexit_registered:
+        if self.atexit_registered:
             return
 
         atexit.register(self._atexit_cleanup)
-        self._atexit_registered = True
+        self.atexit_registered = True
 
         if sys.platform != "win32":
             self._original_sigint_handler = signal.getsignal(signal.SIGINT)
@@ -226,12 +241,12 @@ class ProcessManager:
             except (ValueError, OSError):
                 _module_logger.debug("signal_handler_uninstall_failed", exc_info=True)
 
-        if self._atexit_registered:
+        if self.atexit_registered:
             try:
                 atexit.unregister(self._atexit_cleanup)
-            except Exception:
-                _module_logger.warning("atexit_unregister_failed", exc_info=True)
-            self._atexit_registered = False
+            except (TypeError, OSError) as exc:
+                _module_logger.warning("atexit_unregister_failed", error=str(exc))
+            self.atexit_registered = False
 
         ProcessManager._get_logger().debug("handlers_uninstalled")
 
@@ -246,7 +261,7 @@ class ProcessManager:
         logger = ProcessManager._get_logger()
         logger.info("signal_received", signal=signum)
 
-        self._shutdown_event.set()
+        self.shutdown_event.set()
 
         try:
             loop = asyncio.get_running_loop()
@@ -546,7 +561,7 @@ class ProcessManager:
                 if not tracked.check_running():
                     self.unregister(pid)
                     return True
-            except Exception as e:
+            except (OSError, RuntimeError) as e:
                 logger.warning("cleanup_callback_failed", process_name=tracked.name, error=str(e))
 
         process = tracked.process
@@ -628,8 +643,8 @@ class ProcessManager:
             process.kill()
             try:
                 await process.wait()
-            except Exception:
-                _module_logger.warning("zombie_wait_fallback_failed", exc_info=True)
+            except (OSError, RuntimeError) as exc:
+                _module_logger.warning("zombie_wait_fallback_failed", error=str(exc))
 
         logger.debug("async_process_terminated_tree", process_name=name)
 
@@ -665,14 +680,14 @@ class ProcessManager:
                 break
             try:
                 await self.terminate_process(pid, graceful_timeout, force_timeout)
-            except Exception as e:
+            except (OSError, psutil.NoSuchProcess, RuntimeError) as e:
                 logger.warning("cleanup_pid_failed", pid=pid, error=str(e))
 
         for ext_pid in external_pids:
             try:
                 logger.debug("external_pid_terminating", pid=ext_pid)
-                await asyncio.to_thread(self.terminate_external_pid, ext_pid, True)
-            except Exception as e:
+                await asyncio.to_thread(self.terminate_external_pid, ext_pid, force=True)
+            except (OSError, psutil.NoSuchProcess, RuntimeError) as e:
                 logger.warning("external_pid_terminate_failed", pid=ext_pid, error=str(e))
 
         with self._process_lock:
@@ -689,17 +704,17 @@ class ProcessManager:
         Returns:
             bool: True if a shutdown signal has been received, False otherwise.
         """
-        return self._shutdown_event.is_set()
+        return self.shutdown_event.is_set()
 
     def clear_shutdown_request(self) -> None:
         """Clear the shutdown request flag."""
-        self._shutdown_event.clear()
+        self.shutdown_event.clear()
 
     def request_shutdown(self) -> None:
         """Request a graceful shutdown of all tracked processes."""
         logger = ProcessManager._get_logger()
         logger.info("shutdown_requested")
-        self._shutdown_event.set()
+        self.shutdown_event.set()
 
     @property
     def process_count(self) -> int:
@@ -836,7 +851,7 @@ class ProcessManager:
         *,
         capture_output: bool = True,
         text: bool = True,
-        timeout: float | None = None,
+        process_timeout: float | None = None,
         cwd: str | None = None,
         env: dict[str, str] | None = None,
         check: bool = False,
@@ -854,7 +869,7 @@ class ProcessManager:
             name: Human-readable name for the process.
             capture_output: Capture stdout and stderr.
             text: Decode output as text.
-            timeout: Maximum time to wait for process.
+            process_timeout: Maximum time to wait for process.
             cwd: Working directory for the process.
             env: Environment variables for the process.
             check: Raise CalledProcessError if process returns non-zero.
@@ -869,7 +884,7 @@ class ProcessManager:
             name,
             capture_output=capture_output,
             text=text,
-            timeout=timeout,
+            timeout=process_timeout,
             cwd=cwd,
             env=env,
             check=check,
@@ -906,7 +921,7 @@ class ProcessManager:
                 "name": name,
                 "process_type": process_type,
                 "metadata": metadata or {},
-                "registered_at": datetime.now(),
+                "registered_at": datetime.now(tz=UTC),
             }
 
         logger.debug(
@@ -933,7 +948,7 @@ class ProcessManager:
                 return True
         return False
 
-    def terminate_external_pid(self, pid: int, force: bool = False) -> bool:
+    def terminate_external_pid(self, pid: int, *, force: bool = False) -> bool:
         """
         Terminate an external process by PID using psutil (tree kill).
 
@@ -968,7 +983,7 @@ class ProcessManager:
             self.unregister_external_pid(pid)
             return False
 
-        except Exception as e:
+        except (OSError, psutil.Error, RuntimeError) as e:
             logger.warning(
                 "external_pid_terminate_error",
                 pid=pid,

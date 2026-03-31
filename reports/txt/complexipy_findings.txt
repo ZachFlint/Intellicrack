@@ -1,6 +1,8 @@
-11 findings in src\intellicrack\core\hexpat\evaluator.py
+13 findings in src\intellicrack\core\hexpat\evaluator.py
 
 src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_eval_stmt - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_sizeof_type_node - cognitive complexity 16 (exceeds threshold)
 
 src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_eval_binary - cognitive complexity 17 (exceeds threshold)
 
@@ -9,6 +11,8 @@ src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_eval_assign - cogni
 src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_read_primitive - cognitive complexity 18 (exceeds threshold)
 
 src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_eval_expr - cognitive complexity 19 (exceeds threshold)
+
+src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_eval_cast - cognitive complexity 20 (exceeds threshold)
 
 src\intellicrack\core\hexpat\evaluator.py: HexPatEvaluator::_eval_for - cognitive complexity 20 (exceeds threshold)
 
@@ -38,17 +42,32 @@ src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_watchpoints - cognitive co
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_breakpoints - cognitive complexity 43 (exceeds threshold)
 
 
+6 findings in src\intellicrack\ui\panels\hex_editor_widget.py
+
+src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::contextMenuEvent - cognitive complexity 16 (exceeds threshold)
+
+src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::_paint_ascii_byte - cognitive complexity 18 (exceeds threshold)
+
+src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::_do_paste - cognitive complexity 25 (exceeds threshold)
+
+src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::copy_as_format - cognitive complexity 25 (exceeds threshold)
+
+src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::keyPressEvent - cognitive complexity 42 (exceeds threshold)
+
+src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::_format_group - cognitive complexity 48 (exceeds threshold)
+
+
 5 findings in src\intellicrack\bridges\frida_bridge.py
 
 src\intellicrack\bridges\frida_bridge.py: FridaBridge::shutdown - cognitive complexity 16 (exceeds threshold)
 
-src\intellicrack\bridges\frida_bridge.py: FridaBridge::stalker_follow - cognitive complexity 19 (exceeds threshold)
-
 src\intellicrack\bridges\frida_bridge.py: FridaBridge::allocate_memory - cognitive complexity 20 (exceeds threshold)
+
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::stalker_follow - cognitive complexity 21 (exceeds threshold)
 
 src\intellicrack\bridges\frida_bridge.py: FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)
 
-src\intellicrack\bridges\frida_bridge.py: FridaBridge::hook_function - cognitive complexity 26 (exceeds threshold)
+src\intellicrack\bridges\frida_bridge.py: FridaBridge::hook_function - cognitive complexity 27 (exceeds threshold)
 
 
 5 findings in src\intellicrack\core\hexpat_compiler.py
@@ -77,28 +96,15 @@ src\intellicrack\ui\panels\hex_editor\_pattern_editor.py: PatternEditorMixin::_o
 src\intellicrack\ui\panels\hex_editor\_pattern_editor.py: PatternEditorMixin::_on_pattern_compile - cognitive complexity 23 (exceeds threshold)
 
 
-5 findings in src\intellicrack\ui\panels\hex_editor_widget.py
+4 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::contextMenuEvent - cognitive complexity 16 (exceeds threshold)
+src\intellicrack\bridges\hex_editor.py: HexEditorBridge::_apply_ips_patches - cognitive complexity 18 (exceeds threshold)
 
-src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::_paint_ascii_byte - cognitive complexity 18 (exceeds threshold)
+src\intellicrack\bridges\hex_editor.py: HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)
 
-src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::_do_paste - cognitive complexity 25 (exceeds threshold)
+src\intellicrack\bridges\hex_editor.py: HexEditorBridge::search_numeric - cognitive complexity 22 (exceeds threshold)
 
-src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::copy_as_format - cognitive complexity 25 (exceeds threshold)
-
-src\intellicrack\ui\panels\hex_editor_widget.py: HexEditorWidget::keyPressEvent - cognitive complexity 42 (exceeds threshold)
-
-
-4 findings in src\intellicrack\bridges\installer.py
-
-src\intellicrack\bridges\installer.py: ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\bridges\installer.py: ToolInstaller::get_version - cognitive complexity 16 (exceeds threshold)
-
-src\intellicrack\bridges\installer.py: ToolInstaller::_get_latest_release_url - cognitive complexity 23 (exceeds threshold)
-
-src\intellicrack\bridges\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)
+src\intellicrack\bridges\hex_editor.py: HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)
 
 
 4 findings in src\intellicrack\core\hexpat\preprocessor.py
@@ -116,7 +122,7 @@ src\intellicrack\core\hexpat\preprocessor.py: HexPatPreprocessor::process - cogn
 
 src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)
 
-src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 18 (exceeds threshold)
+src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 17 (exceeds threshold)
 
 src\intellicrack\ui\panels\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 23 (exceeds threshold)
 
@@ -145,13 +151,13 @@ src\intellicrack\ui\provider_config.py: CredentialSourceDetector::_load_env_file
 src\intellicrack\ui\provider_config.py: ModelRefreshWorker::_fetch_anthropic_models - cognitive complexity 28 (exceeds threshold)
 
 
-3 findings in src\intellicrack\bridges\hex_editor.py
+3 findings in src\intellicrack\bridges\installer.py
 
-src\intellicrack\bridges\hex_editor.py: HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)
+src\intellicrack\bridges\installer.py: ToolInstaller::get_version - cognitive complexity 16 (exceeds threshold)
 
-src\intellicrack\bridges\hex_editor.py: HexEditorBridge::search_numeric - cognitive complexity 22 (exceeds threshold)
+src\intellicrack\bridges\installer.py: ToolInstaller::_get_latest_release_url - cognitive complexity 23 (exceeds threshold)
 
-src\intellicrack\bridges\hex_editor.py: HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)
+src\intellicrack\bridges\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)
 
 
 3 findings in src\intellicrack\bridges\process.py
@@ -215,6 +221,15 @@ src\intellicrack\ui\panels\hex_editor\_patches.py: PatchesMixin::_on_export_patc
 src\intellicrack\ui\panels\hex_editor\_patches.py: PatchesMixin::_update_patches - cognitive complexity 30 (exceeds threshold)
 
 src\intellicrack\ui\panels\hex_editor\_patches.py: PatchesMixin::_on_import_patches - cognitive complexity 32 (exceeds threshold)
+
+
+3 findings in src\intellicrack\ui\session_manager.py
+
+src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions_from_disk - cognitive complexity 21 (exceeds threshold)
+
+src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions - cognitive complexity 24 (exceeds threshold)
+
+src\intellicrack\ui\session_manager.py: SessionManagerDialog::_update_details - cognitive complexity 25 (exceeds threshold)
 
 
 2 findings in src\intellicrack\bridges\binary.py
@@ -287,13 +302,6 @@ src\intellicrack\ui\panels\hex_editor\_transforms.py: TransformsMixin::_on_trans
 src\intellicrack\ui\panels\hex_editor\_transforms.py: TransformsMixin::_on_pipeline_execute - cognitive complexity 32 (exceeds threshold)
 
 
-2 findings in src\intellicrack\ui\session_manager.py
-
-src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions_from_disk - cognitive complexity 19 (exceeds threshold)
-
-src\intellicrack\ui\session_manager.py: SessionManagerDialog::_load_sessions - cognitive complexity 24 (exceeds threshold)
-
-
 2 findings in src\intellicrack\ui\tool_config.py
 
 src\intellicrack\ui\tool_config.py: ToolStatusCheckWorker::_check_ghidra - cognitive complexity 20 (exceeds threshold)
@@ -321,6 +329,11 @@ src\intellicrack\core\logging.py: _sanitize_arguments - cognitive complexity 21 
 1 findings in src\intellicrack\core\orchestrator.py
 
 src\intellicrack\core\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)
+
+
+1 findings in src\intellicrack\core\process_manager.py
+
+src\intellicrack\core\process_manager.py: ProcessManager::_sync_cleanup - cognitive complexity 17 (exceeds threshold)
 
 
 1 findings in src\intellicrack\core\tools.py
@@ -390,7 +403,12 @@ src\intellicrack\ui\panels\hex_editor\_yara.py: YaraMixin::_on_yara_scan - cogni
 
 1 findings in src\intellicrack\ui\panels\hex_editor\panel.py
 
-src\intellicrack\ui\panels\hex_editor\panel.py: HexEditorPanel::set_state_holder - cognitive complexity 34 (exceeds threshold)
+src\intellicrack\ui\panels\hex_editor\panel.py: HexEditorPanel::set_state_holder - cognitive complexity 38 (exceeds threshold)
+
+
+1 findings in src\intellicrack\ui\panels\hxd_panel.py
+
+src\intellicrack\ui\panels\hxd_panel.py: _find_hxd_executable - cognitive complexity 16 (exceeds threshold)
 
 
 1 findings in src\intellicrack\ui\sandbox_config.py

@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Cutter/Rizin analysis panel for Intellicrack.
 
@@ -181,7 +180,7 @@ class CutterPanel(AnalysisPanelBase):
 
         self._func_tree = QTreeWidget()
         set_header_labels(self._func_tree, _FUNC_COLUMNS)
-        set_sorting_enabled(self._func_tree, True)
+        set_sorting_enabled(self._func_tree, enable=True)
         set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
         self._func_tree.itemClicked.connect(self._on_function_clicked)
         layout.addWidget(self._func_tree)
@@ -200,14 +199,14 @@ class CutterPanel(AnalysisPanelBase):
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(True)
+        self._disasm_view.setReadOnly(ro=True)
         set_max_block_count(self._disasm_view, 50000)
         self._asm_highlighter = AssemblySyntaxHighlighter(self._disasm_view.document())
         tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
         self._decompiled_view = QPlainTextEdit()
         self._decompiled_view.setFont(fm.get_code_font(10))
-        self._decompiled_view.setReadOnly(True)
+        self._decompiled_view.setReadOnly(ro=True)
         set_max_block_count(self._decompiled_view, 50000)
         self._c_highlighter = CSyntaxHighlighter(self._decompiled_view.document())
         tabs.addTab(self._decompiled_view, "Decompiler")
@@ -306,11 +305,11 @@ class CutterPanel(AnalysisPanelBase):
         console_label.setFont(fm.get_ui_font_bold(9))
         layout.addWidget(console_label)
 
-        self._console_output = QPlainTextEdit()
-        self._console_output.setFont(fm.get_code_font(9))
-        self._console_output.setReadOnly(True)
-        set_max_block_count(self._console_output, 10000)
-        layout.addWidget(self._console_output)
+        self.console_output = QPlainTextEdit()
+        self.console_output.setFont(fm.get_code_font(9))
+        self.console_output.setReadOnly(ro=True)
+        set_max_block_count(self.console_output, 10000)
+        layout.addWidget(self.console_output)
 
         input_row = QHBoxLayout()
         self._console_input = QLineEdit()
@@ -517,7 +516,7 @@ class CutterPanel(AnalysisPanelBase):
         """
         functions: list[object] = [*result] if isinstance(result, list) else []
 
-        set_sorting_enabled(self._func_tree, False)
+        set_sorting_enabled(self._func_tree, enable=False)
         self._func_tree.clear()
 
         for func in functions:
@@ -529,7 +528,7 @@ class CutterPanel(AnalysisPanelBase):
             tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, getattr(func, "address", 0))
             self._func_tree.addTopLevelItem(item)
 
-        set_sorting_enabled(self._func_tree, True)
+        set_sorting_enabled(self._func_tree, enable=True)
         self._func_count_label.setText(f"Functions ({len(functions)})")
         self._refresh_funcs_btn.setEnabled(True)
         _logger.debug("cutter_functions_refreshed", count=len(functions))
@@ -897,10 +896,10 @@ class CutterPanel(AnalysisPanelBase):
             return
 
         self._console_input.clear()
-        self._console_output.appendPlainText(f"> {command}")
+        self.console_output.appendPlainText(f"> {command}")
 
         if self._bridge is None:
-            self._console_output.appendPlainText("[error] No bridge configured")
+            self.console_output.appendPlainText("[error] No bridge configured")
             return
 
         self._console_run_btn.setEnabled(False)
@@ -918,7 +917,7 @@ class CutterPanel(AnalysisPanelBase):
             result: Command output string from the bridge.
         """
         if result is not None and (text := str(result).rstrip()):
-            self._console_output.appendPlainText(text)
+            self.console_output.appendPlainText(text)
         self._console_run_btn.setEnabled(True)
 
     def _on_command_error(self, exc: object) -> None:
@@ -928,6 +927,6 @@ class CutterPanel(AnalysisPanelBase):
         Args:
             exc: The exception that occurred.
         """
-        self._console_output.appendPlainText(f"[error] {exc}")
+        self.console_output.appendPlainText(f"[error] {exc}")
         _logger.warning("cutter_command_failed", error=str(exc))
         self._console_run_btn.setEnabled(True)

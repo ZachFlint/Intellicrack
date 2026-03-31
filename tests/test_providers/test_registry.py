@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for providers.registry module - provider registration and management."""
 
 from __future__ import annotations
@@ -25,14 +30,13 @@ if TYPE_CHECKING:
 
 
 class ConcreteTestProvider(LLMProviderBase):
-    """Minimal concrete provider for registry testing."""
+    """Minimal concrete provider for registry testing.
+
+    Args:
+        provider_name: The provider name to use.
+    """
 
     def __init__(self, provider_name: ProviderName = ProviderName.ANTHROPIC) -> None:
-        """Initialize test provider.
-
-        Args:
-            provider_name: The provider name to use.
-        """
         super().__init__()
         self._name = provider_name
 
@@ -42,7 +46,7 @@ class ConcreteTestProvider(LLMProviderBase):
         """Return the provider name.
 
         Returns:
-            Configured ProviderName.
+            ProviderName: Configured ProviderName.
         """
         return self._name
 
@@ -65,7 +69,7 @@ class ConcreteTestProvider(LLMProviderBase):
         """Return empty model list.
 
         Returns:
-            Empty list.
+            list[ModelInfo]: Empty list.
         """
         return []
 
@@ -88,7 +92,7 @@ class ConcreteTestProvider(LLMProviderBase):
             max_tokens: Max response tokens.
 
         Returns:
-            Tuple of empty message and None.
+            tuple[Message, list[ToolCall] | None]: Tuple of empty message and None.
         """
         return Message(role="assistant", content="test"), None
 
@@ -111,7 +115,7 @@ class ConcreteTestProvider(LLMProviderBase):
             max_tokens: Max response tokens.
 
         Yields:
-            Empty string.
+            str: Empty string.
         """
         yield ""
 
@@ -126,7 +130,7 @@ class ConcreteTestProvider(LLMProviderBase):
             tools: Tool definitions.
 
         Returns:
-            Empty list.
+            list[dict[str, object]]: Empty list.
         """
         return []
 
@@ -141,7 +145,7 @@ class ConcreteTestProvider(LLMProviderBase):
             messages: Messages to convert.
 
         Returns:
-            Empty list.
+            list[dict[str, object]]: Empty list.
         """
         return []
 
@@ -155,7 +159,7 @@ def _make_provider(
         name: Provider name.
 
     Returns:
-        ConcreteTestProvider instance.
+        ConcreteTestProvider: ConcreteTestProvider instance.
     """
     return ConcreteTestProvider(provider_name=name)
 
@@ -169,7 +173,7 @@ def _make_connected(
         name: Provider name.
 
     Returns:
-        Connected ConcreteTestProvider.
+        ConcreteTestProvider: Connected ConcreteTestProvider.
     """
     p = ConcreteTestProvider(provider_name=name)
     p.mark_connected()

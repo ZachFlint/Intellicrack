@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from PyQt6.QtGui import QFont, QFontDatabase
 
-from ...core.logging import get_logger
-from .resource_helper import get_assets_path, get_font_path, resource_exists
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.resource_helper import get_assets_path, get_font_path, resource_exists
 
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class FontManager:
     _instance: ClassVar[FontManager | None] = None
 
     def __init__(self) -> None:
-        self._fonts_loaded: bool = False
+        self.fonts_loaded: bool = False
         self._loaded_families: list[str] = []
         self._code_font_family: str = ""
         self._ui_font_family: str = ""
@@ -90,11 +90,11 @@ class FontManager:
         Returns:
             bool: True if at least one font was loaded successfully.
         """
-        if self._fonts_loaded:
+        if self.fonts_loaded:
             _logger.debug("fonts_already_loaded", families_count=len(self._loaded_families))
             return bool(self._loaded_families)
 
-        self._fonts_loaded = True
+        self.fonts_loaded = True
         self._load_font_config()
 
         try:
@@ -130,7 +130,7 @@ class FontManager:
         try:
             config_path = get_font_path("font_config.json")
             if config_path.exists():
-                with open(config_path, encoding="utf-8") as f:
+                with config_path.open(encoding="utf-8") as f:
                     self._font_config = cast("dict[str, object]", json.load(f))
                     _logger.debug("font_config_loaded", config=self._font_config)
         except (json.JSONDecodeError, OSError) as e:
@@ -221,7 +221,7 @@ class FontManager:
         Returns:
             QFont: QFont configured for code display.
         """
-        if not self._fonts_loaded:
+        if not self.fonts_loaded:
             self.load_fonts()
 
         _logger.debug("get_code_font", family=self._code_font_family, size=size)
@@ -254,7 +254,7 @@ class FontManager:
         Returns:
             QFont: QFont configured for UI display.
         """
-        if not self._fonts_loaded:
+        if not self.fonts_loaded:
             self.load_fonts()
 
         _logger.debug("get_ui_font", family=self._ui_font_family, size=size)
@@ -298,7 +298,7 @@ class FontManager:
         Returns:
             str: Code font family name.
         """
-        if not self._fonts_loaded:
+        if not self.fonts_loaded:
             self.load_fonts()
         return self._code_font_family
 
@@ -310,7 +310,7 @@ class FontManager:
         Returns:
             str: UI font family name.
         """
-        if not self._fonts_loaded:
+        if not self.fonts_loaded:
             self.load_fonts()
         return self._ui_font_family
 
@@ -341,7 +341,7 @@ class FontManager:
             dict[str, object]: Dictionary with font loading status and details.
         """
         return {
-            "fonts_loaded": self._fonts_loaded,
+            "fonts_loaded": self.fonts_loaded,
             "custom_fonts_available": self.is_custom_font_loaded(),
             "loaded_families": self._loaded_families,
             "code_font": self._code_font_family,

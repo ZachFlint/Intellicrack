@@ -38,7 +38,7 @@ def bridge() -> GhidraBridge:
     """Create a fresh GhidraBridge instance.
 
     Returns:
-        GhidraBridge instance.
+        GhidraBridge: GhidraBridge instance.
     """
     return GhidraBridge()
 
@@ -230,7 +230,7 @@ class TestMutatingMethodsRequireConnection:
         """Create a bridge with no connection.
 
         Returns:
-            GhidraBridge instance not connected.
+            GhidraBridge: GhidraBridge instance not connected.
         """
         return GhidraBridge()
 
@@ -367,7 +367,7 @@ class TestQueryMethodsRaiseWhenDisconnected:
         """Create a bridge with no connection.
 
         Returns:
-            GhidraBridge instance not connected.
+            GhidraBridge: GhidraBridge instance not connected.
         """
         return GhidraBridge()
 

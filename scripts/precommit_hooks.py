@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
 """Native runner for pre-commit-hooks that outputs JSON findings.
 
 Imports ``pre_commit_hooks`` modules directly and invokes their ``main(argv)``
@@ -188,7 +192,11 @@ _FALSE_POSITIVE_PREFIXES: tuple[str, ...] = (
 
 
 def _is_plausible_path(candidate: str) -> bool:
-    """Check if a string looks like a real file path rather than error output."""
+    """Check if a string looks like a real file path rather than error output.
+
+    Returns:
+        bool: True if the candidate looks like a valid file path.
+    """
     stripped = candidate.lstrip()
     if stripped != candidate:
         return False
@@ -222,7 +230,11 @@ class Finding:
     fixed: bool
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to dictionary for JSON output."""
+        """Serialize to dictionary for JSON output.
+
+        Returns:
+            dict[str, Any]: Dictionary representation of the finding.
+        """
         return {
             "file": self.file,
             "line": self.line,
@@ -378,9 +390,13 @@ HOOK_REGISTRY: dict[str, HookConfig] = {
 
 
 def _is_binary_content(filepath: str) -> bool:
-    """Check if a file contains binary content by looking for null bytes."""
+    """Check if a file contains binary content by looking for null bytes.
+
+    Returns:
+        bool: True if the file contains null bytes or cannot be read.
+    """
     try:
-        with open(filepath, "rb") as fh:
+        with Path(filepath).open("rb") as fh:
             chunk = fh.read(_BINARY_CHECK_SIZE)
             return b"\x00" in chunk
     except OSError:
@@ -388,17 +404,30 @@ def _is_binary_content(filepath: str) -> bool:
 
 
 def _should_exclude_dir(name: str) -> bool:
-    """Check if a directory component should be excluded from file discovery."""
+    """Check if a directory component should be excluded from file discovery.
+
+    Returns:
+        bool: True if the directory should be excluded.
+    """
     return name in EXCLUDE_DIRS or name.endswith(".egg-info")
 
 
 def _is_windows() -> bool:
-    """Check if running on Windows."""
+    """Check if running on Windows.
+
+    Returns:
+        bool: True if the platform is Windows.
+    """
     return sys.platform == "win32"
 
 
 def _git_ls_files(target_dir: Path) -> list[str] | None:
-    """Get tracked files from git, or ``None`` if not in a git repo."""
+    """Get tracked files from git, or ``None`` if not in a git repo.
+
+    Returns:
+        list[str] | None: List of tracked file paths, or None if git is
+            unavailable or the command fails.
+    """
     try:
         result = subprocess.run(
             ["git", "ls-files", "-z", "--", str(target_dir)],
@@ -426,6 +455,9 @@ def discover_files(target_dir: Path, extensions: frozenset[str]) -> list[str]:
     Uses ``git ls-files`` when available (matching pre-commit behavior), with a
     ``Path.rglob`` fallback. Binary extensions are always excluded. When
     *extensions* is empty every non-binary file is returned.
+
+    Returns:
+        list[str]: Sorted list of discovered file paths in POSIX format.
     """
     git_files = _git_ls_files(target_dir)
 
@@ -467,7 +499,11 @@ def discover_files(target_dir: Path, extensions: frozenset[str]) -> list[str]:
 
 
 def _import_hook(module_path: str) -> ModuleType:
-    """Import a hook module by its dotted path."""
+    """Import a hook module by its dotted path.
+
+    Returns:
+        ModuleType: The imported module.
+    """
     return importlib.import_module(module_path)
 
 
@@ -477,6 +513,9 @@ def _check_illegal_windows_names(files: list[str]) -> list[Finding]:
     Checks for Windows reserved device names (CON, PRN, AUX, NUL, COM1-9,
     LPT1-9), illegal characters (<>:"|?*), trailing dots/spaces, and paths
     exceeding 260 characters.
+
+    Returns:
+        list[Finding]: Findings for files with illegal Windows names.
     """
     findings: list[Finding] = []
 
@@ -525,6 +564,9 @@ def _parse_fixer_output(
     - ``Fixing <filepath>`` (trailing-whitespace, end-of-file-fixer)
     - ``<filepath>: fixed <detail>`` / ``<filepath>: removed <detail>``
       (mixed-line-ending, fix-byte-order-marker)
+
+    Returns:
+        list[Finding]: Parsed findings from the fixer output.
     """
     findings: list[Finding] = []
     seen: set[str] = set()
@@ -542,7 +584,7 @@ def _parse_fixer_output(
                     hook_id=hook_id,
                     message="Fixed",
                     fixed=True,
-                )
+                ),
             )
 
     for match in _FIXER_MSG_RE.finditer(output):
@@ -559,7 +601,7 @@ def _parse_fixer_output(
                     hook_id=hook_id,
                     message=msg,
                     fixed=True,
-                )
+                ),
             )
 
     return findings
@@ -574,6 +616,9 @@ def _parse_checker_output(
     Handles several output formats: ``file:line:col: message``,
     ``file: message``, ``Private key detected: file``, and
     ``file: Has a byte-order marker``.
+
+    Returns:
+        list[Finding]: Parsed findings from the checker output.
     """
     findings: list[Finding] = []
     seen: set[str] = set()
@@ -592,7 +637,7 @@ def _parse_checker_output(
                         hook_id=hook_id,
                         message="Private key material detected",
                         fixed=False,
-                    )
+                    ),
                 )
         return findings
 
@@ -610,7 +655,7 @@ def _parse_checker_output(
                         hook_id=hook_id,
                         message="Has a byte-order marker",
                         fixed=False,
-                    )
+                    ),
                 )
         return findings
 
@@ -632,7 +677,7 @@ def _parse_checker_output(
                     hook_id=hook_id,
                     message=msg,
                     fixed=False,
-                )
+                ),
             )
 
     matched_lines = {m.start() for m in _FILE_LINE_COL_RE.finditer(output)}
@@ -657,7 +702,7 @@ def _parse_checker_output(
                     hook_id=hook_id,
                     message=msg,
                     fixed=False,
-                )
+                ),
             )
 
     return findings
@@ -673,6 +718,9 @@ def run_hook(
     For ``check-illegal-windows-names`` a custom implementation is used.
     All other hooks are invoked via their module's ``main(argv)`` entry point
     with stdout/stderr captured.
+
+    Returns:
+        list[Finding]: Findings produced by the hook execution.
     """
     if not files:
         return []
@@ -707,7 +755,7 @@ def run_hook(
             exit_code = result if isinstance(result, int) else 0
         except SystemExit as exc:
             exit_code = exc.code if isinstance(exc.code, int) else 1
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, OSError, KeyError, AttributeError, UnicodeError) as exc:
             stderr_buf.write(f"{type(exc).__name__}: {exc}\n")
             exit_code = 1
 
@@ -742,7 +790,12 @@ def _get_hooks_to_run(hook_name: str | None) -> list[HookConfig]:
 
 
 def parse_cli(argv: list[str]) -> tuple[str | None, str, list[str]]:
-    """Parse CLI arguments into ``(hook_name, target_dir, extra_args)``."""
+    """Parse CLI arguments into ``(hook_name, target_dir, extra_args)``.
+
+    Returns:
+        tuple[str | None, str, list[str]]: A tuple of the hook name (or None
+            for all hooks), target directory, and extra arguments.
+    """
     hook_name: str | None = None
     target_dir = "."
     extra_args: list[str] = []
@@ -767,7 +820,11 @@ def parse_cli(argv: list[str]) -> tuple[str | None, str, list[str]]:
 
 
 def main() -> int:
-    """Run pre-commit hooks and output JSON findings to stdout."""
+    """Run pre-commit hooks and output JSON findings to stdout.
+
+    Returns:
+        int: Exit code, 0 on success or 1 on failure.
+    """
     hook_name, target_dir, extra_args = parse_cli(sys.argv[1:])
     target_path = Path(target_dir)
 

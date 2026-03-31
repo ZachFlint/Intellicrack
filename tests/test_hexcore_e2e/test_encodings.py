@@ -5,9 +5,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
+
+
+if TYPE_CHECKING:
+    import types
+
+    from intellicrack_hexcore import HexDocument
 
 
 class TestDecodeText:
@@ -18,7 +24,7 @@ class TestDecodeText:
     for known embedded payloads.
     """
 
-    def test_decode_utf8_hello_world(self, hexcore: Any) -> None:
+    def test_decode_utf8_hello_world(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() returns 'Hello, World!' for UTF-8 encoded bytes at offset 0.
 
         Args:
@@ -31,7 +37,7 @@ class TestDecodeText:
         result = doc.decode_text(0, len(encoded), "utf-8")
         assert result == text
 
-    def test_decode_ascii_text(self, hexcore: Any) -> None:
+    def test_decode_ascii_text(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() returns the original ASCII string for ASCII-encoded data.
 
         Args:
@@ -44,7 +50,7 @@ class TestDecodeText:
         result = doc.decode_text(0, len(encoded), "ascii")
         assert result == text
 
-    def test_decode_latin1_text(self, hexcore: Any) -> None:
+    def test_decode_latin1_text(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() returns the original string for Latin-1 encoded bytes.
 
         Args:
@@ -57,7 +63,7 @@ class TestDecodeText:
         result = doc.decode_text(0, len(encoded), "latin-1")
         assert result == text
 
-    def test_decode_at_non_zero_offset(self, hexcore: Any) -> None:
+    def test_decode_at_non_zero_offset(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() at a non-zero offset reads from the correct position.
 
         Args:
@@ -71,7 +77,7 @@ class TestDecodeText:
         result = doc.decode_text(len(prefix), len(encoded), "utf-8")
         assert result == text
 
-    def test_decode_returns_string(self, hexcore: Any) -> None:
+    def test_decode_returns_string(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() returns a str object.
 
         Args:
@@ -82,7 +88,7 @@ class TestDecodeText:
         result = doc.decode_text(0, 4, "utf-8")
         assert isinstance(result, str)
 
-    def test_decode_utf8_multibyte_codepoint(self, hexcore: Any) -> None:
+    def test_decode_utf8_multibyte_codepoint(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() handles multi-byte UTF-8 codepoints correctly.
 
         Args:
@@ -104,7 +110,7 @@ class TestEncodeText:
     encode then decode reproduces the original text.
     """
 
-    def test_encode_utf8_returns_bytes(self, hexcore: Any) -> None:
+    def test_encode_utf8_returns_bytes(self, hexcore: types.ModuleType) -> None:
         """Verify that encode_text_to_bytes() returns a bytes object for UTF-8.
 
         Args:
@@ -114,7 +120,7 @@ class TestEncodeText:
         result = doc.encode_text_to_bytes("Hello", "utf-8")
         assert isinstance(result, bytes)
 
-    def test_encode_utf8_matches_python_encode(self, hexcore: Any) -> None:
+    def test_encode_utf8_matches_python_encode(self, hexcore: types.ModuleType) -> None:
         """Verify that encode_text_to_bytes() for UTF-8 matches Python's str.encode('utf-8').
 
         Args:
@@ -125,7 +131,7 @@ class TestEncodeText:
         result = doc.encode_text_to_bytes(text, "utf-8")
         assert result == text.encode("utf-8")
 
-    def test_encode_ascii_matches_python_encode(self, hexcore: Any) -> None:
+    def test_encode_ascii_matches_python_encode(self, hexcore: types.ModuleType) -> None:
         """Verify that encode_text_to_bytes() for ASCII matches Python's str.encode('ascii').
 
         Args:
@@ -136,7 +142,7 @@ class TestEncodeText:
         result = doc.encode_text_to_bytes(text, "ascii")
         assert result == text.encode("ascii")
 
-    def test_encode_latin1_matches_python_encode(self, hexcore: Any) -> None:
+    def test_encode_latin1_matches_python_encode(self, hexcore: types.ModuleType) -> None:
         """Verify that encode_text_to_bytes() for Latin-1 matches Python's str.encode('latin-1').
 
         Args:
@@ -147,7 +153,7 @@ class TestEncodeText:
         result = doc.encode_text_to_bytes(text, "latin-1")
         assert result == text.encode("latin-1")
 
-    def test_encode_decode_roundtrip_utf8(self, hexcore: Any) -> None:
+    def test_encode_decode_roundtrip_utf8(self, hexcore: types.ModuleType) -> None:
         """Verify that encoding then decoding a UTF-8 string produces the original text.
 
         Args:
@@ -160,7 +166,7 @@ class TestEncodeText:
         result = doc2.decode_text(0, len(encoded), "utf-8")
         assert result == original
 
-    def test_encode_decode_roundtrip_ascii(self, hexcore: Any) -> None:
+    def test_encode_decode_roundtrip_ascii(self, hexcore: types.ModuleType) -> None:
         """Verify that encoding then decoding an ASCII string produces the original text.
 
         Args:
@@ -181,7 +187,7 @@ class TestListEncodings:
     and that common encodings such as UTF-8 and ASCII are present.
     """
 
-    def test_list_encodings_returns_nonempty_list(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_encodings_returns_nonempty_list(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that list_encodings() returns a non-empty list.
 
         Args:
@@ -191,7 +197,7 @@ class TestListEncodings:
         assert isinstance(result, list)
         assert result
 
-    def test_list_encodings_entries_are_two_tuples(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_encodings_entries_are_two_tuples(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that each entry in list_encodings() is a tuple of exactly 2 elements.
 
         Args:
@@ -201,7 +207,7 @@ class TestListEncodings:
         for entry in result:
             assert len(entry) == 2
 
-    def test_list_encodings_entries_are_strings(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_encodings_entries_are_strings(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that each element in every list_encodings() tuple is a string.
 
         Args:
@@ -212,7 +218,7 @@ class TestListEncodings:
             assert isinstance(name, str)
             assert isinstance(label, str)
 
-    def test_list_encodings_contains_utf8(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_encodings_contains_utf8(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that list_encodings() includes an entry whose name contains 'utf-8'.
 
         Args:
@@ -222,7 +228,7 @@ class TestListEncodings:
         names_lower = [name.lower() for name, _label in result]
         assert any("utf-8" in n or "utf8" in n for n in names_lower)
 
-    def test_list_encodings_contains_ascii(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_encodings_contains_ascii(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that list_encodings() includes an entry whose name contains 'ascii'.
 
         Args:
@@ -232,7 +238,7 @@ class TestListEncodings:
         names_lower = [name.lower() for name, _label in result]
         assert any("ascii" in n for n in names_lower)
 
-    def test_list_encodings_names_are_nonempty(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_encodings_names_are_nonempty(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that every encoding name in list_encodings() is a non-empty string.
 
         Args:
@@ -254,7 +260,7 @@ class TestEncodingRoundtrips:
         "encoding",
         ["utf-8", "ascii", "latin-1", "utf-16le", "utf-16be"],
     )
-    def test_roundtrip_encode_decode(self, hexcore: Any, encoding: str) -> None:
+    def test_roundtrip_encode_decode(self, hexcore: types.ModuleType, encoding: str) -> None:
         """Verify that encoding then decoding a string reproduces the original for the given encoding.
 
         Args:
@@ -270,7 +276,7 @@ class TestEncodingRoundtrips:
         result = doc2.decode_text(0, len(encoded), encoding)
         assert result == original
 
-    def test_utf16le_bom_absent_roundtrip(self, hexcore: Any) -> None:
+    def test_utf16le_bom_absent_roundtrip(self, hexcore: types.ModuleType) -> None:
         """Verify that UTF-16 LE encoding without BOM roundtrips correctly.
 
         Args:
@@ -283,7 +289,7 @@ class TestEncodingRoundtrips:
         result = doc2.decode_text(0, len(encoded), "utf-16le")
         assert result == original
 
-    def test_latin1_extended_chars_roundtrip(self, hexcore: Any) -> None:
+    def test_latin1_extended_chars_roundtrip(self, hexcore: types.ModuleType) -> None:
         """Verify that Latin-1 extended characters encode and decode without loss.
 
         Args:
@@ -306,7 +312,7 @@ class TestDecodeTextEdgeCases:
     crashing silently.
     """
 
-    def test_decode_zero_length_returns_empty_string(self, hexcore: Any) -> None:
+    def test_decode_zero_length_returns_empty_string(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() on a zero-length range returns an empty string.
 
         Args:
@@ -316,7 +322,7 @@ class TestDecodeTextEdgeCases:
         result = doc.decode_text(0, 0, "utf-8")
         assert not result
 
-    def test_decode_invalid_utf8_does_not_crash(self, hexcore: Any) -> None:
+    def test_decode_invalid_utf8_does_not_crash(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() on invalid UTF-8 bytes returns a string or raises a known error.
 
         Args:
@@ -334,7 +340,7 @@ class TestDecodeTextEdgeCases:
             assert result is not None
             assert isinstance(result, str)
 
-    def test_decode_single_ascii_byte(self, hexcore: Any) -> None:
+    def test_decode_single_ascii_byte(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() on a single ASCII byte returns a one-character string.
 
         Args:
@@ -344,7 +350,7 @@ class TestDecodeTextEdgeCases:
         result = doc.decode_text(0, 1, "ascii")
         assert result == "Z"
 
-    def test_decode_exact_document_length(self, hexcore: Any) -> None:
+    def test_decode_exact_document_length(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() spanning the entire document returns all characters.
 
         Args:

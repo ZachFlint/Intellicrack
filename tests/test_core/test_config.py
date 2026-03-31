@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for core.config module - configuration management."""
 
 from __future__ import annotations
@@ -158,7 +163,7 @@ def test_config_is_tool_enabled() -> None:
 def test_config_to_dict_round_trip() -> None:
     """Verify _to_dict produces serializable dict with expected keys."""
     config = Config.default()
-    d = config._to_dict()
+    d = config.to_dict()
     assert "general" in d
     assert "providers" in d
     assert "tools" in d
@@ -171,7 +176,7 @@ def test_config_to_dict_round_trip() -> None:
 
 def test_config_from_dict_empty() -> None:
     """Verify _from_dict with empty dict uses all defaults."""
-    config = Config._from_dict({})
+    config = Config.from_dict({})
     assert config.default_provider == ProviderName.ANTHROPIC
     assert len(config.providers) > 0
     assert len(config.tools) > 0
@@ -185,7 +190,7 @@ def test_config_from_dict_custom_general() -> None:
             "confirmation_level": "none",
         },
     }
-    config = Config._from_dict(data)
+    config = Config.from_dict(data)
     assert config.default_provider == ProviderName.OPENAI
     assert config.confirmation_level == ConfirmationLevel.NONE
 
@@ -195,7 +200,7 @@ def test_config_from_dict_invalid_provider_fallback() -> None:
     data: dict[str, Any] = {
         "general": {"default_provider": "nonexistent"},
     }
-    config = Config._from_dict(data)
+    config = Config.from_dict(data)
     assert config.default_provider == ProviderName.ANTHROPIC
 
 
@@ -204,7 +209,7 @@ def test_config_from_dict_invalid_confirmation_fallback() -> None:
     data: dict[str, Any] = {
         "general": {"confirmation_level": "badvalue"},
     }
-    config = Config._from_dict(data)
+    config = Config.from_dict(data)
     assert config.confirmation_level == ConfirmationLevel.DESTRUCTIVE
 
 
@@ -214,7 +219,7 @@ def test_config_parse_providers_unknown_skipped() -> None:
         "anthropic": {"enabled": False},
         "unknown_provider": {"enabled": True},
     }
-    result = Config._parse_providers(providers_data)
+    result = Config.parse_providers(providers_data)
     assert result[ProviderName.ANTHROPIC].enabled is False
     assert ProviderName.GROK not in result or result.get(ProviderName.GROK, ProviderConfig()).enabled
 
@@ -225,7 +230,7 @@ def test_config_parse_tools_unknown_skipped() -> None:
         "ghidra": {"enabled": False},
         "unknown_tool": {"enabled": True},
     }
-    result = Config._parse_tools(tools_data)
+    result = Config.parse_tools(tools_data)
     assert result[ToolName.GHIDRA].enabled is False
 
 
@@ -234,13 +239,13 @@ def test_config_parse_tools_with_path() -> None:
     tools_data: dict[str, Any] = {
         "ghidra": {"path": "/opt/ghidra"},
     }
-    result = Config._parse_tools(tools_data)
+    result = Config.parse_tools(tools_data)
     assert result[ToolName.GHIDRA].path == Path("/opt/ghidra")
 
 
 def test_config_parse_sub_configs_defaults() -> None:
     """Verify _parse_sub_configs returns defaults for empty data."""
-    sandbox, ui, session, log = Config._parse_sub_configs({})
+    sandbox, ui, session, log = Config.parse_sub_configs({})
     assert sandbox.enabled is True
     assert ui.theme == "dark"
     assert session.auto_save is True
@@ -255,7 +260,7 @@ def test_config_parse_sub_configs_custom() -> None:
         "session": {"retention_days": _CUSTOM_RETENTION},
         "log": {"level": "DEBUG"},
     }
-    sandbox, ui, session, log = Config._parse_sub_configs(data)
+    sandbox, ui, session, log = Config.parse_sub_configs(data)
     assert sandbox.network_enabled is True
     assert ui.theme == "light"
     assert ui.font_size == _CUSTOM_FONT_SIZE

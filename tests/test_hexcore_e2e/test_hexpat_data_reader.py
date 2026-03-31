@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import math
 import struct
 
 import pytest
@@ -138,15 +139,15 @@ class TestDataReaderFloat:
 
     def test_read_float_value(self) -> None:
         """read_float reads a 32-bit IEEE 754 float correctly."""
-        data = struct.pack("<f", 3.14)
+        data = struct.pack("<f", math.pi)
         r = _reader(data)
-        assert abs(r.read_float(0, "little") - 3.14) < 1e-4
+        assert abs(r.read_float(0, "little") - math.pi) < 1e-4
 
     def test_read_float_big_endian(self) -> None:
         """read_float in big-endian reads the same float as little-endian when data is big-endian."""
-        data = struct.pack(">f", 2.71828)
+        data = struct.pack(">f", math.e)
         r = _reader(data)
-        assert abs(r.read_float(0, "big") - 2.71828) < 1e-4
+        assert abs(r.read_float(0, "big") - math.e) < 1e-4
 
     def test_read_double_value(self) -> None:
         """read_double reads a 64-bit IEEE 754 double correctly."""

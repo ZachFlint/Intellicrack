@@ -80,14 +80,14 @@ class RFBClient:
         """
         return self._connected
 
-    async def connect(self, host: str, port: int, timeout: float = 10.0) -> bool:
+    async def connect(self, host: str, port: int, connect_timeout: float = 10.0) -> bool:
         """
         Connect to a VNC server and complete the handshake.
 
         Args:
             host: Server hostname or IP.
             port: Server port number.
-            timeout: Connection timeout in seconds.
+            connect_timeout: Connection timeout in seconds.
 
         Returns:
             bool: True if connection and handshake succeeded.
@@ -95,7 +95,7 @@ class RFBClient:
         try:
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port),
-                timeout=timeout,
+                timeout=connect_timeout,
             )
 
             await self._negotiate_version()
@@ -220,7 +220,7 @@ class RFBClient:
 
         return width, height, name
 
-    async def request_framebuffer_update(self, incremental: bool = True) -> None:
+    async def request_framebuffer_update(self, *, incremental: bool = True) -> None:
         """
         Send a FramebufferUpdateRequest.
 
@@ -385,7 +385,7 @@ class RFBClient:
         self._writer.write(msg)
         await self._writer.drain()
 
-    async def send_key_event(self, key: int, down: bool) -> None:
+    async def send_key_event(self, key: int, *, down: bool) -> None:
         """
         Send a key event to the server.
 
@@ -466,6 +466,20 @@ def _qt_key_to_x11(key: int, text: str) -> int:
     return ord(text) if text and len(text) == 1 else key
 
 
+def qt_key_to_x11(key: int, text: str) -> int:
+    """
+    Convert a Qt key code to an X11 keysym.
+
+    Args:
+        key: Qt key code.
+        text: Text character from the key event.
+
+    Returns:
+        int: X11 keysym value.
+    """
+    return _qt_key_to_x11(key, text)
+
+
 class VNCWidget(QWidget):
     """
     Qt widget that displays a VNC remote framebuffer.
@@ -484,10 +498,10 @@ class VNCWidget(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._client = RFBClient()
-        self._update_timer = QTimer(self)
-        self._update_timer.timeout.connect(self._on_update_tick)
-        self.setMouseTracking(True)
+        self.client = RFBClient()
+        self.update_timer = QTimer(self)
+        self.update_timer.timeout.connect(self._on_update_tick)
+        self.setMouseTracking(enable=True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(320, 240)
 
@@ -499,39 +513,40 @@ class VNCWidget(QWidget):
             host: Server hostname or IP.
             port: Server port number.
         """
+        connected: bool = False
         try:
-            result = run_bridge_coroutine(self._client.connect(host, port))
-            success: bool = bool(result)
-            if success:
-                self.connection_status_changed.emit(True)
-                self._update_timer.start(_FB_UPDATE_INTERVAL_MS)
+            result = run_bridge_coroutine(self.client.connect(host, port))
+            connected = bool(result)
+            if connected:
+                self.update_timer.start(_FB_UPDATE_INTERVAL_MS)
                 _logger.info("vnc_widget_connected", host=host, port=port)
             else:
-                self.connection_status_changed.emit(False)
                 _logger.warning("vnc_widget_connect_failed", host=host, port=port)
         except (OSError, struct.error, RuntimeError):
             _logger.exception("vnc_widget_connect_error", host=host, port=port)
-            self.connection_status_changed.emit(False)
+        self.connection_status_changed.emit(connected)
 
     def disconnect_from_server(self) -> None:
         """Disconnect from the VNC server."""
-        self._update_timer.stop()
+        self.update_timer.stop()
         try:
-            run_bridge_coroutine(self._client.disconnect())
+            run_bridge_coroutine(self.client.disconnect())
         except (OSError, RuntimeError):
             _logger.debug("vnc_widget_disconnect_error", exc_info=True)
-        self.connection_status_changed.emit(False)
+        disconnected: bool = False
+        self.connection_status_changed.emit(disconnected)
 
     def _on_update_tick(self) -> None:
         """Timer callback to request framebuffer updates and repaint."""
-        if not self._client.connected:
-            self._update_timer.stop()
-            self.connection_status_changed.emit(False)
+        if not self.client.connected:
+            self.update_timer.stop()
+            disconnected: bool = False
+            self.connection_status_changed.emit(disconnected)
             return
 
         try:
-            run_bridge_coroutine(self._client.request_framebuffer_update(incremental=True))
-            run_bridge_coroutine(self._client.handle_server_message())
+            run_bridge_coroutine(self.client.request_framebuffer_update(incremental=True))
+            run_bridge_coroutine(self.client.handle_server_message())
         except (OSError, struct.error, RuntimeError):
             _logger.debug("vnc_update_tick_error", exc_info=True)
 
@@ -546,8 +561,8 @@ class VNCWidget(QWidget):
             a0: Paint event.
         """
         painter = QPainter(self)
-        if self._client.framebuffer is not None:
-            scaled = self._client.framebuffer.scaled(
+        if self.client.framebuffer is not None:
+            scaled = self.client.framebuffer.scaled(
                 self.size(),
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
@@ -572,12 +587,12 @@ class VNCWidget(QWidget):
         Returns:
             tuple[int, int]: Tuple of (x, y) in framebuffer coordinates.
         """
-        if self._client.framebuffer is None or self._client.width == 0:
+        if self.client.framebuffer is None or self.client.width == 0:
             return 0, 0
 
         pos = event.pos()
-        scale_x = self._client.width / self.width()
-        scale_y = self._client.height / self.height()
+        scale_x = self.client.width / self.width()
+        scale_y = self.client.height / self.height()
         return int(pos.x() * scale_x), int(pos.y() * scale_y)
 
     @staticmethod
@@ -609,11 +624,11 @@ class VNCWidget(QWidget):
         Args:
             a0: Mouse event.
         """
-        if a0 is None or not self._client.connected:
+        if a0 is None or not self.client.connected:
             return
         x, y = self._scale_coords(a0)
         try:
-            run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(a0)))
+            run_bridge_coroutine(self.client.send_pointer_event(x, y, self._button_mask(a0)))
         except (OSError, RuntimeError):
             _logger.debug("vnc_pointer_error", exc_info=True)
 
@@ -625,11 +640,11 @@ class VNCWidget(QWidget):
         Args:
             a0: Mouse event.
         """
-        if a0 is None or not self._client.connected:
+        if a0 is None or not self.client.connected:
             return
         x, y = self._scale_coords(a0)
         try:
-            run_bridge_coroutine(self._client.send_pointer_event(x, y, self._button_mask(a0)))
+            run_bridge_coroutine(self.client.send_pointer_event(x, y, self._button_mask(a0)))
         except (OSError, RuntimeError):
             _logger.debug("vnc_pointer_error", exc_info=True)
 
@@ -641,11 +656,11 @@ class VNCWidget(QWidget):
         Args:
             a0: Mouse event.
         """
-        if a0 is None or not self._client.connected:
+        if a0 is None or not self.client.connected:
             return
         x, y = self._scale_coords(a0)
         try:
-            run_bridge_coroutine(self._client.send_pointer_event(x, y, 0))
+            run_bridge_coroutine(self.client.send_pointer_event(x, y, 0))
         except (OSError, RuntimeError):
             _logger.debug("vnc_pointer_error", exc_info=True)
 
@@ -657,11 +672,11 @@ class VNCWidget(QWidget):
         Args:
             a0: Key event.
         """
-        if a0 is None or not self._client.connected:
+        if a0 is None or not self.client.connected:
             return
         keysym = _qt_key_to_x11(a0.key(), a0.text())
         try:
-            run_bridge_coroutine(self._client.send_key_event(keysym, down=True))
+            run_bridge_coroutine(self.client.send_key_event(keysym, down=True))
         except (OSError, RuntimeError):
             _logger.debug("vnc_key_error", exc_info=True)
 
@@ -673,10 +688,10 @@ class VNCWidget(QWidget):
         Args:
             a0: Key event.
         """
-        if a0 is None or not self._client.connected:
+        if a0 is None or not self.client.connected:
             return
         keysym = _qt_key_to_x11(a0.key(), a0.text())
         try:
-            run_bridge_coroutine(self._client.send_key_event(keysym, down=False))
+            run_bridge_coroutine(self.client.send_key_event(keysym, down=False))
         except (OSError, RuntimeError):
             _logger.debug("vnc_key_error", exc_info=True)

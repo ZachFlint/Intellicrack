@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for core.logging module - structured logging infrastructure."""
 
 from __future__ import annotations
@@ -61,7 +66,7 @@ def _make_event_dict(**overrides: object) -> dict[str, Any]:
         **overrides: Key-value overrides for the event dict.
 
     Returns:
-        Event dictionary with defaults merged with overrides.
+        dict[str, Any]: Event dictionary with defaults merged with overrides.
     """
     base: dict[str, Any] = {
         "timestamp": "2026-03-07 12:00:00",
@@ -588,9 +593,13 @@ def test_operation_timer_with_context() -> None:
 
 
 def test_operation_timer_on_exception() -> None:
-    """Verify OperationTimer logs failure on exception."""
+    """Verify OperationTimer logs failure on exception.
+
+    Raises:
+        ValueError: Deliberately raised to test exception handling.
+    """
+    msg = "test error"
     with pytest.raises(ValueError, match="test error"), OperationTimer("failing_op"):
-        msg = "test error"
         raise ValueError(msg)
 
 

@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Main application entry point for Intellicrack.
 
@@ -17,8 +16,9 @@ import importlib
 import sys
 import time
 from dataclasses import dataclass
+from itertools import starmap
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from intellicrack._metadata import __version__
 
@@ -26,7 +26,7 @@ from intellicrack._metadata import __version__
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication, QSplashScreen
     from structlog.stdlib import BoundLogger
 
     from intellicrack.core.config import Config, LogConfig
@@ -34,7 +34,9 @@ if TYPE_CHECKING:
     from intellicrack.core.process_manager import ProcessManager
     from intellicrack.core.session import SessionManager, SessionStore
     from intellicrack.core.tools import ToolRegistry
+    from intellicrack.core.types import ProviderName
     from intellicrack.credentials.env_loader import CredentialLoader
+    from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import ModelDiscovery
     from intellicrack.providers.registry import ProviderRegistry
     from intellicrack.ui.app import MainWindow
@@ -307,55 +309,74 @@ def _log_import_time(logger: BoundLogger, module_name: str, elapsed: float) -> N
     logger.debug("import_timing", imported_module=module_name, elapsed_s=round(elapsed, 3))
 
 
-def _setup_qt_and_splash(
-    logger: BoundLogger,
-) -> tuple[QApplication, SplashScreen] | None:
+def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
     """
-    Set up Qt application with theme, icons, and splash screen.
+    Create QApplication and show a minimal splash screen for instant visual feedback.
 
-    Phase 1 imports only PyQt6.QtWidgets, creates QApplication and shows
-    a minimal QSplashScreen immediately for visual feedback.
-    Phase 2 imports the heavier UI resource modules (ThemeManager,
-    IconManager, SplashScreen) and swaps in the full splash.
+    This runs before any heavy intellicrack imports (config, logging,
+    process manager) so the user sees visual feedback immediately.
+    Only imports PyQt6 and standard library modules.
+
+    Returns:
+        tuple[QApplication, QSplashScreen] | None: Tuple of (app, early_splash) or None on failure.
+    """
+    try:
+        from PyQt6.QtCore import Qt as _Qt
+        from PyQt6.QtGui import (
+            QColor as _QColor,
+            QPixmap as _QPixmap,
+        )
+        from PyQt6.QtWidgets import (
+            QApplication as _QApp,
+            QSplashScreen as _QSplash,
+        )
+
+        app = _QApp(sys.argv)
+        _QApp.setApplicationName("Intellicrack")
+        _QApp.setApplicationVersion(_APP_VERSION)
+        app.setStyle("Fusion")
+
+        icon_path = Path(__file__).resolve().parent / "assets" / "icon.ico"
+        if icon_path.exists():
+            early_pixmap = _QPixmap(str(icon_path))
+        else:
+            early_pixmap = _QPixmap(400, 250)
+            early_pixmap.fill(_QColor(_EARLY_SPLASH_BG))
+
+        early_splash = _QSplash(early_pixmap)
+        early_splash.setWindowFlags(
+            _Qt.WindowType.WindowStaysOnTopHint | _Qt.WindowType.FramelessWindowHint | _Qt.WindowType.SplashScreen,
+        )
+        early_splash.show()
+        app.processEvents()
+    except (ImportError, OSError, RuntimeError) as exc:
+        sys.stderr.write(f"Failed to show early splash: {exc}\n")
+        return None
+    else:
+        return app, early_splash
+
+
+def _upgrade_to_full_splash(
+    app: QApplication,
+    early_splash: QSplashScreen,
+    logger: BoundLogger,
+) -> SplashScreen | None:
+    """
+    Replace the early splash with the full animated splash screen.
+
+    Imports the heavier UI resource modules (ThemeManager, IconManager,
+    SplashScreen), applies the dark theme, closes the early splash,
+    and shows the full animated splash.
 
     Args:
+        app: Qt application instance.
+        early_splash: The minimal early splash screen to replace.
         logger: BoundLogger for error reporting.
 
     Returns:
-        tuple[QApplication, SplashScreen] | None: Tuple of (app, splash) or None if imports failed.
+        SplashScreen | None: Full animated splash screen, or None on failure.
     """
     try:
-        t0 = time.perf_counter()
-        qt_app_cls = _import_qt_app()
-        _log_import_time(logger, "PyQt6.QtWidgets", time.perf_counter() - t0)
-    except ImportError as e:
-        logger.exception("dependency_import_failed", error=str(e))
-        logger.warning("install_hint", command="pixi install")
-        return None
-
-    try:
-        from PyQt6.QtGui import QColor, QPixmap
-        from PyQt6.QtWidgets import QSplashScreen
-
-        app = qt_app_cls(sys.argv)
-        qt_app_cls.setApplicationName("Intellicrack")
-        qt_app_cls.setApplicationVersion(_APP_VERSION)
-        app.setStyle("Fusion")
-
-        from .ui.resources.resource_helper import get_assets_path
-
-        icon_path = get_assets_path() / "icon.ico"
-        if icon_path.exists():
-            early_pixmap = QPixmap(str(icon_path))
-        else:
-            early_pixmap = QPixmap(400, 250)
-            early_pixmap.fill(QColor(_EARLY_SPLASH_BG))
-
-        early_splash = QSplashScreen(early_pixmap)
-        early_splash.show()
-        app.processEvents()
-        logger.debug("early_splash_shown")
-
         t0 = time.perf_counter()
         theme_mgr_cls, icon_mgr_cls = _import_theme_icon_managers()
         _log_import_time(logger, "intellicrack.ui.resources", time.perf_counter() - t0)
@@ -368,6 +389,7 @@ def _setup_qt_and_splash(
         theme_manager.apply_theme("dark")
 
         icon_manager = icon_mgr_cls.get_instance()
+        qt_app_cls = _import_qt_app()
         qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
 
         early_splash.close()
@@ -375,11 +397,11 @@ def _setup_qt_and_splash(
         splash = splash_cls(version=_APP_VERSION)
         splash.show_animated()
         app.processEvents()
-    except Exception as e:
-        logger.exception("qt_initialization_failed", error=str(e))
+    except (ImportError, OSError, RuntimeError) as exc:
+        logger.warning("full_splash_upgrade_failed", error=str(exc), exc_info=True)
         return None
     else:
-        return app, splash
+        return splash
 
 
 async def _initialize_providers(
@@ -407,18 +429,21 @@ async def _initialize_providers(
     openai_mod = importlib.import_module("intellicrack.providers.openai")
     openrouter_mod = importlib.import_module("intellicrack.providers.openrouter")
 
-    providers = [
-        (provider_name_enum.ANTHROPIC, anthropic_mod.AnthropicProvider),
-        (provider_name_enum.OPENAI, openai_mod.OpenAIProvider),
-        (provider_name_enum.GOOGLE, google_mod.GoogleProvider),
-        (provider_name_enum.OLLAMA, ollama_mod.OllamaProvider),
-        (provider_name_enum.OPENROUTER, openrouter_mod.OpenRouterProvider),
-        (provider_name_enum.HUGGINGFACE, hf_mod.HuggingFaceProvider),
-        (provider_name_enum.GROK, grok_mod.GrokProvider),
-        (provider_name_enum.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
-    ]
+    providers: list[tuple[ProviderName, type[LLMProviderBase]]] = cast(
+        "list[tuple[ProviderName, type[LLMProviderBase]]]",
+        [
+            (provider_name_enum.ANTHROPIC, anthropic_mod.AnthropicProvider),
+            (provider_name_enum.OPENAI, openai_mod.OpenAIProvider),
+            (provider_name_enum.GOOGLE, google_mod.GoogleProvider),
+            (provider_name_enum.OLLAMA, ollama_mod.OllamaProvider),
+            (provider_name_enum.OPENROUTER, openrouter_mod.OpenRouterProvider),
+            (provider_name_enum.HUGGINGFACE, hf_mod.HuggingFaceProvider),
+            (provider_name_enum.GROK, grok_mod.GrokProvider),
+            (provider_name_enum.LOCAL_TRANSFORMERS, local_mod.LocalTransformersProvider),
+        ],
+    )
 
-    async def _init_one(provider_name: Any, provider_class: Any) -> None:
+    async def _init_one(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
         try:
             provider = provider_class()
             if creds := credentials.get_credentials(provider_name):
@@ -439,15 +464,16 @@ async def _initialize_providers(
                 logger.debug("no_credentials", provider=provider_name.value)
                 registry.register(provider)
 
-        except Exception as e:
-            logger.exception(
+        except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as e:
+            logger.warning(
                 "provider_init_failed",
                 provider=provider_name.value,
                 error=str(e),
                 error_type=type(e).__name__,
+                exc_info=True,
             )
 
-    await asyncio.gather(*(_init_one(pn, pc) for pn, pc in providers))
+    await asyncio.gather(*starmap(_init_one, providers))
 
 
 def main() -> int:
@@ -457,12 +483,17 @@ def main() -> int:
     Returns:
         int: Exit code (0 for success, non-zero for failure).
     """
+    cli_options, remaining_args = _parse_args()
+    sys.argv = [sys.argv[0], *remaining_args]
+
+    early_result = _show_early_splash()
+    if early_result is None:
+        return 1
+    app, early_splash = early_result
+
     config_cls = _import_config_class()
     get_logger, setup_logging = _import_logging_funcs()
     pm_cls = _import_process_manager()
-
-    cli_options, remaining_args = _parse_args()
-    sys.argv = [sys.argv[0], *remaining_args]
 
     config_path = Path("config.toml")
     config = config_cls.load(config_path) if config_path.exists() else config_cls.default()
@@ -478,12 +509,11 @@ def main() -> int:
     process_manager.install_handlers()
     logger.debug("process_manager_initialized", handlers_installed=True)
 
-    result = _setup_qt_and_splash(logger)
-    if result is None:
+    splash = _upgrade_to_full_splash(app, early_splash, logger)
+    if splash is None:
         process_manager.uninstall_handlers()
         return 1
 
-    app, splash = result
     logger.info("splash_screen_shown")
 
     splash.set_progress(5, "Loading configuration...")
@@ -496,8 +526,8 @@ def main() -> int:
         return loop.run_until_complete(
             _run_application(config, app, splash, process_manager, logger),
         )
-    except Exception:
-        logger.exception("startup_failed")
+    except (ImportError, OSError, RuntimeError) as exc:
+        logger.exception("startup_failed", error=str(exc))
         return 1
     finally:
         try:
@@ -509,7 +539,7 @@ def main() -> int:
             )
         except TimeoutError:
             logger.warning("final_process_cleanup_timeout")
-        except Exception:
+        except (OSError, RuntimeError):
             logger.debug("final_process_cleanup_failed", exc_info=True)
         process_manager.uninstall_handlers()
         loop.close()
@@ -561,6 +591,25 @@ async def _init_model_discovery(
     return model_discovery, discovery_cache
 
 
+async def init_model_discovery(
+    provider_registry: ProviderRegistry,
+    config: Config,
+    logger: BoundLogger,
+) -> tuple[object, Path]:
+    """
+    Initialize the model discovery subsystem.
+
+    Args:
+        provider_registry: Provider registry for model queries.
+        config: Application configuration.
+        logger: BoundLogger instance.
+
+    Returns:
+        tuple[object, Path]: Tuple of (model_discovery, discovery_cache_path).
+    """
+    return await _init_model_discovery(provider_registry, config, logger)
+
+
 def _clear_model_cache(logger: BoundLogger) -> None:
     """
     Clear the global model cache during shutdown.
@@ -577,7 +626,7 @@ def _clear_model_cache(logger: BoundLogger) -> None:
             if callable(clear_fn):
                 clear_fn()
             logger.debug("model_cache_cleared")
-        except Exception:
+        except (ImportError, OSError, RuntimeError):
             logger.debug("model_cache_cleanup_skipped", exc_info=True)
 
 
@@ -700,7 +749,7 @@ async def _run_application(
         )
         if callable(shutdown_fn):
             shutdown_fn()
-    except Exception:
+    except (ImportError, OSError, RuntimeError):
         logger.debug("bridge_loop_shutdown_failed", exc_info=True)
 
     logger.info("shutdown_complete")

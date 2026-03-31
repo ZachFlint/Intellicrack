@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Tool confirmation dialog for Intellicrack.
 
@@ -26,11 +25,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
-    from ..core.types import ToolCall
+    from intellicrack.core.types import ToolCall
 
 _logger = get_logger("ui.confirmation_dialog")
 

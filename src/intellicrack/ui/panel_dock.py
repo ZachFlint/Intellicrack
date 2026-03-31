@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
@@ -68,7 +68,7 @@ class DetachedPanelWindow(QMainWindow):
         self._settings_key: str = f"DetachedPanel/{title.replace(' ', '_')}"
 
         self.setWindowTitle(f"Intellicrack - {title}")
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, on=False)
 
         toolbar = QToolBar()
         toolbar.setMovable(False)

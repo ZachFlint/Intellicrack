@@ -14,8 +14,8 @@ from __future__ import annotations
 import re
 from typing import Any, Literal, Never, TypedDict
 
-from ..core.logging import get_logger
-from ..core.types import (
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import (
     ProviderName,
     ToolDefinition,
     ToolFunction,
@@ -34,9 +34,6 @@ def _assert_never(value: Never) -> Never:
 
     Args:
         value: A value of type Never (should be impossible to call).
-
-    Returns:
-        Never: This function never returns.
 
     Raises:
         AssertionError: Always raised if this function is somehow called.
@@ -194,6 +191,7 @@ def normalize_type(param_type: str) -> str:
 
 def build_schema_property(
     param: ToolParameter,
+    *,
     uppercase_types: bool = False,
 ) -> JSONSchemaProperty | GoogleSchemaProperty:
     """
@@ -293,6 +291,7 @@ def _build_google_schema_parameters(
 
 def build_schema_parameters(
     params: list[ToolParameter],
+    *,
     uppercase_types: bool = False,
 ) -> JSONSchemaParameters | GoogleSchemaParameters:
     """
@@ -332,14 +331,14 @@ def validate_tool_parameter(
             ValidationError(
                 "Parameter name cannot be empty",
                 location,
-            )
+            ),
         )
     elif not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", param.name):
         errors.append(
             ValidationError(
                 f"Invalid parameter name '{param.name}' (must be valid identifier)",
                 location,
-            )
+            ),
         )
 
     normalized_type = normalize_type(param.type)
@@ -349,7 +348,7 @@ def validate_tool_parameter(
                 f"Invalid type '{param.type}' (normalized to '{normalized_type}')",
                 location,
                 "warning",
-            )
+            ),
         )
 
     if not param.description:
@@ -358,7 +357,7 @@ def validate_tool_parameter(
                 "Parameter description should not be empty",
                 location,
                 "warning",
-            )
+            ),
         )
 
     if param.required and param.default is not None:
@@ -367,7 +366,7 @@ def validate_tool_parameter(
                 "Required parameter should not have a default value",
                 location,
                 "warning",
-            )
+            ),
         )
 
     if param.enum is not None:
@@ -376,14 +375,14 @@ def validate_tool_parameter(
                 ValidationError(
                     "Enum list cannot be empty",
                     location,
-                )
+                ),
             )
         elif param.default is not None and param.default not in param.enum:
             errors.append(
                 ValidationError(
                     f"Default value '{param.default}' not in enum {param.enum}",
                     location,
-                )
+                ),
             )
 
     return errors
@@ -406,7 +405,7 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
             ValidationError(
                 "Function name cannot be empty",
                 "function",
-            )
+            ),
         )
     elif "." not in func.name:
         errors.append(
@@ -414,7 +413,7 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
                 f"Function name '{func.name}' should follow 'tool.function' pattern",
                 func.name,
                 "warning",
-            )
+            ),
         )
 
     if not func.description:
@@ -423,7 +422,7 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
                 "Function description should not be empty",
                 func.name or "function",
                 "warning",
-            )
+            ),
         )
 
     param_names: set[str] = set()
@@ -433,7 +432,7 @@ def validate_tool_function(func: ToolFunction) -> list[ValidationError]:
                 ValidationError(
                     f"Duplicate parameter name '{param.name}'",
                     func.name or "function",
-                )
+                ),
             )
         param_names.add(param.name)
         errors.extend(validate_tool_parameter(param, func.name))
@@ -459,7 +458,7 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
                 "Tool description should not be empty",
                 str(tool.tool_name),
                 "warning",
-            )
+            ),
         )
 
     if len(tool.functions) == 0:
@@ -467,7 +466,7 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
             ValidationError(
                 "Tool must have at least one function",
                 str(tool.tool_name),
-            )
+            ),
         )
 
     func_names: set[str] = set()
@@ -477,7 +476,7 @@ def validate_tool_definition(tool: ToolDefinition) -> list[ValidationError]:
                 ValidationError(
                     f"Duplicate function name '{func.name}'",
                     str(tool.tool_name),
-                )
+                ),
             )
         func_names.add(func.name)
         errors.extend(validate_tool_function(func))

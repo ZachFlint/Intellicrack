@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Integration tests that display dynamically fetched models from each provider.
 
 These tests fetch and verify the actual models available from each provider's API.
@@ -7,8 +12,13 @@ Run with pytest -v -s to see the model output.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
+
+
+if TYPE_CHECKING:
+    from intellicrack.credentials.store import CredentialLoader
 
 from intellicrack.core.types import ProviderCredentials, ProviderName
 from intellicrack.providers.anthropic import AnthropicProvider
@@ -110,7 +120,8 @@ class TestAllProvidersModelCount:
     @pytest.mark.asyncio
     @staticmethod
     async def test_summary_all_providers(
-        credential_loader,
+        credential_loader: CredentialLoader,
+        *,
         has_openai_key: bool,
         has_google_key: bool,
         has_openrouter_key: bool,

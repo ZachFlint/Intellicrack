@@ -11,8 +11,8 @@ OpenRouter, and local Transformers with Intel XPU acceleration.
 
 from __future__ import annotations
 
-from .anthropic import AnthropicProvider
-from .base import (
+from intellicrack.providers.anthropic import AnthropicProvider
+from intellicrack.providers.base import (
     AnthropicToolSchema,
     GoogleFunctionDeclaration,
     JSONSchemaParameters,
@@ -26,12 +26,12 @@ from .base import (
     create_google_tool_schema,
     create_openai_tool_schema,
 )
-from .discovery import DiscoveryCache, DiscoveryEvent, DiscoveryFilter, ModelDiscovery
-from .google import GoogleProvider
-from .grok import GrokProvider
-from .huggingface import HuggingFaceProvider
-from .local_transformers import LocalTransformersProvider
-from .model_loader import (
+from intellicrack.providers.discovery import DiscoveryCache, DiscoveryEvent, DiscoveryFilter, ModelDiscovery
+from intellicrack.providers.google import GoogleProvider
+from intellicrack.providers.grok import GrokProvider
+from intellicrack.providers.huggingface import HuggingFaceProvider
+from intellicrack.providers.local_transformers import LocalTransformersProvider
+from intellicrack.providers.model_loader import (
     DtypeOption,
     LoadedModel,
     ModelCache,
@@ -43,11 +43,11 @@ from .model_loader import (
     load_model_for_xpu,
     set_global_cache_size,
 )
-from .ollama import OllamaProvider
-from .openai import OpenAIProvider
-from .openrouter import OpenRouterProvider
-from .registry import ProviderRegistry
-from .xpu_utils import (
+from intellicrack.providers.ollama import OllamaProvider
+from intellicrack.providers.openai import OpenAIProvider
+from intellicrack.providers.openrouter import OpenRouterProvider
+from intellicrack.providers.registry import ProviderRegistry
+from intellicrack.providers.xpu_utils import (
     XPUDeviceInfo,
     check_windows_requirements,
     clear_xpu_cache,

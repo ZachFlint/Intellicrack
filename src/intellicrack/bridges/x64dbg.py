@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 X64dbg bridge for Windows debugging.
 
@@ -18,16 +17,26 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeGuard
 
+from intellicrack.bridges.base import (
+    BridgeCapabilities,
+    BridgeState,
+    DebuggerBridge,
+    DisassemblyLine,
+    MemorySearchResult,
+    StackFrame,
+    WatchpointInfo,
+)
+from intellicrack.bridges.installer import deploy_x64dbg_plugin
+from intellicrack.bridges.named_pipe_client import NamedPipeClient, PipeConfig
 from intellicrack.core._subprocess import (
     PIPE,
     STARTF_USESHOWWINDOW,
     STARTUPINFO,
     Popen,
 )
-
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager, ProcessType
-from ..core.types import (
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.types import (
     BreakpointInfo,
     MemoryRegion,
     ModuleInfo,
@@ -40,17 +49,6 @@ from ..core.types import (
     ToolName,
     ToolParameter,
 )
-from .base import (
-    BridgeCapabilities,
-    BridgeState,
-    DebuggerBridge,
-    DisassemblyLine,
-    MemorySearchResult,
-    StackFrame,
-    WatchpointInfo,
-)
-from .installer import deploy_x64dbg_plugin
-from .named_pipe_client import NamedPipeClient, PipeConfig
 
 
 if sys.platform == "win32":
@@ -108,6 +106,7 @@ WIN_PROCESS_VM_READ = 0x0010
 WIN_PROCESS_VM_WRITE = 0x0020
 WIN_PROCESS_VM_OPERATION = 0x0008
 WIN_PROCESS_QUERY_INFORMATION = 0x0400
+WIN_NO_INHERIT_HANDLE: bool = False
 WIN_MEM_COMMIT = 0x1000
 WIN_MEM_RESERVE = 0x2000
 WIN_MEM_RELEASE = 0x8000
@@ -224,9 +223,10 @@ def _read_process_command_line(pid: int) -> str | None:
 
     try:
         kernel32 = ctypes.windll.kernel32
+        inherit_handle = False
         handle = kernel32.OpenProcess(
             WIN_PROCESS_QUERY_INFORMATION | WIN_PROCESS_VM_READ,
-            False,
+            inherit_handle,
             pid,
         )
         if not handle:
@@ -237,7 +237,7 @@ def _read_process_command_line(pid: int) -> str | None:
         finally:
             kernel32.CloseHandle(handle)
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         _logger.warning("command_line_read_failed", error=str(e))
         return None
 
@@ -372,7 +372,7 @@ class X64DbgBridge(DebuggerBridge):
         self._watchpoints: dict[int, WatchpointInfo] = {}
         self._next_wp_id: int = 1
         self._plugin_deployed: bool = False
-        self._event_callbacks: list[Callable[[str, dict[str, Any]], None]] = []
+        self.event_callbacks: list[Callable[[str, dict[str, Any]], None]] = []
         self._capabilities = BridgeCapabilities(
             supports_debugging=True,
             supports_dynamic_analysis=True,
@@ -1205,9 +1205,9 @@ class X64DbgBridge(DebuggerBridge):
         x64_exe = self._x64dbg_path / "release" / "x64" / "x64dbg.exe"
         x32_exe = self._x64dbg_path / "release" / "x32" / "x32dbg.exe"
 
-        return x64_exe.exists() or x32_exe.exists()
+        return await asyncio.to_thread(x64_exe.exists) or await asyncio.to_thread(x32_exe.exists)
 
-    async def _start_debugger(self, is_64bit: bool = True) -> None:
+    async def _start_debugger(self, *, is_64bit: bool = True) -> None:
         """
         Start the x64dbg debugger process.
 
@@ -1226,7 +1226,7 @@ class X64DbgBridge(DebuggerBridge):
         else:
             exe_path = self._x64dbg_path / "release" / "x32" / "x32dbg.exe"
 
-        if not exe_path.exists():
+        if not await asyncio.to_thread(exe_path.exists):
             msg = f"x64dbg executable not found: {exe_path}"
             raise ToolError(msg)
 
@@ -1307,7 +1307,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             callback: Function to call on debug events.
         """
-        self._event_callbacks.append(callback)
+        self.event_callbacks.append(callback)
 
     def unregister_event_callback(
         self,
@@ -1320,7 +1320,7 @@ class X64DbgBridge(DebuggerBridge):
             callback: The callback to remove.
         """
         try:
-            self._event_callbacks.remove(callback)
+            self.event_callbacks.remove(callback)
         except ValueError:
             _logger.debug("event_callback_not_found_for_removal", callback=str(callback))
 
@@ -1344,10 +1344,10 @@ class X64DbgBridge(DebuggerBridge):
                     wp.hit_count += 1
                     break
 
-        for cb in self._event_callbacks:
+        for cb in self.event_callbacks:
             try:
                 cb(event_type, message)
-            except Exception:
+            except (RuntimeError, TypeError, ValueError):
                 _logger.debug("event_callback_error", event_type=event_type)
 
     async def _send_pipe_command(
@@ -1433,16 +1433,16 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If load fails.
         """
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             msg = f"File not found: {path}"
             raise ToolError(msg)
 
-        self._binary_path = path.resolve()
+        self._binary_path = await asyncio.to_thread(path.resolve)
 
         is_64bit = self._detect_architecture(path)
 
         if self._process is None:
-            await self._start_debugger(is_64bit)
+            await self._start_debugger(is_64bit=is_64bit)
 
         cmd = f'InitDebug "{path.as_posix()}"'
         if args:
@@ -1470,7 +1470,7 @@ class X64DbgBridge(DebuggerBridge):
         """
         try:
             data = path.read_bytes()
-        except Exception as e:
+        except OSError as e:
             _logger.debug("architecture_detection_failed", error=str(e))
             return True
 
@@ -1506,7 +1506,7 @@ class X64DbgBridge(DebuggerBridge):
         is_64 = await asyncio.to_thread(self._detect_process_arch, pid)
 
         if self._process is None:
-            await self._start_debugger(is_64)
+            await self._start_debugger(is_64bit=is_64)
 
         await self._send_command(f"attach {pid}")
         self._attached_pid = pid
@@ -1532,7 +1532,8 @@ class X64DbgBridge(DebuggerBridge):
             return True
         try:
             kernel32 = ctypes.windll.kernel32
-            handle = kernel32.OpenProcess(0x0400, False, pid)
+            inherit_handle = False
+            handle = kernel32.OpenProcess(0x0400, inherit_handle, pid)
             if not handle:
                 return True
             try:
@@ -1935,7 +1936,7 @@ class X64DbgBridge(DebuggerBridge):
 
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_READ,
-            False,
+            WIN_NO_INHERIT_HANDLE,
             self._attached_pid,
         )
 
@@ -1990,7 +1991,7 @@ class X64DbgBridge(DebuggerBridge):
 
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_WRITE | WIN_PROCESS_VM_OPERATION,
-            False,
+            WIN_NO_INHERIT_HANDLE,
             self._attached_pid,
         )
 
@@ -2059,7 +2060,7 @@ class X64DbgBridge(DebuggerBridge):
 
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_OPERATION,
-            False,
+            WIN_NO_INHERIT_HANDLE,
             self._attached_pid,
         )
 
@@ -2109,7 +2110,7 @@ class X64DbgBridge(DebuggerBridge):
 
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_OPERATION,
-            False,
+            WIN_NO_INHERIT_HANDLE,
             self._attached_pid,
         )
 
@@ -2163,7 +2164,7 @@ class X64DbgBridge(DebuggerBridge):
 
         handle = kernel32.OpenProcess(
             WIN_PROCESS_QUERY_INFORMATION | WIN_PROCESS_VM_READ,
-            False,
+            WIN_NO_INHERIT_HANDLE,
             self._attached_pid,
         )
 
@@ -2207,7 +2208,7 @@ class X64DbgBridge(DebuggerBridge):
                             state="committed",
                             type="private" if mbi.Type == MEM_MAPPED_FLAG else "mapped",
                             module_name=None,
-                        )
+                        ),
                     )
 
                 address = (mbi.BaseAddress or 0) + mbi.RegionSize
@@ -2259,7 +2260,7 @@ class X64DbgBridge(DebuggerBridge):
                         mnemonic=instr.mnemonic,
                         operands=instr.op_str,
                         comment=None,
-                    )
+                    ),
                 )
                 if len(lines) >= count:
                     break
@@ -2324,7 +2325,7 @@ class X64DbgBridge(DebuggerBridge):
                 stack_pointer=rsp,
                 function_name=None,
                 module_name=None,
-            )
+            ),
         )
 
         for i in range(1, 32):
@@ -2356,7 +2357,7 @@ class X64DbgBridge(DebuggerBridge):
                         stack_pointer=rbp + (16 if self._is_64bit else 8),
                         function_name=None,
                         module_name=None,
-                    )
+                    ),
                 )
 
                 rbp = saved_rbp
@@ -2408,7 +2409,7 @@ class X64DbgBridge(DebuggerBridge):
                             matched_bytes=pattern.hex(),
                             context_before=context_before,
                             context_after=context_after,
-                        )
+                        ),
                     )
                     offset = idx + 1
 
@@ -2503,7 +2504,7 @@ class X64DbgBridge(DebuggerBridge):
                                 start_address=0,
                                 state="unknown",
                                 priority=te32.tpBasePri,
-                            )
+                            ),
                         )
                     if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
                         break
@@ -2580,7 +2581,7 @@ class X64DbgBridge(DebuggerBridge):
                             base_address=base_addr,
                             size=me32.modBaseSize,
                             entry_point=0,
-                        )
+                        ),
                     )
                     if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
                         break
@@ -2610,7 +2611,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[ThreadInfo]: List of thread information.
         """
-        return await self._get_threads()
+        return await self.get_threads()
 
     async def get_process_info(self) -> ProcessInfo | None:
         """
@@ -2625,7 +2626,7 @@ class X64DbgBridge(DebuggerBridge):
         if self._attached_pid is None:
             return None
 
-        threads = await self._get_threads()
+        threads = await self.get_threads()
         modules = await self._get_modules()
 
         command_line = self._get_command_line(self._attached_pid)
@@ -2937,8 +2938,8 @@ class X64DbgBridge(DebuggerBridge):
         _logger.info("memory_dumping", address=hex(address), size=size, path=path)
         data = await self.read_memory(address, size)
         output_path = Path(path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(data)
+        await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(output_path.write_bytes, data)
         return {"success": True, "path": path, "bytes_written": len(data)}
 
     async def _resolve_module_base(self, module_name: str) -> int:

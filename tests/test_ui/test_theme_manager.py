@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for ThemeManager module.
 
 Validates theme loading, stylesheet application, and theme switching
@@ -24,7 +29,11 @@ _MIN_STYLESHEET_LENGTH: int = 100
 
 @pytest.fixture
 def theme_manager() -> ThemeManager:
-    """Provide a fresh ThemeManager instance for each test."""
+    """Provide a fresh ThemeManager instance for each test.
+
+    Returns:
+        ThemeManager: A fresh singleton instance.
+    """
     ThemeManager.reset_instance()
     return ThemeManager.get_instance()
 
@@ -104,7 +113,7 @@ class TestGetStylesheet:
         stylesheet1 = theme_manager.get_stylesheet(THEME_DARK)
         stylesheet2 = theme_manager.get_stylesheet(THEME_DARK)
         assert stylesheet1 == stylesheet2
-        assert THEME_DARK in theme_manager._theme_cache
+        assert THEME_DARK in theme_manager.theme_cache
 
 
 class TestApplyTheme:
@@ -136,17 +145,17 @@ class TestApplyTheme:
     def test_apply_theme_updates_current_theme(theme_manager: ThemeManager) -> None:
         """apply_theme updates _current_theme."""
         theme_manager.apply_theme(THEME_LIGHT)
-        assert theme_manager._current_theme == THEME_LIGHT
+        assert theme_manager.current_theme == THEME_LIGHT
 
         theme_manager.apply_theme(THEME_DARK)
-        assert theme_manager._current_theme == THEME_DARK
+        assert theme_manager.current_theme == THEME_DARK
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_invalid_theme_uses_default(theme_manager: ThemeManager) -> None:
         """Invalid theme name falls back to default."""
         theme_manager.apply_theme("invalid_theme_name")
-        assert theme_manager._current_theme == DEFAULT_THEME
+        assert theme_manager.current_theme == DEFAULT_THEME
 
 
 class TestCurrentTheme:
@@ -313,7 +322,7 @@ class TestThemeIntegrity:
     @staticmethod
     def test_styles_available_flag(theme_manager: ThemeManager) -> None:
         """ThemeManager correctly detects styles availability."""
-        assert theme_manager._styles_available
+        assert theme_manager.styles_available
 
     @staticmethod
     def test_loaded_stylesheet_matches_file(theme_manager: ThemeManager) -> None:
@@ -332,5 +341,5 @@ class TestThemeIntegrity:
         try:
             manager = ThemeManager.get_instance()
             assert manager is not None
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError) as e:
             pytest.fail(f"ThemeManager initialization failed: {e}")

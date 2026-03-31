@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Comprehensive integration tests for Intellicrack x64dbg bridge module.
 
 Tests validate:
@@ -109,7 +114,11 @@ def test_breakpoint_info_fields() -> None:
 
 @pytest.fixture
 def x64dbg_bridge() -> X64DbgBridge:
-    """Create a fresh bridge instance for tests."""
+    """Create a fresh bridge instance for tests.
+
+    Returns:
+        X64DbgBridge: A new bridge instance.
+    """
     return X64DbgBridge()
 
 
@@ -253,7 +262,11 @@ async def test_read_own_process_memory(x64dbg_bridge: X64DbgBridge) -> None:
 
 @pytest.fixture
 def x64dbg_bridge_64bit() -> X64DbgBridge:
-    """Create a fresh bridge instance with 64-bit mode enabled."""
+    """Create a fresh bridge instance with 64-bit mode enabled.
+
+    Returns:
+        X64DbgBridge: A bridge instance in 64-bit mode.
+    """
     bridge = X64DbgBridge()
     bridge.is_64bit = True
     return bridge
@@ -320,7 +333,11 @@ async def test_get_memory_map_current_process(x64dbg_bridge: X64DbgBridge) -> No
 
 @pytest.fixture
 def x64dbg_bridge_attached() -> X64DbgBridge:
-    """Create a fresh bridge with current process attached."""
+    """Create a fresh bridge with current process attached.
+
+    Returns:
+        X64DbgBridge: A bridge attached to the current process.
+    """
     bridge = X64DbgBridge()
     bridge.attached_pid = os.getpid()
     return bridge

@@ -1,1 +1,1 @@
-tests/test_core/test_tools.py -x -q --tb=short --no-header
+tests/test_ui/test_splash_screen.py --collect-only --no-header -q

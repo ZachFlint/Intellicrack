@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from ...core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ def _resolve(obj: object, method_name: str) -> Callable[..., Any]:
     return cast("Callable[..., Any]", method)
 
 
-def set_sorting_enabled(table: QTableWidget | QTreeWidget, enable: bool) -> None:
+def set_sorting_enabled(table: QTableWidget | QTreeWidget, *, enable: bool) -> None:
     """
     Toggle sorting on a QTableWidget or QTreeWidget.
 

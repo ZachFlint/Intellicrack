@@ -12,21 +12,24 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
 pytest.importorskip("yara", reason="yara module not installed")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -124,7 +127,7 @@ rule RuleBeta {
 class TestYaraScanInline:
     """Tests for HexEditorBridge.yara_scan using inline YARA rule source strings."""
 
-    def test_multi_rule_source_both_rules_match(self, loaded_bridge: Any) -> None:
+    def test_multi_rule_source_both_rules_match(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that a two-rule source returns two matches when both rules fire on the PE.
 
         Args:
@@ -135,7 +138,7 @@ class TestYaraScanInline:
         assert "RuleAlpha" in rule_names
         assert "RuleBeta" in rule_names
 
-    def test_tagged_rule_populates_tags_field(self, loaded_bridge: Any) -> None:
+    def test_tagged_rule_populates_tags_field(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that a rule with tags returns a non-empty tags list in each match.
 
         Args:
@@ -148,7 +151,7 @@ class TestYaraScanInline:
         assert "executable" in tags
         assert "windows" in tags
 
-    def test_rule_with_meta_populates_meta_field(self, loaded_bridge: Any) -> None:
+    def test_rule_with_meta_populates_meta_field(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that a rule with meta entries returns a non-empty meta dict per match.
 
         Args:
@@ -161,7 +164,7 @@ class TestYaraScanInline:
         assert "author" in meta
         assert meta["author"] == "tester"
 
-    def test_regex_string_rule_finds_match(self, bridge: Any, tmp_path: Path) -> None:
+    def test_regex_string_rule_finds_match(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a YARA regex string rule finds a matching substring.
 
         Args:
@@ -176,7 +179,7 @@ class TestYaraScanInline:
         assert results
         assert results[0]["rule"] == "RegexMatch"
 
-    def test_int3_hex_pattern_matches_pe_text_section(self, loaded_bridge: Any) -> None:
+    def test_int3_hex_pattern_matches_pe_text_section(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that a hex pattern {CC CC CC CC} matches the INT3 bytes in the PE .text section.
 
         Args:
@@ -186,7 +189,7 @@ class TestYaraScanInline:
         assert results
         assert results[0]["rule"] == "Int3InTextSection"
 
-    def test_int3_match_strings_contain_correct_offset(self, loaded_bridge: Any) -> None:
+    def test_int3_match_strings_contain_correct_offset(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the strings field in INT3 match contains an entry at the .text offset.
 
         Args:
@@ -200,7 +203,7 @@ class TestYaraScanInline:
         found_offset = any(s["offset"] == _PE_TEXT_OFFSET for s in strings)
         assert found_offset
 
-    def test_int3_match_strings_data_hex_equals_cc_bytes(self, loaded_bridge: Any) -> None:
+    def test_int3_match_strings_data_hex_equals_cc_bytes(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the data field in the INT3 match strings is 'cccccccc'.
 
         Args:
@@ -213,7 +216,7 @@ class TestYaraScanInline:
         assert target is not None
         assert target["data"].lower() == "cccccccc"
 
-    def test_no_match_rule_returns_empty_list(self, loaded_bridge: Any) -> None:
+    def test_no_match_rule_returns_empty_list(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that a rule that cannot match returns an empty list.
 
         Args:
@@ -222,7 +225,7 @@ class TestYaraScanInline:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_NO_MATCH_RULE))
         assert not results
 
-    def test_ascii_string_rule_matches_embedded_text(self, bridge: Any, tmp_path: Path) -> None:
+    def test_ascii_string_rule_matches_embedded_text(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a plain ASCII string rule finds the literal in the document.
 
         Args:
@@ -237,7 +240,7 @@ class TestYaraScanInline:
         assert results
         assert results[0]["rule"] == "AsciiText"
 
-    def test_match_dict_has_all_required_keys(self, loaded_bridge: Any) -> None:
+    def test_match_dict_has_all_required_keys(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify every match dict contains rule, tags, meta, namespace, and strings keys.
 
         Args:
@@ -252,7 +255,7 @@ class TestYaraScanInline:
 class TestYaraScanFiles:
     """Tests for HexEditorBridge.yara_scan_files using on-disk .yar rule files."""
 
-    def test_single_yar_file_matches_same_as_inline_source(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_single_yar_file_matches_same_as_inline_source(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify yara_scan_files with one .yar file produces the same rule names as yara_scan.
 
         Args:
@@ -268,7 +271,7 @@ class TestYaraScanFiles:
         inline_rule_names = {r["rule"] for r in inline_results}
         assert file_rule_names == inline_rule_names
 
-    def test_multiple_comma_separated_yar_files_both_match(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_multiple_comma_separated_yar_files_both_match(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify yara_scan_files with two comma-separated paths returns matches from both files.
 
         Args:
@@ -285,7 +288,7 @@ class TestYaraScanFiles:
         assert "MzSignature" in rule_names
         assert "Int3InTextSection" in rule_names
 
-    def test_yar_file_with_no_match_rule_returns_empty(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_yar_file_with_no_match_rule_returns_empty(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify yara_scan_files with a non-matching rule file returns an empty list.
 
         Args:
@@ -297,7 +300,7 @@ class TestYaraScanFiles:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
         assert not results
 
-    def test_nonexistent_yar_file_raises_or_returns_error(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_nonexistent_yar_file_raises_or_returns_error(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify yara_scan_files with a nonexistent path raises an exception.
 
         Args:
@@ -308,7 +311,7 @@ class TestYaraScanFiles:
         with pytest.raises((FileNotFoundError, RuntimeError, Exception)):
             _run(loaded_bridge.yara_scan_files(missing_path))
 
-    def test_yar_file_match_strings_have_identifier_offset_data(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_yar_file_match_strings_have_identifier_offset_data(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that match strings from a file-based scan have identifier, offset, and data.
 
         Args:

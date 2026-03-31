@@ -16,8 +16,8 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any, ClassVar, cast
 
-from ..core.logging import get_logger
-from ..core.types import ToolError
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolError
 
 
 _logger = get_logger("bridges.namedpipe")

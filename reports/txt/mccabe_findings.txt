@@ -1,143 +1,154 @@
 10 findings in src/intellicrack/core\hexpat\evaluator.py
 
-src/intellicrack/core\hexpat\evaluator.py:383:5: C901 'HexPatEvaluator._format_value' is too complex (11)
+src/intellicrack/core\hexpat\evaluator.py:353:5: C901 'HexPatEvaluator._format_value' is too complex (11)
 
-src/intellicrack/core\hexpat\evaluator.py:528:5: C901 'HexPatEvaluator._eval_stmt' is too complex (14)
+src/intellicrack/core\hexpat\evaluator.py:495:5: C901 'HexPatEvaluator._eval_stmt' is too complex (14)
 
-src/intellicrack/core\hexpat\evaluator.py:610:5: C901 'HexPatEvaluator._eval_for' is too complex (11)
+src/intellicrack/core\hexpat\evaluator.py:577:5: C901 'HexPatEvaluator._eval_for' is too complex (11)
 
-src/intellicrack/core\hexpat\evaluator.py:1278:5: C901 'HexPatEvaluator._eval_stmt_collect' is too complex (15)
+src/intellicrack/core\hexpat\evaluator.py:1244:5: C901 'HexPatEvaluator._eval_stmt_collect' is too complex (15)
 
-src/intellicrack/core\hexpat\evaluator.py:1326:5: C901 'HexPatEvaluator._read_primitive' is too complex (17)
+src/intellicrack/core\hexpat\evaluator.py:1297:5: C901 'HexPatEvaluator._read_primitive' is too complex (17)
 
-src/intellicrack/core\hexpat\evaluator.py:1394:5: C901 'HexPatEvaluator._eval_expr' is too complex (17)
+src/intellicrack/core\hexpat\evaluator.py:1365:5: C901 'HexPatEvaluator._eval_expr' is too complex (17)
 
-src/intellicrack/core\hexpat\evaluator.py:1512:5: C901 'HexPatEvaluator._apply_numeric_op' is too complex (20)
+src/intellicrack/core\hexpat\evaluator.py:1479:5: C901 'HexPatEvaluator._apply_numeric_op' is too complex (20)
 
-src/intellicrack/core\hexpat\evaluator.py:1735:5: C901 'HexPatEvaluator._eval_assign' is too complex (11)
+src/intellicrack/core\hexpat\evaluator.py:1702:5: C901 'HexPatEvaluator._eval_assign' is too complex (11)
 
-src/intellicrack/core\hexpat\evaluator.py:1903:5: C901 'HexPatEvaluator._eval_cast' is too complex (11)
+src/intellicrack/core\hexpat\evaluator.py:1870:5: C901 'HexPatEvaluator._eval_cast' is too complex (11)
 
-src/intellicrack/core\hexpat\evaluator.py:1985:5: C901 'HexPatEvaluator._build_builtins' is too complex (33)
+src/intellicrack/core\hexpat\evaluator.py:1951:5: C901 'HexPatEvaluator._build_builtins' is too complex (33)
 
 
 7 findings in src/intellicrack/ui\app.py
 
-src/intellicrack/ui\app.py:292:5: C901 'MainWindow._restore_window_state' is too complex (12)
+src/intellicrack/ui\app.py:290:5: C901 'MainWindow._restore_window_state' is too complex (12)
 
-src/intellicrack/ui\app.py:1365:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
+src/intellicrack/ui\app.py:1375:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
 
-src/intellicrack/ui\app.py:1441:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
+src/intellicrack/ui\app.py:1451:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
 
-src/intellicrack/ui\app.py:1519:5: C901 'MainWindow._on_refresh_models' is too complex (11)
+src/intellicrack/ui\app.py:1529:5: C901 'MainWindow._on_refresh_models' is too complex (12)
 
-src/intellicrack/ui\app.py:1838:5: C901 'MainWindow._on_open_frida' is too complex (11)
+src/intellicrack/ui\app.py:1878:5: C901 'MainWindow._on_open_frida' is too complex (11)
 
-src/intellicrack/ui\app.py:1884:5: C901 'MainWindow._on_process_attached' is too complex (16)
+src/intellicrack/ui\app.py:1924:5: C901 'MainWindow._on_process_attached' is too complex (16)
 
-src/intellicrack/ui\app.py:2113:5: C901 'MainWindow.closeEvent' is too complex (12)
+src/intellicrack/ui\app.py:2153:5: C901 'MainWindow.closeEvent' is too complex (12)
+
+
+6 findings in src/intellicrack/ui\panels\hex_editor_widget.py
+
+src/intellicrack/ui\panels\hex_editor_widget.py:723:5: C901 'HexEditorWidget._format_group' is too complex (26)
+
+src/intellicrack/ui\panels\hex_editor_widget.py:1014:5: C901 'HexEditorWidget._paint_ascii_byte' is too complex (11)
+
+src/intellicrack/ui\panels\hex_editor_widget.py:1188:5: C901 'HexEditorWidget.keyPressEvent' is too complex (25)
+
+src/intellicrack/ui\panels\hex_editor_widget.py:1444:5: C901 'HexEditorWidget._do_paste' is too complex (18)
+
+src/intellicrack/ui\panels\hex_editor_widget.py:1772:5: C901 'HexEditorWidget.copy_as_format' is too complex (17)
+
+src/intellicrack/ui\panels\hex_editor_widget.py:1856:5: C901 'HexEditorWidget.contextMenuEvent' is too complex (12)
 
 
 6 findings in src/intellicrack/ui\tools.py
 
-src/intellicrack/ui\tools.py:1072:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)
+src/intellicrack/ui\tools.py:1084:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)
 
-src/intellicrack/ui\tools.py:1124:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)
+src/intellicrack/ui\tools.py:1136:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)
 
-src/intellicrack/ui\tools.py:1171:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)
+src/intellicrack/ui\tools.py:1183:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)
 
-src/intellicrack/ui\tools.py:1218:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)
+src/intellicrack/ui\tools.py:1230:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)
 
-src/intellicrack/ui\tools.py:1571:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)
+src/intellicrack/ui\tools.py:1584:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)
 
-src/intellicrack/ui\tools.py:1634:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)
-
-
-5 findings in src/intellicrack/ui\panels\hex_editor_widget.py
-
-src/intellicrack/ui\panels\hex_editor_widget.py:717:5: C901 'HexEditorWidget._format_group' is too complex (26)
-
-src/intellicrack/ui\panels\hex_editor_widget.py:1006:5: C901 'HexEditorWidget._paint_ascii_byte' is too complex (11)
-
-src/intellicrack/ui\panels\hex_editor_widget.py:1180:5: C901 'HexEditorWidget.keyPressEvent' is too complex (25)
-
-src/intellicrack/ui\panels\hex_editor_widget.py:1436:5: C901 'HexEditorWidget._do_paste' is too complex (18)
-
-src/intellicrack/ui\panels\hex_editor_widget.py:1753:5: C901 'HexEditorWidget.copy_as_format' is too complex (17)
+src/intellicrack/ui\tools.py:1647:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)
 
 
 4 findings in src/intellicrack/ui\panels\hex_editor\_pattern_editor.py
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:172:5: C901 'PatternEditorMixin._on_pattern_compile' is too complex (15)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:174:5: C901 'PatternEditorMixin._on_pattern_compile' is too complex (15)
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:222:5: C901 'PatternEditorMixin._on_pattern_apply' is too complex (15)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:224:5: C901 'PatternEditorMixin._on_pattern_apply' is too complex (15)
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:275:5: C901 'PatternEditorMixin._apply_via_interpreter' is too complex (12)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:277:5: C901 'PatternEditorMixin._apply_via_interpreter' is too complex (12)
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:466:5: C901 'PatternEditorMixin._populate_pattern_library' is too complex (11)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:468:5: C901 'PatternEditorMixin._populate_pattern_library' is too complex (11)
+
+
+3 findings in src/intellicrack/bridges\frida_bridge.py
+
+src/intellicrack/bridges\frida_bridge.py:546:5: C901 'FridaBridge.shutdown' is too complex (20)
+
+src/intellicrack/bridges\frida_bridge.py:1148:5: C901 'FridaBridge.hook_function' is too complex (11)
+
+src/intellicrack/bridges\frida_bridge.py:2072:5: C901 'FridaBridge.stalker_follow' is too complex (12)
 
 
 3 findings in src/intellicrack/bridges\hex_editor.py
 
-src/intellicrack/bridges\hex_editor.py:1727:5: C901 'HexEditorBridge.copy_as' is too complex (21)
+src/intellicrack/bridges\hex_editor.py:1741:5: C901 'HexEditorBridge.copy_as' is too complex (21)
 
-src/intellicrack/bridges\hex_editor.py:2635:5: C901 'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)
+src/intellicrack/bridges\hex_editor.py:2643:5: C901 'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)
 
-src/intellicrack/bridges\hex_editor.py:2859:5: C901 'HexEditorBridge.search_numeric' is too complex (11)
+src/intellicrack/bridges\hex_editor.py:2868:5: C901 'HexEditorBridge.search_numeric' is too complex (11)
 
 
 3 findings in src/intellicrack/core\hexpat\lexer.py
 
-src/intellicrack/core\hexpat\lexer.py:295:5: C901 'HexPatLexer._scan_number' is too complex (18)
+src/intellicrack/core\hexpat\lexer.py:266:5: C901 'HexPatLexer._scan_number' is too complex (18)
 
-src/intellicrack/core\hexpat\lexer.py:394:5: C901 'HexPatLexer._scan_operator' is too complex (42)
+src/intellicrack/core\hexpat\lexer.py:365:5: C901 'HexPatLexer._scan_operator' is too complex (42)
 
-src/intellicrack/core\hexpat\lexer.py:511:5: C901 'HexPatLexer._scan_token' is too complex (11)
+src/intellicrack/core\hexpat\lexer.py:483:5: C901 'HexPatLexer._scan_token' is too complex (11)
 
 
 3 findings in src/intellicrack/core\hexpat\parser.py
 
-src/intellicrack/core\hexpat\parser.py:415:5: C901 'HexPatParser._parse_expression' is too complex (12)
+src/intellicrack/core\hexpat\parser.py:387:5: C901 'HexPatParser._parse_expression' is too complex (12)
 
-src/intellicrack/core\hexpat\parser.py:527:5: C901 'HexPatParser._parse_prefix' is too complex (22)
+src/intellicrack/core\hexpat\parser.py:496:5: C901 'HexPatParser._parse_prefix' is too complex (22)
 
-src/intellicrack/core\hexpat\parser.py:709:5: C901 'HexPatParser._parse_statement' is too complex (14)
+src/intellicrack/core\hexpat\parser.py:672:5: C901 'HexPatParser._parse_statement' is too complex (14)
 
 
 3 findings in src/intellicrack/core\hexpat\preprocessor.py
 
-src/intellicrack/core\hexpat\preprocessor.py:90:5: C901 'HexPatPreprocessor.process' is too complex (16)
+src/intellicrack/core\hexpat\preprocessor.py:82:5: C901 'HexPatPreprocessor.process' is too complex (16)
 
-src/intellicrack/core\hexpat\preprocessor.py:210:5: C901 'HexPatPreprocessor._process_source' is too complex (11)
+src/intellicrack/core\hexpat\preprocessor.py:198:5: C901 'HexPatPreprocessor._process_source' is too complex (11)
 
-src/intellicrack/core\hexpat\preprocessor.py:432:1: C901 'extract_pragmas_fast' is too complex (14)
+src/intellicrack/core\hexpat\preprocessor.py:417:1: C901 'extract_pragmas_fast' is too complex (14)
 
 
 3 findings in src/intellicrack/core\hexpat_compiler.py
 
-src/intellicrack/core\hexpat_compiler.py:541:5: C901 'HexPatLexer._read_multi_char_operator' is too complex (15)
+src/intellicrack/core\hexpat_compiler.py:526:5: C901 'HexPatLexer._read_multi_char_operator' is too complex (15)
 
-src/intellicrack/core\hexpat_compiler.py:1252:5: C901 'HexPatCodegen.generate' is too complex (11)
+src/intellicrack/core\hexpat_compiler.py:1232:5: C901 'HexPatCodegen.generate' is too complex (11)
 
-src/intellicrack/core\hexpat_compiler.py:1322:5: C901 'HexPatCodegen._gen_regular_field' is too complex (15)
+src/intellicrack/core\hexpat_compiler.py:1302:5: C901 'HexPatCodegen._gen_regular_field' is too complex (15)
 
 
 3 findings in src/intellicrack/providers\discovery.py
 
-src/intellicrack/providers\discovery.py:336:5: C901 'ModelDiscovery.discover_all' is too complex (12)
+src/intellicrack/providers\discovery.py:338:5: C901 'ModelDiscovery.discover_all' is too complex (12)
 
-src/intellicrack/providers\discovery.py:573:5: C901 'ModelDiscovery.filter' is too complex (13)
+src/intellicrack/providers\discovery.py:577:5: C901 'ModelDiscovery.filter' is too complex (13)
 
-src/intellicrack/providers\discovery.py:685:5: C901 'ModelDiscovery.get_recommended_model' is too complex (12)
+src/intellicrack/providers\discovery.py:689:5: C901 'ModelDiscovery.get_recommended_model' is too complex (12)
 
 
 3 findings in src/intellicrack/providers\local_transformers.py
 
-src/intellicrack/providers\local_transformers.py:461:5: C901 'LocalTransformersProvider.chat_stream' is too complex (13)
+src/intellicrack/providers\local_transformers.py:463:5: C901 'LocalTransformersProvider.chat_stream' is too complex (13)
 
-src/intellicrack/providers\local_transformers.py:645:5: C901 'LocalTransformersProvider._stream_generate' is too complex (11)
+src/intellicrack/providers\local_transformers.py:648:5: C901 'LocalTransformersProvider._stream_generate' is too complex (11)
 
-src/intellicrack/providers\local_transformers.py:930:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)
+src/intellicrack/providers\local_transformers.py:933:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)
 
 
 3 findings in src/intellicrack/providers\openrouter.py
@@ -146,16 +157,7 @@ src/intellicrack/providers\openrouter.py:145:5: C901 'OpenRouterProvider.list_mo
 
 src/intellicrack/providers\openrouter.py:223:5: C901 'OpenRouterProvider.chat' is too complex (12)
 
-src/intellicrack/providers\openrouter.py:390:5: C901 'OpenRouterProvider.chat_stream' is too complex (19)
-
-
-3 findings in src/intellicrack/sandbox\qemu.py
-
-src/intellicrack/sandbox\qemu.py:839:5: C901 'QEMUSandbox._build_qemu_command' is too complex (12)
-
-src/intellicrack/sandbox\qemu.py:941:5: C901 'QEMUSandbox.start' is too complex (11)
-
-src/intellicrack/sandbox\qemu.py:1664:5: C901 'QEMUSandbox.run_binary' is too complex (12)
+src/intellicrack/providers\openrouter.py:391:5: C901 'OpenRouterProvider.chat_stream' is too complex (19)
 
 
 3 findings in src/intellicrack/ui\provider_config.py
@@ -164,51 +166,58 @@ src/intellicrack/ui\provider_config.py:565:5: C901 'ModelRefreshWorker._fetch_mo
 
 src/intellicrack/ui\provider_config.py:600:5: C901 'ModelRefreshWorker._fetch_anthropic_models' is too complex (11)
 
-src/intellicrack/ui\provider_config.py:2281:5: C901 'ProviderSettingsWidget.get_provider_device_info' is too complex (11)
+src/intellicrack/ui\provider_config.py:2304:5: C901 'ProviderSettingsWidget.get_provider_device_info' is too complex (11)
 
 
 3 findings in src/intellicrack/ui\session_manager.py
 
 src/intellicrack/ui\session_manager.py:250:5: C901 'SessionManagerDialog._load_sessions' is too complex (13)
 
-src/intellicrack/ui\session_manager.py:305:5: C901 'SessionManagerDialog._load_sessions_from_disk' is too complex (13)
+src/intellicrack/ui\session_manager.py:305:5: C901 'SessionManagerDialog._load_sessions_from_disk' is too complex (14)
 
-src/intellicrack/ui\session_manager.py:650:5: C901 'SessionManagerDialog._prepare_export_data' is too complex (11)
+src/intellicrack/ui\session_manager.py:660:5: C901 'SessionManagerDialog._prepare_export_data' is too complex (11)
 
 
 2 findings in src/intellicrack/bridges\installer.py
 
-src/intellicrack/bridges\installer.py:241:5: C901 'ToolInstaller.find_tool' is too complex (16)
+src/intellicrack/bridges\installer.py:239:5: C901 'ToolInstaller.find_tool' is too complex (16)
 
-src/intellicrack/bridges\installer.py:588:5: C901 'ToolInstaller._get_latest_release_url' is too complex (12)
+src/intellicrack/bridges\installer.py:587:5: C901 'ToolInstaller._get_latest_release_url' is too complex (12)
 
 
 2 findings in src/intellicrack/core\disassembler.py
 
-src/intellicrack/core\disassembler.py:140:5: C901 'HexDisassembler._resolve_arch_mode' is too complex (16)
+src/intellicrack/core\disassembler.py:138:5: C901 'HexDisassembler._resolve_arch_mode' is too complex (16)
 
-src/intellicrack/core\disassembler.py:293:5: C901 'HexDisassembler.auto_detect_arch' is too complex (21)
+src/intellicrack/core\disassembler.py:287:5: C901 'HexDisassembler.auto_detect_arch' is too complex (21)
 
 
 2 findings in src/intellicrack/core\orchestrator.py
 
-src/intellicrack/core\orchestrator.py:429:5: C901 'Orchestrator._run_agent_loop' is too complex (11)
+src/intellicrack/core\orchestrator.py:430:5: C901 'Orchestrator._run_agent_loop' is too complex (11)
 
-src/intellicrack/core\orchestrator.py:1707:5: C901 'Orchestrator.shutdown' is too complex (17)
+src/intellicrack/core\orchestrator.py:1711:5: C901 'Orchestrator.shutdown' is too complex (17)
 
 
 2 findings in src/intellicrack/providers\google.py
 
-src/intellicrack/providers\google.py:343:5: C901 'GoogleProvider.chat_stream' is too complex (13)
+src/intellicrack/providers\google.py:344:5: C901 'GoogleProvider.chat_stream' is too complex (13)
 
-src/intellicrack/providers\google.py:584:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)
+src/intellicrack/providers\google.py:586:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)
+
+
+2 findings in src/intellicrack/sandbox\qemu.py
+
+src/intellicrack/sandbox\qemu.py:858:5: C901 'QEMUSandbox._build_qemu_command' is too complex (12)
+
+src/intellicrack/sandbox\qemu.py:1700:5: C901 'QEMUSandbox.run_binary' is too complex (12)
 
 
 2 findings in src/intellicrack/ui\panels\binary_panel.py
 
-src/intellicrack/ui\panels\binary_panel.py:582:5: C901 'BinaryPanel._parse_pe_sections' is too complex (11)
+src/intellicrack/ui\panels\binary_panel.py:588:5: C901 'BinaryPanel._parse_pe_sections' is too complex (11)
 
-src/intellicrack/ui\panels\binary_panel.py:817:5: C901 'BinaryPanel._parse_elf_sections' is too complex (12)
+src/intellicrack/ui\panels\binary_panel.py:825:5: C901 'BinaryPanel._parse_elf_sections' is too complex (12)
 
 
 2 findings in src/intellicrack/ui\panels\hex_editor\_patches.py
@@ -227,36 +236,31 @@ src/intellicrack/ui\panels\hex_editor\_transforms.py:428:5: C901 'TransformsMixi
 
 2 findings in src/intellicrack/ui\panels\hex_tools_panel.py
 
-src/intellicrack/ui\panels\hex_tools_panel.py:179:1: C901 '_ast_eval_node' is too complex (11)
+src/intellicrack/ui\panels\hex_tools_panel.py:181:1: C901 '_ast_eval_node' is too complex (11)
 
-src/intellicrack/ui\panels\hex_tools_panel.py:1071:5: C901 'HexToolsPanel._on_base_input_changed' is too complex (11)
+src/intellicrack/ui\panels\hex_tools_panel.py:1070:5: C901 'HexToolsPanel._on_base_input_changed' is too complex (11)
 
 
 2 findings in src/intellicrack/ui\tool_config.py
 
 src/intellicrack/ui\tool_config.py:132:5: C901 'ToolInstallWorker._install_tool' is too complex (12)
 
-src/intellicrack/ui\tool_config.py:502:5: C901 'ToolStatusCheckWorker._check_cutter' is too complex (11)
+src/intellicrack/ui\tool_config.py:509:5: C901 'ToolStatusCheckWorker._check_cutter' is too complex (11)
 
 
 1 findings in src/intellicrack/bridges\binary.py
 
-src/intellicrack/bridges\binary.py:559:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
-
-
-1 findings in src/intellicrack/bridges\frida_bridge.py
-
-src/intellicrack/bridges\frida_bridge.py:546:5: C901 'FridaBridge.shutdown' is too complex (20)
+src/intellicrack/bridges\binary.py:560:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
 
 
 1 findings in src/intellicrack/bridges\process.py
 
-src/intellicrack/bridges\process.py:1151:5: C901 'ProcessBridge.search_pattern' is too complex (11)
+src/intellicrack/bridges\process.py:1156:5: C901 'ProcessBridge.search_pattern' is too complex (11)
 
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:2644:5: C901 'X64DbgBridge.find_pattern' is too complex (11)
+src/intellicrack/bridges\x64dbg.py:2645:5: C901 'X64DbgBridge.find_pattern' is too complex (11)
 
 
 1 findings in src/intellicrack/core\analysis_aggregator.py
@@ -266,12 +270,12 @@ src/intellicrack/core\analysis_aggregator.py:166:5: C901 'AnalysisAggregator._co
 
 1 findings in src/intellicrack/core\hexpat\pattern_registry.py
 
-src/intellicrack/core\hexpat\pattern_registry.py:145:5: C901 'PatternRegistry.match_file' is too complex (11)
+src/intellicrack/core\hexpat\pattern_registry.py:138:5: C901 'PatternRegistry.match_file' is too complex (11)
 
 
 1 findings in src/intellicrack/core\process_manager.py
 
-src/intellicrack/core\process_manager.py:273:5: C901 'ProcessManager._sync_cleanup' is too complex (14)
+src/intellicrack/core\process_manager.py:294:5: C901 'ProcessManager._sync_cleanup' is too complex (15)
 
 
 1 findings in src/intellicrack/core\tools.py
@@ -281,27 +285,27 @@ src/intellicrack/core\tools.py:452:5: C901 'ToolRegistry.execute_tool_call' is t
 
 1 findings in src/intellicrack/core\transform_pipeline.py
 
-src/intellicrack/core\transform_pipeline.py:93:1: C901 '_eval_ast_node' is too complex (23)
+src/intellicrack/core\transform_pipeline.py:103:1: C901 '_eval_ast_node' is too complex (23)
 
 
 1 findings in src/intellicrack/main.py
 
-src/intellicrack/main.py:584:1: C901 '_run_application' is too complex (13)
+src/intellicrack/main.py:633:1: C901 '_run_application' is too complex (13)
 
 
 1 findings in src/intellicrack/providers\anthropic.py
 
-src/intellicrack/providers\anthropic.py:431:5: C901 'AnthropicProvider.chat_stream' is too complex (13)
+src/intellicrack/providers\anthropic.py:432:5: C901 'AnthropicProvider.chat_stream' is too complex (13)
 
 
 1 findings in src/intellicrack/providers\grok.py
 
-src/intellicrack/providers\grok.py:424:5: C901 'GrokProvider.chat_stream' is too complex (19)
+src/intellicrack/providers\grok.py:425:5: C901 'GrokProvider.chat_stream' is too complex (19)
 
 
 1 findings in src/intellicrack/providers\huggingface.py
 
-src/intellicrack/providers\huggingface.py:447:5: C901 'HuggingFaceProvider.chat_stream' is too complex (20)
+src/intellicrack/providers\huggingface.py:448:5: C901 'HuggingFaceProvider.chat_stream' is too complex (20)
 
 
 1 findings in src/intellicrack/providers\model_loader.py
@@ -311,17 +315,17 @@ src/intellicrack/providers\model_loader.py:465:1: C901 'load_model_for_xpu' is t
 
 1 findings in src/intellicrack/providers\ollama.py
 
-src/intellicrack/providers\ollama.py:582:5: C901 'OllamaProvider.chat_stream' is too complex (18)
+src/intellicrack/providers\ollama.py:584:5: C901 'OllamaProvider.chat_stream' is too complex (18)
 
 
 1 findings in src/intellicrack/providers\openai.py
 
-src/intellicrack/providers\openai.py:466:5: C901 'OpenAIProvider.chat_stream' is too complex (18)
+src/intellicrack/providers\openai.py:467:5: C901 'OpenAIProvider.chat_stream' is too complex (18)
 
 
 1 findings in src/intellicrack/providers\xpu_utils.py
 
-src/intellicrack/providers\xpu_utils.py:220:1: C901 'get_xpu_device_info' is too complex (18)
+src/intellicrack/providers\xpu_utils.py:219:1: C901 'get_xpu_device_info' is too complex (18)
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_disassembly.py
@@ -331,7 +335,7 @@ src/intellicrack/ui\panels\hex_editor\_disassembly.py:119:5: C901 'DisassemblyMi
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_sections.py
 
-src/intellicrack/ui\panels\hex_editor\_sections.py:221:5: C901 'SectionsMixin._auto_detect_file_type' is too complex (12)
+src/intellicrack/ui\panels\hex_editor\_sections.py:224:5: C901 'SectionsMixin._auto_detect_file_type' is too complex (12)
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_yara.py
@@ -341,4 +345,4 @@ src/intellicrack/ui\panels\hex_editor\_yara.py:118:5: C901 'YaraMixin._on_yara_s
 
 1 findings in src/intellicrack/ui\panels\hex_editor\panel.py
 
-src/intellicrack/ui\panels\hex_editor\panel.py:709:5: C901 'HexEditorPanel.set_state_holder' is too complex (15)
+src/intellicrack/ui\panels\hex_editor\panel.py:712:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)

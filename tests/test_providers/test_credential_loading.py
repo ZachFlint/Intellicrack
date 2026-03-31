@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Unit tests for CredentialLoader.
 
 These tests validate that the CredentialLoader can properly read API keys
@@ -118,6 +123,7 @@ class TestApiKeyFormatValidation:
     @staticmethod
     def test_anthropic_key_format_validation(
         credential_loader: CredentialLoader,
+        *,
         has_anthropic_key: bool,
     ) -> None:
         """Test Anthropic API key format starts with sk-ant-."""
@@ -132,6 +138,7 @@ class TestApiKeyFormatValidation:
     @staticmethod
     def test_openai_key_format_validation(
         credential_loader: CredentialLoader,
+        *,
         has_openai_key: bool,
     ) -> None:
         """Test OpenAI API key format starts with sk-."""
@@ -146,6 +153,7 @@ class TestApiKeyFormatValidation:
     @staticmethod
     def test_openrouter_key_format_validation(
         credential_loader: CredentialLoader,
+        *,
         has_openrouter_key: bool,
     ) -> None:
         """Test OpenRouter API key format starts with sk-or-."""
@@ -160,6 +168,7 @@ class TestApiKeyFormatValidation:
     @staticmethod
     def test_google_key_exists_when_configured(
         credential_loader: CredentialLoader,
+        *,
         has_google_key: bool,
     ) -> None:
         """Test Google API key is non-empty when configured."""

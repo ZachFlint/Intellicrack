@@ -11,7 +11,7 @@ extended thinking, and prompt caching across all providers.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import pytest
@@ -47,7 +47,7 @@ def _make_test_tool() -> list[ToolDefinition]:
     """Build a minimal tool definition for testing function calling.
 
     Returns:
-        A list containing a single ToolDefinition for binary.get_file_size.
+        list[ToolDefinition]: A list containing a single ToolDefinition for binary.get_file_size.
     """
     return [
         ToolDefinition(
@@ -79,9 +79,9 @@ def _make_messages(prompt: str) -> list[Message]:
         prompt: The user message text.
 
     Returns:
-        A list containing a single user Message.
+        list[Message]: A list containing a single user Message.
     """
-    return [Message(role="user", content=prompt, timestamp=datetime.now())]
+    return [Message(role="user", content=prompt, timestamp=datetime.now(tz=UTC))]
 
 
 class TestToolChoiceRequired:

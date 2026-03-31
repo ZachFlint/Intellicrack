@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for the async bridge infrastructure.
 
 Validates BridgeCallWorker, run_bridge_coroutine (blocking),
@@ -21,6 +26,8 @@ from intellicrack.ui.panels.async_bridge import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from PyQt6.QtWidgets import QApplication
 
 
@@ -31,8 +38,12 @@ MAX_WAIT_MS = 3000
 
 
 @pytest.fixture(autouse=True, scope="session")
-def _cleanup_bridge_loop() -> object:
-    """Shut down the persistent bridge event loop after all async bridge tests."""
+def _cleanup_bridge_loop() -> Generator[None]:
+    """Shut down the persistent bridge event loop after all async bridge tests.
+
+    Yields:
+        None: Nothing (fixture exists for cleanup only).
+    """
     yield
     shutdown_bridge_loop()
     time.sleep(0.1)
@@ -224,14 +235,14 @@ class TestEnsureLoop:
     @staticmethod
     def test_returns_running_loop() -> None:
         """Verify _ensure_loop returns a running event loop."""
-        loop = async_bridge_mod._ensure_loop()
+        loop = async_bridge_mod.ensure_loop()
         assert loop.is_running()
 
     @staticmethod
     def test_returns_same_loop_on_repeated_calls() -> None:
         """Verify _ensure_loop returns the same loop instance."""
-        loop1 = async_bridge_mod._ensure_loop()
-        loop2 = async_bridge_mod._ensure_loop()
+        loop1 = async_bridge_mod.ensure_loop()
+        loop2 = async_bridge_mod.ensure_loop()
         assert loop1 is loop2
 
 

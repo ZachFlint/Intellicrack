@@ -103,7 +103,7 @@ class X64DbgPanel(AnalysisPanelBase):
     def __init__(self, parent: QWidget | None = None) -> None:
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
-        self._embedded_container: QWidget | None = None
+        self.embedded_container: QWidget | None = None
         super().__init__(parent)
 
     @override
@@ -140,7 +140,11 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._64bit_toggle = QCheckBox("64-bit")
         self._64bit_toggle.setChecked(True)
-        self._64bit_toggle.toggled.connect(self._on_toggle_64bit)
+
+        def _toggle_64bit_slot(c: int) -> None:
+            self._on_toggle_64bit(checked=bool(c))
+
+        self._64bit_toggle.toggled.connect(_toggle_64bit_slot)
         toolbar.addWidget(self._64bit_toggle)
 
         toolbar.addSeparator()
@@ -184,22 +188,22 @@ class X64DbgPanel(AnalysisPanelBase):
         native_layout.addWidget(main_splitter)
         self._main_tabs.addTab(native_container, self.tr("Analysis"))
 
-        self._embed_host = QWidget()
-        embed_layout = QVBoxLayout(self._embed_host)
+        self.embed_host = QWidget()
+        embed_layout = QVBoxLayout(self.embed_host)
         embed_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         self._embed_status_label = QLabel(self.tr("No debugger process active"))
         self._embed_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         embed_layout.addWidget(self._embed_status_label)
-        self._main_tabs.addTab(self._embed_host, self.tr("x64dbg Window"))
+        self._main_tabs.addTab(self.embed_host, self.tr("x64dbg Window"))
 
         return self._main_tabs
 
     @override
     def _cleanup(self) -> None:
         """Unregister event callback and stop the x64dbg bridge."""
-        if self._embedded_container is not None:
-            self._embedded_container.setParent(None)
-            self._embedded_container = None
+        if self.embedded_container is not None:
+            self.embedded_container.setParent(None)
+            self.embedded_container = None
         if self._bridge is not None:
             if hasattr(self._bridge, "unregister_event_callback"):
                 self._bridge.unregister_event_callback(self._on_debug_event)
@@ -228,7 +232,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(True)
+        self._disasm_view.setReadOnly(ro=True)
         set_max_block_count(self._disasm_view, 50000)
         layout.addWidget(self._disasm_view)
 
@@ -369,7 +373,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._mem_dump = QPlainTextEdit()
         self._mem_dump.setFont(fm.get_code_font(10))
-        self._mem_dump.setReadOnly(True)
+        self._mem_dump.setReadOnly(ro=True)
         set_max_block_count(self._mem_dump, 10000)
         mem_layout.addWidget(self._mem_dump)
         tabs.addTab(mem_container, self.tr("Memory"))
@@ -381,7 +385,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(fm.get_code_font(9))
-        self._console_output.setReadOnly(True)
+        self._console_output.setReadOnly(ro=True)
         set_max_block_count(self._console_output, 10000)
         console_layout.addWidget(self._console_output)
 
@@ -492,7 +496,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         def _on_embedded(container: QWidget) -> None:
-            layout = self._embed_host.layout()
+            layout = self.embed_host.layout()
             if layout is not None:
                 while layout.count():
                     item = layout.takeAt(0)
@@ -500,13 +504,13 @@ class X64DbgPanel(AnalysisPanelBase):
                     if widget is not None:
                         widget.setParent(None)
                 layout.addWidget(container)
-            self._embedded_container = container
-            self._main_tabs.setCurrentWidget(self._embed_host)
+            self.embedded_container = container
+            self._main_tabs.setCurrentWidget(self.embed_host)
             _logger.info("x64dbg_window_embedded", pid=pid)
 
         poll_and_embed(
             pid=pid,
-            parent=self._embed_host,
+            parent=self.embed_host,
             callback=_on_embedded,
             max_retries=20,
             interval_ms=500,
@@ -761,11 +765,11 @@ class X64DbgPanel(AnalysisPanelBase):
             return
         bridge_64: bool = getattr(self._bridge, "is_64bit", True)
         self._is_64bit = bridge_64
-        self._64bit_toggle.blockSignals(True)
+        self._64bit_toggle.blockSignals(b=True)
         self._64bit_toggle.setChecked(self._is_64bit)
-        self._64bit_toggle.blockSignals(False)
+        self._64bit_toggle.blockSignals(b=False)
 
-    def _on_toggle_64bit(self, checked: bool) -> None:
+    def _on_toggle_64bit(self, *, checked: bool) -> None:
         """
         Handle 64-bit toggle.
 
@@ -1051,7 +1055,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         regs = result
-        self._reg_table.blockSignals(True)
+        self._reg_table.blockSignals(b=True)
         self._reg_table.setRowCount(0)
 
         all_regs = [*_GENERAL_REGS_64, _FLAG_REG, *_SEGMENT_REGS]
@@ -1068,7 +1072,7 @@ class X64DbgPanel(AnalysisPanelBase):
             val_item = QTableWidgetItem(f"0x{value:016X}" if self._is_64bit else f"0x{value:08X}")
             self._reg_table.setItem(row, 1, val_item)
 
-        self._reg_table.blockSignals(False)
+        self._reg_table.blockSignals(b=False)
 
         if rip := getattr(regs, "rip", 0):
             self._refresh_disassembly(rip)

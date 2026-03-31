@@ -18,7 +18,7 @@ import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, runtime_checkable
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QSyntaxHighlighter, QTextCursor
 from PyQt6.QtWidgets import (
     QFrame,
@@ -36,12 +36,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.logging import get_logger
-from .highlighter import (
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.highlighter import (
     get_highlighter_for_language,
 )
-from .panel_dock import DetachedPanelWindow
-from .resources.font_manager import FontManager
+from intellicrack.ui.panel_dock import DetachedPanelWindow
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 @runtime_checkable
@@ -49,22 +49,24 @@ class ToolWidget(Protocol):
     """Protocol for embedded tool widgets."""
 
     @property
-    def tool_started(self) -> Any:
+    def tool_started(self) -> pyqtBoundSignal:
         """Get the signal emitted when the tool process starts.
 
         Returns:
-            Any: The tool-started signal, or None if not implemented.
+            pyqtBoundSignal: The tool-started signal.
         """
-        return None
+        _ = self
+        return cast("pyqtBoundSignal", pyqtSignal())
 
     @property
-    def tool_closed(self) -> Any:
+    def tool_closed(self) -> pyqtBoundSignal:
         """Get the signal emitted when the tool process closes.
 
         Returns:
-            Any: The tool-closed signal, or None if not implemented.
+            pyqtBoundSignal: The tool-closed signal.
         """
-        return None
+        _ = self
+        return cast("pyqtBoundSignal", pyqtSignal())
 
     def start_tool(self) -> bool:
         """Launch the external tool process.
@@ -114,7 +116,7 @@ class HexEditorPanelProtocol(ToolWidget, Protocol):
 class X64DbgWidgetProtocol(ToolWidget, Protocol):
     """Protocol for x64dbg debugger widget integration."""
 
-    def set_bridge(self, bridge: Any) -> None:
+    def set_bridge(self, bridge: X64DbgBridge) -> None:
         """Set the X64DbgBridge instance.
 
         Args:
@@ -139,7 +141,7 @@ class X64DbgWidgetProtocol(ToolWidget, Protocol):
 class CutterWidgetProtocol(ToolWidget, Protocol):
     """Protocol for Cutter reverse engineering widget integration."""
 
-    def set_bridge(self, bridge: Any) -> None:
+    def set_bridge(self, bridge: CutterBridge) -> None:
         """Set the CutterBridge instance.
 
         Args:
@@ -164,7 +166,7 @@ class CutterWidgetProtocol(ToolWidget, Protocol):
 class GhidraWidgetProtocol(ToolWidget, Protocol):
     """Protocol for Ghidra reverse engineering widget integration."""
 
-    def set_bridge(self, bridge: Any) -> None:
+    def set_bridge(self, bridge: GhidraBridge) -> None:
         """Set the GhidraBridge instance.
 
         Args:
@@ -189,7 +191,7 @@ class GhidraWidgetProtocol(ToolWidget, Protocol):
 class FridaPanelProtocol(ToolWidget, Protocol):
     """Protocol for Frida instrumentation panel."""
 
-    def set_bridge(self, bridge: Any) -> None:
+    def set_bridge(self, bridge: FridaBridge) -> None:
         """Set the FridaBridge instance.
 
         Args:
@@ -230,13 +232,14 @@ class ProcessPanelProtocol(ToolWidget, Protocol):
     """Protocol for process management panel."""
 
     @property
-    def process_attached(self) -> Any:
+    def process_attached(self) -> pyqtBoundSignal:
         """Get the signal emitted with PID when a process is attached.
 
         Returns:
-            Any: The process-attached signal, or None if not implemented.
+            pyqtBoundSignal: The process-attached signal.
         """
-        return None
+        _ = self
+        return cast("pyqtBoundSignal", pyqtSignal())
 
     def get_selected_pid(self) -> int | None:
         """Get the currently selected process ID.
@@ -269,7 +272,7 @@ class BinaryPanelProtocol(ToolWidget, Protocol):
 class SandboxPanelProtocol(ToolWidget, Protocol):
     """Protocol for sandbox management panel."""
 
-    def set_sandbox(self, sandbox: Any) -> None:
+    def set_sandbox(self, sandbox: SandboxBase) -> None:
         """Set the sandbox backend instance.
 
         Args:
@@ -286,7 +289,7 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         _ = self
         return None
 
-    def set_sandbox_manager(self, manager: object) -> None:
+    def set_sandbox_manager(self, manager: SandboxManager) -> None:
         """Set the sandbox manager for type-aware sandbox creation.
 
         Args:
@@ -298,12 +301,20 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ..core.script_gen import ScriptManager, ScriptValidator
-    from ..core.types import BridgeAnalysisSummary
-    from ..sandbox.base import SandboxBase
-    from .panels.analysis_panel import BridgeAnalysisPanel
-    from .panels.script_manager import ScriptManagerPanel
-    from .panels.stack_viewer import StackViewerPanel
+    from intellicrack.bridges.base import ToolBridgeBase
+    from intellicrack.bridges.cutter import CutterBridge
+    from intellicrack.bridges.frida_bridge import FridaBridge
+    from intellicrack.bridges.ghidra import GhidraBridge
+    from intellicrack.bridges.x64dbg import X64DbgBridge
+    from intellicrack.core.script_gen import ScriptManager, ScriptValidator
+    from intellicrack.core.tools import ToolRegistry
+    from intellicrack.core.types import BridgeAnalysisSummary
+    from intellicrack.sandbox.base import SandboxBase
+    from intellicrack.sandbox.manager import SandboxManager
+    from intellicrack.ui.panels.analysis_panel import BridgeAnalysisPanel
+    from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
+    from intellicrack.ui.panels.script_manager import ScriptManagerPanel
+    from intellicrack.ui.panels.stack_viewer import StackViewerPanel
 
 _logger = get_logger("ui.tools")
 
@@ -451,8 +462,8 @@ class ToolTab(QFrame):
 
         self._splitter = QSplitter(Qt.Orientation.Vertical)
 
-        self._code_display = CodeDisplay(self._language)
-        self._splitter.addWidget(self._code_display)
+        self.code_display = CodeDisplay(self._language)
+        self._splitter.addWidget(self.code_display)
 
         self._info_panel = QFrame()
         self._info_panel.setMaximumHeight(_INFO_MAX_HEIGHT)
@@ -486,7 +497,7 @@ class ToolTab(QFrame):
         Args:
             content: Text content to display.
         """
-        self._code_display.set_content(content)
+        self.code_display.set_content(content)
 
     def set_info(self, header: str, content: str) -> None:
         """Set the info panel content.
@@ -504,7 +515,7 @@ class ToolTab(QFrame):
         Args:
             language: Programming language.
         """
-        self._code_display.set_language(language)
+        self.code_display.set_language(language)
 
     def goto_line(self, line_number: int) -> None:
         """Scroll to a specific line.
@@ -512,7 +523,7 @@ class ToolTab(QFrame):
         Args:
             line_number: 1-based line number.
         """
-        self._code_display.goto_line(line_number)
+        self.code_display.goto_line(line_number)
 
     def append_content(self, content: str) -> None:
         """Append content to the display.
@@ -520,7 +531,7 @@ class ToolTab(QFrame):
         Args:
             content: Text content to append.
         """
-        self._code_display.append_content(content)
+        self.code_display.append_content(content)
 
 
 class FunctionListPanel(QFrame):
@@ -566,11 +577,11 @@ class FunctionListPanel(QFrame):
 
         layout.addWidget(header)
 
-        self._list_widget = QListWidget()
-        self._list_widget.setFont(FontManager.get_instance().get_code_font(9))
-        self._list_widget.setObjectName("function_list")
-        self._list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
-        layout.addWidget(self._list_widget)
+        self.list_widget = QListWidget()
+        self.list_widget.setFont(FontManager.get_instance().get_code_font(9))
+        self.list_widget.setObjectName("function_list")
+        self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
+        layout.addWidget(self.list_widget)
 
         self.setObjectName("function_list_panel")
 
@@ -597,9 +608,9 @@ class FunctionListPanel(QFrame):
         self._functions = functions
         self._count_label.setText(f"({len(functions)})")
 
-        self._list_widget.clear()
+        self.list_widget.clear()
         for name, address in functions:
-            self._list_widget.addItem(f"0x{address:08X}  {name}")
+            self.list_widget.addItem(f"0x{address:08X}  {name}")
 
     def get_functions(self) -> list[tuple[str, int]]:
         """Get the current list of functions.
@@ -648,12 +659,12 @@ class XRefPanel(QFrame):
 
         layout.addWidget(header)
 
-        self._xref_display = QTreeWidget()
-        self._xref_display.setHeaderHidden(True)
-        self._xref_display.setFont(FontManager.get_instance().get_code_font(9))
-        self._xref_display.setObjectName("xref_display")
-        self._xref_display.itemClicked.connect(self._on_item_clicked)
-        layout.addWidget(self._xref_display)
+        self.xref_display = QTreeWidget()
+        self.xref_display.setHeaderHidden(True)
+        self.xref_display.setFont(FontManager.get_instance().get_code_font(9))
+        self.xref_display.setObjectName("xref_display")
+        self.xref_display.itemClicked.connect(self._on_item_clicked)
+        layout.addWidget(self.xref_display)
 
         self.setObjectName("xref_panel")
 
@@ -684,16 +695,16 @@ class XRefPanel(QFrame):
             incoming: List of (address, description) for refs to this location.
             outgoing: List of (address, description) for refs from this location.
         """
-        self._xref_display.clear()
+        self.xref_display.clear()
 
         if incoming:
-            incoming_root = QTreeWidgetItem(self._xref_display, ["=== References TO ==="])
+            incoming_root = QTreeWidgetItem(self.xref_display, ["=== References TO ==="])
             incoming_root.setExpanded(True)
             for addr, desc in incoming:
                 QTreeWidgetItem(incoming_root, [f"0x{addr:08X}  {desc}"])
 
         if outgoing:
-            outgoing_root = QTreeWidgetItem(self._xref_display, ["=== References FROM ==="])
+            outgoing_root = QTreeWidgetItem(self.xref_display, ["=== References FROM ==="])
             outgoing_root.setExpanded(True)
             for addr, desc in outgoing:
                 QTreeWidgetItem(outgoing_root, [f"0x{addr:08X}  {desc}"])
@@ -713,6 +724,7 @@ class ToolOutputPanel(QFrame):
         address_clicked: Signal emitted when an address is clicked.
         embedded_tool_started: Signal emitted when embedded tool starts.
         embedded_tool_closed: Signal emitted when embedded tool closes.
+        hex_context_ready: Signal emitted when hex context is formatted for AI.
     """
 
     address_clicked: pyqtSignal = pyqtSignal(int)
@@ -722,9 +734,9 @@ class ToolOutputPanel(QFrame):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._tabs: dict[str, ToolTab] = {}
-        self._embedded_tools: dict[str, QWidget] = {}
-        self._panels: dict[str, QWidget] = {}
+        self.tabs: dict[str, ToolTab] = {}
+        self.embedded_tools: dict[str, QWidget] = {}
+        self.panels: dict[str, QWidget] = {}
         self._detached_windows: dict[str, DetachedPanelWindow] = {}
         self._setup_ui()
         self._setup_embedded_tabs()
@@ -747,14 +759,14 @@ class ToolOutputPanel(QFrame):
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        self._address_label = QLabel()
-        self._address_label.setFont(FontManager.get_instance().get_code_font(10))
-        self._address_label.setObjectName("code_label")
-        header_layout.addWidget(self._address_label)
+        self.address_label = QLabel()
+        self.address_label.setFont(FontManager.get_instance().get_code_font(10))
+        self.address_label.setObjectName("code_label")
+        header_layout.addWidget(self.address_label)
 
         layout.addWidget(header)
 
-        self._main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         left_panel = QFrame()
         left_panel.setMinimumWidth(_LEFT_MIN_WIDTH)
@@ -762,18 +774,18 @@ class ToolOutputPanel(QFrame):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
 
-        self._tab_widget = QTabWidget()
-        self._tab_widget.setObjectName("analysis_tabs")
-        self._tab_widget.setTabsClosable(True)
-        tab_bar = self._tab_widget.tabBar()
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setObjectName("analysis_tabs")
+        self.tab_widget.setTabsClosable(True)
+        tab_bar = self.tab_widget.tabBar()
         if tab_bar is not None:
             tab_bar.setMovable(True)
             tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
-        self._tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
+        self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
 
-        left_layout.addWidget(self._tab_widget)
-        self._main_splitter.addWidget(left_panel)
+        left_layout.addWidget(self.tab_widget)
+        self.main_splitter.addWidget(left_panel)
 
         right_panel = QFrame()
         right_panel.setMinimumWidth(_RIGHT_MIN_WIDTH)
@@ -781,18 +793,18 @@ class ToolOutputPanel(QFrame):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
 
-        self._func_list = FunctionListPanel()
-        self._func_list.function_selected.connect(self._on_function_selected)
-        right_layout.addWidget(self._func_list)
+        self.func_list = FunctionListPanel()
+        self.func_list.function_selected.connect(self._on_function_selected)
+        right_layout.addWidget(self.func_list)
 
-        self._xref_panel = XRefPanel()
-        self._xref_panel.xref_selected.connect(self._on_xref_selected)
-        right_layout.addWidget(self._xref_panel)
+        self.xref_panel = XRefPanel()
+        self.xref_panel.xref_selected.connect(self._on_xref_selected)
+        right_layout.addWidget(self.xref_panel)
 
-        self._main_splitter.addWidget(right_panel)
-        self._main_splitter.setSizes([_DEFAULT_SPLIT_LEFT, _DEFAULT_SPLIT_RIGHT])
+        self.main_splitter.addWidget(right_panel)
+        self.main_splitter.setSizes([_DEFAULT_SPLIT_LEFT, _DEFAULT_SPLIT_RIGHT])
 
-        layout.addWidget(self._main_splitter)
+        layout.addWidget(self.main_splitter)
 
         self.setObjectName("analysis_panel")
 
@@ -821,7 +833,7 @@ class ToolOutputPanel(QFrame):
             tab_name: Name of the tab.
             content: Text content to display.
         """
-        if tab := self._tabs.get(tab_name.lower()):
+        if tab := self.tabs.get(tab_name.lower()):
             tab.set_content(content)
 
     def set_tab_info(self, tab_name: OutputType, header: str, content: str) -> None:
@@ -832,7 +844,7 @@ class ToolOutputPanel(QFrame):
             header: Info header text.
             content: Info content text.
         """
-        if tab := self._tabs.get(tab_name.lower()):
+        if tab := self.tabs.get(tab_name.lower()):
             tab.set_info(header, content)
 
     def append_tab_content(self, tab_name: OutputType, content: str) -> None:
@@ -842,7 +854,7 @@ class ToolOutputPanel(QFrame):
             tab_name: Name of the tab.
             content: Text content to append.
         """
-        if tab := self._tabs.get(tab_name.lower()):
+        if tab := self.tabs.get(tab_name.lower()):
             tab.append_content(content)
 
     def set_current_address(self, address: int) -> None:
@@ -851,7 +863,7 @@ class ToolOutputPanel(QFrame):
         Args:
             address: Memory address.
         """
-        self._address_label.setText(f"0x{address:08X}")
+        self.address_label.setText(f"0x{address:08X}")
 
     def set_functions(self, functions: list[tuple[str, int]]) -> None:
         """Set the function list.
@@ -859,7 +871,7 @@ class ToolOutputPanel(QFrame):
         Args:
             functions: List of (name, address) tuples.
         """
-        self._func_list.set_functions(functions)
+        self.func_list.set_functions(functions)
 
     def set_xrefs(
         self,
@@ -872,7 +884,7 @@ class ToolOutputPanel(QFrame):
             incoming: List of (address, description) for refs to this location.
             outgoing: List of (address, description) for refs from this location.
         """
-        self._xref_panel.set_xrefs(incoming, outgoing)
+        self.xref_panel.set_xrefs(incoming, outgoing)
 
     def activate_tab(self, tab_name: OutputType) -> None:
         """Activate a specific tab.
@@ -880,11 +892,11 @@ class ToolOutputPanel(QFrame):
         Args:
             tab_name: Name of the tab to activate.
         """
-        if tab := self._tabs.get(tab_name.lower()):
-            index = self._tab_widget.indexOf(tab)
+        if tab := self.tabs.get(tab_name.lower()):
+            index = self.tab_widget.indexOf(tab)
             if index >= 0:
-                self._tab_widget.setCurrentIndex(index)
-        elif widget := self._panels.get(tab_name.lower()) or self._embedded_tools.get(tab_name.lower()):
+                self.tab_widget.setCurrentIndex(index)
+        elif widget := self.panels.get(tab_name.lower()) or self.embedded_tools.get(tab_name.lower()):
             self._activate_tab_by_widget(widget)
 
     def log(self, message: str) -> None:
@@ -895,10 +907,10 @@ class ToolOutputPanel(QFrame):
         Args:
             message: Message to log.
         """
-        if "log" not in self._tabs:
+        if "log" not in self.tabs:
             log_tab = ToolTab("Log", "python")
-            self._tabs["log"] = log_tab
-            self._tab_widget.addTab(log_tab, "Log")
+            self.tabs["log"] = log_tab
+            self.tab_widget.addTab(log_tab, "Log")
         self.append_tab_content("log", message)
 
     def clear_tab(self, tab_name: OutputType) -> None:
@@ -907,22 +919,22 @@ class ToolOutputPanel(QFrame):
         Args:
             tab_name: Name of the tab to clear.
         """
-        if tab := self._tabs.get(tab_name.lower()):
+        if tab := self.tabs.get(tab_name.lower()):
             tab.set_content("")
 
     def clear_all(self) -> None:
         """Clear all tab contents."""
-        for tab in self._tabs.values():
+        for tab in self.tabs.values():
             tab.set_content("")
-        self._func_list.set_functions([])
-        self._xref_panel.set_xrefs([], [])
-        self._address_label.setText("")
+        self.func_list.set_functions([])
+        self.xref_panel.set_xrefs([], [])
+        self.address_label.setText("")
 
     def _setup_embedded_tabs(self) -> None:
         """Set up tabs for embedded tools and analysis panels."""
-        self._analysis_panel: BridgeAnalysisPanel | None = None
-        self._script_panel: ScriptManagerPanel | None = None
-        self._stack_panel: StackViewerPanel | None = None
+        self.analysis_panel: BridgeAnalysisPanel | None = None
+        self.script_panel: ScriptManagerPanel | None = None
+        self.stack_panel: StackViewerPanel | None = None
         self._hex_editor_panel: HexEditorPanelProtocol | None = None
         self._hex_tools_panel: QWidget | None = None
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
@@ -931,20 +943,20 @@ class ToolOutputPanel(QFrame):
         self._frida_panel: FridaPanelProtocol | None = None
         self._process_panel: ProcessPanelProtocol | None = None
         self._binary_panel: BinaryPanelProtocol | None = None
-        self._sandbox_panel: SandboxPanelProtocol | None = None
+        self.sandbox_panel: SandboxPanelProtocol | None = None
 
-        self._x64dbg_bridge: object | None = None
-        self._ghidra_bridge: object | None = None
-        self._cutter_bridge: object | None = None
-        self._frida_bridge: object | None = None
+        self.x64dbg_bridge: Any | None = None
+        self.ghidra_bridge: Any | None = None
+        self.cutter_bridge: Any | None = None
+        self.frida_bridge: Any | None = None
 
-        self._tool_registry: object | None = None
+        self._tool_registry: Any | None = None
 
-        self._pending_sandbox_backend: object | None = None
-        self._pending_script_backend: object | None = None
-        self._pending_script_validator: object | None = None
+        self._pending_sandbox_backend: Any | None = None
+        self._pending_script_backend: Any | None = None
+        self._pending_script_validator: Any | None = None
 
-    def set_tool_registry(self, registry: object) -> None:
+    def set_tool_registry(self, registry: ToolRegistry) -> None:
         """Set the shared tool registry for bridge reuse.
 
         Args:
@@ -959,14 +971,14 @@ class ToolOutputPanel(QFrame):
         Returns:
             BridgeAnalysisPanel: The created BridgeAnalysisPanel widget.
         """
-        if self._analysis_panel is not None:
-            return self._analysis_panel
+        if self.analysis_panel is not None:
+            return self.analysis_panel
 
         panel_module = importlib.import_module(".panels.analysis_panel", "intellicrack.ui")
         panel = cast("BridgeAnalysisPanel", panel_module.BridgeAnalysisPanel())
-        self._analysis_panel = panel
-        self._tab_widget.addTab(panel, "Analysis")
-        self._panels["analysis"] = panel
+        self.analysis_panel = panel
+        self.tab_widget.addTab(panel, "Analysis")
+        self.panels["analysis"] = panel
         _logger.info("analysis_panel_added", tab="Analysis")
         return panel
 
@@ -976,18 +988,18 @@ class ToolOutputPanel(QFrame):
         Returns:
             QWidget: The created ScriptManagerPanel widget.
         """
-        if self._script_panel is not None:
-            return self._script_panel
+        if self.script_panel is not None:
+            return self.script_panel
 
         panel_module = importlib.import_module(".panels.script_manager", "intellicrack.ui")
         raw_widget = panel_module.ScriptManagerPanel()
-        self._script_panel = cast("ScriptManagerPanel", raw_widget)
+        self.script_panel = cast("ScriptManagerPanel", raw_widget)
         qwidget = cast("QWidget", raw_widget)
-        self._tab_widget.addTab(qwidget, "Scripts")
-        self._panels["scripts"] = qwidget
+        self.tab_widget.addTab(qwidget, "Scripts")
+        self.panels["scripts"] = qwidget
 
         if self._pending_script_backend is not None:
-            self._script_panel.set_backend(
+            self.script_panel.set_backend(
                 cast("ScriptManager", self._pending_script_backend),
                 validator=cast("ScriptValidator | None", self._pending_script_validator),
             )
@@ -1003,17 +1015,17 @@ class ToolOutputPanel(QFrame):
         Returns:
             QWidget: The created StackViewerPanel widget.
         """
-        if self._stack_panel is not None:
-            return self._stack_panel
+        if self.stack_panel is not None:
+            return self.stack_panel
 
         panel_module = importlib.import_module(".panels.stack_viewer", "intellicrack.ui")
         raw_widget = panel_module.StackViewerPanel()
-        self._stack_panel = cast("StackViewerPanel", raw_widget)
+        self.stack_panel = cast("StackViewerPanel", raw_widget)
         qwidget = cast("QWidget", raw_widget)
-        self._tab_widget.addTab(qwidget, "Stack")
-        self._panels["stack"] = qwidget
+        self.tab_widget.addTab(qwidget, "Stack")
+        self.panels["stack"] = qwidget
 
-        add_source = getattr(self._stack_panel, "add_source", None)
+        add_source = getattr(self.stack_panel, "add_source", None)
         if callable(add_source):
             add_source("orchestrator", self)
 
@@ -1036,13 +1048,13 @@ class ToolOutputPanel(QFrame):
             qwidget = cast("QWidget", raw_widget)
             self._hex_editor_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("hex_editor"))
             self._hex_editor_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hex_editor"))
-            self._tab_widget.addTab(qwidget, "Hex Editor")
-            self._embedded_tools["hex_editor"] = qwidget
+            self.tab_widget.addTab(qwidget, "Hex Editor")
+            self.embedded_tools["hex_editor"] = qwidget
 
             self._wire_hex_editor_state(raw_widget)
 
             _logger.info("hex_editor_tab_added", tab="Hex Editor")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("hex_editor_tab_add_failed", error=str(e))
             return None
         else:
@@ -1061,15 +1073,15 @@ class ToolOutputPanel(QFrame):
             panel_module = importlib.import_module(".panels.hex_tools_panel", "intellicrack.ui")
             panel = panel_module.HexToolsPanel()
             self._hex_tools_panel = panel
-            self._tab_widget.addTab(panel, "Hex Tools")
+            self.tab_widget.addTab(panel, "Hex Tools")
             _logger.info("hex_tools_tab_added")
-        except Exception as exc:
+        except (RuntimeError, ImportError, AttributeError) as exc:
             _logger.warning("hex_tools_tab_add_failed", error=str(exc))
             return None
         else:
             return self._hex_tools_panel
 
-    def add_x64dbg_tab(self, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
+    def add_x64dbg_tab(self, *, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
         """Add the x64dbg debugger as a native panel tab.
 
         Args:
@@ -1089,33 +1101,33 @@ class ToolOutputPanel(QFrame):
             self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
             self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
             tab_name = "x64dbg" if is_64bit else "x32dbg"
-            self._tab_widget.addTab(qwidget, tab_name)
-            self._embedded_tools["x64dbg"] = qwidget
+            self.tab_widget.addTab(qwidget, tab_name)
+            self.embedded_tools["x64dbg"] = qwidget
 
-            bridge: object | None = None
+            bridge: Any | None = None
             reg_getter = getattr(self._tool_registry, "get_x64dbg_bridge", None)
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
                     _logger.info("x64dbg_bridge_from_registry", source="registry")
-                except Exception:
+                except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("x64dbg_bridge_registry_fallback", exc_info=True)
 
             if bridge is None:
                 try:
                     bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
                     bridge = bridge_module.X64DbgBridge()
-                except Exception as bridge_err:
+                except (RuntimeError, ImportError, AttributeError) as bridge_err:
                     _logger.warning("x64dbg_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._x64dbg_widget.set_bridge(bridge)
-                self._x64dbg_bridge = bridge
+                self.x64dbg_bridge = bridge
                 self._wire_stack_viewer_bridges()
                 _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
 
             _logger.info("x64dbg_tab_added", is_64bit=is_64bit)
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("x64dbg_tab_add_failed", error=str(e))
             return None
         else:
@@ -1137,32 +1149,32 @@ class ToolOutputPanel(QFrame):
             qwidget = cast("QWidget", raw_widget)
             self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
             self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
-            self._tab_widget.addTab(qwidget, "Cutter")
-            self._embedded_tools["cutter"] = qwidget
+            self.tab_widget.addTab(qwidget, "Cutter")
+            self.embedded_tools["cutter"] = qwidget
 
-            bridge: object | None = None
+            bridge: Any | None = None
             reg_getter = getattr(self._tool_registry, "get_cutter_bridge", None)
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
                     _logger.info("cutter_bridge_from_registry", source="registry")
-                except Exception:
+                except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("cutter_bridge_registry_fallback", exc_info=True)
 
             if bridge is None:
                 try:
                     bridge_module = importlib.import_module("intellicrack.bridges.cutter")
                     bridge = bridge_module.CutterBridge()
-                except Exception as bridge_err:
+                except (RuntimeError, ImportError, AttributeError) as bridge_err:
                     _logger.warning("cutter_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._cutter_widget.set_bridge(bridge)
-                self._cutter_bridge = bridge
+                self.cutter_bridge = bridge
                 _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
 
             _logger.info("cutter_tab_added", tab="Cutter")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("cutter_tab_add_failed", error=str(e))
             return None
         else:
@@ -1184,32 +1196,32 @@ class ToolOutputPanel(QFrame):
             qwidget = cast("QWidget", raw_widget)
             self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
             self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
-            self._tab_widget.addTab(qwidget, "Ghidra")
-            self._embedded_tools["ghidra"] = qwidget
+            self.tab_widget.addTab(qwidget, "Ghidra")
+            self.embedded_tools["ghidra"] = qwidget
 
-            bridge: object | None = None
+            bridge: Any | None = None
             reg_getter = getattr(self._tool_registry, "get_ghidra_bridge", None)
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
                     _logger.info("ghidra_bridge_from_registry", source="registry")
-                except Exception:
+                except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("ghidra_bridge_registry_fallback", exc_info=True)
 
             if bridge is None:
                 try:
                     bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
                     bridge = bridge_module.GhidraBridge()
-                except Exception as bridge_err:
+                except (RuntimeError, ImportError, AttributeError) as bridge_err:
                     _logger.warning("ghidra_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._ghidra_widget.set_bridge(bridge)
-                self._ghidra_bridge = bridge
+                self.ghidra_bridge = bridge
                 _logger.info("ghidra_bridge_set", bridge_type=type(bridge).__name__)
 
             _logger.info("ghidra_tab_added", tab="Ghidra")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("ghidra_tab_add_failed", error=str(e))
             return None
         else:
@@ -1231,33 +1243,33 @@ class ToolOutputPanel(QFrame):
             qwidget = cast("QWidget", raw_widget)
             self._frida_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("frida"))
             self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
-            self._tab_widget.addTab(qwidget, "Frida")
-            self._panels["frida"] = qwidget
+            self.tab_widget.addTab(qwidget, "Frida")
+            self.panels["frida"] = qwidget
 
-            bridge: object | None = None
+            bridge: Any | None = None
             reg_getter = getattr(self._tool_registry, "get_frida_bridge", None)
             if callable(reg_getter):
                 try:
                     bridge = reg_getter()
                     _logger.info("frida_bridge_from_registry", source="registry")
-                except Exception:
+                except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("frida_bridge_registry_fallback", exc_info=True)
 
             if bridge is None:
                 try:
                     bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
                     bridge = bridge_module.FridaBridge()
-                except Exception as bridge_err:
+                except (RuntimeError, ImportError, AttributeError) as bridge_err:
                     _logger.warning("frida_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
                 self._frida_panel.set_bridge(bridge)
-                self._frida_bridge = bridge
+                self.frida_bridge = bridge
                 self._wire_stack_viewer_bridges()
                 _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
             _logger.info("frida_tab_added", tab="Frida")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("frida_tab_add_failed", error=str(e))
             return None
         else:
@@ -1279,10 +1291,10 @@ class ToolOutputPanel(QFrame):
             qwidget = cast("QWidget", raw_widget)
             self._process_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("process"))
             self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
-            self._tab_widget.addTab(qwidget, "Process")
-            self._panels["process"] = qwidget
+            self.tab_widget.addTab(qwidget, "Process")
+            self.panels["process"] = qwidget
             _logger.info("process_tab_added", tab="Processes")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("process_tab_add_failed", error=str(e))
             return None
         else:
@@ -1304,10 +1316,10 @@ class ToolOutputPanel(QFrame):
             qwidget = cast("QWidget", raw_widget)
             self._binary_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("binary"))
             self._binary_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("binary"))
-            self._tab_widget.addTab(qwidget, "Binary")
-            self._panels["binary"] = qwidget
+            self.tab_widget.addTab(qwidget, "Binary")
+            self.panels["binary"] = qwidget
             _logger.info("binary_tab_added", tab="Binary")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("binary_tab_add_failed", error=str(e))
             return None
         else:
@@ -1319,8 +1331,8 @@ class ToolOutputPanel(QFrame):
         Returns:
             SandboxPanelProtocol | None: The created SandboxPanel or None if creation failed.
         """
-        if self._sandbox_panel is not None:
-            return self._sandbox_panel
+        if self.sandbox_panel is not None:
+            return self.sandbox_panel
 
         try:
             sandbox_config_mod = importlib.import_module(".sandbox_config", "intellicrack.ui")
@@ -1331,16 +1343,16 @@ class ToolOutputPanel(QFrame):
 
             panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
             raw_widget = panel_module.SandboxPanel()
-            self._sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
+            self.sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
             qwidget = cast("QWidget", raw_widget)
-            self._sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
-            self._sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
-            self._tab_widget.addTab(qwidget, "Sandbox")
-            self._panels["sandbox"] = qwidget
+            self.sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
+            self.sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
+            self.tab_widget.addTab(qwidget, "Sandbox")
+            self.panels["sandbox"] = qwidget
 
             if self._pending_sandbox_backend is not None:
-                if hasattr(self._sandbox_panel, "set_sandbox"):
-                    self._sandbox_panel.set_sandbox(self._pending_sandbox_backend)
+                if hasattr(self.sandbox_panel, "set_sandbox"):
+                    self.sandbox_panel.set_sandbox(self._pending_sandbox_backend)
                 self._pending_sandbox_backend = None
 
             monitor_cls = getattr(sandbox_config_mod, "SandboxMonitorWidget", None)
@@ -1351,11 +1363,11 @@ class ToolOutputPanel(QFrame):
                     layout.addWidget(monitor)
 
             _logger.info("sandbox_tab_added", tab="Sandbox")
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("sandbox_tab_add_failed", error=str(e))
             return None
         else:
-            return self._sandbox_panel
+            return self.sandbox_panel
 
     def open_in_ghidra(self, file_path: Path | str) -> bool:
         """Open a file in the embedded Ghidra tool.
@@ -1427,6 +1439,7 @@ class ToolOutputPanel(QFrame):
     def open_in_x64dbg(
         self,
         file_path: Path | str,
+        *,
         is_64bit: bool = True,
     ) -> bool:
         """Open a file in the embedded x64dbg debugger.
@@ -1439,7 +1452,7 @@ class ToolOutputPanel(QFrame):
             bool: True if the file was opened successfully.
         """
         if self._x64dbg_widget is None:
-            widget = self.add_x64dbg_tab(is_64bit)
+            widget = self.add_x64dbg_tab(is_64bit=is_64bit)
             if widget is None:
                 return False
 
@@ -1481,9 +1494,9 @@ class ToolOutputPanel(QFrame):
         Args:
             widget: The widget whose tab should be activated.
         """
-        index = self._tab_widget.indexOf(widget)
+        index = self.tab_widget.indexOf(widget)
         if index >= 0:
-            self._tab_widget.setCurrentIndex(index)
+            self.tab_widget.setCurrentIndex(index)
 
     def get_embedded_tool(self, tool_id: OutputType) -> QWidget | None:
         """Get an embedded tool widget by ID.
@@ -1494,7 +1507,7 @@ class ToolOutputPanel(QFrame):
         Returns:
             QWidget | None: The embedded tool widget or None if not available.
         """
-        return self._embedded_tools.get(tool_id.lower())
+        return self.embedded_tools.get(tool_id.lower())
 
     def get_panel(self, panel_id: OutputType) -> QWidget | None:
         """Get a panel widget by ID.
@@ -1505,7 +1518,7 @@ class ToolOutputPanel(QFrame):
         Returns:
             QWidget | None: The panel widget or None if not available.
         """
-        return self._panels.get(panel_id.lower())
+        return self.panels.get(panel_id.lower())
 
     def update_bridge_analysis(self, analysis: BridgeAnalysisSummary) -> None:
         """Update the analysis panel with new bridge analysis data.
@@ -1513,36 +1526,36 @@ class ToolOutputPanel(QFrame):
         Args:
             analysis: The bridge analysis data to display.
         """
-        if self._analysis_panel is None:
+        if self.analysis_panel is None:
             self.add_analysis_panel()
 
-        if self._analysis_panel is not None:
-            self._analysis_panel.set_analysis(analysis)
+        if self.analysis_panel is not None:
+            self.analysis_panel.set_analysis(analysis)
             _logger.info("bridge_analysis_updated", has_panel=True)
 
     def activate_analysis_tab(self) -> None:
         """Activate the bridge analysis tab."""
-        if self._analysis_panel is None:
+        if self.analysis_panel is None:
             self.add_analysis_panel()
-        if self._analysis_panel is not None:
-            self._activate_tab_by_widget(self._analysis_panel)
+        if self.analysis_panel is not None:
+            self._activate_tab_by_widget(self.analysis_panel)
 
     def activate_scripts_tab(self) -> None:
         """Activate the scripts manager tab."""
-        if self._script_panel is None:
+        if self.script_panel is None:
             self.add_script_panel()
-        if self._script_panel is not None:
-            self._activate_tab_by_widget(self._script_panel)
+        if self.script_panel is not None:
+            self._activate_tab_by_widget(self.script_panel)
 
     def activate_stack_tab(self) -> None:
         """Activate the stack viewer tab."""
-        if self._stack_panel is None:
+        if self.stack_panel is None:
             self.add_stack_panel()
-        if self._stack_panel is not None:
-            self._activate_tab_by_widget(self._stack_panel)
+        if self.stack_panel is not None:
+            self._activate_tab_by_widget(self.stack_panel)
 
     @staticmethod
-    def _cleanup_bridge(bridge: object, bridge_attr: str) -> None:
+    def _cleanup_bridge(bridge: ToolBridgeBase, bridge_attr: str) -> None:
         """Safely clean up a bridge, handling both sync and async methods.
 
         Args:
@@ -1560,7 +1573,7 @@ class ToolOutputPanel(QFrame):
                         run_coro(method())
                     else:
                         method()
-                except Exception:
+                except (RuntimeError, OSError, AttributeError):
                     _logger.warning(
                         "bridge_cleanup_error",
                         exc_info=True,
@@ -1577,22 +1590,22 @@ class ToolOutputPanel(QFrame):
         Args:
             index: Tab index to close.
         """
-        widget = self._tab_widget.widget(index)
+        widget = self.tab_widget.widget(index)
         if widget is None:
             return
 
         panel_registry: tuple[tuple[str, str | None], ...] = (
-            ("_ghidra_widget", "_ghidra_bridge"),
-            ("_cutter_widget", "_cutter_bridge"),
-            ("_x64dbg_widget", "_x64dbg_bridge"),
+            ("_ghidra_widget", "ghidra_bridge"),
+            ("_cutter_widget", "cutter_bridge"),
+            ("_x64dbg_widget", "x64dbg_bridge"),
             ("_hex_editor_panel", None),
-            ("_frida_panel", "_frida_bridge"),
+            ("_frida_panel", "frida_bridge"),
             ("_process_panel", None),
             ("_binary_panel", None),
             ("_sandbox_panel", None),
-            ("_analysis_panel", None),
-            ("_script_panel", None),
-            ("_stack_panel", None),
+            ("analysis_panel", None),
+            ("script_panel", None),
+            ("stack_panel", None),
         )
 
         widget_id = id(widget)
@@ -1618,16 +1631,16 @@ class ToolOutputPanel(QFrame):
 
                 setattr(self, attr_name, None)
 
-            for tracking_dict in (self._embedded_tools, self._panels):
+            for tracking_dict in (self.embedded_tools, self.panels):
                 keys_to_remove = [k for k, v in tracking_dict.items() if id(v) == widget_id]
                 for k in keys_to_remove:
                     del tracking_dict[k]
         else:
-            keys_to_remove = [k for k, v in self._tabs.items() if id(v) == widget_id]
+            keys_to_remove = [k for k, v in self.tabs.items() if id(v) == widget_id]
             for k in keys_to_remove:
-                del self._tabs[k]
+                del self.tabs[k]
 
-        self._tab_widget.removeTab(index)
+        self.tab_widget.removeTab(index)
         widget.deleteLater()
         _logger.debug("tab_closed", tab_index=index)
 
@@ -1661,29 +1674,29 @@ class ToolOutputPanel(QFrame):
             self._binary_panel.stop_tool()
             self._binary_panel = None
 
-        if self._sandbox_panel is not None:
-            self._sandbox_panel.stop_tool()
-            self._sandbox_panel = None
+        if self.sandbox_panel is not None:
+            self.sandbox_panel.stop_tool()
+            self.sandbox_panel = None
 
-        if self._analysis_panel is not None:
-            self._analysis_panel = None
+        if self.analysis_panel is not None:
+            self.analysis_panel = None
 
-        if self._script_panel is not None:
-            self._script_panel = None
+        if self.script_panel is not None:
+            self.script_panel = None
 
-        if self._stack_panel is not None:
-            self._stack_panel = None
+        if self.stack_panel is not None:
+            self.stack_panel = None
 
-        for attr_name in ("_x64dbg_bridge", "_ghidra_bridge", "_cutter_bridge", "_frida_bridge"):
+        for attr_name in ("x64dbg_bridge", "ghidra_bridge", "cutter_bridge", "frida_bridge"):
             if getattr(self, attr_name, None) is not None:
                 setattr(self, attr_name, None)
                 _logger.debug("bridge_reference_released", bridge=attr_name)
 
-        self._embedded_tools.clear()
-        self._panels.clear()
-        self._tabs.clear()
+        self.embedded_tools.clear()
+        self.panels.clear()
+        self.tabs.clear()
 
-        _logger.info("embedded_tools_closed", panel_count=len(self._panels))
+        _logger.info("embedded_tools_closed", panel_count=len(self.panels))
 
     def _on_tab_context_menu(self, pos: QPoint) -> None:
         """Show a context menu for the tab bar at the given position.
@@ -1691,7 +1704,7 @@ class ToolOutputPanel(QFrame):
         Args:
             pos: Position of the right-click in tab bar coordinates.
         """
-        tab_bar = self._tab_widget.tabBar()
+        tab_bar = self.tab_widget.tabBar()
         if tab_bar is None:
             return
         index = tab_bar.tabAt(pos)
@@ -1735,12 +1748,12 @@ class ToolOutputPanel(QFrame):
             DetachedPanelWindow | None: The created window, or None
                 if the index is invalid.
         """
-        widget = self._tab_widget.widget(index)
+        widget = self.tab_widget.widget(index)
         if widget is None:
             return None
 
-        title = self._tab_widget.tabText(index)
-        self._tab_widget.removeTab(index)
+        title = self.tab_widget.tabText(index)
+        self.tab_widget.removeTab(index)
 
         window = DetachedPanelWindow(widget, title, self)
         window.reattach_requested.connect(self._reattach_panel)
@@ -1761,8 +1774,8 @@ class ToolOutputPanel(QFrame):
         if window is not None:
             window.hide()
 
-        self._tab_widget.addTab(widget, title)
-        self._tab_widget.setCurrentWidget(widget)
+        self.tab_widget.addTab(widget, title)
+        self.tab_widget.setCurrentWidget(widget)
         _logger.info("tab_reattached", title=title)
 
     def _close_other_tabs(self, keep_index: int) -> None:
@@ -1771,14 +1784,14 @@ class ToolOutputPanel(QFrame):
         Args:
             keep_index: Tab index to keep open.
         """
-        keep_widget = self._tab_widget.widget(keep_index)
-        indices_to_close = [i for i in range(self._tab_widget.count() - 1, -1, -1) if self._tab_widget.widget(i) is not keep_widget]
+        keep_widget = self.tab_widget.widget(keep_index)
+        indices_to_close = [i for i in range(self.tab_widget.count() - 1, -1, -1) if self.tab_widget.widget(i) is not keep_widget]
         for i in indices_to_close:
             self._on_tab_close_requested(i)
 
     def _close_all_tabs(self) -> None:
         """Close every tab in the tab widget."""
-        for i in range(self._tab_widget.count() - 1, -1, -1):
+        for i in range(self.tab_widget.count() - 1, -1, -1):
             self._on_tab_close_requested(i)
 
     def detach_current_tab(self) -> DetachedPanelWindow | None:
@@ -1788,7 +1801,7 @@ class ToolOutputPanel(QFrame):
             DetachedPanelWindow | None: The created window, or None
                 if no tab is active.
         """
-        index = self._tab_widget.currentIndex()
+        index = self.tab_widget.currentIndex()
         return None if index < 0 else self.detach_tab(index)
 
     def close_detached_windows(self) -> None:
@@ -1816,11 +1829,11 @@ class ToolOutputPanel(QFrame):
             int: Tab index, or -1 if not found.
         """
         return next(
-            (i for i in range(self._tab_widget.count()) if self._tab_widget.tabText(i) == title),
+            (i for i in range(self.tab_widget.count()) if self.tab_widget.tabText(i) == title),
             -1,
         )
 
-    def get_bridge_for_tool(self, tool_id: str) -> object | None:
+    def get_bridge_for_tool(self, tool_id: str) -> ToolBridgeBase | None:
         """Get the bridge instance for a specific tool.
 
         Delegates to the appropriate panel's get_bridge() method.
@@ -1829,7 +1842,7 @@ class ToolOutputPanel(QFrame):
             tool_id: Tool identifier (e.g., "frida", "ghidra", "cutter", "x64dbg").
 
         Returns:
-            object | None: Bridge instance or None if not available.
+            ToolBridgeBase | None: Bridge instance or None if not available.
         """
         panel_map: dict[str, str] = {
             "frida": "_frida_panel",
@@ -1919,14 +1932,14 @@ class ToolOutputPanel(QFrame):
                 hook_id=str(hook_info.get("hook_id", "")),
             )
 
-    def get_sandbox_backend(self) -> object | None:
+    def get_sandbox_backend(self) -> SandboxBase | None:
         """Get the sandbox backend from the sandbox panel.
 
         Returns:
-            object | None: Sandbox backend or None.
+            SandboxBase | None: Sandbox backend or None.
         """
-        if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "get_sandbox"):
-            return self._sandbox_panel.get_sandbox()
+        if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "get_sandbox"):
+            return self.sandbox_panel.get_sandbox()
         return None
 
     def load_sandbox_report(self, report_path: str) -> None:
@@ -1935,8 +1948,8 @@ class ToolOutputPanel(QFrame):
         Args:
             report_path: Path to the execution report.
         """
-        if self._sandbox_panel is not None:
-            loader = getattr(self._sandbox_panel, "load_execution_report", None)
+        if self.sandbox_panel is not None:
+            loader = getattr(self.sandbox_panel, "load_execution_report", None)
             if callable(loader):
                 loader(report_path)
 
@@ -1950,13 +1963,13 @@ class ToolOutputPanel(QFrame):
         """
         selected_id: str | None = None
         current_script: tuple[str, str, str] | None = None
-        if self._script_panel is not None:
-            get_id = getattr(self._script_panel, "get_selected_id", None)
+        if self.script_panel is not None:
+            get_id = getattr(self.script_panel, "get_selected_id", None)
             if callable(get_id):
                 raw_id = get_id()
                 if isinstance(raw_id, str):
                     selected_id = raw_id
-            current_script = self._script_panel.get_current_script()
+            current_script = self.script_panel.get_current_script()
         return selected_id, current_script
 
     def get_code_highlighter(self) -> QSyntaxHighlighter | None:
@@ -1968,14 +1981,14 @@ class ToolOutputPanel(QFrame):
         Returns:
             QSyntaxHighlighter | None: Syntax highlighter or None if not available.
         """
-        current_widget = self._tab_widget.currentWidget()
+        current_widget = self.tab_widget.currentWidget()
         if current_widget is None:
             return None
         code_display = current_widget.findChild(QPlainTextEdit)
         doc = code_display.document()
         return None if doc is None else doc.findChild(QSyntaxHighlighter)
 
-    def _wire_hex_editor_state(self, panel_widget: object) -> None:
+    def _wire_hex_editor_state(self, panel_widget: HexEditorPanel) -> None:
         """Create a shared HexDocumentState and wire it to the bridge and panel.
 
         Args:
@@ -2000,14 +2013,14 @@ class ToolOutputPanel(QFrame):
                     if callable(bridge_set_reg):
                         bridge_set_reg(self._tool_registry)
                     _logger.info("hex_editor_state_wired", source="registry")
-                except Exception:
+                except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
 
             context_signal = getattr(panel_widget, "context_push_requested", None)
             if context_signal is not None and hasattr(context_signal, "connect"):
                 context_signal.connect(self._on_hex_context_push)
 
-        except Exception:
+        except (RuntimeError, ImportError, AttributeError):
             _logger.debug("hex_editor_state_wire_failed", exc_info=True)
 
     def _on_hex_context_push(self, context: dict[str, object]) -> None:
@@ -2057,12 +2070,12 @@ class ToolOutputPanel(QFrame):
         Connects x64dbg and Frida bridges to the stack viewer
         for stack trace display.
         """
-        if self._stack_panel is None:
+        if self.stack_panel is None:
             return
-        if hasattr(self._stack_panel, "set_x64dbg_bridge") and self._x64dbg_bridge is not None:
-            self._stack_panel.set_x64dbg_bridge(self._x64dbg_bridge)
-        if hasattr(self._stack_panel, "set_frida_bridge") and self._frida_bridge is not None:
-            self._stack_panel.set_frida_bridge(self._frida_bridge)
+        if hasattr(self.stack_panel, "set_x64dbg_bridge") and self.x64dbg_bridge is not None:
+            self.stack_panel.set_x64dbg_bridge(self.x64dbg_bridge)
+        if hasattr(self.stack_panel, "set_frida_bridge") and self.frida_bridge is not None:
+            self.stack_panel.set_frida_bridge(self.frida_bridge)
 
     def wire_sandbox_backend(self, sandbox: object, manager: object | None = None) -> None:
         """Wire a sandbox backend and optional manager to the sandbox panel.
@@ -2076,11 +2089,11 @@ class ToolOutputPanel(QFrame):
             manager: Optional SandboxManager instance for type-aware creation.
         """
         self._pending_sandbox_backend = sandbox
-        if self._sandbox_panel is not None and hasattr(self._sandbox_panel, "set_sandbox"):
-            self._sandbox_panel.set_sandbox(sandbox)
+        if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "set_sandbox"):
+            self.sandbox_panel.set_sandbox(cast("SandboxBase", sandbox))
             self._pending_sandbox_backend = None
-        if manager is not None and self._sandbox_panel is not None and hasattr(self._sandbox_panel, "set_sandbox_manager"):
-            self._sandbox_panel.set_sandbox_manager(manager)
+        if manager is not None and self.sandbox_panel is not None and hasattr(self.sandbox_panel, "set_sandbox_manager"):
+            self.sandbox_panel.set_sandbox_manager(cast("SandboxManager", manager))
 
     def wire_script_backend(self, backend: object, validator: object | None = None) -> None:
         """Wire a script generation backend to the script manager.
@@ -2094,8 +2107,8 @@ class ToolOutputPanel(QFrame):
         """
         self._pending_script_backend = backend
         self._pending_script_validator = validator
-        if self._script_panel is not None and hasattr(self._script_panel, "set_backend"):
-            self._script_panel.set_backend(
+        if self.script_panel is not None and hasattr(self.script_panel, "set_backend"):
+            self.script_panel.set_backend(
                 cast("ScriptManager", backend),
                 validator=cast("ScriptValidator | None", validator),
             )
@@ -2110,14 +2123,14 @@ class ToolOutputPanel(QFrame):
                 order, the active tab index, and splitter proportions.
         """
         tab_names: list[str] = []
-        for i in range(self._tab_widget.count()):
-            text = self._tab_widget.tabText(i)
+        for i in range(self.tab_widget.count()):
+            text = self.tab_widget.tabText(i)
             tab_names.append(text)
 
         return {
             "tab_names": tab_names,
-            "active_index": self._tab_widget.currentIndex(),
-            "splitter_sizes": self._main_splitter.sizes(),
+            "active_index": self.tab_widget.currentIndex(),
+            "splitter_sizes": self.main_splitter.sizes(),
         }
 
     def restore_tab_state(self, state: dict[str, object]) -> None:
@@ -2151,13 +2164,13 @@ class ToolOutputPanel(QFrame):
                 opener()
 
         idx_val: object = state.get("active_index")
-        if isinstance(idx_val, int) and 0 <= idx_val < self._tab_widget.count():
-            self._tab_widget.setCurrentIndex(idx_val)
+        if isinstance(idx_val, int) and 0 <= idx_val < self.tab_widget.count():
+            self.tab_widget.setCurrentIndex(idx_val)
 
         sizes_val: object = state.get("splitter_sizes")
         stored_sizes = cast("list[int]", sizes_val) if isinstance(sizes_val, list) else []
         if len(stored_sizes) == 2:  # noqa: PLR2004
-            self._main_splitter.setSizes([int(stored_sizes[0]), int(stored_sizes[1])])
+            self.main_splitter.setSizes([int(stored_sizes[0]), int(stored_sizes[1])])
 
     def has_unsaved_changes(self) -> bool:
         """Check whether any panel has unsaved modifications.

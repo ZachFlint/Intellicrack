@@ -15,7 +15,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -132,7 +132,7 @@ class Session:
             Session: New Session instance.
         """
         session_id = str(uuid4())
-        now = datetime.now()
+        now = datetime.now(tz=UTC)
 
         return cls(
             id=session_id,
@@ -164,7 +164,7 @@ class Session:
         """
         self.binaries.append(binary)
         self.active_binary_index = max(self.active_binary_index, 0)
-        self.updated_at = datetime.now()
+        self.updated_at = datetime.now(tz=UTC)
 
     def add_message(self, message: Message) -> None:
         """
@@ -174,7 +174,7 @@ class Session:
             message: Message to add.
         """
         self.messages.append(message)
-        self.updated_at = datetime.now()
+        self.updated_at = datetime.now(tz=UTC)
 
     def add_patch(self, patch: PatchInfo) -> None:
         """
@@ -184,7 +184,7 @@ class Session:
             patch: Patch information to add.
         """
         self.patches.append(patch)
-        self.updated_at = datetime.now()
+        self.updated_at = datetime.now(tz=UTC)
 
     def add_bridge_analysis(self, binary_name: str, analysis: BridgeAnalysisSummary) -> None:
         """
@@ -195,7 +195,7 @@ class Session:
             analysis: Bridge analysis summary results.
         """
         self.bridge_analyses[binary_name] = analysis
-        self.updated_at = datetime.now()
+        self.updated_at = datetime.now(tz=UTC)
 
     def get_bridge_analysis(self, binary_name: str) -> BridgeAnalysisSummary | None:
         """
@@ -221,8 +221,8 @@ class SessionStore:
     """
 
     def __init__(self, db_path: Path) -> None:
-        self._db_path = db_path
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.db_path = db_path
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         _logger.debug("session_store_init", db_path=str(db_path))
         self._init_database()
 
@@ -235,26 +235,27 @@ class SessionStore:
             sqlite3.Connection: Active database connection with auto-commit/rollback.
 
         Raises:
-            Exception: Re-raised from any database operation after rollback.
+            sqlite3.Error: On database-level errors (re-raised after rollback).
+            OSError: On filesystem-level errors (re-raised after rollback).
         """
-        conn = sqlite3.connect(str(self._db_path))
+        conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
-        _logger.debug("db_connection_opened", db_path=str(self._db_path))
+        _logger.debug("db_connection_opened", db_path=str(self.db_path))
         try:
             yield conn
             conn.commit()
-            _logger.debug("db_connection_committed", db_path=str(self._db_path))
-        except Exception:
+            _logger.debug("db_connection_committed", db_path=str(self.db_path))
+        except (sqlite3.Error, OSError):
             conn.rollback()
-            _logger.exception("db_connection_rollback", db_path=str(self._db_path))
+            _logger.exception("db_connection_rollback", db_path=str(self.db_path))
             raise
         finally:
             conn.close()
-            _logger.debug("db_connection_closed", db_path=str(self._db_path))
+            _logger.debug("db_connection_closed", db_path=str(self.db_path))
 
     def _init_database(self) -> None:
         """Initialize the database schema."""
-        _logger.debug("database_schema_init_start", db_path=str(self._db_path))
+        _logger.debug("database_schema_init_start", db_path=str(self.db_path))
         with self._connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -284,7 +285,7 @@ class SessionStore:
                 )
             """)
 
-            _logger.debug("database_schema_initialized", db_path=str(self._db_path))
+            _logger.debug("database_schema_initialized", db_path=str(self.db_path))
 
     def save(self, session: Session) -> None:
         """
@@ -441,7 +442,7 @@ class SessionStore:
                         model=row["model"],
                         binary_count=len(data.get("binaries", [])),
                         message_count=len(data.get("messages", [])),
-                    )
+                    ),
                 )
 
             _logger.debug("session_list_all_result", count=len(result))
@@ -483,7 +484,7 @@ class SessionStore:
                         model=row["model"],
                         binary_count=len(data.get("binaries", [])),
                         message_count=len(data.get("messages", [])),
-                    )
+                    ),
                 )
 
             _logger.debug("session_search_by_tag_result", tag=tag, count=len(result))
@@ -500,7 +501,7 @@ class SessionStore:
             int: Number of sessions deleted.
         """
         _logger.debug("session_cleanup_old_start", days=days)
-        cutoff = datetime.now().isoformat()
+        cutoff = datetime.now(tz=UTC).isoformat()
 
         with self._connection() as conn:
             cursor = conn.execute(
@@ -717,7 +718,7 @@ class SessionStore:
         """
         export_data = {
             "export_version": "1.0",
-            "exported_at": datetime.now().isoformat(),
+            "exported_at": datetime.now(tz=UTC).isoformat(),
             "session": {
                 "id": session.id,
                 "name": session.name,
@@ -737,7 +738,7 @@ class SessionStore:
 
         path.parent.mkdir(parents=True, exist_ok=True)
         _logger.debug("session_export_file_write", session_id=session.id, path=str(path))
-        with open(path, "w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
         _logger.info("session_exported", session_id=session.id, path=str(path))
@@ -760,7 +761,7 @@ class SessionStore:
             raise FileNotFoundError(_ERR_FILE_NOT_FOUND)
 
         _logger.debug("session_import_file_read", path=str(path))
-        with open(path, encoding="utf-8") as f:
+        with path.open(encoding="utf-8") as f:
             data = json.load(f)
 
         session_data = data.get("session", data)
@@ -812,13 +813,14 @@ class SessionManager:
     def __init__(
         self,
         store: SessionStore,
+        *,
         auto_save: bool = True,
         save_interval: int = 300,
     ) -> None:
-        self._store = store
+        self.store = store
         self._current: Session | None = None
-        self._auto_save = auto_save
-        self._save_interval = save_interval
+        self.auto_save = auto_save
+        self.save_interval = save_interval
         self._save_task: asyncio.Task[None] | None = None
         _logger.debug("session_manager_init", auto_save=auto_save, save_interval=save_interval)
 
@@ -875,7 +877,7 @@ class SessionManager:
         if self._current is not None:
             await self.save()
 
-        session = self._store.load(session_id)
+        session = self.store.load(session_id)
 
         if session is not None:
             self._current = session
@@ -894,7 +896,7 @@ class SessionManager:
         Returns:
             Session | None: Session instance or None if not found.
         """
-        return self._store.load(session_id)
+        return self.store.load(session_id)
 
     async def update(self, session: Session) -> None:
         """
@@ -903,13 +905,13 @@ class SessionManager:
         Args:
             session: Session to update.
         """
-        self._store.save(session)
+        self.store.save(session)
         _logger.debug("session_updated", session_id=session.id)
 
     async def save(self) -> None:
         """Save the current session."""
         if self._current is not None:
-            self._store.save(self._current)
+            self.store.save(self._current)
             log_session_operation("save", self._current.id)
             _logger.debug("current_session_saved", session_id=self._current.id)
 
@@ -938,7 +940,7 @@ class SessionManager:
             await self._stop_auto_save()
             self._current = None
 
-        return self._store.delete(session_id)
+        return self.store.delete(session_id)
 
     def list_sessions(self, limit: int = 100) -> list[SessionMetadata]:
         """
@@ -950,7 +952,7 @@ class SessionManager:
         Returns:
             list[SessionMetadata]: List of session metadata.
         """
-        return self._store.list_all(limit)
+        return self.store.list_all(limit)
 
     def search_by_tag(self, tag: str) -> list[SessionMetadata]:
         """
@@ -962,7 +964,7 @@ class SessionManager:
         Returns:
             list[SessionMetadata]: List of matching session metadata.
         """
-        return self._store.search_by_tag(tag)
+        return self.store.search_by_tag(tag)
 
     async def cleanup(self, days: int = 30) -> int:
         """
@@ -975,7 +977,7 @@ class SessionManager:
             int: Number of sessions deleted.
         """
         _logger.info("session_cleanup_requested", days=days)
-        return self._store.cleanup_old(days)
+        return self.store.cleanup_old(days)
 
     async def export_json(self, session_id: str, path: Path) -> None:
         """
@@ -989,13 +991,13 @@ class SessionManager:
             ValueError: If the session is not found.
         """
         _logger.info("session_exporting", session_id=session_id, path=str(path))
-        session = self._store.load(session_id)
+        session = self.store.load(session_id)
         if session is None:
             raise ValueError(_ERR_SESSION_NOT_FOUND)
 
-        self._store.export_to_json(session, path)
+        self.store.export_to_json(session, path)
 
-    async def import_json(self, path: Path, replace: bool = False) -> Session:
+    async def import_json(self, path: Path, *, replace: bool = False) -> Session:
         """
         Import a session from a JSON file.
 
@@ -1009,13 +1011,13 @@ class SessionManager:
         Raises:
             ValueError: If session with same ID already exists and replace=False.
         """
-        session = self._store.import_from_json(path)
+        session = self.store.import_from_json(path)
 
-        existing = self._store.load(session.id)
+        existing = self.store.load(session.id)
         if existing is not None and not replace:
             raise ValueError(_ERR_SESSION_EXISTS)
 
-        self._store.save(session)
+        self.store.save(session)
         return session
 
     async def export_current(self, path: Path) -> None:
@@ -1032,13 +1034,13 @@ class SessionManager:
         if self._current is None:
             raise ValueError(_ERR_NO_CURRENT_SESSION)
 
-        self._store.export_to_json(self._current, path)
+        self.store.export_to_json(self._current, path)
 
     async def _start_auto_save(self) -> None:
         """Start the auto-save task."""
         await self._stop_auto_save()
 
-        if self._auto_save:
+        if self.auto_save:
             self._save_task = asyncio.create_task(self._auto_save_loop())
 
     async def _stop_auto_save(self) -> None:
@@ -1054,5 +1056,5 @@ class SessionManager:
     async def _auto_save_loop(self) -> None:
         """Auto-save loop."""
         while True:
-            await asyncio.sleep(self._save_interval)
+            await asyncio.sleep(self.save_interval)
             await self.save()

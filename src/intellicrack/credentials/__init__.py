@@ -13,12 +13,12 @@ This module handles loading and validating API credentials from multiple sources
 
 from __future__ import annotations
 
-from .env_loader import (
+from intellicrack.credentials.env_loader import (
     CredentialLoader,
     ProviderCredentialMapping,
     get_credential_loader,
 )
-from .oauth import (
+from intellicrack.credentials.oauth import (
     OAuthAuthorizationError,
     OAuthCallbackError,
     OAuthConfig,
@@ -33,7 +33,7 @@ from .oauth import (
     authorize_google,
     get_oauth_manager,
 )
-from .store import (
+from intellicrack.credentials.store import (
     CredentialNotFoundError,
     CredentialSource,
     CredentialStore,

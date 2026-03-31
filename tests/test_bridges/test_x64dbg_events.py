@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for x64dbg bridge event callback system (Fix 6).
 
 Validates:
@@ -37,7 +42,7 @@ class TestEventCallbackRegistration:
             calls.append((event_type, message))
 
         bridge.register_event_callback(handler)
-        assert len(bridge._event_callbacks) == 1
+        assert len(bridge.event_callbacks) == 1
 
     @staticmethod
     def test_register_multiple_callbacks() -> None:
@@ -52,7 +57,7 @@ class TestEventCallbackRegistration:
 
         bridge.register_event_callback(handler1)
         bridge.register_event_callback(handler2)
-        assert len(bridge._event_callbacks) == EXPECTED_CALLBACK_COUNT_TWO
+        assert len(bridge.event_callbacks) == EXPECTED_CALLBACK_COUNT_TWO
 
     @staticmethod
     def test_unregister_callback_removes() -> None:
@@ -64,7 +69,7 @@ class TestEventCallbackRegistration:
 
         bridge.register_event_callback(handler)
         bridge.unregister_event_callback(handler)
-        assert len(bridge._event_callbacks) == 0
+        assert len(bridge.event_callbacks) == 0
 
     @staticmethod
     def test_unregister_nonexistent_does_not_raise() -> None:
@@ -92,7 +97,7 @@ class TestEventDispatch:
         bridge.register_event_callback(handler)
 
         message: dict[str, Any] = {"event": "breakpoint", "address": TEST_ADDR_BP}
-        bridge._handle_event(message)
+        bridge.handle_event(message)
 
         assert len(received) == 1
         assert received[0][0] == "breakpoint"
@@ -114,7 +119,7 @@ class TestEventDispatch:
         bridge.register_event_callback(handler1)
         bridge.register_event_callback(handler2)
 
-        bridge._handle_event({"event": "step"})
+        bridge.handle_event({"event": "step"})
 
         assert calls1 == ["step"]
         assert calls2 == ["step"]
@@ -135,7 +140,7 @@ class TestEventDispatch:
         bridge.register_event_callback(bad_handler)
         bridge.register_event_callback(good_handler)
 
-        bridge._handle_event({"event": "breakpoint", "address": TEST_ADDR_BP})
+        bridge.handle_event({"event": "breakpoint", "address": TEST_ADDR_BP})
 
         assert calls == ["breakpoint"]
 
@@ -143,7 +148,7 @@ class TestEventDispatch:
     def test_handle_event_with_no_callbacks() -> None:
         """Verify _handle_event succeeds with no registered callbacks."""
         bridge = X64DbgBridge()
-        bridge._handle_event({"event": "breakpoint", "address": TEST_ADDR_BP})
+        bridge.handle_event({"event": "breakpoint", "address": TEST_ADDR_BP})
 
 
 class TestBreakpointHitCounting:
@@ -153,7 +158,7 @@ class TestBreakpointHitCounting:
     def test_breakpoint_hit_count_incremented() -> None:
         """Verify breakpoint hit count increments on breakpoint event."""
         bridge = X64DbgBridge()
-        bridge._breakpoints[TEST_ADDR_BP] = BreakpointInfo(
+        bridge.breakpoints[TEST_ADDR_BP] = BreakpointInfo(
             id=BP_ID_TEST,
             address=TEST_ADDR_BP,
             bp_type="software",
@@ -162,15 +167,15 @@ class TestBreakpointHitCounting:
             condition=None,
         )
 
-        bridge._handle_event({"event": "breakpoint", "address": TEST_ADDR_BP})
+        bridge.handle_event({"event": "breakpoint", "address": TEST_ADDR_BP})
 
-        assert bridge._breakpoints[TEST_ADDR_BP].hit_count == 1
+        assert bridge.breakpoints[TEST_ADDR_BP].hit_count == 1
 
     @staticmethod
     def test_watchpoint_hit_count_incremented() -> None:
         """Verify watchpoint hit count increments on watchpoint event."""
         bridge = X64DbgBridge()
-        bridge._watchpoints[WP_ID_TEST] = WatchpointInfo(
+        bridge.watchpoints[WP_ID_TEST] = WatchpointInfo(
             id=WP_ID_TEST,
             address=TEST_ADDR_WP,
             size=WATCHPOINT_SIZE,
@@ -179,12 +184,12 @@ class TestBreakpointHitCounting:
             hit_count=0,
         )
 
-        bridge._handle_event({"event": "watchpoint", "address": TEST_ADDR_WP})
+        bridge.handle_event({"event": "watchpoint", "address": TEST_ADDR_WP})
 
-        assert bridge._watchpoints[WP_ID_TEST].hit_count == 1
+        assert bridge.watchpoints[WP_ID_TEST].hit_count == 1
 
     @staticmethod
     def test_unknown_event_does_not_crash() -> None:
         """Verify unknown event types are handled gracefully."""
         bridge = X64DbgBridge()
-        bridge._handle_event({"event": "unknown_event"})
+        bridge.handle_event({"event": "unknown_event"})

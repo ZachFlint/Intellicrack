@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
 """Verify that no test files use mocks or fake data.
 
 This script enforces the REAL DATA ONLY testing principle.
@@ -70,13 +74,16 @@ EXCLUDE_DIRS = [
 def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
     """Find all mock usage in a file.
 
-    Returns list of (line_number, line_content, pattern_matched)
+    Args:
+        file_path: Path to the Python file to scan.
+
+    Returns:
+        list[tuple[int, str, str]]: List of (line_number, line_content, pattern_matched).
     """
     violations: list[tuple[int, str, str]] = []
 
     try:
-        with open(file_path, encoding="utf-8") as f:
-            lines = f.readlines()
+        lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
 
         is_validation_script = any(
             "validation" in str(file_path).lower() or "check" in str(file_path).lower() or "verify" in str(file_path).lower()
@@ -94,7 +101,7 @@ def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
                 if re.search(pattern, line, re.IGNORECASE):
                     violations.append((line_num, line.strip(), pattern))
                     break
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"Error reading {file_path}: {e}")
 
     return violations
@@ -103,7 +110,11 @@ def find_mock_usage(file_path: Path) -> list[tuple[int, str, str]]:
 def scan_test_directory(test_dir: Path) -> dict[str, list[tuple[int, str, str]]]:
     """Scan entire test directory for mock usage.
 
-    Returns dict of {file_path: [(line_num, line, pattern), ...]}
+    Args:
+        test_dir: Root directory to scan recursively.
+
+    Returns:
+        dict[str, list[tuple[int, str, str]]]: Mapping of file paths to violation tuples.
     """
     all_violations: dict[str, list[tuple[int, str, str]]] = {}
 
@@ -148,7 +159,7 @@ def classify_severity(_pattern: str, line: str, _file_path: str) -> str:
     return "LOW"
 
 
-def print_report(violations: dict[str, list[tuple[int, str, str]]], summary_only: bool = False) -> int:
+def print_report(violations: dict[str, list[tuple[int, str, str]]], *, summary_only: bool = False) -> int:
     """Print violation report and return exit code.
 
     Args:

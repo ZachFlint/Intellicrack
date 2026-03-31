@@ -50,98 +50,58 @@ class TestBuiltinTypes:
     """Tests for the BuiltinTypes static registry."""
 
     def test_get_u8_returns_hexpat_type(self) -> None:
-        """BuiltinTypes.get('u8') returns a HexPatType instance.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('u8') returns a HexPatType instance."""
         result = BuiltinTypes.get("u8")
         assert isinstance(result, HexPatType)
 
     def test_get_u8_size_is_one(self) -> None:
-        """BuiltinTypes.get('u8') has size 1.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('u8') has size 1."""
         result = BuiltinTypes.get("u8")
         assert result is not None
         assert result.size == 1
 
     def test_get_u8_is_unsigned(self) -> None:
-        """BuiltinTypes.get('u8') is unsigned (signed=False).
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('u8') is unsigned (signed=False)."""
         result = BuiltinTypes.get("u8")
         assert result is not None
         assert result.signed is False
 
     def test_get_s32_size_is_four(self) -> None:
-        """BuiltinTypes.get('s32') has size 4.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('s32') has size 4."""
         result = BuiltinTypes.get("s32")
         assert result is not None
         assert result.size == 4
 
     def test_get_s32_is_signed(self) -> None:
-        """BuiltinTypes.get('s32') is signed (signed=True).
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('s32') is signed (signed=True)."""
         result = BuiltinTypes.get("s32")
         assert result is not None
         assert result.signed is True
 
     def test_get_float_size_is_four(self) -> None:
-        """BuiltinTypes.get('float') has size 4.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('float') has size 4."""
         result = BuiltinTypes.get("float")
         assert result is not None
         assert result.size == 4
 
     def test_get_double_size_is_eight(self) -> None:
-        """BuiltinTypes.get('double') has size 8.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get('double') has size 8."""
         result = BuiltinTypes.get("double")
         assert result is not None
         assert result.size == 8
 
     def test_get_nonexistent_returns_none(self) -> None:
-        """BuiltinTypes.get with an unknown name returns None.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.get with an unknown name returns None."""
         result = BuiltinTypes.get("nonexistent_type")
         assert result is None
 
     def test_all_names_returns_frozenset(self) -> None:
-        """BuiltinTypes.all_names() returns a frozenset.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.all_names() returns a frozenset."""
         names = BuiltinTypes.all_names()
         assert isinstance(names, frozenset)
 
     def test_all_names_contains_expected_types(self) -> None:
-        """BuiltinTypes.all_names() contains all expected primitive type names.
-
-        Returns:
-            None
-        """
+        """BuiltinTypes.all_names() contains all expected primitive type names."""
         names = BuiltinTypes.all_names()
         assert names >= _EXPECTED_BUILTIN_NAMES
 
@@ -150,11 +110,7 @@ class TestTypeRegistry:
     """Tests for the TypeRegistry class."""
 
     def test_register_struct_resolve_returns_struct_type_info(self) -> None:
-        """Registering a struct and resolving its name returns StructTypeInfo.
-
-        Returns:
-            None
-        """
+        """Registering a struct and resolving its name returns StructTypeInfo."""
         registry = TypeRegistry()
         decl = StructDecl(
             name="TestStruct",
@@ -169,11 +125,7 @@ class TestTypeRegistry:
         assert isinstance(result, StructTypeInfo)
 
     def test_register_struct_name_preserved(self) -> None:
-        """StructTypeInfo resolved from registry has the correct name.
-
-        Returns:
-            None
-        """
+        """StructTypeInfo resolved from registry has the correct name."""
         registry = TypeRegistry()
         decl = StructDecl(
             name="MyStruct",
@@ -189,11 +141,7 @@ class TestTypeRegistry:
         assert result.name == "MyStruct"
 
     def test_register_struct_with_parent(self) -> None:
-        """StructTypeInfo resolved from registry carries the parent name.
-
-        Returns:
-            None
-        """
+        """StructTypeInfo resolved from registry carries the parent name."""
         registry = TypeRegistry()
         decl = StructDecl(
             name="Child",
@@ -209,11 +157,7 @@ class TestTypeRegistry:
         assert result.parent == "Parent"
 
     def test_register_alias_resolve_follows_to_primitive(self) -> None:
-        """Registering an alias for u32 resolves transparently to HexPatType.
-
-        Returns:
-            None
-        """
+        """Registering an alias for u32 resolves transparently to HexPatType."""
         registry = TypeRegistry()
         registry.register_alias("DWORD", "u32")
         result = registry.resolve("DWORD")
@@ -221,64 +165,40 @@ class TestTypeRegistry:
         assert result.name == "u32"
 
     def test_resolve_primitive_u32_returns_hex_pat_type(self) -> None:
-        """Resolving the primitive 'u32' returns a HexPatType instance.
-
-        Returns:
-            None
-        """
+        """Resolving the primitive 'u32' returns a HexPatType instance."""
         registry = TypeRegistry()
         result = registry.resolve("u32")
         assert isinstance(result, HexPatType)
 
     def test_resolve_primitive_u32_size_is_four(self) -> None:
-        """Resolving 'u32' yields size 4.
-
-        Returns:
-            None
-        """
+        """Resolving 'u32' yields size 4."""
         registry = TypeRegistry()
         result = registry.resolve("u32")
         assert isinstance(result, HexPatType)
         assert result.size == 4
 
     def test_resolve_primitive_with_endian_override(self) -> None:
-        """resolve_primitive with endian override returns a new HexPatType with that endian.
-
-        Returns:
-            None
-        """
+        """resolve_primitive with endian override returns a new HexPatType with that endian."""
         registry = TypeRegistry()
         result = registry.resolve_primitive("u32", endian="big")
         assert result is not None
         assert result.endian == "big"
 
     def test_resolve_primitive_endian_override_preserves_size(self) -> None:
-        """resolve_primitive with endian override preserves the original type size.
-
-        Returns:
-            None
-        """
+        """resolve_primitive with endian override preserves the original type size."""
         registry = TypeRegistry()
         result = registry.resolve_primitive("u16", endian="little")
         assert result is not None
         assert result.size == 2
 
     def test_resolve_unknown_name_returns_none(self) -> None:
-        """Resolving an unknown type name returns None.
-
-        Returns:
-            None
-        """
+        """Resolving an unknown type name returns None."""
         registry = TypeRegistry()
         result = registry.resolve("CompletelyUnknown")
         assert result is None
 
     def test_register_enum_resolve_returns_enum_type_info(self) -> None:
-        """Registering an enum and resolving its name returns EnumTypeInfo.
-
-        Returns:
-            None
-        """
+        """Registering an enum and resolving its name returns EnumTypeInfo."""
         registry = TypeRegistry()
         backing = BuiltinTypes.get("u8")
         assert backing is not None
@@ -295,11 +215,7 @@ class TestTypeRegistry:
         assert isinstance(result, EnumTypeInfo)
 
     def test_register_enum_members_preserved(self) -> None:
-        """EnumTypeInfo resolved from registry carries the registered member mapping.
-
-        Returns:
-            None
-        """
+        """EnumTypeInfo resolved from registry carries the registered member mapping."""
         registry = TypeRegistry()
         backing = BuiltinTypes.get("u8")
         assert backing is not None
@@ -317,11 +233,7 @@ class TestTypeRegistry:
         assert result.members == {"OK": 0, "ERR": 1}
 
     def test_register_union_resolve_returns_union_type_info(self) -> None:
-        """Registering a union and resolving its name returns UnionTypeInfo.
-
-        Returns:
-            None
-        """
+        """Registering a union and resolving its name returns UnionTypeInfo."""
         registry = TypeRegistry()
         decl = UnionDecl(
             name="MyUnion",
@@ -342,6 +254,6 @@ def _make_primitive_type_node(name: str) -> PrimitiveType:
         name: The primitive type name (e.g. "u8", "u32").
 
     Returns:
-        A PrimitiveType dataclass instance usable as a TypeNode.
+        PrimitiveType: A PrimitiveType dataclass instance usable as a TypeNode.
     """
     return PrimitiveType(name=name, endianness=None, line=1, column=1)

@@ -7,7 +7,11 @@ from __future__ import annotations
 
 import json
 import struct
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    import types
 
 import pytest
 
@@ -39,7 +43,7 @@ _CUSTOM_TEMPLATE_JSON = json.dumps({
 class TestListTemplates:
     """Tests for the list_templates API returning (name, description) pairs."""
 
-    def test_returns_nonempty_list(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_returns_nonempty_list(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify list_templates returns at least one entry.
 
         Args:
@@ -50,7 +54,7 @@ class TestListTemplates:
         templates: list[tuple[str, str]] = doc.list_templates()
         assert templates
 
-    def test_entries_are_name_description_pairs(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_entries_are_name_description_pairs(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify each entry is a 2-tuple of strings.
 
         Args:
@@ -65,7 +69,7 @@ class TestListTemplates:
             assert isinstance(entry[1], str)
             assert len(entry[0]) > 0
 
-    def test_image_dos_header_present(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_image_dos_header_present(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify IMAGE_DOS_HEADER is in the built-in template list.
 
         Args:
@@ -77,7 +81,7 @@ class TestListTemplates:
         names = [t[0] for t in templates]
         assert "IMAGE_DOS_HEADER" in names
 
-    def test_elf_template_present(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_elf_template_present(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify Elf64_Ehdr built-in template is always registered.
 
         Args:
@@ -89,7 +93,7 @@ class TestListTemplates:
         names = [t[0] for t in templates]
         assert "Elf64_Ehdr" in names
 
-    def test_zip_template_present(self, hexcore: Any, zip_bytes: bytes) -> None:
+    def test_zip_template_present(self, hexcore: types.ModuleType, zip_bytes: bytes) -> None:
         """Verify ZIP_LOCAL_FILE_HEADER built-in template is always registered.
 
         Args:
@@ -105,7 +109,7 @@ class TestListTemplates:
 class TestListTemplatesDetailed:
     """Tests for the list_templates_detailed API returning 4-tuples."""
 
-    def test_returns_nonempty_list(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_returns_nonempty_list(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify list_templates_detailed returns at least one entry.
 
         Args:
@@ -116,7 +120,7 @@ class TestListTemplatesDetailed:
         detailed: list[tuple[str, str, str, int]] = doc.list_templates_detailed()
         assert detailed
 
-    def test_entries_are_four_tuples(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_entries_are_four_tuples(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify each entry is (name, description, category, field_count).
 
         Args:
@@ -133,7 +137,7 @@ class TestListTemplatesDetailed:
             assert isinstance(category, str)
             assert isinstance(field_count, int)
 
-    def test_dos_header_field_count_positive(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_dos_header_field_count_positive(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify IMAGE_DOS_HEADER has a positive field count.
 
         Args:
@@ -148,7 +152,7 @@ class TestListTemplatesDetailed:
         assert field_count > 0
         assert category == "PE"
 
-    def test_elf64_field_count_positive(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_elf64_field_count_positive(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify Elf64_Ehdr has a positive field count and ELF category.
 
         Args:
@@ -163,7 +167,7 @@ class TestListTemplatesDetailed:
         assert field_count > 0
         assert category == "ELF"
 
-    def test_zip_template_field_count_positive(self, hexcore: Any, zip_bytes: bytes) -> None:
+    def test_zip_template_field_count_positive(self, hexcore: types.ModuleType, zip_bytes: bytes) -> None:
         """Verify ZIP_LOCAL_FILE_HEADER has a positive field count.
 
         Args:
@@ -182,7 +186,7 @@ class TestListTemplatesDetailed:
 class TestApplyPETemplate:
     """Tests for applying the IMAGE_DOS_HEADER template to PE binary data."""
 
-    def test_apply_returns_nonempty_fields(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_apply_returns_nonempty_fields(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify apply_template on IMAGE_DOS_HEADER returns parsed fields.
 
         Args:
@@ -193,7 +197,7 @@ class TestApplyPETemplate:
         fields: list[dict[str, Any]] = doc.apply_template("IMAGE_DOS_HEADER", 0)
         assert fields
 
-    def test_first_field_is_e_magic(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_first_field_is_e_magic(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify the first parsed field is named e_magic.
 
         Args:
@@ -204,7 +208,7 @@ class TestApplyPETemplate:
         fields: list[dict[str, Any]] = doc.apply_template("IMAGE_DOS_HEADER", 0)
         assert fields[0]["name"] == "e_magic"
 
-    def test_e_magic_contains_mz_value(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_e_magic_contains_mz_value(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify e_magic display value contains the MZ magic (23117 or 5A4D).
 
         Args:
@@ -217,7 +221,7 @@ class TestApplyPETemplate:
         display: str = e_magic["display_value"]
         assert str(PE_E_MAGIC_DECIMAL) in display or PE_E_MAGIC_HEX in display
 
-    def test_e_magic_offset_is_zero(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_e_magic_offset_is_zero(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify e_magic is parsed at offset 0.
 
         Args:
@@ -228,7 +232,7 @@ class TestApplyPETemplate:
         fields: list[dict[str, Any]] = doc.apply_template("IMAGE_DOS_HEADER", 0)
         assert fields[0]["offset"] == 0
 
-    def test_e_lfanew_field_exists(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_e_lfanew_field_exists(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify e_lfanew field is present in parsed output.
 
         Args:
@@ -240,7 +244,7 @@ class TestApplyPETemplate:
         names = [f["name"] for f in fields]
         assert "e_lfanew" in names
 
-    def test_e_lfanew_has_correct_value(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_e_lfanew_has_correct_value(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify e_lfanew display value matches the 0x80 offset in the PE fixture.
 
         Args:
@@ -254,7 +258,7 @@ class TestApplyPETemplate:
         display: str = lfanew_fields[0]["display_value"]
         assert str(PE_LFANEW_VALUE) in display
 
-    def test_fields_have_required_keys(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_fields_have_required_keys(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify every returned field dict contains name, offset, size, display_value.
 
         Args:
@@ -273,7 +277,7 @@ class TestApplyPETemplate:
 class TestApplyELFTemplate:
     """Tests for applying the Elf64_Ehdr template to ELF64 binary data."""
 
-    def test_apply_returns_fields(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_apply_returns_fields(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify Elf64_Ehdr template parses the ELF binary successfully.
 
         Args:
@@ -284,7 +288,7 @@ class TestApplyELFTemplate:
         fields: list[dict[str, Any]] = doc.apply_template("Elf64_Ehdr", 0)
         assert fields
 
-    def test_first_field_is_e_ident(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_first_field_is_e_ident(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify the first parsed field is named e_ident.
 
         Args:
@@ -295,7 +299,7 @@ class TestApplyELFTemplate:
         fields: list[dict[str, Any]] = doc.apply_template("Elf64_Ehdr", 0)
         assert fields[0]["name"] == "e_ident"
 
-    def test_e_ident_contains_elf_magic_hex(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_e_ident_contains_elf_magic_hex(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify e_ident display value contains 7F 45 4C 46 (ELF magic).
 
         Args:
@@ -310,7 +314,7 @@ class TestApplyELFTemplate:
         assert "4C" in e_ident_display
         assert "46" in e_ident_display
 
-    def test_e_ident_size_is_16(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_e_ident_size_is_16(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify e_ident field has size 16 as per ELF specification.
 
         Args:
@@ -325,7 +329,7 @@ class TestApplyELFTemplate:
 class TestApplyZIPTemplate:
     """Tests for applying the ZIP_LOCAL_FILE_HEADER template to ZIP binary data."""
 
-    def test_apply_returns_fields(self, hexcore: Any, zip_bytes: bytes) -> None:
+    def test_apply_returns_fields(self, hexcore: types.ModuleType, zip_bytes: bytes) -> None:
         """Verify ZIP_LOCAL_FILE_HEADER template parses the ZIP binary successfully.
 
         Args:
@@ -336,7 +340,7 @@ class TestApplyZIPTemplate:
         fields: list[dict[str, Any]] = doc.apply_template("ZIP_LOCAL_FILE_HEADER", 0)
         assert fields
 
-    def test_first_field_is_signature(self, hexcore: Any, zip_bytes: bytes) -> None:
+    def test_first_field_is_signature(self, hexcore: types.ModuleType, zip_bytes: bytes) -> None:
         """Verify the first parsed field is named signature.
 
         Args:
@@ -347,7 +351,7 @@ class TestApplyZIPTemplate:
         fields: list[dict[str, Any]] = doc.apply_template("ZIP_LOCAL_FILE_HEADER", 0)
         assert fields[0]["name"] == "signature"
 
-    def test_signature_contains_pk_magic(self, hexcore: Any, zip_bytes: bytes) -> None:
+    def test_signature_contains_pk_magic(self, hexcore: types.ModuleType, zip_bytes: bytes) -> None:
         """Verify the signature field display value contains the PK magic (0x04034B50).
 
         Args:
@@ -363,7 +367,7 @@ class TestApplyZIPTemplate:
 class TestRegisterCustomTemplate:
     """Tests for registering and using a custom JSON-defined template."""
 
-    def test_register_returns_template_name(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_register_returns_template_name(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify register_json_template returns the template name from JSON.
 
         Args:
@@ -374,7 +378,7 @@ class TestRegisterCustomTemplate:
         name: str = doc.register_json_template(_CUSTOM_TEMPLATE_JSON)
         assert name == "TestStruct"
 
-    def test_custom_template_appears_in_list(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_custom_template_appears_in_list(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify the custom template appears in list_templates after registration.
 
         Args:
@@ -387,7 +391,7 @@ class TestRegisterCustomTemplate:
         names = [t[0] for t in templates]
         assert "TestStruct" in names
 
-    def test_apply_custom_template_parses_fields(self, hexcore: Any) -> None:
+    def test_apply_custom_template_parses_fields(self, hexcore: types.ModuleType) -> None:
         """Verify applying the custom template parses the expected fields.
 
         Args:
@@ -403,7 +407,7 @@ class TestRegisterCustomTemplate:
         assert fields[0]["name"] == "magic"
         assert fields[1]["name"] == "version"
 
-    def test_custom_template_magic_value_correct(self, hexcore: Any) -> None:
+    def test_custom_template_magic_value_correct(self, hexcore: types.ModuleType) -> None:
         """Verify the parsed magic field contains the expected value.
 
         Args:
@@ -418,7 +422,7 @@ class TestRegisterCustomTemplate:
         magic_display: str = fields[0]["display_value"]
         assert "43981" in magic_display or "ABCD" in magic_display
 
-    def test_custom_template_version_value_correct(self, hexcore: Any) -> None:
+    def test_custom_template_version_value_correct(self, hexcore: types.ModuleType) -> None:
         """Verify the parsed version field contains the expected value.
 
         Args:
@@ -437,7 +441,7 @@ class TestRegisterCustomTemplate:
 class TestRemoveTemplate:
     """Tests for removing templates from the document registry."""
 
-    def test_remove_custom_template_returns_true(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_remove_custom_template_returns_true(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify remove_template returns True when the template exists.
 
         Args:
@@ -449,7 +453,7 @@ class TestRemoveTemplate:
         result: bool = doc.remove_template("TestStruct")
         assert result
 
-    def test_removed_template_absent_from_list(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_removed_template_absent_from_list(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify removed template no longer appears in list_templates.
 
         Args:
@@ -463,7 +467,7 @@ class TestRemoveTemplate:
         names = [t[0] for t in templates]
         assert "TestStruct" not in names
 
-    def test_remove_nonexistent_returns_false(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_remove_nonexistent_returns_false(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify remove_template returns False when the template does not exist.
 
         Args:
@@ -474,7 +478,7 @@ class TestRemoveTemplate:
         result: bool = doc.remove_template("__DOES_NOT_EXIST__")
         assert not result
 
-    def test_builtin_template_removable(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_builtin_template_removable(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify a built-in template can be removed and disappears from the list.
 
         Args:
@@ -492,7 +496,7 @@ class TestRemoveTemplate:
 class TestExportTemplate:
     """Tests for exporting registered templates as JSON."""
 
-    def test_export_builtin_returns_valid_json(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_export_builtin_returns_valid_json(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify export_template_json returns parseable JSON for a built-in template.
 
         Args:
@@ -504,7 +508,7 @@ class TestExportTemplate:
         parsed = json.loads(exported)
         assert isinstance(parsed, dict)
 
-    def test_export_contains_template_name(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_export_contains_template_name(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify the exported JSON contains the correct template name.
 
         Args:
@@ -515,7 +519,7 @@ class TestExportTemplate:
         exported: str = doc.export_template_json("IMAGE_DOS_HEADER")
         assert "IMAGE_DOS_HEADER" in exported
 
-    def test_export_contains_field_names(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_export_contains_field_names(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify the exported JSON contains expected field names like e_magic.
 
         Args:
@@ -527,7 +531,7 @@ class TestExportTemplate:
         assert "e_magic" in exported
         assert "e_lfanew" in exported
 
-    def test_exported_json_can_be_reregistered(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_exported_json_can_be_reregistered(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify exported JSON can be removed and re-registered with equivalent behavior.
 
         Args:
@@ -543,7 +547,7 @@ class TestExportTemplate:
         names = [t[0] for t in templates]
         assert "IMAGE_DOS_HEADER" in names
 
-    def test_roundtrip_produces_equivalent_parse(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_roundtrip_produces_equivalent_parse(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify re-registered template produces identical field parse results.
 
         Args:
@@ -563,7 +567,7 @@ class TestExportTemplate:
             assert before["offset"] == after["offset"]
             assert before["size"] == after["size"]
 
-    def test_export_custom_template(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_export_custom_template(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify export_template_json works for a custom-registered template.
 
         Args:
@@ -583,7 +587,7 @@ class TestExportTemplate:
 class TestApplyInvalidTemplate:
     """Tests for error handling when applying non-existent templates."""
 
-    def test_nonexistent_template_raises(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_nonexistent_template_raises(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify apply_template raises an exception for an unknown template name.
 
         Args:
@@ -594,7 +598,7 @@ class TestApplyInvalidTemplate:
         with pytest.raises((OSError, RuntimeError, KeyError, ValueError)):
             doc.apply_template("__NO_SUCH_TEMPLATE__", 0)
 
-    def test_empty_template_name_raises(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_empty_template_name_raises(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify apply_template raises an exception when name is an empty string.
 
         Args:
@@ -605,7 +609,7 @@ class TestApplyInvalidTemplate:
         with pytest.raises((OSError, RuntimeError, KeyError, ValueError)):
             doc.apply_template("", 0)
 
-    def test_export_nonexistent_raises(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_export_nonexistent_raises(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify export_template_json raises for a template name that does not exist.
 
         Args:
@@ -620,7 +624,7 @@ class TestApplyInvalidTemplate:
 class TestTemplateOnWrongData:
     """Tests for template behavior when applied to binary data of the wrong format."""
 
-    def test_pe_template_on_elf_data_parses_or_raises(self, hexcore: Any, elf_bytes: bytes) -> None:
+    def test_pe_template_on_elf_data_parses_or_raises(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
         """Verify IMAGE_DOS_HEADER on ELF data either parses with wrong values or raises.
 
         If it parses, the e_magic field must NOT contain the MZ magic string.
@@ -635,7 +639,7 @@ class TestTemplateOnWrongData:
         try:
             wrong_data_fields = doc.apply_template("IMAGE_DOS_HEADER", 0)
             parsed_successfully = True
-        except Exception as _exc:
+        except (RuntimeError, ValueError) as _exc:
             parsed_successfully = False
         if parsed_successfully:
             assert len(wrong_data_fields) > 0
@@ -644,7 +648,7 @@ class TestTemplateOnWrongData:
             display: str = e_magic_fields[0]["display_value"]
             assert str(PE_E_MAGIC_DECIMAL) not in display
 
-    def test_elf_template_on_pe_data_parses_or_raises(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_elf_template_on_pe_data_parses_or_raises(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify Elf64_Ehdr on PE data either parses with wrong values or raises.
 
         If it parses, the e_ident field must NOT contain 7F 45 4C 46.
@@ -659,7 +663,7 @@ class TestTemplateOnWrongData:
         try:
             wrong_data_fields = doc.apply_template("Elf64_Ehdr", 0)
             parsed_successfully = True
-        except Exception as _exc:
+        except (RuntimeError, ValueError) as _exc:
             parsed_successfully = False
         if parsed_successfully:
             assert len(wrong_data_fields) > 0
@@ -668,7 +672,7 @@ class TestTemplateOnWrongData:
             display: str = e_ident_fields[0]["display_value"]
             assert "7F 45 4C 46" not in display
 
-    def test_dos_header_on_too_short_data_raises(self, hexcore: Any) -> None:
+    def test_dos_header_on_too_short_data_raises(self, hexcore: types.ModuleType) -> None:
         """Verify IMAGE_DOS_HEADER raises when data is shorter than the 64-byte structure.
 
         Args:
@@ -678,7 +682,7 @@ class TestTemplateOnWrongData:
         with pytest.raises((OSError, RuntimeError, KeyError, ValueError)):
             doc.apply_template("IMAGE_DOS_HEADER", 0)
 
-    def test_apply_at_nonzero_offset_within_bounds(self, hexcore: Any, pe_bytes: bytes) -> None:
+    def test_apply_at_nonzero_offset_within_bounds(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         r"""Verify apply_template respects the offset parameter when data is present.
 
         Applying IMAGE_FILE_HEADER at PE_SIGNATURE_OFFSET + 4 (after "PE\x00\x00") should parse.

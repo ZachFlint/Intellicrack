@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Hex editor bridge wrapping the Rust-powered intellicrack_hexcore.
 
@@ -23,18 +22,19 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from ..core.logging import get_logger
-from ..core.types import ToolDefinition, ToolFunction, ToolName, ToolParameter
-from .base import BridgeCapabilities, ToolBridgeBase
+from intellicrack.bridges.base import BridgeCapabilities, ToolBridgeBase
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolDefinition, ToolFunction, ToolName, ToolParameter
 
 
 if TYPE_CHECKING:
-    from ..core.disassembler import HexDisassembler
-    from ..core.hexpat_compiler import HexPatCompiler, HexPatError
-    from ..core.tools import ToolRegistry
-    from ..core.transform_pipeline import TransformPipeline
-    from ..core.yara_scanner import YaraScanner
-    from .hex_state import HexDocumentState
+    from intellicrack.bridges.hex_state import HexDocumentState
+    from intellicrack.core.disassembler import HexDisassembler
+    from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
+    from intellicrack.core.hexpat_compiler import HexPatCompiler, HexPatError
+    from intellicrack.core.tools import ToolRegistry
+    from intellicrack.core.transform_pipeline import TransformPipeline
+    from intellicrack.core.yara_scanner import YaraScanner
 
 
 _logger = get_logger("bridges.hex_editor")
@@ -60,7 +60,7 @@ try:
     )
 
     _hexpat_available = True
-except Exception as _exc:
+except (ImportError, OSError) as _exc:
     _logger.debug("hexpat_compiler_unavailable", error=str(_exc))
 
 _HexPatInterpreter: Any = None
@@ -75,7 +75,7 @@ try:
     from intellicrack.core.hexpat.data_reader import DataReader as _DataReader
 
     _hexpat_interpreter_available = True
-except Exception as _exc:
+except (ImportError, OSError) as _exc:
     _logger.debug("hexpat_interpreter_unavailable", error=str(_exc))
 
 _HexDisassembler: type[HexDisassembler] | None = None
@@ -84,7 +84,7 @@ try:
     from intellicrack.core.disassembler import HexDisassembler as _HexDisassembler
 
     _disasm_available = True
-except Exception as _exc:
+except (ImportError, OSError) as _exc:
     _logger.debug("hex_disassembler_unavailable", error=str(_exc))
 
 _YaraScanner: type[YaraScanner] | None = None
@@ -93,7 +93,7 @@ try:
     from intellicrack.core.yara_scanner import YaraScanner as _YaraScanner
 
     _yara_bridge_available = True
-except Exception as _exc:
+except (ImportError, OSError) as _exc:
     _logger.debug("yara_scanner_unavailable", error=str(_exc))
 
 _get_all_transform_nodes: Any = None
@@ -106,7 +106,7 @@ try:
     )
 
     _pipeline_available = True
-except Exception as _exc:
+except (ImportError, OSError) as _exc:
     _logger.debug("transform_pipeline_unavailable", error=str(_exc))
 
 
@@ -127,7 +127,7 @@ class HexEditorBridge(ToolBridgeBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self._document: Any | None = None
+        self.document: Any | None = None
         self._cursor_offset: int = 0
         self._selection: tuple[int, int] | None = None
         self._hexcore_available: bool = _hexcore_available
@@ -136,8 +136,8 @@ class HexEditorBridge(ToolBridgeBase):
         self._pipeline_available: bool = _pipeline_available
         self._interpreter: Any | None = None
         self._pattern_registry: Any | None = None
-        self._state_holder: HexDocumentState | None = None
-        self._tool_registry: ToolRegistry | None = None
+        self.state_holder: HexDocumentState | None = None
+        self.tool_registry: ToolRegistry | None = None
         self._highlight_rules: dict[str, dict[str, Any]] = {}
         self._display_mode: str = "hex8"
         self._transform_node_cache: dict[str, Any] | None = None
@@ -155,7 +155,7 @@ class HexEditorBridge(ToolBridgeBase):
         Args:
             state_holder: The shared HexDocumentState instance.
         """
-        self._state_holder = state_holder
+        self.state_holder = state_holder
 
     def set_tool_registry(self, registry: ToolRegistry) -> None:
         """
@@ -164,7 +164,7 @@ class HexEditorBridge(ToolBridgeBase):
         Args:
             registry: The ToolRegistry providing access to other bridges.
         """
-        self._tool_registry = registry
+        self.tool_registry = registry
 
     @property
     def name(self) -> ToolName:
@@ -258,7 +258,11 @@ class HexEditorBridge(ToolBridgeBase):
                             default="utf-8",
                         ),
                         ToolParameter(
-                            name="case_sensitive", type="boolean", description="Case-sensitive match.", required=False, default=True
+                            name="case_sensitive",
+                            type="boolean",
+                            description="Case-sensitive match.",
+                            required=False,
+                            default=True,
                         ),
                         ToolParameter(name="max_results", type="integer", description="Maximum results.", required=False, default=100),
                     ],
@@ -295,7 +299,7 @@ class HexEditorBridge(ToolBridgeBase):
                     name="hex_editor.calculate_hash",
                     description="Calculate hash of the entire document.",
                     parameters=[
-                        ToolParameter(name="algorithm", type="string", description="Hash algorithm.", required=False, default="sha256")
+                        ToolParameter(name="algorithm", type="string", description="Hash algorithm.", required=False, default="sha256"),
                     ],
                     returns="Hex digest string",
                 ),
@@ -466,7 +470,7 @@ class HexEditorBridge(ToolBridgeBase):
                     name="hex_editor.save",
                     description="Save the document.",
                     parameters=[
-                        ToolParameter(name="path", type="string", description="Save path (uses original if omitted).", required=False)
+                        ToolParameter(name="path", type="string", description="Save path (uses original if omitted).", required=False),
                     ],
                     returns="True if saved",
                 ),
@@ -643,7 +647,11 @@ class HexEditorBridge(ToolBridgeBase):
                             default="auto",
                         ),
                         ToolParameter(
-                            name="mode", type="string", description="Mode (16, 32, 64, arm, thumb).", required=False, default="64"
+                            name="mode",
+                            type="string",
+                            description="Mode (16, 32, 64, arm, thumb).",
+                            required=False,
+                            default="64",
                         ),
                     ],
                     returns="List of {address, bytes, mnemonic, operands, size} dicts",
@@ -746,7 +754,11 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8.", required=False, default=4),
                         ToolParameter(name="value_type", type="string", description="Type: uint, int.", required=False, default="uint"),
                         ToolParameter(
-                            name="endianness", type="string", description="Byte order: little, big.", required=False, default="little"
+                            name="endianness",
+                            type="string",
+                            description="Byte order: little, big.",
+                            required=False,
+                            default="little",
                         ),
                         ToolParameter(name="alignment", type="integer", description="Search alignment.", required=False, default=1),
                         ToolParameter(name="max_results", type="integer", description="Max results.", required=False, default=100),
@@ -913,9 +925,9 @@ class HexEditorBridge(ToolBridgeBase):
                 return
             self._state.connected = True
             self._state.tool_running = True
-            if self._state_holder is not None:
-                self._highlight_rules = self._state_holder.get_highlight_rules()
-                self._display_mode = self._state_holder.get_display_mode()
+            if self.state_holder is not None:
+                self._highlight_rules = self.state_holder.get_highlight_rules()
+                self._display_mode = self.state_holder.get_display_mode()
             _logger.info("hex_editor_initialized", backend="rust_hexcore")
         else:
             self._state.connected = False
@@ -933,8 +945,8 @@ class HexEditorBridge(ToolBridgeBase):
 
     async def shutdown(self) -> None:
         """Shutdown the hex editor bridge."""
-        if self._document is not None:
-            self._document = None
+        if self.document is not None:
+            self.document = None
         self._cursor_offset = 0
         self._selection = None
         _logger.debug("hex_editor_shutdown")
@@ -957,8 +969,8 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "intellicrack_hexcore not installed"
             raise RuntimeError(msg)
 
-        self._document = _hexcore_mod.HexDocument.open(path)
-        if self._document is None:
+        self.document = _hexcore_mod.HexDocument.open(path)
+        if self.document is None:
             msg = f"failed to open {path}"
             raise RuntimeError(msg)
         self._cursor_offset = 0
@@ -966,11 +978,11 @@ class HexEditorBridge(ToolBridgeBase):
         self._state.binary_loaded = True
         self._state.target_path = Path(path)
 
-        doc_len: int = self._document.length()
+        doc_len: int = self.document.length()
         _logger.info("file_opened", path=path, size=doc_len)
 
-        if self._state_holder is not None:
-            self._state_holder.set_document(self._document, Path(path), source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_document(self.document, Path(path), source="bridge")
 
         return {
             "file_path": path,
@@ -985,16 +997,16 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             bool: True if a file was closed.
         """
-        if self._document is None:
+        if self.document is None:
             return False
 
-        self._document = None
+        self.document = None
         self._cursor_offset = 0
         self._selection = None
         self._state.binary_loaded = False
         self._state.target_path = None
-        if self._state_holder is not None:
-            self._state_holder.set_document(None, None, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_document(None, None, source="bridge")
         _logger.info("file_closed")
         return True
 
@@ -1012,12 +1024,12 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         _logger.debug("bytes_read", offset=hex(offset), length=length)
-        raw = self._document.read(offset, length)
+        raw = self.document.read(offset, length)
         return " ".join(f"{b:02X}" for b in raw)
 
     async def write_bytes(self, offset: int, data_hex: str) -> bool:
@@ -1034,15 +1046,15 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         data = bytes.fromhex(data_hex.replace(" ", ""))
-        self._document.write_bytes(offset, data)
+        self.document.write_bytes(offset, data)
         _logger.debug("bytes_written", offset=hex(offset), length=len(data))
-        if self._state_holder is not None:
-            self._state_holder.notify_data_modified(offset, len(data), source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, len(data), source="bridge")
         return True
 
     async def insert_bytes(self, offset: int, data_hex: str) -> bool:
@@ -1059,15 +1071,15 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         data = bytes.fromhex(data_hex.replace(" ", ""))
-        self._document.insert_bytes(offset, data)
+        self.document.insert_bytes(offset, data)
         _logger.debug("bytes_inserted", offset=hex(offset), length=len(data))
-        if self._state_holder is not None:
-            self._state_holder.notify_data_modified(offset, len(data), source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, len(data), source="bridge")
         return True
 
     async def delete_bytes(self, offset: int, length: int) -> bool:
@@ -1084,14 +1096,14 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        self._document.delete_bytes(offset, length)
+        self.document.delete_bytes(offset, length)
         _logger.debug("bytes_deleted", offset=hex(offset), length=length)
-        if self._state_holder is not None:
-            self._state_holder.notify_data_modified(offset, length, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, length, source="bridge")
         return True
 
     async def goto_offset(self, offset: int) -> bool:
@@ -1106,8 +1118,8 @@ class HexEditorBridge(ToolBridgeBase):
         """
         self._cursor_offset = offset
         _logger.debug("cursor_moved", offset=hex(offset))
-        if self._state_holder is not None:
-            self._state_holder.set_cursor(offset, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_cursor(offset, source="bridge")
         return True
 
     async def get_cursor_position(self) -> int:
@@ -1132,8 +1144,8 @@ class HexEditorBridge(ToolBridgeBase):
         """
         self._selection = (start, end)
         _logger.debug("range_selected", start=hex(start), end=hex(end))
-        if self._state_holder is not None:
-            self._state_holder.set_selection(start, end, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_selection(start, end, source="bridge")
         return True
 
     async def get_selection(self) -> tuple[int, int] | None:
@@ -1159,11 +1171,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        results = self._document.search_hex(pattern, max_results)
+        results = self.document.search_hex(pattern, max_results)
         _logger.debug("search_hex_completed", pattern=pattern, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -1181,12 +1193,12 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         pattern = bytes.fromhex(pattern_hex.replace(" ", ""))
-        results = self._document.search_bytes(pattern, max_results)
+        results = self.document.search_bytes(pattern, max_results)
         _logger.debug("search_bytes_completed", pattern_len=len(pattern), matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -1194,8 +1206,9 @@ class HexEditorBridge(ToolBridgeBase):
         self,
         text: str,
         encoding: str = "utf-8",
-        case_sensitive: bool = True,
         max_results: int = 100,
+        *,
+        case_sensitive: bool = True,
     ) -> list[dict[str, int]]:
         """
         Search for text with encoding support.
@@ -1203,8 +1216,8 @@ class HexEditorBridge(ToolBridgeBase):
         Args:
             text: Text string to search for.
             encoding: Text encoding (utf-8, utf-16le, shift-jis, euc-kr, etc.).
-            case_sensitive: Whether the search is case-sensitive.
             max_results: Maximum number of results.
+            case_sensitive: Whether the search is case-sensitive.
 
         Returns:
             list[dict[str, int]]: List of dicts with offset and length keys.
@@ -1212,14 +1225,14 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self._document, "search_text_encoded"):
-            results = self._document.search_text_encoded(text, encoding, case_sensitive, max_results)
+        if hasattr(self.document, "search_text_encoded"):
+            results = self.document.search_text_encoded(text, encoding, case_sensitive, max_results)
         else:
-            results = self._document.search_text(text, encoding, case_sensitive, max_results)
+            results = self.document.search_text(text, encoding, case_sensitive, max_results)
         _logger.debug("search_text_completed", encoding=encoding, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -1237,11 +1250,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        results = self._document.search_regex(pattern, max_results)
+        results = self.document.search_regex(pattern, max_results)
         _logger.debug("search_regex_completed", pattern=pattern, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -1259,17 +1272,17 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         pattern = list(bytes.fromhex(pattern_hex.replace(" ", "")))
         replacement = list(bytes.fromhex(replacement_hex.replace(" ", "")))
-        count: int = self._document.replace_bytes(pattern, replacement)
+        count: int = self.document.replace_bytes(pattern, replacement)
         _logger.debug("bytes_replaced", pattern_length=len(pattern), replacements=count)
-        if count > 0 and self._state_holder is not None:
-            doc_len: int = self._document.length()
-            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
+        if count > 0 and self.state_holder is not None:
+            doc_len: int = self.document.length()
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return count
 
     async def undo(self) -> bool:
@@ -1279,13 +1292,13 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             bool: True if an operation was undone.
         """
-        if self._document is None:
+        if self.document is None:
             return False
-        result: bool = self._document.undo()
+        result: bool = self.document.undo()
         _logger.debug("undo_performed", success=result)
-        if result and self._state_holder is not None:
-            doc_len: int = self._document.length()
-            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
+        if result and self.state_holder is not None:
+            doc_len: int = self.document.length()
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return result
 
     async def redo(self) -> bool:
@@ -1295,13 +1308,13 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             bool: True if an operation was redone.
         """
-        if self._document is None:
+        if self.document is None:
             return False
-        result: bool = self._document.redo()
+        result: bool = self.document.redo()
         _logger.debug("redo_performed", success=result)
-        if result and self._state_holder is not None:
-            doc_len: int = self._document.length()
-            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
+        if result and self.state_holder is not None:
+            doc_len: int = self.document.length()
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return result
 
     async def inspect_data_at(self, offset: int) -> dict[str, str]:
@@ -1317,12 +1330,12 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         _logger.debug("data_inspected", offset=hex(offset))
-        result = self._document.inspect_at(offset)
+        result = self.document.inspect_at(offset)
         if not isinstance(result, dict):
             return {}
         typed = cast("dict[str, object]", result)
@@ -1341,11 +1354,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        digest: str = self._document.compute_hash(algorithm)
+        digest: str = self.document.compute_hash(algorithm)
         _logger.debug("hash_calculated", algorithm=algorithm)
         return digest
 
@@ -1359,11 +1372,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        stats = self._document.byte_statistics()
+        stats = self.document.byte_statistics()
         _logger.debug("byte_statistics_computed", unique_bytes=len(stats))
         return [{"byte": s[0], "count": s[1]} for s in stats]
 
@@ -1381,12 +1394,12 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         _logger.debug("template_applied", template=template_name, offset=hex(offset))
-        result = self._document.apply_template(template_name, offset)
+        result = self.document.apply_template(template_name, offset)
         if not isinstance(result, list):
             return []
         typed_list = cast("list[object]", result)
@@ -1399,17 +1412,17 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             list[dict[str, str]]: List of dicts with name and description.
         """
-        if self._document is None:
+        if self.document is None:
             if not self._hexcore_available or _hexcore_mod is None:
                 return []
             try:
                 doc = _hexcore_mod.HexDocument()
-            except Exception:
+            except (RuntimeError, OSError, TypeError):
                 _logger.warning("hexdocument_default_init_failed", exc_info=True)
                 return []
             templates = doc.list_templates()
         else:
-            templates = self._document.list_templates()
+            templates = self.document.list_templates()
 
         _logger.debug("templates_listed", count=len(templates))
         return [{"name": t[0], "description": t[1]} for t in templates]
@@ -1427,14 +1440,14 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        name: str = self._document.register_json_template(json_str)
+        name: str = self.document.register_json_template(json_str)
         _logger.info("template_registered", template_name=name)
-        if self._state_holder is not None:
-            self._state_holder.notify_template_registered(name, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_template_registered(name, source="bridge")
         return name
 
     async def remove_template(self, template_name: str) -> bool:
@@ -1447,14 +1460,14 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             bool: True if the template was removed.
         """
-        if self._document is None:
+        if self.document is None:
             return False
 
-        removed: bool = self._document.remove_template(template_name)
+        removed: bool = self.document.remove_template(template_name)
         if removed:
             _logger.info("template_removed", template_name=template_name)
-            if self._state_holder is not None:
-                self._state_holder.notify_template_removed(template_name, source="bridge")
+            if self.state_holder is not None:
+                self.state_holder.notify_template_removed(template_name, source="bridge")
         return removed
 
     async def compile_pattern(self, source: str) -> str:
@@ -1481,36 +1494,36 @@ class HexEditorBridge(ToolBridgeBase):
             msg = f"compilation error at line {exc.line}, column {exc.column}: {exc.message}"
             raise ValueError(msg) from exc
 
-    def _get_interpreter(self) -> Any:
+    def _get_interpreter(self) -> HexPatInterpreter:
         """
         Get or create the HexPat interpreter instance.
 
         Returns:
-            Any: A HexPatInterpreter instance.
+            HexPatInterpreter: A HexPatInterpreter instance.
 
         Raises:
             RuntimeError: If the interpreter module is not available.
         """
         if self._interpreter is not None:
-            return self._interpreter
+            return cast("HexPatInterpreter", self._interpreter)
         if not self._hexpat_interpreter_available or _HexPatInterpreter is None:
             msg = "hexpat interpreter not available"
             raise RuntimeError(msg)
         self._interpreter = _HexPatInterpreter()
-        return self._interpreter
+        return cast("HexPatInterpreter", self._interpreter)
 
-    def _get_pattern_registry(self) -> Any:
+    def _get_pattern_registry(self) -> PatternRegistry:
         """
         Get or create the pattern registry instance.
 
         Returns:
-            Any: A PatternRegistry instance.
+            PatternRegistry: A PatternRegistry instance.
 
         Raises:
             RuntimeError: If the pattern registry module is not available.
         """
         if self._pattern_registry is not None:
-            return self._pattern_registry
+            return cast("PatternRegistry", self._pattern_registry)
         if not self._hexpat_interpreter_available or _PatternRegistry is None:
             msg = "pattern registry not available"
             raise RuntimeError(msg)
@@ -1520,7 +1533,7 @@ class HexEditorBridge(ToolBridgeBase):
         if patterns_dir.exists():
             pattern_dirs.append(patterns_dir)
         self._pattern_registry = _PatternRegistry(pattern_dirs)
-        return self._pattern_registry
+        return cast("PatternRegistry", self._pattern_registry)
 
     async def execute_pattern(
         self,
@@ -1541,15 +1554,15 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open or interpreter unavailable.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         interpreter = self._get_interpreter()
-        fields: list[dict[str, Any]] = interpreter.execute(source, self._document, offset)
+        fields: list[dict[str, Any]] = interpreter.execute(source, self.document, offset)
         _logger.info("pattern_executed", field_count=len(fields), offset=offset)
-        if self._state_holder is not None:
-            self._state_holder.notify_pattern_executed("<inline>", len(fields), source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_pattern_executed("<inline>", len(fields), source="bridge")
         return fields
 
     async def execute_pattern_file(
@@ -1571,25 +1584,25 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open or interpreter unavailable.
             FileNotFoundError: If the pattern file does not exist.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         path = Path(pattern_path)
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             msg = f"pattern file not found: {pattern_path}"
             raise FileNotFoundError(msg)
 
         interpreter = self._get_interpreter()
-        fields: list[dict[str, Any]] = interpreter.execute_file(path, self._document, offset)
+        fields: list[dict[str, Any]] = interpreter.execute_file(path, self.document, offset)
         _logger.info(
             "pattern_file_executed",
             pattern_path=pattern_path,
             field_count=len(fields),
             offset=offset,
         )
-        if self._state_holder is not None:
-            self._state_holder.notify_pattern_executed(path.stem, len(fields), source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_pattern_executed(path.stem, len(fields), source="bridge")
         return fields
 
     async def list_hexpat_patterns(self) -> list[dict[str, str]]:
@@ -1625,7 +1638,7 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -1637,7 +1650,7 @@ class HexEditorBridge(ToolBridgeBase):
         except RuntimeError:
             return []
 
-        data_reader = _DataReader.from_document(self._document)
+        data_reader = _DataReader.from_document(self.document)
         matches = registry.match_file(data_reader)
         _logger.debug("pattern_auto_detect", match_count=len(matches))
         return [
@@ -1662,11 +1675,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result: str = self._document.export_template_json(template_name)
+        result: str = self.document.export_template_json(template_name)
         _logger.debug("template_exported", template_name=template_name)
         return result
 
@@ -1677,17 +1690,17 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             list[dict[str, Any]]: List of dicts with name, description, category, field_count.
         """
-        if self._document is None:
+        if self.document is None:
             if not self._hexcore_available or _hexcore_mod is None:
                 return []
             try:
                 doc = _hexcore_mod.HexDocument()
-            except Exception:
+            except (RuntimeError, OSError, TypeError):
                 _logger.warning("hexdocument_default_init_failed", exc_info=True)
                 return []
             templates = doc.list_templates_detailed()
         else:
-            templates = self._document.list_templates_detailed()
+            templates = self.document.list_templates_detailed()
 
         _logger.debug("templates_listed_detailed", count=len(templates))
         return [
@@ -1740,7 +1753,7 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -1752,7 +1765,7 @@ class HexEditorBridge(ToolBridgeBase):
             start = self._cursor_offset
             length = 1
 
-        raw = self._document.read(start, length)
+        raw = self.document.read(start, length)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray):
@@ -1829,11 +1842,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        idx: int = self._document.add_bookmark(offset, length, label, color)
+        idx: int = self.document.add_bookmark(offset, length, label, color)
         _logger.debug("bookmark_added", offset=hex(offset), label=label, index=idx)
         return idx
 
@@ -1850,11 +1863,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        removed: bool = self._document.remove_bookmark(index)
+        removed: bool = self.document.remove_bookmark(index)
         _logger.debug("bookmark_removed", index=index, success=removed)
         return removed
 
@@ -1865,10 +1878,10 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             list[dict[str, Any]]: List of dicts with offset, length, label, color.
         """
-        if self._document is None:
+        if self.document is None:
             return []
 
-        bookmarks = self._document.list_bookmarks()
+        bookmarks = self.document.list_bookmarks()
         _logger.debug("bookmarks_listed", count=len(bookmarks))
         return [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in bookmarks]
 
@@ -1885,25 +1898,25 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         if path is not None:
             saved_path = path
-            self._document.save(saved_path)
+            self.document.save(saved_path)
         else:
-            file_path = self._document.file_path()
+            file_path = self.document.file_path()
             if file_path is not None:
                 saved_path = file_path
-                self._document.save(saved_path)
+                self.document.save(saved_path)
             else:
                 msg = "no file path; use save_as"
                 raise RuntimeError(msg)
 
         _logger.info("file_saved", path=saved_path)
-        if self._state_holder is not None:
-            self._state_holder.notify_document_saved(str(saved_path), source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.notify_document_saved(str(saved_path), source="bridge")
         return True
 
     async def save_as(self, path: str) -> bool:
@@ -1938,11 +1951,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        digest: str = self._document.compute_hash_range(start, end, algorithm)
+        digest: str = self.document.compute_hash_range(start, end, algorithm)
         _logger.debug("hash_range_calculated", algorithm=algorithm, start=start, end=end)
         return digest
 
@@ -1953,7 +1966,7 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             dict[str, Any]: Dict with file_path, size, modified, cursor, and selection.
         """
-        if self._document is None:
+        if self.document is None:
             return {
                 "file_path": None,
                 "size": 0,
@@ -1962,11 +1975,11 @@ class HexEditorBridge(ToolBridgeBase):
                 "selection": None,
             }
 
-        file_path_val = self._document.file_path()
+        file_path_val = self.document.file_path()
         return {
             "file_path": file_path_val,
-            "size": self._document.length(),
-            "modified": self._document.is_modified(),
+            "size": self.document.length(),
+            "modified": self.document.is_modified(),
             "cursor": self._cursor_offset,
             "selection": list(self._selection) if self._selection else None,
         }
@@ -1988,14 +2001,14 @@ class HexEditorBridge(ToolBridgeBase):
         """
         context: dict[str, Any] = await self.get_document_info()
 
-        if self._document is not None:
+        if self.document is not None:
             cursor = self._cursor_offset
             half = include_bytes // 2
-            doc_len: int = self._document.length()
+            doc_len: int = self.document.length()
             read_start = max(0, cursor - half)
             read_len = min(include_bytes, doc_len - read_start)
             if read_len > 0:
-                raw = self._document.read(read_start, read_len)
+                raw = self.document.read(read_start, read_len)
                 context["bytes_at_cursor"] = " ".join(f"{b:02X}" for b in raw)
                 context["bytes_offset"] = read_start
             else:
@@ -2003,10 +2016,10 @@ class HexEditorBridge(ToolBridgeBase):
                 context["bytes_offset"] = 0
 
             try:
-                inspection = self._document.inspect_at(cursor)
+                inspection = self.document.inspect_at(cursor)
                 if isinstance(inspection, dict):
                     context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
-            except Exception as exc:
+            except (RuntimeError, OSError, ValueError) as exc:
                 _logger.warning("inspect_at_failed", offset=cursor, exc_info=True)
                 context["inspection"] = {"error": str(exc)}
 
@@ -2015,11 +2028,11 @@ class HexEditorBridge(ToolBridgeBase):
                 sel_start, sel_end = min(sel_start, sel_end), max(sel_start, sel_end)
                 sel_len = sel_end - sel_start + 1
                 capped = min(sel_len, include_bytes)
-                sel_raw = self._document.read(sel_start, capped)
+                sel_raw = self.document.read(sel_start, capped)
                 context["selected_bytes"] = " ".join(f"{b:02X}" for b in sel_raw)
                 context["selection_range"] = [sel_start, sel_end]
 
-            bookmarks = self._document.list_bookmarks()
+            bookmarks = self.document.list_bookmarks()
             context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in bookmarks]
 
         return context
@@ -2045,25 +2058,25 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open or sandbox unavailable.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if self._tool_registry is None:
+        if self.tool_registry is None:
             msg = "tool registry not set; cannot access sandbox bridge"
             raise RuntimeError(msg)
 
-        sandbox_bridge = self._tool_registry.get(ToolName.SANDBOX)
+        sandbox_bridge = self.tool_registry.get(ToolName.SANDBOX)
         if sandbox_bridge is None:
             msg = "sandbox bridge not available"
             raise RuntimeError(msg)
 
-        file_path_str = self._document.file_path()
+        file_path_str = self.document.file_path()
         tmp_path: str | None = None
         if file_path_str is None:
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
             os.close(tmp_fd)
-            self._document.save(tmp_path)
+            self.document.save(tmp_path)
             file_path_str = tmp_path
 
         try:
@@ -2076,7 +2089,7 @@ class HexEditorBridge(ToolBridgeBase):
         finally:
             if tmp_path is not None:
                 try:
-                    os.unlink(tmp_path)
+                    await asyncio.to_thread(Path(tmp_path).unlink)
                 except OSError:
                     _logger.debug("tmp_file_cleanup_failed", path=tmp_path)
 
@@ -2087,7 +2100,7 @@ class HexEditorBridge(ToolBridgeBase):
         self,
         args: str = "",
         sandbox_type: str = "docker",
-        timeout: int = 30,
+        max_wait: int = 30,
     ) -> dict[str, Any]:
         """
         Save to sandbox, execute the binary, and return the report.
@@ -2095,7 +2108,7 @@ class HexEditorBridge(ToolBridgeBase):
         Args:
             args: Command-line arguments for the binary.
             sandbox_type: Sandbox type.
-            timeout: Execution timeout in seconds.
+            max_wait: Execution timeout in seconds.
 
         Returns:
             dict[str, Any]: Dict with execution report including exit_code, stdout, stderr.
@@ -2104,23 +2117,23 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open or sandbox unavailable.
             TypeError: If sandbox bridge does not support run_binary.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         file_name = "target.bin"
-        file_path_str = self._document.file_path()
+        file_path_str = self.document.file_path()
         if file_path_str is not None:
             file_name = Path(file_path_str).name
 
         dest_path = f"/sandbox_workdir/{file_name}"
         await self.save_to_sandbox(dest_path, sandbox_type)
 
-        if self._tool_registry is None:
+        if self.tool_registry is None:
             msg = "tool registry not set"
             raise RuntimeError(msg)
 
-        sandbox_bridge = self._tool_registry.get(ToolName.SANDBOX)
+        sandbox_bridge = self.tool_registry.get(ToolName.SANDBOX)
         if sandbox_bridge is None:
             msg = "sandbox bridge not available"
             raise RuntimeError(msg)
@@ -2131,9 +2144,9 @@ class HexEditorBridge(ToolBridgeBase):
             raise TypeError(msg)
 
         if _inspect_mod.iscoroutinefunction(run_fn):
-            result = await run_fn(dest_path, args, timeout)
+            result = await run_fn(dest_path, args, max_wait)
         else:
-            result = await asyncio.to_thread(run_fn, dest_path, args, timeout)
+            result = await asyncio.to_thread(run_fn, dest_path, args, max_wait)
 
         _logger.info(
             "sandbox_test_completed",
@@ -2154,11 +2167,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result: float = self._document.entropy()
+        result: float = self.document.entropy()
         _logger.debug("entropy_computed", value=result)
         return result
 
@@ -2175,11 +2188,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result = self._document.entropy_map(block_size)
+        result = self.document.entropy_map(block_size)
         _logger.debug("entropy_map_computed", blocks=len(result), block_size=block_size)
         return [float(v) for v in result]
 
@@ -2193,11 +2206,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result = self._document.byte_distribution_full()
+        result = self.document.byte_distribution_full()
         _logger.debug("byte_distribution_computed")
         return [int(v) for v in result]
 
@@ -2211,11 +2224,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result: Any = self._document.byte_type_distribution()
+        result: Any = self.document.byte_type_distribution()
         _logger.debug("byte_type_distribution_computed")
         if isinstance(result, dict):
             return cast("dict[str, int]", result)
@@ -2237,11 +2250,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result = self._document.digram_matrix()
+        result = self.document.digram_matrix()
         _logger.debug("digram_matrix_computed")
         return [int(v) for v in result]
 
@@ -2259,11 +2272,11 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        result = self._document.content_classification(block_size)
+        result = self.document.content_classification(block_size)
         _logger.debug("content_classification_computed", blocks=len(result), block_size=block_size)
         return [int(v) for v in result]
 
@@ -2287,10 +2300,9 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, Any]]: List of dicts with address, bytes, mnemonic, operands, size.
 
         Raises:
-            RuntimeError: If no document is open.
-            ImportError: If the disassembler module is unavailable.
+            RuntimeError: If no document is open or disassembler module is unavailable.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -2299,13 +2311,13 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         max_bytes = count * 15
-        doc_len: int = self._document.length()
+        doc_len: int = self.document.length()
         read_len = min(max_bytes, doc_len - offset)
         if read_len <= 0:
             _logger.info("disassemble_out_of_bounds", offset=offset, doc_len=doc_len)
             return []
 
-        raw = self._document.read(offset, read_len)
+        raw = self.document.read(offset, read_len)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray) or not isinstance(raw, list):
@@ -2340,10 +2352,9 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, Any]]: List of match dicts with rule, tags, meta, strings.
 
         Raises:
-            RuntimeError: If no document is open.
-            ImportError: If the YARA scanner module is unavailable.
+            RuntimeError: If no document is open or YARA scanner module is unavailable.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -2351,8 +2362,8 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "yara_scanner module not available"
             raise RuntimeError(msg)
 
-        doc_len: int = self._document.length()
-        raw = self._document.read(0, doc_len)
+        doc_len: int = self.document.length()
+        raw = self.document.read(0, doc_len)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray) or not isinstance(raw, list):
@@ -2385,10 +2396,9 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, Any]]: List of match dicts with rule, tags, meta, strings.
 
         Raises:
-            RuntimeError: If no document is open.
-            ImportError: If the YARA scanner module is unavailable.
+            RuntimeError: If no document is open or YARA scanner module is unavailable.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -2396,8 +2406,8 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "yara_scanner module not available"
             raise RuntimeError(msg)
 
-        doc_len: int = self._document.length()
-        raw = self._document.read(0, doc_len)
+        doc_len: int = self.document.length()
+        raw = self.document.read(0, doc_len)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray) or not isinstance(raw, list):
@@ -2440,10 +2450,9 @@ class HexEditorBridge(ToolBridgeBase):
             str: Hex string of the transformed bytes.
 
         Raises:
-            RuntimeError: If no document is open.
-            ValueError: If params_json is not valid JSON.
+            RuntimeError: If the operation fails.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -2458,10 +2467,10 @@ class HexEditorBridge(ToolBridgeBase):
             else:
                 params[k] = v
 
-        if not hasattr(self._document, "transform_data"):
+        if not hasattr(self.document, "transform_data"):
             msg = "backend does not support transform_data"
             raise RuntimeError(msg)
-        result = self._document.transform_data(name, offset, length, params)
+        result = self.document.transform_data(name, offset, length, params)
         if isinstance(result, bytes):
             data = result
         elif isinstance(result, bytearray) or not isinstance(result, list):
@@ -2489,11 +2498,9 @@ class HexEditorBridge(ToolBridgeBase):
             str: Hex string of the transformed bytes.
 
         Raises:
-            RuntimeError: If no document is open.
-            ValueError: If pipeline_json is not valid JSON.
-            ImportError: If the transform pipeline module is unavailable.
+            RuntimeError: If the operation fails.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
@@ -2502,7 +2509,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         steps = cast("list[dict[str, Any]]", json.loads(pipeline_json))
-        raw = self._document.read(offset, length)
+        raw = self.document.read(offset, length)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray) or not isinstance(raw, list):
@@ -2552,17 +2559,17 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self._document, "decode_text"):
-            result: str = self._document.decode_text(offset, length, encoding)
+        if hasattr(self.document, "decode_text"):
+            result: str = self.document.decode_text(offset, length, encoding)
             _logger.debug("text_decoded", offset=hex(offset), length=length, encoding=encoding, backend="rust")
             return result
 
         _logger.info("decode_text_fallback_used", offset=hex(offset), length=length, encoding=encoding)
-        raw = self._document.read(offset, length)
+        raw = self.document.read(offset, length)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray) or not isinstance(raw, list):
@@ -2587,12 +2594,12 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self._document, "encode_text_to_bytes"):
-            raw_bytes: list[int] = self._document.encode_text_to_bytes(text, encoding)
+        if hasattr(self.document, "encode_text_to_bytes"):
+            raw_bytes: list[int] = self.document.encode_text_to_bytes(text, encoding)
             result = bytes(raw_bytes).hex()
             _logger.debug("text_encoded", encoding=encoding, length=len(raw_bytes), backend="rust")
             return result
@@ -2608,8 +2615,8 @@ class HexEditorBridge(ToolBridgeBase):
         Returns:
             list[dict[str, str]]: List of dicts with name and label.
         """
-        if self._document is not None and hasattr(self._document, "list_encodings"):
-            raw = self._document.list_encodings()
+        if self.document is not None and hasattr(self.document, "list_encodings"):
+            raw = self.document.list_encodings()
             _logger.debug("encodings_listed", count=len(raw))
             return [{"name": str(e[0]), "label": str(e[1])} for e in raw]
 
@@ -2639,6 +2646,7 @@ class HexEditorBridge(ToolBridgeBase):
         poly: int,
         init: int,
         width: int,
+        *,
         refin: bool = False,
         refout: bool = False,
         xorout: int = 0,
@@ -2663,12 +2671,12 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open.
             ValueError: If width is not 8, 16, 32, or 64.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self._document, "compute_hash_custom_crc"):
-            result: str = self._document.compute_hash_custom_crc(start, end, poly, init, width, refin, refout, xorout)
+        if hasattr(self.document, "compute_hash_custom_crc"):
+            result: str = self.document.compute_hash_custom_crc(start, end, poly, init, width, refin, refout, xorout)
             _logger.debug("custom_crc_computed", width=width)
             return result
 
@@ -2678,7 +2686,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise ValueError(msg)
 
         length = end - start
-        raw = self._document.read(start, length)
+        raw = self.document.read(start, length)
         if isinstance(raw, bytes):
             data = raw
         elif isinstance(raw, bytearray):
@@ -2725,17 +2733,17 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         raw: bytes
-        if patch_format == "ips32" and hasattr(self._document, "export_patches_ips32"):
-            raw = self._document.export_patches_ips32()
-        elif hasattr(self._document, "export_patches_ips"):
-            raw = self._document.export_patches_ips()
-        elif hasattr(self._document, "get_patches"):
-            patches: list[tuple[int, bytes]] = self._document.get_patches()
+        if patch_format == "ips32" and hasattr(self.document, "export_patches_ips32"):
+            raw = self.document.export_patches_ips32()
+        elif hasattr(self.document, "export_patches_ips"):
+            raw = self.document.export_patches_ips()
+        elif hasattr(self.document, "get_patches"):
+            patches: list[tuple[int, bytes]] = self.document.get_patches()
             raw = self._build_ips_from_patches(patches, ips32=(patch_format == "ips32"))
         else:
             msg = f"patch export format '{patch_format}' not supported by backend"
@@ -2757,20 +2765,20 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open or import is unsupported.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         raw = base64.b64decode(data_b64)
-        if hasattr(self._document, "import_patches_ips"):
-            count: int = self._document.import_patches_ips(raw)
+        if hasattr(self.document, "import_patches_ips"):
+            count: int = self.document.import_patches_ips(raw)
         else:
             count = self._apply_ips_patches(raw)
 
         _logger.debug("patches_imported", count=count)
-        if count > 0 and self._state_holder is not None:
-            doc_len: int = self._document.length()
-            self._state_holder.notify_data_modified(0, doc_len, source="bridge")
+        if count > 0 and self.state_holder is not None:
+            doc_len: int = self.document.length()
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return count
 
     @staticmethod
@@ -2851,8 +2859,8 @@ class HexEditorBridge(ToolBridgeBase):
                 break
             patch_data = raw[pos : pos + size]
             pos += size
-            if self._document is not None:
-                self._document.write_bytes(offset, list(patch_data))
+            if self.document is not None:
+                self.document.write_bytes(offset, list(patch_data))
             count += 1
         return count
 
@@ -2880,31 +2888,30 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, int]]: List of dicts with offset and length.
 
         Raises:
-            RuntimeError: If no document is open.
-            ValueError: If size is not 1, 2, 4, or 8.
+            RuntimeError: If the operation fails.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
         big_endian = endianness == "big"
         if value_type == "float":
-            if hasattr(self._document, "search_numeric_float"):
-                results = self._document.search_numeric_float(value, size, big_endian, alignment, max_results)
+            if hasattr(self.document, "search_numeric_float"):
+                results = self.document.search_numeric_float(value, size, big_endian, alignment, max_results)
                 _logger.debug("search_numeric_float_completed", matches=len(results))
                 return [{"offset": r[0], "length": r[1]} for r in results]
-        elif hasattr(self._document, "search_numeric"):
-            results = self._document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
+        elif hasattr(self.document, "search_numeric"):
+            results = self.document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
             _logger.debug("search_numeric_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
 
-        needle = self._pack_numeric_needle(value, size, value_type, big_endian)
-        doc_len: int = self._document.length()
+        needle = self._pack_numeric_needle(value, size, value_type, big_endian=big_endian)
+        doc_len: int = self.document.length()
         matches: list[dict[str, int]] = []
         pos = 0
         while pos <= doc_len - size and len(matches) < max_results:
             chunk_len = min(65536, doc_len - pos)
-            raw = self._document.read(pos, chunk_len)
+            raw = self.document.read(pos, chunk_len)
             if isinstance(raw, bytes):
                 chunk = raw
             elif isinstance(raw, bytearray) or not isinstance(raw, list):
@@ -2951,12 +2958,12 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
-        if self._document is None:
+        if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self._document, "search_numeric_range"):
-            results = self._document.search_numeric_range(
+        if hasattr(self.document, "search_numeric_range"):
+            results = self.document.search_numeric_range(
                 min_val,
                 max_val,
                 size,
@@ -2968,13 +2975,13 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.debug("search_numeric_range_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
 
-        fmt = self._build_numeric_format(size, value_type, endianness == "big")
-        doc_len: int = self._document.length()
+        fmt = self._build_numeric_format(size, value_type, big_endian=endianness == "big")
+        doc_len: int = self.document.length()
         matches: list[dict[str, int]] = []
         pos = 0
         while pos <= doc_len - size and len(matches) < max_results:
             read_len = min(65536, doc_len - pos)
-            raw = self._document.read(pos, read_len)
+            raw = self.document.read(pos, read_len)
             chunk = raw if isinstance(raw, bytes) else bytes(raw)
             idx = 0
             while idx <= len(chunk) - size and len(matches) < max_results:
@@ -2992,7 +2999,7 @@ class HexEditorBridge(ToolBridgeBase):
         return matches
 
     @staticmethod
-    def _build_numeric_format(size: int, value_type: str, big_endian: bool) -> str:
+    def _build_numeric_format(size: int, value_type: str, *, big_endian: bool) -> str:
         """
         Build a struct format string for numeric search.
 
@@ -3016,7 +3023,7 @@ class HexEditorBridge(ToolBridgeBase):
         return endian_char + fmt_char
 
     @staticmethod
-    def _pack_numeric_needle(value: int, size: int, value_type: str, big_endian: bool) -> bytes:
+    def _pack_numeric_needle(value: int, size: int, value_type: str, *, big_endian: bool) -> bytes:
         """
         Pack a numeric value into bytes for use as a search needle.
 
@@ -3063,9 +3070,6 @@ class HexEditorBridge(ToolBridgeBase):
 
         Returns:
             str: Rule ID string (UUID).
-
-        Raises:
-            ValueError: If condition_params is not valid JSON.
         """
         parsed_params = cast("dict[str, Any]", json.loads(condition_params))
         rule_id = str(uuid.uuid4())
@@ -3077,9 +3081,9 @@ class HexEditorBridge(ToolBridgeBase):
         }
         self._highlight_rules[rule_id] = rule
         _logger.debug("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
-        if self._state_holder is not None:
-            self._state_holder.set_highlight_rule(rule_id, rule)
-            self._state_holder.notify_highlight_rule_added(rule, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_highlight_rule(rule_id, rule)
+            self.state_holder.notify_highlight_rule_added(rule, source="bridge")
         return rule_id
 
     async def remove_highlight_rule(self, rule_id: str) -> bool:
@@ -3096,9 +3100,9 @@ class HexEditorBridge(ToolBridgeBase):
             return False
         del self._highlight_rules[rule_id]
         _logger.debug("highlight_rule_removed", rule_id=rule_id)
-        if self._state_holder is not None:
-            self._state_holder.remove_highlight_rule_state(rule_id)
-            self._state_holder.notify_highlight_rule_removed(rule_id, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.remove_highlight_rule_state(rule_id)
+            self.state_holder.notify_highlight_rule_removed(rule_id, source="bridge")
         return True
 
     async def list_highlight_rules(self) -> list[dict[str, Any]]:
@@ -3125,9 +3129,9 @@ class HexEditorBridge(ToolBridgeBase):
         """
         self._display_mode = mode
         _logger.debug("display_mode_set", mode=mode)
-        if self._state_holder is not None:
-            self._state_holder.set_display_mode_state(mode)
-            self._state_holder.notify_display_mode_changed(mode, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_display_mode_state(mode)
+            self.state_holder.notify_display_mode_changed(mode, source="bridge")
         return True
 
     async def get_display_mode(self) -> str:
@@ -3179,15 +3183,15 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "hexcore native module not available"
             raise RuntimeError(msg)
 
-        self._document = _hexcore_mod.HexDocument.from_process_memory(pid, address, size)
+        self.document = _hexcore_mod.HexDocument.from_process_memory(pid, address, size)
         self._cursor_position = 0
         self._selection = None
         self._state.binary_loaded = True
         _logger.info("process_memory_opened", pid=pid, address=hex(address), size=size)
 
-        if self._state_holder is not None:
-            self._state_holder.set_document(self._document, None, source="bridge")
+        if self.state_holder is not None:
+            self.state_holder.set_document(self.document, None, source="bridge")
 
-        doc = self._document
+        doc = self.document
         doc_length: int = doc.length() if doc is not None else size
         return {"pid": pid, "address": address, "size": size, "document_length": doc_length}

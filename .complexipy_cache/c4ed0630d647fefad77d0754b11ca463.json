@@ -429,6 +429,12 @@
     {
       "complexity": 0,
       "file_name": "base.py",
+      "function_name": "ToolBridgeBase::state",
+      "path": "src\\intellicrack\\bridges\\base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
       "function_name": "ToolBridgeBase::tool_definition",
       "path": "src\\intellicrack\\bridges\\base.py"
     },
@@ -633,6 +639,24 @@
     {
       "complexity": 0,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::r2",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::r2",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::r2_cmd",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::seek",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -747,12 +771,6 @@
     {
       "complexity": 2,
       "file_name": "cutter.py",
-      "function_name": "CutterBridge::load_binary",
-      "path": "src\\intellicrack\\bridges\\cutter.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "cutter.py",
       "function_name": "CutterBridge::rename_function",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -777,7 +795,7 @@
     {
       "complexity": 3,
       "file_name": "cutter.py",
-      "function_name": "CutterBridge::_r2_cmd",
+      "function_name": "CutterBridge::load_binary",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -790,6 +808,12 @@
       "complexity": 4,
       "file_name": "cutter.py",
       "function_name": "CutterBridge::_extract_hashes",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::_r2_cmd",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -1147,15 +1171,15 @@
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
-      "complexity": 19,
-      "file_name": "frida_bridge.py",
-      "function_name": "FridaBridge::stalker_follow",
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
-    },
-    {
       "complexity": 20,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::allocate_memory",
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+    },
+    {
+      "complexity": 21,
+      "file_name": "frida_bridge.py",
+      "function_name": "FridaBridge::stalker_follow",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
@@ -1165,7 +1189,7 @@
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
-      "complexity": 26,
+      "complexity": 27,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::hook_function",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
@@ -1180,6 +1204,18 @@
       "complexity": 0,
       "file_name": "ghidra.py",
       "function_name": "GhidraBridge::_create_bridge_script",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::bridge_script_path",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::create_bridge_script",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
@@ -1879,18 +1915,6 @@
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
-      "complexity": 6,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::yara_scan",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::yara_scan_files",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
       "complexity": 7,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::initialize",
@@ -1900,6 +1924,18 @@
       "complexity": 7,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::save",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::yara_scan",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::yara_scan_files",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -1917,13 +1953,13 @@
     {
       "complexity": 8,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::disassemble",
+      "function_name": "HexEditorBridge::test_in_sandbox",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
-      "complexity": 8,
+      "complexity": 9,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::test_in_sandbox",
+      "function_name": "HexEditorBridge::disassemble",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -2251,15 +2287,15 @@
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
-      "complexity": 14,
+      "complexity": 13,
       "file_name": "installer.py",
-      "function_name": "ToolInstaller::verify_tool",
+      "function_name": "ToolInstaller::_download_file",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
-      "complexity": 16,
+      "complexity": 14,
       "file_name": "installer.py",
-      "function_name": "ToolInstaller::_download_file",
+      "function_name": "ToolInstaller::verify_tool",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
@@ -3393,6 +3429,12 @@
     {
       "complexity": 0,
       "file_name": "config.py",
+      "function_name": "Config::from_dict",
+      "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "config.py",
       "function_name": "Config::get_provider_config",
       "path": "src\\intellicrack\\core\\config.py"
     },
@@ -3418,6 +3460,24 @@
       "complexity": 0,
       "file_name": "config.py",
       "function_name": "Config::load",
+      "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "config.py",
+      "function_name": "Config::parse_providers",
+      "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "config.py",
+      "function_name": "Config::parse_sub_configs",
+      "path": "src\\intellicrack\\core\\config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "config.py",
+      "function_name": "Config::parse_tools",
       "path": "src\\intellicrack\\core\\config.py"
     },
     {
@@ -4023,6 +4083,12 @@
     {
       "complexity": 20,
       "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_eval_cast",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 20,
+      "file_name": "evaluator.py",
       "function_name": "HexPatEvaluator::_eval_for",
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
     },
@@ -4036,12 +4102,6 @@
       "complexity": 20,
       "file_name": "evaluator.py",
       "function_name": "HexPatEvaluator::_format_value",
-      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
-    },
-    {
-      "complexity": 22,
-      "file_name": "evaluator.py",
-      "function_name": "HexPatEvaluator::_eval_cast",
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
     },
     {
@@ -4108,12 +4168,6 @@
       "complexity": 0,
       "file_name": "lexer.py",
       "function_name": "HexPatLexer::_add",
-      "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "lexer.py",
-      "function_name": "HexPatLexer::_error",
       "path": "src\\intellicrack\\core\\hexpat\\lexer.py"
     },
     {
@@ -4210,12 +4264,6 @@
       "complexity": 0,
       "file_name": "parser.py",
       "function_name": "HexPatParser::_at_end",
-      "path": "src\\intellicrack\\core\\hexpat\\parser.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "parser.py",
-      "function_name": "HexPatParser::_error",
       "path": "src\\intellicrack\\core\\hexpat\\parser.py"
     },
     {
@@ -4489,7 +4537,7 @@
       "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
     },
     {
-      "complexity": 2,
+      "complexity": 1,
       "file_name": "preprocessor.py",
       "function_name": "_parse_int_value",
       "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
@@ -4629,12 +4677,6 @@
     {
       "complexity": 1,
       "file_name": "stdlib.py",
-      "function_name": "BuiltinFunctions::_unwrap",
-      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "stdlib.py",
       "function_name": "BuiltinFunctions::register_all",
       "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
     },
@@ -4714,6 +4756,12 @@
       "complexity": 4,
       "file_name": "stdlib.py",
       "function_name": "BuiltinFunctions::_io_format",
+      "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "stdlib.py",
+      "function_name": "BuiltinFunctions::_unwrap",
       "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
     },
     {
@@ -5583,6 +5631,12 @@
     {
       "complexity": 0,
       "file_name": "process_manager.py",
+      "function_name": "ProcessManager::prepare_for_teardown",
+      "path": "src\\intellicrack\\core\\process_manager.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "process_manager.py",
       "function_name": "ProcessManager::process_count",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
@@ -5626,12 +5680,6 @@
       "complexity": 1,
       "file_name": "process_manager.py",
       "function_name": "ProcessManager::__init__",
-      "path": "src\\intellicrack\\core\\process_manager.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "process_manager.py",
-      "function_name": "ProcessManager::_atexit_cleanup",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
@@ -5691,6 +5739,12 @@
     {
       "complexity": 4,
       "file_name": "process_manager.py",
+      "function_name": "ProcessManager::_atexit_cleanup",
+      "path": "src\\intellicrack\\core\\process_manager.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "process_manager.py",
       "function_name": "ProcessManager::register_external_pid",
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
@@ -5737,7 +5791,7 @@
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
-      "complexity": 12,
+      "complexity": 17,
       "file_name": "process_manager.py",
       "function_name": "ProcessManager::_sync_cleanup",
       "path": "src\\intellicrack\\core\\process_manager.py"
@@ -5905,6 +5959,12 @@
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
     {
+      "complexity": 5,
+      "file_name": "script_gen.py",
+      "function_name": "ScriptValidator::validate_javascript",
+      "path": "src\\intellicrack\\core\\script_gen.py"
+    },
+    {
       "complexity": 6,
       "file_name": "script_gen.py",
       "function_name": "ScriptContext::_format_target_functions",
@@ -5914,12 +5974,6 @@
       "complexity": 6,
       "file_name": "script_gen.py",
       "function_name": "ScriptManager::load_script",
-      "path": "src\\intellicrack\\core\\script_gen.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "script_gen.py",
-      "function_name": "ScriptValidator::validate_javascript",
       "path": "src\\intellicrack\\core\\script_gen.py"
     },
     {
@@ -6645,6 +6699,12 @@
     {
       "complexity": 0,
       "file_name": "types.py",
+      "function_name": "CompiledYaraRules::match",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
       "function_name": "ConfigurationError::__init__",
       "path": "src\\intellicrack\\core\\types.py"
     },
@@ -6652,6 +6712,60 @@
       "complexity": 0,
       "file_name": "types.py",
       "function_name": "FunctionInfo::summary",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::export_template_json",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::inspect_at",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::list_templates",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::list_templates_detailed",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::register_json_template",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::remove_template",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentFull::write",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentLike::length",
+      "path": "src\\intellicrack\\core\\types.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "types.py",
+      "function_name": "HexDocumentLike::read",
       "path": "src\\intellicrack\\core\\types.py"
     },
     {
@@ -7005,12 +7119,6 @@
     {
       "complexity": 1,
       "file_name": "oauth.py",
-      "function_name": "OAuthToken::from_dict",
-      "path": "src\\intellicrack\\credentials\\oauth.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "oauth.py",
       "function_name": "OAuthToken::is_expired",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
@@ -7114,6 +7222,12 @@
       "complexity": 7,
       "file_name": "oauth.py",
       "function_name": "OAuthManager::refresh_token",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "oauth.py",
+      "function_name": "OAuthToken::from_dict",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
     {
@@ -7327,6 +7441,18 @@
       "path": "src\\intellicrack\\main.py"
     },
     {
+      "complexity": 0,
+      "file_name": "main.py",
+      "function_name": "init_model_discovery",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "main.py",
+      "function_name": "_upgrade_to_full_splash",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
       "complexity": 3,
       "file_name": "main.py",
       "function_name": "_apply_cli_overrides",
@@ -7345,27 +7471,27 @@
       "path": "src\\intellicrack\\main.py"
     },
     {
+      "complexity": 4,
+      "file_name": "main.py",
+      "function_name": "_show_early_splash",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
       "complexity": 5,
       "file_name": "main.py",
       "function_name": "_clear_model_cache",
       "path": "src\\intellicrack\\main.py"
     },
     {
-      "complexity": 5,
+      "complexity": 6,
       "file_name": "main.py",
-      "function_name": "_setup_qt_and_splash",
-      "path": "src\\intellicrack\\main.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "main.py",
-      "function_name": "main",
+      "function_name": "_initialize_providers",
       "path": "src\\intellicrack\\main.py"
     },
     {
       "complexity": 6,
       "file_name": "main.py",
-      "function_name": "_initialize_providers",
+      "function_name": "main",
       "path": "src\\intellicrack\\main.py"
     },
     {
@@ -7521,6 +7647,12 @@
     {
       "complexity": 0,
       "file_name": "base.py",
+      "function_name": "LLMProviderBase::_serialize_tool_result",
+      "path": "src\\intellicrack\\providers\\base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
       "function_name": "LLMProviderBase::cancel_request",
       "path": "src\\intellicrack\\providers\\base.py"
     },
@@ -7540,6 +7672,18 @@
       "complexity": 0,
       "file_name": "base.py",
       "function_name": "LLMProviderBase::connect",
+      "path": "src\\intellicrack\\providers\\base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "LLMProviderBase::convert_messages_to_provider_format",
+      "path": "src\\intellicrack\\providers\\base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "LLMProviderBase::convert_tools_to_provider_format",
       "path": "src\\intellicrack\\providers\\base.py"
     },
     {
@@ -7593,7 +7737,7 @@
     {
       "complexity": 1,
       "file_name": "base.py",
-      "function_name": "LLMProviderBase::_serialize_tool_result",
+      "function_name": "serialize_tool_result",
       "path": "src\\intellicrack\\providers\\base.py"
     },
     {
@@ -7831,7 +7975,7 @@
       "path": "src\\intellicrack\\providers\\google.py"
     },
     {
-      "complexity": 12,
+      "complexity": 9,
       "file_name": "google.py",
       "function_name": "GoogleProvider::list_models",
       "path": "src\\intellicrack\\providers\\google.py"
@@ -9099,6 +9243,18 @@
     {
       "complexity": 1,
       "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::_ensure_qemu_started",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::_verify_qemu_pid",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::is_available",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
@@ -9307,6 +9463,18 @@
       "path": "src\\intellicrack\\sandbox\\windows.py"
     },
     {
+      "complexity": 2,
+      "file_name": "windows.py",
+      "function_name": "WindowsSandbox::_check_sandbox_alive",
+      "path": "src\\intellicrack\\sandbox\\windows.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "windows.py",
+      "function_name": "WindowsSandbox::start",
+      "path": "src\\intellicrack\\sandbox\\windows.py"
+    },
+    {
       "complexity": 3,
       "file_name": "windows.py",
       "function_name": "WindowsSandbox::_cleanup",
@@ -9322,12 +9490,6 @@
       "complexity": 3,
       "file_name": "windows.py",
       "function_name": "WindowsSandbox::copy_to_sandbox",
-      "path": "src\\intellicrack\\sandbox\\windows.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "windows.py",
-      "function_name": "WindowsSandbox::start",
       "path": "src\\intellicrack\\sandbox\\windows.py"
     },
     {
@@ -9568,6 +9730,18 @@
       "complexity": 0,
       "file_name": "app.py",
       "function_name": "MainWindow::_update_status",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::on_open_cutter",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::on_open_x64dbg",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -9865,6 +10039,12 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
+      "complexity": 7,
+      "file_name": "app.py",
+      "function_name": "MainWindow::on_open_hxd",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
       "complexity": 8,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_export_analysis",
@@ -9925,6 +10105,12 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
+      "complexity": 11,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_save_patched_binary",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
       "complexity": 12,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_process_attached",
@@ -9940,12 +10126,6 @@
       "complexity": 13,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_refresh_models",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 14,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_save_patched_binary",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -10155,6 +10335,12 @@
     {
       "complexity": 0,
       "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_compute_gradient_stop_color",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_create_fallback_pixmap",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
@@ -10167,6 +10353,18 @@
     {
       "complexity": 0,
       "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::compute_dpi_scale",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::create_fallback_pixmap",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::dpi_scale",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
@@ -10174,6 +10372,12 @@
       "complexity": 0,
       "file_name": "splash_screen.py",
       "function_name": "SplashScreen::finish_animated",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::load_splash_pixmap",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
@@ -10197,7 +10401,31 @@
     {
       "complexity": 0,
       "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::status_label",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::version",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_gradient_background",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_splash_image",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_status_and_version",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
@@ -10215,6 +10443,12 @@
     {
       "complexity": 1,
       "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::mark_stage_failed",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::resizeEvent",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
@@ -10225,15 +10459,87 @@
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
+      "complexity": 2,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_compute_glitch_intensity",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_title",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_glow_title",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_get_glitch_title_text",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_trigger_glitch",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::paintEvent",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
       "complexity": 3,
       "file_name": "splash_screen.py",
       "function_name": "SplashScreen::set_progress",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
+      "complexity": 4,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_pipeline_stage",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_pipeline",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_load_splash_image",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
       "complexity": 6,
       "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_load_splash_pixmap",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_on_animation_tick",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_update_stage_states",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_glitch_title",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
@@ -10537,6 +10843,12 @@
       "path": "src\\intellicrack\\ui\\panels\\async_bridge.py"
     },
     {
+      "complexity": 0,
+      "file_name": "async_bridge.py",
+      "function_name": "ensure_loop",
+      "path": "src\\intellicrack\\ui\\panels\\async_bridge.py"
+    },
+    {
       "complexity": 1,
       "file_name": "async_bridge.py",
       "function_name": "BridgeCallWorker::run",
@@ -10719,6 +11031,12 @@
     {
       "complexity": 1,
       "file_name": "binary_panel.py",
+      "function_name": "BinaryPanel::_get_patched_byte_offsets",
+      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "binary_panel.py",
       "function_name": "BinaryPanel::_on_next_page",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
@@ -10774,12 +11092,6 @@
       "complexity": 1,
       "file_name": "binary_panel.py",
       "function_name": "_lief_parse",
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "binary_panel.py",
-      "function_name": "BinaryPanel::_get_patched_byte_offsets",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
     {
@@ -10897,7 +11209,7 @@
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
     },
     {
-      "complexity": 18,
+      "complexity": 17,
       "file_name": "binary_panel.py",
       "function_name": "BinaryPanel::_parse_pe_ilt_entries",
       "path": "src\\intellicrack\\ui\\panels\\binary_panel.py"
@@ -11811,6 +12123,12 @@
     {
       "complexity": 1,
       "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::load_graph",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "graph_view.py",
       "function_name": "CFGGraphView::fit_to_view",
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
@@ -11818,12 +12136,6 @@
       "complexity": 1,
       "file_name": "graph_view.py",
       "function_name": "CFGGraphView::graph_scene",
-      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "graph_view.py",
-      "function_name": "CFGGraphView::mousePressEvent",
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
@@ -11839,6 +12151,12 @@
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
+      "complexity": 2,
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphView::mousePressEvent",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
       "complexity": 3,
       "file_name": "graph_view.py",
       "function_name": "CFGGraphView::wheelEvent",
@@ -11851,6 +12169,18 @@
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
+      "complexity": 4,
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::_build_block_map",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "graph_view.py",
+      "function_name": "CFGGraphScene::_position_layers",
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
+    },
+    {
       "complexity": 11,
       "file_name": "graph_view.py",
       "function_name": "BasicBlockItem::paint",
@@ -11860,12 +12190,6 @@
       "complexity": 13,
       "file_name": "graph_view.py",
       "function_name": "CFGGraphScene::_create_edges",
-      "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
-    },
-    {
-      "complexity": 13,
-      "file_name": "graph_view.py",
-      "function_name": "CFGGraphScene::load_graph",
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py"
     },
     {
@@ -12085,7 +12409,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
     },
     {
-      "complexity": 14,
+      "complexity": 13,
       "file_name": "_pattern_editor.py",
       "function_name": "PatternEditorMixin::_populate_pattern_library",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
@@ -12787,7 +13111,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
     },
     {
-      "complexity": 34,
+      "complexity": 38,
       "file_name": "panel.py",
       "function_name": "HexEditorPanel::set_state_holder",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py"
@@ -12898,6 +13222,12 @@
       "complexity": 0,
       "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::set_encoding",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor_widget.py",
+      "function_name": "HexEditorWidget::set_selection_range",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
@@ -13225,7 +13555,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
     },
     {
-      "complexity": 49,
+      "complexity": 48,
       "file_name": "hex_editor_widget.py",
       "function_name": "HexEditorWidget::_format_group",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py"
@@ -13234,12 +13564,6 @@
       "complexity": 0,
       "file_name": "hex_tools_panel.py",
       "function_name": "HexToolsPanel::__init__",
-      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "hex_tools_panel.py",
-      "function_name": "HexToolsPanel::_build_ascii_tab",
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
@@ -13342,6 +13666,12 @@
       "complexity": 1,
       "file_name": "hex_tools_panel.py",
       "function_name": "HexToolsPanel::_browse_split_source",
+      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_tools_panel.py",
+      "function_name": "HexToolsPanel::_build_ascii_tab",
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
@@ -13459,15 +13789,15 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
-      "complexity": 11,
+      "complexity": 10,
       "file_name": "hex_tools_panel.py",
-      "function_name": "HexToolsPanel::_demangle_symbol",
+      "function_name": "HexToolsPanel::_demangle_rust",
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
-      "complexity": 12,
+      "complexity": 11,
       "file_name": "hex_tools_panel.py",
-      "function_name": "HexToolsPanel::_demangle_rust",
+      "function_name": "HexToolsPanel::_demangle_symbol",
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
     },
     {
@@ -13499,6 +13829,84 @@
       "file_name": "hex_tools_panel.py",
       "function_name": "_ast_eval_node",
       "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_setup_ui",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::cleanup",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::embed_host",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::stop_tool",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::terminate_existing",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hxd_panel.py",
+      "function_name": "find_hxd_executable",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_on_open_file",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_update_status_label",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::start_tool",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::load_file",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "hxd_panel.py",
+      "function_name": "HxDPanel::_terminate_existing",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "hxd_panel.py",
+      "function_name": "_find_hxd_executable",
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
       "complexity": 0,
@@ -14410,6 +14818,12 @@
       "complexity": 0,
       "file_name": "vnc_widget.py",
       "function_name": "VNCWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "vnc_widget.py",
+      "function_name": "qt_key_to_x11",
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
     },
     {
@@ -16327,13 +16741,7 @@
       "path": "src\\intellicrack\\ui\\session_manager.py"
     },
     {
-      "complexity": 13,
-      "file_name": "session_manager.py",
-      "function_name": "SessionManagerDialog::_update_details",
-      "path": "src\\intellicrack\\ui\\session_manager.py"
-    },
-    {
-      "complexity": 19,
+      "complexity": 21,
       "file_name": "session_manager.py",
       "function_name": "SessionManagerDialog::_load_sessions_from_disk",
       "path": "src\\intellicrack\\ui\\session_manager.py"
@@ -16342,6 +16750,12 @@
       "complexity": 24,
       "file_name": "session_manager.py",
       "function_name": "SessionManagerDialog::_load_sessions",
+      "path": "src\\intellicrack\\ui\\session_manager.py"
+    },
+    {
+      "complexity": 25,
+      "file_name": "session_manager.py",
+      "function_name": "SessionManagerDialog::_update_details",
       "path": "src\\intellicrack\\ui\\session_manager.py"
     },
     {

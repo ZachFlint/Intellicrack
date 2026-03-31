@@ -45,7 +45,7 @@ def _make_tool_call(
         arguments: Function arguments dict.
 
     Returns:
-        A populated ToolCall instance.
+        ToolCall: A populated ToolCall instance.
     """
     args: dict[str, object] = arguments if arguments is not None else {"path": "/bin/target"}
     tool_name = function_name.split(".", maxsplit=1)[0] if "." in function_name else function_name
@@ -71,7 +71,7 @@ def _make_tool_result(
         success: Whether the operation succeeded.
 
     Returns:
-        A populated ToolResult instance.
+        ToolResult: A populated ToolResult instance.
     """
     return ToolResult(
         call_id=call_id,
@@ -96,7 +96,7 @@ def _convert(
         include_tool_call_type: Whether to include 'type' key.
 
     Returns:
-        List of converted message dicts.
+        list[dict[str, Any]]: List of converted message dicts.
     """
     return cast(
         "list[dict[str, Any]]",
@@ -146,7 +146,8 @@ def test_serialize_none() -> None:
 
 def test_serialize_bool() -> None:
     """Boolean values are JSON-serialized."""
-    assert _serialize_tool_result(True) == "true"
+    bool_val = True
+    assert _serialize_tool_result(bool_val) == "true"
 
 
 def test_serialize_nested_dict() -> None:

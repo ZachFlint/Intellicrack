@@ -15,14 +15,14 @@ import abc
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from ..core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
-    from ..core.types import (
+    from intellicrack.core.types import (
         BinaryInfo,
         BreakpointInfo,
         CrossReference,
@@ -279,6 +279,16 @@ class ToolBridgeBase(abc.ABC):
             BridgeState: Current BridgeState instance.
         """
         return self._state
+
+    @state.setter
+    def state(self, value: BridgeState) -> None:
+        """
+        Set bridge state.
+
+        Args:
+            value: New BridgeState instance to assign.
+        """
+        self._state = value
 
     @property
     def capabilities(self) -> BridgeCapabilities:

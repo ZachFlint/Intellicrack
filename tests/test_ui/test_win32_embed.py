@@ -69,8 +69,8 @@ class TestFindWindowByPid:
     @staticmethod
     def test_constants_are_correct() -> None:
         """Verify module constants have expected values."""
-        assert win32_embed_mod._GW_OWNER == GW_OWNER_EXPECTED
-        assert win32_embed_mod._MAX_TITLE_LEN == MAX_TITLE_LEN_EXPECTED
+        assert win32_embed_mod.GW_OWNER == GW_OWNER_EXPECTED
+        assert win32_embed_mod.MAX_TITLE_LEN == MAX_TITLE_LEN_EXPECTED
 
 
 @pytest.mark.usefixtures("qapp")

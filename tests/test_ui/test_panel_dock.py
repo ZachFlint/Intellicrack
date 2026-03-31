@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for DetachedPanelWindow from intellicrack.ui.panel_dock.
 
 Verifies construction, property accessors, signal emission on
@@ -83,7 +88,7 @@ class TestDetachedPanelWindowSignals:
         recorder = SignalRecorder()
         window.reattach_requested.connect(recorder)
 
-        window._on_redock()
+        window.on_redock()
 
         recorder.verify_single_call(panel, _TITLE)
 

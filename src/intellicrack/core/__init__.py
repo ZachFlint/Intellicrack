@@ -11,7 +11,7 @@ operations.
 
 from __future__ import annotations
 
-from .config import (
+from intellicrack.core.config import (
     Config,
     LogConfig,
     ProviderConfig,
@@ -23,19 +23,19 @@ from .config import (
     get_config_file,
     get_project_root,
 )
-from .logging import get_logger, setup_logging
-from .orchestrator import (
+from intellicrack.core.logging import get_logger, setup_logging
+from intellicrack.core.orchestrator import (
     Orchestrator,
     OrchestratorConfig,
     OrchestratorStats,
     PendingConfirmation,
 )
-from .process_manager import (
+from intellicrack.core.process_manager import (
     ProcessManager,
     ProcessType,
     TrackedProcess,
 )
-from .script_gen import (
+from intellicrack.core.script_gen import (
     BypassStrategy,
     Script,
     ScriptContext,
@@ -44,17 +44,17 @@ from .script_gen import (
     ScriptManager,
     ScriptValidator,
 )
-from .session import (
+from intellicrack.core.session import (
     Session,
     SessionManager,
     SessionMetadata,
     SessionStore,
 )
-from .tools import (
+from intellicrack.core.tools import (
     ToolRegistry,
     ToolStatus,
 )
-from .types import (
+from intellicrack.core.types import (
     BinaryInfo,
     BreakpointInfo,
     BridgeAnalysisSummary,

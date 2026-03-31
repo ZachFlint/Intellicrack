@@ -93,9 +93,9 @@ class TestRFBClientState:
         """Verify connected property tracks _connected flag."""
         client = RFBClient()
         assert not client.connected
-        client._connected = True
+        client.connected = True
         assert client.connected
-        client._connected = False
+        client.connected = False
         assert not client.connected
 
     @staticmethod
@@ -196,7 +196,7 @@ class TestRFBClientFramebuffer:
         client.framebuffer.fill(QColor(0, 0, 0))
 
         pixel_data = bytes([255, 0, 0, 0]) * (SMALL_FB_WIDTH * SMALL_FB_HEIGHT)
-        client._apply_raw_rect(0, 0, SMALL_FB_WIDTH, SMALL_FB_HEIGHT, pixel_data)
+        client.apply_raw_rect(0, 0, SMALL_FB_WIDTH, SMALL_FB_HEIGHT, pixel_data)
 
         color = client.framebuffer.pixelColor(0, 0)
         assert color.red() == 0
@@ -211,13 +211,13 @@ class TestRFBClientFramebuffer:
         client.framebuffer.fill(QColor(0, 0, 0))
 
         pixel_data = bytes([128, 64, 32, 0]) * 2
-        client._apply_raw_rect(0, 0, SMALL_FB_WIDTH, SMALL_FB_HEIGHT, pixel_data)
+        client.apply_raw_rect(0, 0, SMALL_FB_WIDTH, SMALL_FB_HEIGHT, pixel_data)
 
     @staticmethod
     def test_apply_raw_rect_no_framebuffer() -> None:
         """Verify _apply_raw_rect is no-op without framebuffer."""
         client = RFBClient()
-        client._apply_raw_rect(0, 0, 1, 1, bytes(PIXEL_BYTES_PER_PIXEL))
+        client.apply_raw_rect(0, 0, 1, 1, bytes(PIXEL_BYTES_PER_PIXEL))
 
     @staticmethod
     def test_apply_raw_rect_at_offset() -> None:
@@ -227,7 +227,7 @@ class TestRFBClientFramebuffer:
         client.framebuffer.fill(QColor(0, 0, 0))
 
         pixel_data = bytes([0, 255, 0, 0])
-        client._apply_raw_rect(2, 2, 1, 1, pixel_data)
+        client.apply_raw_rect(2, 2, 1, 1, pixel_data)
 
         color_at = client.framebuffer.pixelColor(2, 2)
         assert color_at.green() == COLOR_FULL
@@ -243,49 +243,49 @@ class TestQtKeyToX11:
     @staticmethod
     def test_escape_key() -> None:
         """Verify Escape maps to correct X11 keysym."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Escape, "") == KEYSYM_ESCAPE
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Escape, "") == KEYSYM_ESCAPE
 
     @staticmethod
     def test_return_key() -> None:
         """Verify Return maps to correct X11 keysym."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Return, "") == KEYSYM_RETURN
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Return, "") == KEYSYM_RETURN
 
     @staticmethod
     def test_tab_key() -> None:
         """Verify Tab maps to correct X11 keysym."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Tab, "") == KEYSYM_TAB
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Tab, "") == KEYSYM_TAB
 
     @staticmethod
     def test_arrow_keys() -> None:
         """Verify arrow keys map to correct X11 keysyms."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Left, "") == KEYSYM_LEFT
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Up, "") == KEYSYM_UP
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Right, "") == KEYSYM_RIGHT
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Down, "") == KEYSYM_DOWN
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Left, "") == KEYSYM_LEFT
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Up, "") == KEYSYM_UP
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Right, "") == KEYSYM_RIGHT
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Down, "") == KEYSYM_DOWN
 
     @staticmethod
     def test_function_keys() -> None:
         """Verify F1 and F12 map to correct keysyms."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_F1, "") == KEYSYM_F1
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_F12, "") == KEYSYM_F12
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_F1, "") == KEYSYM_F1
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_F12, "") == KEYSYM_F12
 
     @staticmethod
     def test_printable_char_uses_text() -> None:
         """Verify printable characters use ord(text)."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_A, "a") == ord("a")
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_A, "A") == ord("A")
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_A, "a") == ord("a")
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_A, "A") == ord("A")
 
     @staticmethod
     def test_unknown_key_returns_key_value() -> None:
         """Verify unmapped key with no text returns the key code."""
-        assert vnc_widget_mod._qt_key_to_x11(ARBITRARY_UNMAPPED_KEY, "") == ARBITRARY_UNMAPPED_KEY
+        assert vnc_widget_mod.qt_key_to_x11(ARBITRARY_UNMAPPED_KEY, "") == ARBITRARY_UNMAPPED_KEY
 
     @staticmethod
     def test_modifier_keys() -> None:
         """Verify modifier keys map to correct keysyms."""
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Shift, "") == KEYSYM_SHIFT
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Control, "") == KEYSYM_CONTROL
-        assert vnc_widget_mod._qt_key_to_x11(Qt.Key.Key_Alt, "") == KEYSYM_ALT
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Shift, "") == KEYSYM_SHIFT
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Control, "") == KEYSYM_CONTROL
+        assert vnc_widget_mod.qt_key_to_x11(Qt.Key.Key_Alt, "") == KEYSYM_ALT
 
 
 @pytest.mark.usefixtures("qapp")
@@ -303,14 +303,14 @@ class TestVNCWidget:
     def test_initial_client_disconnected() -> None:
         """Verify internal RFB client starts disconnected."""
         widget = VNCWidget()
-        assert not widget._client.connected
+        assert not widget.client.connected
 
     @staticmethod
     def test_disconnect_from_server_idempotent() -> None:
         """Verify disconnect_from_server can be called without prior connect."""
         widget = VNCWidget()
         widget.disconnect_from_server()
-        assert not widget._client.connected
+        assert not widget.client.connected
 
     @staticmethod
     def test_connect_to_unreachable_emits_false(qapp: QApplication) -> None:
@@ -345,9 +345,9 @@ class TestVNCWidget:
     def test_update_timer_not_running_initially() -> None:
         """Verify the framebuffer update timer is not running at start."""
         widget = VNCWidget()
-        assert not widget._update_timer.isActive()
+        assert not widget.update_timer.isActive()
 
     @staticmethod
     def test_button_mask_static_method_exists() -> None:
         """Verify _button_mask is accessible as a static method."""
-        assert callable(VNCWidget._button_mask)
+        assert callable(VNCWidget.button_mask)

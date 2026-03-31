@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Google Gemini API provider implementation.
 
@@ -15,15 +14,15 @@ from __future__ import annotations
 import asyncio
 import os
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, cast, override
 
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
-from ..core.types import (
+from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
+from intellicrack.core.types import (
     AuthenticationError,
     Message,
     ModelInfo,
@@ -37,7 +36,7 @@ from ..core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_google_tool_schema
+from intellicrack.providers.base import LLMProviderBase, create_google_tool_schema
 
 
 if TYPE_CHECKING:
@@ -67,7 +66,7 @@ class GoogleProvider(LLMProviderBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self._client: genai.Client | None = None
+        self.client: genai.Client | None = None
         self._current_task: asyncio.Task[object] | None = None
         self._logger = get_logger("providers.google").bind(provider="google")
 
@@ -97,13 +96,13 @@ class GoogleProvider(LLMProviderBase):
 
         saved_gemini_key = os.environ.pop("GEMINI_API_KEY", None)
         try:
-            self._client = genai.Client(api_key=credentials.api_key)
+            self.client = genai.Client(api_key=credentials.api_key)
 
-            models_iter = await asyncio.to_thread(self._client.models.list)
+            models_iter = await asyncio.to_thread(self.client.models.list)
             _ = next(iter(models_iter), None)
 
             self._credentials = credentials
-            self._connected = True
+            self.connected = True
             self._logger.info(
                 "google_connected",
                 has_custom_base=credentials.api_base is not None,
@@ -118,7 +117,7 @@ class GoogleProvider(LLMProviderBase):
             if e.code in {401, 403}:
                 raise AuthenticationError(_MSG_INVALID_API_KEY) from e
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
             self._logger.exception(
                 "google_connect_failed",
                 error=str(e),
@@ -136,12 +135,12 @@ class GoogleProvider(LLMProviderBase):
         """
         try:
             await super().disconnect()
-            self._client = None
+            self.client = None
             self._current_task = None
             self._logger.info("google_disconnected")
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self._connected = False
+            self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """
@@ -156,11 +155,11 @@ class GoogleProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or the request fails.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         try:
-            models_response = await asyncio.to_thread(self._client.models.list)
+            models_response = await asyncio.to_thread(self.client.models.list)
 
             models: list[ModelInfo] = []
             for model_data in models_response:
@@ -173,8 +172,7 @@ class GoogleProvider(LLMProviderBase):
                 input_limit: int = getattr(model_data, "input_token_limit", 1048576)
 
                 model_id = model_name
-                if model_id.startswith("models/"):
-                    model_id = model_id[7:]
+                model_id = model_id.removeprefix("models/")
 
                 gen_methods: list[str] = getattr(
                     model_data,
@@ -191,18 +189,19 @@ class GoogleProvider(LLMProviderBase):
                         name=display_name or model_id,
                         provider=ProviderName.GOOGLE,
                         context_window=input_limit,
+                        supports_tools=supports_tools,
                         supports_vision=supports_vision,
                         supports_streaming=supports_streaming,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
-                    )
+                    ),
                 )
             sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
             self._logger.info(
                 "google_models_listed",
                 count=len(sorted_models),
             )
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ClientError, ValueError) as e:
             self._logger.warning(
                 "google_list_models_api_failed",
                 error=str(e),
@@ -220,6 +219,7 @@ class GoogleProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -242,7 +242,7 @@ class GoogleProvider(LLMProviderBase):
             ProviderError: If not connected or the request fails.
             RateLimitError: If the API rate limit is exceeded.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -261,7 +261,7 @@ class GoogleProvider(LLMProviderBase):
             self._logger.debug("google_cache_ignored")
 
         system_instruction = self._extract_system_instruction(messages)
-        gemini_contents = self._convert_messages_to_provider_format(messages)
+        gemini_contents = self.convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
 
         log_provider_request(
@@ -282,7 +282,7 @@ class GoogleProvider(LLMProviderBase):
                 tool_choice=tool_choice,
             )
 
-            client = self._client
+            client = self.client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
             def _generate() -> GenerateContentResponse:
@@ -308,7 +308,7 @@ class GoogleProvider(LLMProviderBase):
                 role="assistant",
                 content=content,
                 tool_calls=tool_calls or None,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
             )
 
             log_provider_response(
@@ -326,7 +326,7 @@ class GoogleProvider(LLMProviderBase):
                 content_length=len(content),
             )
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ClientError, ValueError) as e:
             self._logger.exception(
                 "google_chat_failed",
                 model=model,
@@ -349,6 +349,7 @@ class GoogleProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -370,7 +371,7 @@ class GoogleProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or the stream fails.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -384,7 +385,7 @@ class GoogleProvider(LLMProviderBase):
         )
 
         system_instruction = self._extract_system_instruction(messages)
-        gemini_contents = self._convert_messages_to_provider_format(messages)
+        gemini_contents = self.convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
         chunk_count = 0
 
@@ -397,7 +398,7 @@ class GoogleProvider(LLMProviderBase):
                 tool_choice=tool_choice,
             )
 
-            client = self._client
+            client = self.client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
             def _start_stream() -> Iterable[GenerateContentResponse]:
@@ -440,7 +441,7 @@ class GoogleProvider(LLMProviderBase):
                                 tool_name=tool_name,
                                 function_name=func_name,
                                 arguments=args,
-                            )
+                            ),
                         )
                     self._pending_tool_calls = tool_calls
 
@@ -450,7 +451,7 @@ class GoogleProvider(LLMProviderBase):
                     chunks_received=chunk_count,
                 )
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ClientError, ValueError) as e:
             self._logger.exception(
                 "google_chat_stream_failed",
                 model=model,
@@ -531,7 +532,7 @@ class GoogleProvider(LLMProviderBase):
                     function_calling_config=types.FunctionCallingConfig(
                         mode=fc_mode.ANY,
                         allowed_function_names=[tool_choice.function_name],
-                    )
+                    ),
                 )
 
         return types.GenerateContentConfig(
@@ -570,7 +571,7 @@ class GoogleProvider(LLMProviderBase):
                         tool_name=tool_name,
                         function_name=func_name,
                         arguments=args,
-                    )
+                    ),
                 )
 
         if not content and hasattr(response, "candidates") and response.candidates:
@@ -628,7 +629,7 @@ class GoogleProvider(LLMProviderBase):
                             "function_call": {
                                 "name": tc.function_name,
                                 "args": tc.arguments,
-                            }
+                            },
                         }
                         for tc in msg.tool_calls
                     ])
@@ -643,7 +644,7 @@ class GoogleProvider(LLMProviderBase):
                         "function_response": {
                             "name": call_id_to_name.get(tr.call_id, tr.call_id),
                             "response": {"result": tr.result},
-                        }
+                        },
                     }
                     for tr in msg.tool_results
                 ]

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Download GitHub Actions CI job logs and artifacts to reports/ci-jobs/."""
 
 from __future__ import annotations
@@ -86,7 +91,6 @@ def run_gh(args: list[str], *, timeout: int = GH_TIMEOUT) -> str:
 
     Raises:
         subprocess.CalledProcessError: If the gh command exits with a non-zero code.
-        subprocess.TimeoutExpired: If the command exceeds the timeout.
     """
     result = subprocess.run(
         ["gh", *args],
@@ -107,9 +111,6 @@ def detect_repo() -> str:
 
     Returns:
         The owner/repo string (e.g. "user/repo").
-
-    Raises:
-        SystemExit: If the repository cannot be detected.
     """
     try:
         raw = run_gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
@@ -411,20 +412,14 @@ def generate_summary_txt(results: list[WorkflowResult], dest: Path) -> None:
         dest: The directory to write summary.txt into.
     """
     lines: list[str] = []
-    lines.append("CI Reports Summary")
-    lines.append("=" * 60)
-    lines.append(f"Generated: {datetime.now(tz=UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    lines.append("")
+    lines.extend(("CI Reports Summary", "=" * 60, f"Generated: {datetime.now(tz=UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}", ""))
 
     total_jobs = sum(len(r.jobs) for r in results)
     total_logs = sum(sum(1 for j in r.jobs if j.log_downloaded) for r in results)
     total_artifacts = sum(r.artifacts_downloaded for r in results)
     total_skipped = sum(1 for r in results if r.skipped)
 
-    lines.append(f"Workflows: {len(results)} total, {len(results) - total_skipped} downloaded, {total_skipped} skipped")
-    lines.append(f"Jobs:      {total_jobs} total, {total_logs} logs downloaded")
-    lines.append(f"Artifacts: {total_artifacts} downloaded")
-    lines.append("")
+    lines.extend((f"Workflows: {len(results)} total, {len(results) - total_skipped} downloaded, {total_skipped} skipped", f"Jobs:      {total_jobs} total, {total_logs} logs downloaded", f"Artifacts: {total_artifacts} downloaded", ""))
 
     for r in results:
         if r.skipped:

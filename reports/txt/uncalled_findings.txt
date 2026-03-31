@@ -81,33 +81,6 @@ src\intellicrack\credentials\oauth.py: Unused function log_request
 src\intellicrack\credentials\oauth.py: Unused function needs_refresh
 
 
-3 findings in src\intellicrack\ui\resources\font_manager.py
-
-src\intellicrack\ui\resources\font_manager.py: Unused function code_font_family
-
-src\intellicrack\ui\resources\font_manager.py: Unused function reset_instance
-
-src\intellicrack\ui\resources\font_manager.py: Unused function ui_font_family
-
-
-3 findings in src\intellicrack\ui\resources\icon_manager.py
-
-src\intellicrack\ui\resources\icon_manager.py: Unused function icon_exists
-
-src\intellicrack\ui\resources\icon_manager.py: Unused function list_available_icons
-
-src\intellicrack\ui\resources\icon_manager.py: Unused function reset_instance
-
-
-3 findings in src\intellicrack\ui\resources\theme_manager.py
-
-src\intellicrack\ui\resources\theme_manager.py: Unused function current_theme
-
-src\intellicrack\ui\resources\theme_manager.py: Unused function get_available_themes
-
-src\intellicrack\ui\resources\theme_manager.py: Unused function reset_instance
-
-
 2 findings in src\intellicrack\bridges\base.py
 
 src\intellicrack\bridges\base.py: Unused function supports_arch
@@ -143,6 +116,13 @@ src\intellicrack\providers\ollama.py: Unused function cloud_available
 src\intellicrack\providers\ollama.py: Unused function local_available
 
 
+2 findings in src\intellicrack\ui\dialogs\splash_screen.py
+
+src\intellicrack\ui\dialogs\splash_screen.py: Unused function mark_stage_failed
+
+src\intellicrack\ui\dialogs\splash_screen.py: Unused function paintEvent
+
+
 2 findings in src\intellicrack\ui\panels\hex_editor\_widgets.py
 
 src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function mouseMoveEvent
@@ -155,6 +135,32 @@ src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function paintEvent
 src\intellicrack\ui\panels\hex_tools_panel.py: Unused function paintEvent
 
 src\intellicrack\ui\panels\hex_tools_panel.py: Unused function sizeHint
+
+
+2 findings in src\intellicrack\ui\resources\font_manager.py
+
+src\intellicrack\ui\resources\font_manager.py: Unused function code_font_family
+
+src\intellicrack\ui\resources\font_manager.py: Unused function ui_font_family
+
+
+2 findings in src\intellicrack\ui\resources\icon_manager.py
+
+src\intellicrack\ui\resources\icon_manager.py: Unused function icon_exists
+
+src\intellicrack\ui\resources\icon_manager.py: Unused function list_available_icons
+
+
+2 findings in src\intellicrack\ui\resources\theme_manager.py
+
+src\intellicrack\ui\resources\theme_manager.py: Unused function current_theme
+
+src\intellicrack\ui\resources\theme_manager.py: Unused function get_available_themes
+
+
+1 findings in src\intellicrack\bridges\ghidra.py
+
+src\intellicrack\bridges\ghidra.py: Unused function bridge_script_path
 
 
 1 findings in src\intellicrack\core\hexpat\data_reader.py
@@ -170,11 +176,6 @@ src\intellicrack\core\hexpat\type_system.py: Unused function all_names
 1 findings in src\intellicrack\core\logging.py
 
 src\intellicrack\core\logging.py: Unused function get_structlog_logger
-
-
-1 findings in src\intellicrack\core\process_manager.py
-
-src\intellicrack\core\process_manager.py: Unused function reset_instance
 
 
 1 findings in src\intellicrack\core\script_gen.py

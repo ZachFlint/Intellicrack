@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for AnalysisAggregator.
 
 Tests validate:
@@ -34,7 +39,7 @@ def _make_binary_info() -> BinaryInfo:
     """Create a test BinaryInfo instance.
 
     Returns:
-        BinaryInfo with minimal test data.
+        BinaryInfo: BinaryInfo with minimal test data.
     """
     return BinaryInfo(
         path=Path("/test/binary.exe"),
@@ -78,7 +83,7 @@ def _make_tool_registry_no_bridges() -> MagicMock:
     """Create a mock ToolRegistry where all bridge getters raise ToolError.
 
     Returns:
-        MagicMock configured to raise ToolError on bridge access.
+        MagicMock: MagicMock configured to raise ToolError on bridge access.
     """
     registry = MagicMock()
     registry.get_binary_bridge.side_effect = ToolError("not available")
@@ -91,7 +96,7 @@ def _make_tool_registry_with_binary_bridge() -> MagicMock:
     """Create a mock ToolRegistry with a working BinaryBridge.
 
     Returns:
-        MagicMock with BinaryBridge returning test strings.
+        MagicMock: MagicMock with BinaryBridge returning test strings.
     """
     registry = MagicMock()
     binary_bridge = MagicMock()
@@ -99,7 +104,7 @@ def _make_tool_registry_with_binary_bridge() -> MagicMock:
         return_value=[
             (ADDR_BASE, "test string"),
             (0x402000, "another string"),
-        ]
+        ],
     )
     registry.get_binary_bridge.return_value = binary_bridge
     registry.get_ghidra_bridge.side_effect = ToolError("not available")
@@ -230,7 +235,7 @@ class TestDeduplication:
         ghidra.get_imports = AsyncMock(
             return_value=[
                 ImportInfo(dll="kernel32.dll", function="CreateFileA", ordinal=None, address=ADDR_IMPORT),
-            ]
+            ],
         )
         ghidra.get_exports = AsyncMock(return_value=[])
         ghidra.get_functions = AsyncMock(return_value=[])

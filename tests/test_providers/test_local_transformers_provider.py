@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for LocalTransformersProvider with Intel XPU acceleration.
 
 This module provides comprehensive tests for the local transformers provider,
@@ -260,7 +265,7 @@ class TestMessageConversion:
         """Should convert user message correctly."""
         provider = LocalTransformersProvider()
         messages = [Message(role="user", content="Hello")]
-        converted = provider._convert_messages_to_provider_format(messages)
+        converted = provider.convert_messages_to_provider_format(messages)
         assert len(converted) == 1
         assert converted[0]["role"] == "user"
         assert converted[0]["content"] == "Hello"
@@ -270,7 +275,7 @@ class TestMessageConversion:
         """Should convert system message correctly."""
         provider = LocalTransformersProvider()
         messages = [Message(role="system", content="You are helpful")]
-        converted = provider._convert_messages_to_provider_format(messages)
+        converted = provider.convert_messages_to_provider_format(messages)
         assert len(converted) == 1
         assert converted[0]["role"] == "system"
 
@@ -283,7 +288,7 @@ class TestMessageConversion:
             Message(role="user", content="User"),
             Message(role="assistant", content="Assistant"),
         ]
-        converted = provider._convert_messages_to_provider_format(messages)
+        converted = provider.convert_messages_to_provider_format(messages)
         assert len(converted) == _EXPECTED_MESSAGE_COUNT
 
 
@@ -294,7 +299,7 @@ class TestToolConversion:
     def test_convert_empty_tools() -> None:
         """Should handle empty tools list."""
         provider = LocalTransformersProvider()
-        converted = provider._convert_tools_to_provider_format([])
+        converted = provider.convert_tools_to_provider_format([])
         assert converted == []
 
 
@@ -493,7 +498,7 @@ class TestPromptFormatting:
         """Should format simple prompt."""
         provider = LocalTransformersProvider()
         messages = [{"role": "user", "content": "Hello"}]
-        prompt = provider._format_prompt(messages)
+        prompt = provider.format_prompt(messages)
         assert "<|im_start|>user" in prompt
         assert "Hello" in prompt
         assert "<|im_start|>assistant" in prompt
@@ -506,7 +511,7 @@ class TestPromptFormatting:
             {"role": "system", "content": "Be helpful"},
             {"role": "user", "content": "Hi"},
         ]
-        prompt = provider._format_prompt(messages)
+        prompt = provider.format_prompt(messages)
         assert "<|im_start|>system" in prompt
         assert "Be helpful" in prompt
 
@@ -518,7 +523,7 @@ class TestToolCallParsing:
     def test_parse_no_tool_calls() -> None:
         """Should return None for text without tool calls."""
         provider = LocalTransformersProvider()
-        result = provider._parse_tool_calls("Just a regular response")
+        result = provider.parse_tool_calls("Just a regular response")
         assert result is None
 
     @staticmethod
@@ -526,7 +531,7 @@ class TestToolCallParsing:
         """Should parse valid tool call JSON."""
         provider = LocalTransformersProvider()
         response = 'Here is the result: {"tool_call": {"name": "test_func", "arguments": {"arg1": "value1"}}}'
-        result = provider._parse_tool_calls(response)
+        result = provider.parse_tool_calls(response)
         assert result is not None
         assert len(result) == 1
         assert result[0].function_name == "test_func"

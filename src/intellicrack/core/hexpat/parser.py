@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Recursive-descent parser with Pratt-style operator precedence for the HexPat pattern language."""
 
 from __future__ import annotations
@@ -122,10 +121,9 @@ class HexPatParser:
     Consumes a flat list of tokens produced by the lexer and builds an AST
     consisting of top-level declarations and statements.
 
-    Attributes:
-        _tokens: The flat list of tokens to parse.
-        _pos: Current position in the token list.
-        _file_path: Source file path used in error messages.
+    Args:
+            tokens: Flat token list produced by the lexer.
+            file_path: Source file path used for error location reporting.
     """
 
     def __init__(
@@ -133,26 +131,16 @@ class HexPatParser:
         tokens: list[Token],
         file_path: str = "<input>",
     ) -> None:
-        """
-        Initialise the parser with a token stream.
-
-        Args:
-            tokens: Flat token list produced by the lexer.
-            file_path: Source file path used for error location reporting.
-        """
         self._tokens: list[Token] = tokens
         self._pos: int = 0
-        self._file_path: str = file_path
+        self.file_path: str = file_path
 
     def parse(self) -> list[DeclNode | StmtNode]:
         """
         Parse the token stream into a list of top-level declarations and statements.
 
         Returns:
-            Ordered list of top-level AST nodes.
-
-        Raises:
-            HexPatParseError: When a syntax error is encountered.
+            list[DeclNode | StmtNode]: Ordered list of top-level AST nodes.
         """
         nodes: list[DeclNode | StmtNode] = []
         while not self._at_end():
@@ -184,7 +172,7 @@ class HexPatParser:
         Return the current token without consuming it.
 
         Returns:
-            Current token, or an EOF token if past the end.
+            Token: Current token, or an EOF token if past the end.
         """
         return self._tokens[self._pos] if self._pos < len(self._tokens) else _EOF_TOKEN
 
@@ -196,7 +184,7 @@ class HexPatParser:
             offset: Number of positions ahead to look.
 
         Returns:
-            Token at the requested position, or an EOF token if past the end.
+            Token: Token at the requested position, or an EOF token if past the end.
         """
         idx = self._pos + offset
         return self._tokens[idx] if idx < len(self._tokens) else _EOF_TOKEN
@@ -206,7 +194,7 @@ class HexPatParser:
         Consume and return the current token.
 
         Returns:
-            The token that was current before advancing.
+            Token: The token that was current before advancing.
         """
         tok = self._current()
         if self._pos < len(self._tokens):
@@ -221,15 +209,15 @@ class HexPatParser:
             tt: Expected token type.
 
         Returns:
-            The consumed token.
+            Token: The consumed token.
 
         Raises:
-            HexPatParseError: When the current token does not match.
+            HexPatParseError: If the input is malformed.
         """
         tok = self._current()
         if tok.type != tt:
             msg = f"Expected '{tt.value}', got '{tok.value}'"
-            raise self._error(msg)
+            raise HexPatParseError(msg, tok.line, tok.column, self.file_path)
         return self._advance()
 
     def _match(self, *types: TokenType) -> bool:
@@ -240,7 +228,7 @@ class HexPatParser:
             *types: Token types to match against.
 
         Returns:
-            True if a token was consumed, False otherwise.
+            bool: True if a token was consumed, False otherwise.
         """
         if self._current().type in types:
             self._advance()
@@ -252,29 +240,16 @@ class HexPatParser:
         Check whether the token stream is exhausted.
 
         Returns:
-            True if at EOF.
+            bool: True if at EOF.
         """
         return self._current().type == TokenType.EOF
-
-    def _error(self, msg: str) -> HexPatParseError:
-        """
-        Create a parse error anchored at the current token position.
-
-        Args:
-            msg: Human-readable error description.
-
-        Returns:
-            A HexPatParseError instance (not yet raised).
-        """
-        tok = self._current()
-        return HexPatParseError(msg, tok.line, tok.column, self._file_path)
 
     def _save(self) -> int:
         """
         Save the current parser position.
 
         Returns:
-            Current position index.
+            int: Current position index.
         """
         return self._pos
 
@@ -292,7 +267,7 @@ class HexPatParser:
         Attempt to parse an annotation block if one is present.
 
         Returns:
-            Parsed annotations or an empty tuple when no annotation block follows.
+            tuple[tuple[str, ExprNode | None], ...]: Parsed annotations or an empty tuple when no annotation block follows.
         """
         if self._current().type != TokenType.DOUBLE_LBRACKET:
             return ()
@@ -303,10 +278,7 @@ class HexPatParser:
         Parse a double-bracket annotation block.
 
         Returns:
-            Tuple of (name, optional_expr) annotation pairs.
-
-        Raises:
-            HexPatParseError: When the annotation syntax is malformed.
+            tuple[tuple[str, ExprNode | None], ...]: Tuple of (name, optional_expr) annotation pairs.
         """
         self._expect(TokenType.DOUBLE_LBRACKET)
         items: list[tuple[str, ExprNode | None]] = []
@@ -329,10 +301,10 @@ class HexPatParser:
         Parse a type specifier, including optional array suffix.
 
         Returns:
-            A TypeNode representing the parsed type.
+            TypeNode: A TypeNode representing the parsed type.
 
         Raises:
-            HexPatParseError: When no valid type can be parsed at the current position.
+            HexPatParseError: If the input is malformed.
         """
         endianness: str | None = None
         if self._current().type in ENDIANNESS_TOKENS:
@@ -382,7 +354,7 @@ class HexPatParser:
             )
         else:
             msg = f"Expected type, got '{tok.value}'"
-            raise self._error(msg)
+            raise HexPatParseError(msg, tok.line, tok.column, self.file_path)
 
         if self._current().type == TokenType.LBRACKET:
             arr_tok = self._current()
@@ -420,10 +392,7 @@ class HexPatParser:
             min_bp: Minimum binding power threshold for infix operators.
 
         Returns:
-            Parsed expression node.
-
-        Raises:
-            HexPatParseError: When no valid expression can be parsed.
+            ExprNode: Parsed expression node.
         """
         left = self._parse_prefix()
 
@@ -529,10 +498,10 @@ class HexPatParser:
         Parse a prefix expression (literal, identifier, unary operator, grouping).
 
         Returns:
-            Parsed prefix expression node.
+            ExprNode: Parsed prefix expression node.
 
         Raises:
-            HexPatParseError: When no valid prefix can be parsed.
+            HexPatParseError: If the input is malformed.
         """
         tok = self._current()
 
@@ -645,17 +614,14 @@ class HexPatParser:
             return self._parse_paren_or_cast()
 
         msg = f"Unexpected token '{tok.value}' in expression"
-        raise self._error(msg)
+        raise HexPatParseError(msg, tok.line, tok.column, self.file_path)
 
     def _parse_paren_or_cast(self) -> ExprNode:
         """
         Parse a parenthesised expression or a cast expression.
 
         Returns:
-            A CastExpr when the form is (Type)(expr), otherwise the inner expression.
-
-        Raises:
-            HexPatParseError: When neither parse succeeds.
+            ExprNode: A CastExpr when the form is (Type)(expr), otherwise the inner expression.
         """
         tok = self._current()
         self._expect(TokenType.LPAREN)
@@ -686,7 +652,7 @@ class HexPatParser:
         self._expect(TokenType.RPAREN)
         return inner
 
-    def _parse_block(self, allow_fields: bool = False) -> tuple[StmtNode, ...]:
+    def _parse_block(self, *, allow_fields: bool = False) -> tuple[StmtNode, ...]:
         """
         Parse a brace-enclosed block of statements.
 
@@ -694,10 +660,7 @@ class HexPatParser:
             allow_fields: When True, field declarations are permitted within the block.
 
         Returns:
-            Tuple of statement nodes forming the block body.
-
-        Raises:
-            HexPatParseError: When the block syntax is malformed.
+            tuple[StmtNode, ...]: Tuple of statement nodes forming the block body.
         """
         self._expect(TokenType.LBRACE)
         stmts: list[StmtNode] = []
@@ -706,7 +669,7 @@ class HexPatParser:
         self._expect(TokenType.RBRACE)
         return tuple(stmts)
 
-    def _parse_statement(self, allow_fields: bool = False) -> StmtNode:
+    def _parse_statement(self, *, allow_fields: bool = False) -> StmtNode:
         """
         Parse a single statement.
 
@@ -715,10 +678,7 @@ class HexPatParser:
                 field declaration rather than an expression statement.
 
         Returns:
-            A statement AST node.
-
-        Raises:
-            HexPatParseError: When no valid statement can be parsed.
+            StmtNode: A statement AST node.
         """
         tok = self._current()
 
@@ -783,7 +743,7 @@ class HexPatParser:
         Uses look-ahead without consuming tokens.
 
         Returns:
-            True when the token sequence looks like a field or placement declaration.
+            bool: True when the token sequence looks like a field or placement declaration.
         """
         saved = self._save()
         result = self._check_field_lookahead()
@@ -795,7 +755,7 @@ class HexPatParser:
         Perform the actual field lookahead check without save/restore.
 
         Returns:
-            True when the current token sequence matches a field declaration pattern.
+            bool: True when the current token sequence matches a field declaration pattern.
         """
         if self._current().type == TokenType.IDENTIFIER:
             self._advance()
@@ -811,7 +771,7 @@ class HexPatParser:
             return False
         return self._current().type in {TokenType.IDENTIFIER, TokenType.STAR}
 
-    def _parse_expr_or_placement_stmt(self, allow_fields: bool) -> StmtNode:
+    def _parse_expr_or_placement_stmt(self, *, allow_fields: bool) -> StmtNode:
         """
         Parse an expression statement or a top-level placement statement.
 
@@ -822,10 +782,7 @@ class HexPatParser:
             allow_fields: Whether field declarations are currently permitted.
 
         Returns:
-            A PlacementStmt or ExprStmt node.
-
-        Raises:
-            HexPatParseError: When neither form parses successfully.
+            StmtNode: A PlacementStmt or ExprStmt node.
         """
         saved = self._save()
         try:
@@ -844,10 +801,7 @@ class HexPatParser:
         Parse an expression used as a statement.
 
         Returns:
-            An ExprStmt node.
-
-        Raises:
-            HexPatParseError: When no expression can be parsed.
+            ExprStmt: An ExprStmt node.
         """
         tok = self._current()
         expr = self._parse_expression()
@@ -859,10 +813,7 @@ class HexPatParser:
         Parse a single top-level statement or placement declaration.
 
         Returns:
-            A top-level AST node.
-
-        Raises:
-            HexPatParseError: When no valid statement can be parsed.
+            DeclNode | StmtNode: A top-level AST node.
         """
         tok = self._current()
 
@@ -897,10 +848,7 @@ class HexPatParser:
         """Parse a const variable declaration: ``const [Type] name = expr;``.
 
         Returns:
-            A VarDecl node with is_const set to True.
-
-        Raises:
-            HexPatParseError: When the declaration syntax is malformed.
+            VarDecl: A VarDecl node with is_const set to True.
         """
         tok = self._expect(TokenType.CONST)
         type_node: TypeNode | None = None
@@ -931,6 +879,7 @@ class HexPatParser:
     def _parse_field_or_placement(
         self,
         endianness: str | None,
+        *,
         in_struct_body: bool,
     ) -> FieldDecl | PlacementStmt:
         """
@@ -941,10 +890,7 @@ class HexPatParser:
             in_struct_body: When True, produces a FieldDecl; otherwise a PlacementStmt.
 
         Returns:
-            A FieldDecl when inside a struct/union body, or a PlacementStmt at top level.
-
-        Raises:
-            HexPatParseError: When the field/placement syntax is malformed.
+            FieldDecl | PlacementStmt: A FieldDecl when inside a struct/union body, or a PlacementStmt at top level.
         """
         tok = self._current()
         type_node = self._parse_type()
@@ -1039,10 +985,7 @@ class HexPatParser:
         Parse an if/else-if/else conditional statement.
 
         Returns:
-            A ConditionalField node.
-
-        Raises:
-            HexPatParseError: When the if-statement syntax is malformed.
+            ConditionalField: A ConditionalField node.
         """
         tok = self._expect(TokenType.IF)
         self._expect(TokenType.LPAREN)
@@ -1066,10 +1009,7 @@ class HexPatParser:
         Parse a while loop statement.
 
         Returns:
-            A WhileStmt node.
-
-        Raises:
-            HexPatParseError: When the while-statement syntax is malformed.
+            WhileStmt: A WhileStmt node.
         """
         tok = self._expect(TokenType.WHILE)
         self._expect(TokenType.LPAREN)
@@ -1083,10 +1023,7 @@ class HexPatParser:
         Parse a for loop statement.
 
         Returns:
-            A ForStmt node.
-
-        Raises:
-            HexPatParseError: When the for-statement syntax is malformed.
+            ForStmt: A ForStmt node.
         """
         tok = self._expect(TokenType.FOR)
         self._expect(TokenType.LPAREN)
@@ -1131,10 +1068,7 @@ class HexPatParser:
         Parse a match statement.
 
         Returns:
-            A MatchStmt node.
-
-        Raises:
-            HexPatParseError: When the match-statement syntax is malformed.
+            MatchStmt: A MatchStmt node.
         """
         tok = self._expect(TokenType.MATCH)
         self._expect(TokenType.LPAREN)
@@ -1169,7 +1103,7 @@ class HexPatParser:
                     body=arm_body,
                     line=arm_tok.line,
                     column=arm_tok.column,
-                )
+                ),
             )
 
         self._expect(TokenType.RBRACE)
@@ -1180,10 +1114,7 @@ class HexPatParser:
         Parse a try/catch statement.
 
         Returns:
-            A TryStmt node.
-
-        Raises:
-            HexPatParseError: When the try-statement syntax is malformed.
+            TryStmt: A TryStmt node.
         """
         tok = self._expect(TokenType.TRY)
         try_body = self._parse_block(allow_fields=False)
@@ -1201,10 +1132,7 @@ class HexPatParser:
         Parse a return statement.
 
         Returns:
-            A ReturnStmt node.
-
-        Raises:
-            HexPatParseError: When the return-statement syntax is malformed.
+            ReturnStmt: A ReturnStmt node.
         """
         tok = self._expect(TokenType.RETURN)
         value: ExprNode | None = None
@@ -1224,10 +1152,7 @@ class HexPatParser:
             annotations: Pre-parsed annotation pairs collected before the struct keyword.
 
         Returns:
-            A StructDecl node.
-
-        Raises:
-            HexPatParseError: When the struct syntax is malformed.
+            StructDecl: A StructDecl node.
         """
         tok = self._expect(TokenType.STRUCT)
         name_tok = self._expect(TokenType.IDENTIFIER)
@@ -1256,10 +1181,7 @@ class HexPatParser:
             annotations: Pre-parsed annotation pairs collected before the union keyword.
 
         Returns:
-            A UnionDecl node.
-
-        Raises:
-            HexPatParseError: When the union syntax is malformed.
+            UnionDecl: A UnionDecl node.
         """
         tok = self._expect(TokenType.UNION)
         name_tok = self._expect(TokenType.IDENTIFIER)
@@ -1277,10 +1199,7 @@ class HexPatParser:
         Parse an enum declaration.
 
         Returns:
-            An EnumDecl node.
-
-        Raises:
-            HexPatParseError: When the enum syntax is malformed.
+            EnumDecl: An EnumDecl node.
         """
         tok = self._expect(TokenType.ENUM)
         name_tok = self._expect(TokenType.IDENTIFIER)
@@ -1301,7 +1220,7 @@ class HexPatParser:
                     value=entry_value,
                     line=entry_tok.line,
                     column=entry_tok.column,
-                )
+                ),
             )
             if not self._match(TokenType.COMMA):
                 break
@@ -1326,10 +1245,7 @@ class HexPatParser:
             annotations: Pre-parsed annotation pairs collected before the bitfield keyword.
 
         Returns:
-            A BitfieldDecl node.
-
-        Raises:
-            HexPatParseError: When the bitfield syntax is malformed.
+            BitfieldDecl: A BitfieldDecl node.
         """
         tok = self._expect(TokenType.BITFIELD)
         name_tok = self._expect(TokenType.IDENTIFIER)
@@ -1347,7 +1263,7 @@ class HexPatParser:
                     width=width,
                     line=entry_tok.line,
                     column=entry_tok.column,
-                )
+                ),
             )
 
         self._expect(TokenType.RBRACE)
@@ -1364,10 +1280,7 @@ class HexPatParser:
         Parse a function declaration.
 
         Returns:
-            A FunctionDecl node.
-
-        Raises:
-            HexPatParseError: When the function syntax is malformed.
+            FunctionDecl: A FunctionDecl node.
         """
         tok = self._expect(TokenType.FN)
         name_tok = self._expect(TokenType.IDENTIFIER)
@@ -1395,7 +1308,7 @@ class HexPatParser:
                     default_value=default_value,
                     line=param_tok.line,
                     column=param_tok.column,
-                )
+                ),
             )
             if not self._match(TokenType.COMMA):
                 break
@@ -1422,10 +1335,10 @@ class HexPatParser:
         Parse a namespace declaration.
 
         Returns:
-            A NamespaceDecl node.
+            NamespaceDecl: A NamespaceDecl node.
 
         Raises:
-            HexPatParseError: When the namespace syntax is malformed.
+            HexPatParseError: If the input is malformed.
         """
         tok = self._expect(TokenType.NAMESPACE)
         name_tok = self._expect(TokenType.IDENTIFIER)
@@ -1450,8 +1363,9 @@ class HexPatParser:
             elif tt == TokenType.USING:
                 body.append(self._parse_using())
             else:
-                msg = f"Expected declaration inside namespace, got '{self._current().value}'"
-                raise self._error(msg)
+                err_tok = self._current()
+                msg = f"Expected declaration inside namespace, got '{err_tok.value}'"
+                raise HexPatParseError(msg, err_tok.line, err_tok.column, self.file_path)
 
         self._expect(TokenType.RBRACE)
         return NamespaceDecl(
@@ -1466,10 +1380,7 @@ class HexPatParser:
         Parse a using (type alias) declaration.
 
         Returns:
-            A UsingDecl node.
-
-        Raises:
-            HexPatParseError: When the using declaration syntax is malformed.
+            UsingDecl: A UsingDecl node.
         """
         tok = self._expect(TokenType.USING)
         alias_tok = self._expect(TokenType.IDENTIFIER)

@@ -2,377 +2,113 @@
 
 src\intellicrack\bridges\base.py:name:266: DAR202: + return
 
-src\intellicrack\bridges\base.py:tool_definition:300: DAR202: + return
+src\intellicrack\bridges\base.py:tool_definition:310: DAR202: + return
 
-src\intellicrack\bridges\base.py:is_available:331: DAR202: + return
+src\intellicrack\bridges\base.py:is_available:341: DAR202: + return
 
-src\intellicrack\bridges\base.py:load_binary:364: DAR202: + return
+src\intellicrack\bridges\base.py:load_binary:374: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_functions:392: DAR202: + return
+src\intellicrack\bridges\base.py:get_functions:402: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_function:409: DAR202: + return
+src\intellicrack\bridges\base.py:get_function:419: DAR202: + return
 
-src\intellicrack\bridges\base.py:decompile:425: DAR202: + return
+src\intellicrack\bridges\base.py:decompile:435: DAR202: + return
 
-src\intellicrack\bridges\base.py:disassemble:445: DAR202: + return
+src\intellicrack\bridges\base.py:disassemble:455: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_xrefs_to:462: DAR202: + return
+src\intellicrack\bridges\base.py:get_xrefs_to:472: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_xrefs_from:478: DAR202: + return
+src\intellicrack\bridges\base.py:get_xrefs_from:488: DAR202: + return
 
-src\intellicrack\bridges\base.py:search_strings:494: DAR202: + return
+src\intellicrack\bridges\base.py:search_strings:504: DAR202: + return
 
-src\intellicrack\bridges\base.py:search_bytes:510: DAR202: + return
+src\intellicrack\bridges\base.py:search_bytes:520: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_imports:523: DAR202: + return
+src\intellicrack\bridges\base.py:get_imports:533: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_exports:536: DAR202: + return
+src\intellicrack\bridges\base.py:get_exports:546: DAR202: + return
 
-src\intellicrack\bridges\base.py:rename_function:553: DAR202: + return
+src\intellicrack\bridges\base.py:rename_function:563: DAR202: + return
 
-src\intellicrack\bridges\base.py:add_comment:575: DAR202: + return
+src\intellicrack\bridges\base.py:add_comment:585: DAR202: + return
 
-src\intellicrack\bridges\base.py:spawn:627: DAR202: + return
+src\intellicrack\bridges\base.py:spawn:637: DAR202: + return
 
-src\intellicrack\bridges\base.py:read_memory:655: DAR202: + return
+src\intellicrack\bridges\base.py:read_memory:665: DAR202: + return
 
-src\intellicrack\bridges\base.py:write_memory:672: DAR202: + return
+src\intellicrack\bridges\base.py:write_memory:682: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_memory_regions:685: DAR202: + return
+src\intellicrack\bridges\base.py:get_memory_regions:695: DAR202: + return
 
-src\intellicrack\bridges\base.py:scan_memory:701: DAR202: + return
+src\intellicrack\bridges\base.py:scan_memory:711: DAR202: + return
 
-src\intellicrack\bridges\base.py:step_into:756: DAR202: + return
+src\intellicrack\bridges\base.py:step_into:766: DAR202: + return
 
-src\intellicrack\bridges\base.py:step_over:769: DAR202: + return
+src\intellicrack\bridges\base.py:step_over:779: DAR202: + return
 
-src\intellicrack\bridges\base.py:step_out:782: DAR202: + return
+src\intellicrack\bridges\base.py:step_out:792: DAR202: + return
 
-src\intellicrack\bridges\base.py:set_breakpoint:804: DAR202: + return
+src\intellicrack\bridges\base.py:set_breakpoint:814: DAR202: + return
 
-src\intellicrack\bridges\base.py:remove_breakpoint:821: DAR202: + return
+src\intellicrack\bridges\base.py:remove_breakpoint:831: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_breakpoints:834: DAR202: + return
+src\intellicrack\bridges\base.py:get_breakpoints:844: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_registers:847: DAR202: + return
+src\intellicrack\bridges\base.py:get_registers:857: DAR202: + return
 
-src\intellicrack\bridges\base.py:set_register:864: DAR202: + return
+src\intellicrack\bridges\base.py:set_register:874: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_stack_trace:877: DAR202: + return
+src\intellicrack\bridges\base.py:get_stack_trace:887: DAR202: + return
 
-src\intellicrack\bridges\base.py:disassemble_at:897: DAR202: + return
+src\intellicrack\bridges\base.py:disassemble_at:907: DAR202: + return
 
-src\intellicrack\bridges\base.py:assemble_at:915: DAR202: + return
+src\intellicrack\bridges\base.py:assemble_at:925: DAR202: + return
 
-src\intellicrack\bridges\base.py:enumerate_modules:940: DAR202: + return
+src\intellicrack\bridges\base.py:enumerate_modules:950: DAR202: + return
 
-src\intellicrack\bridges\base.py:enumerate_exports:956: DAR202: + return
+src\intellicrack\bridges\base.py:enumerate_exports:966: DAR202: + return
 
-src\intellicrack\bridges\base.py:hook_function:978: DAR202: + return
+src\intellicrack\bridges\base.py:hook_function:988: DAR202: + return
 
-src\intellicrack\bridges\base.py:remove_hook:995: DAR202: + return
+src\intellicrack\bridges\base.py:remove_hook:1005: DAR202: + return
 
-src\intellicrack\bridges\base.py:get_hooks:1008: DAR202: + return
+src\intellicrack\bridges\base.py:get_hooks:1018: DAR202: + return
 
-src\intellicrack\bridges\base.py:execute_script:1024: DAR202: + return
+src\intellicrack\bridges\base.py:execute_script:1034: DAR202: + return
 
-src\intellicrack\bridges\base.py:intercept_return:1041: DAR202: + return
+src\intellicrack\bridges\base.py:intercept_return:1051: DAR202: + return
 
-src\intellicrack\bridges\base.py:call_function:1061: DAR202: + return
+src\intellicrack\bridges\base.py:call_function:1071: DAR202: + return
 
-src\intellicrack\bridges\base.py:enumerate_imports:1078: DAR202: + return
+src\intellicrack\bridges\base.py:enumerate_imports:1088: DAR202: + return
 
-src\intellicrack\bridges\base.py:enumerate_threads:1091: DAR202: + return
+src\intellicrack\bridges\base.py:enumerate_threads:1101: DAR202: + return
 
-src\intellicrack\bridges\base.py:load_file:1124: DAR202: + return
+src\intellicrack\bridges\base.py:load_file:1134: DAR202: + return
 
-src\intellicrack\bridges\base.py:read_bytes:1141: DAR202: + return
+src\intellicrack\bridges\base.py:read_bytes:1151: DAR202: + return
 
-src\intellicrack\bridges\base.py:apply_patch:1171: DAR202: + return
+src\intellicrack\bridges\base.py:apply_patch:1181: DAR202: + return
 
-src\intellicrack\bridges\base.py:revert_patch:1187: DAR202: + return
+src\intellicrack\bridges\base.py:revert_patch:1197: DAR202: + return
 
-src\intellicrack\bridges\base.py:save:1203: DAR202: + return
+src\intellicrack\bridges\base.py:save:1213: DAR202: + return
 
-src\intellicrack\bridges\base.py:search_pattern:1225: DAR202: + return
+src\intellicrack\bridges\base.py:search_pattern:1235: DAR202: + return
 
-src\intellicrack\bridges\base.py:calculate_checksum:1244: DAR202: + return
-
-
-31 findings in src\intellicrack\core\hexpat\parser.py
-
-src\intellicrack\core\hexpat\parser.py:parse:154: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_expect:216: DAR401: -r _error
-
-src\intellicrack\core\hexpat\parser.py:_expect:226: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_annotations:308: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_type:327: DAR401: -r _error
-
-src\intellicrack\core\hexpat\parser.py:_parse_type:334: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_expression:425: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_prefix:527: DAR401: -r _error
-
-src\intellicrack\core\hexpat\parser.py:_parse_prefix:534: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_paren_or_cast:657: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_block:699: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_statement:720: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_expr_or_placement_stmt:827: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_expr_stmt:849: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_top_level_statement:864: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_const_decl:903: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_field_or_placement:945: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_if_stmt:1044: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_while_stmt:1071: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_for_stmt:1088: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_match_stmt:1136: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_try_stmt:1185: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_return_stmt:1206: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_struct:1228: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_union:1260: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_enum:1282: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_bitfield:1330: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_function:1369: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_namespace:1420: DAR401: -r _error
-
-src\intellicrack\core\hexpat\parser.py:_parse_namespace:1427: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\parser.py:_parse_using:1471: DAR402: +r HexPatParseError
-
-
-18 findings in src\intellicrack\core\hexpat\data_reader.py
-
-src\intellicrack\core\hexpat\data_reader.py:read_u8:125: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_u16:142: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_u32:160: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_u64:178: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_u128:196: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_s8:213: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_s16:230: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_s32:248: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_s64:266: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_s128:284: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_float:302: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_double:320: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_char:340: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_char16:357: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_bool:376: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_string:398: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:read_fixed_string:422: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\data_reader.py:find_sequence:445: DAR402: +r HexPatRuntimeError
-
-
-14 findings in src\intellicrack\core\hexpat\lexer.py
-
-src\intellicrack\core\hexpat\lexer.py:tokenize:51: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_skip_block_comment:155: DAR401: -r _error
-
-src\intellicrack\core\hexpat\lexer.py:_skip_block_comment:162: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_scan_string:188: DAR401: -r _error
-
-src\intellicrack\core\hexpat\lexer.py:_scan_string:196: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_scan_char:220: DAR401: -r _error
-
-src\intellicrack\core\hexpat\lexer.py:_scan_char:228: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_scan_escape:252: DAR401: -r _error
-
-src\intellicrack\core\hexpat\lexer.py:_scan_escape:263: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_scan_number:295: DAR401: -r _error
-
-src\intellicrack\core\hexpat\lexer.py:_scan_number:306: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_scan_operator:394: DAR401: -r _error
-
-src\intellicrack\core\hexpat\lexer.py:_scan_operator:403: DAR402: +r HexPatParseError
-
-src\intellicrack\core\hexpat\lexer.py:_scan_token:515: DAR402: +r HexPatParseError
-
-
-8 findings in src\intellicrack\bridges\hex_editor.py
-
-src\intellicrack\bridges\hex_editor.py:disassemble:2289: DAR402: +r ImportError
-
-src\intellicrack\bridges\hex_editor.py:yara_scan:2343: DAR402: +r ImportError
-
-src\intellicrack\bridges\hex_editor.py:yara_scan_files:2388: DAR402: +r ImportError
-
-src\intellicrack\bridges\hex_editor.py:apply_transform:2442: DAR402: +r ValueError
-
-src\intellicrack\bridges\hex_editor.py:apply_pipeline:2491: DAR402: +r ValueError
-
-src\intellicrack\bridges\hex_editor.py:apply_pipeline:2492: DAR402: +r ImportError
-
-src\intellicrack\bridges\hex_editor.py:search_numeric:2882: DAR402: +r ValueError
-
-src\intellicrack\bridges\hex_editor.py:add_highlight_rule:3066: DAR402: +r ValueError
-
-
-7 findings in src\intellicrack\core\hexpat\evaluator.py
-
-src\intellicrack\core\hexpat\evaluator.py:_eval_decl:426: DAR402: +r HexPatTypeError
-
-src\intellicrack\core\hexpat\evaluator.py:_instantiate_type:757: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\evaluator.py:_eval_stmt_collect:1281: DAR401: -r _BreakSignalError
-
-src\intellicrack\core\hexpat\evaluator.py:_eval_stmt_collect:1281: DAR401: -r _ContinueSignalError
-
-src\intellicrack\core\hexpat\evaluator.py:_eval_stmt_collect:1281: DAR401: -r _ReturnSignalError
-
-src\intellicrack\core\hexpat\evaluator.py:_eval_expr:1404: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\evaluator.py:_eval_expr:1405: DAR402: +r HexPatTypeError
-
-
-7 findings in src\intellicrack\core\hexpat\stdlib.py
-
-src\intellicrack\core\hexpat\stdlib.py:_mem_read_unsigned:154: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\stdlib.py:_mem_read_signed:173: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\stdlib.py:_mem_read_string:192: DAR402: +r HexPatRuntimeError
-
-src\intellicrack\core\hexpat\stdlib.py:_mem_size:224: DAR101: - *_args
-
-src\intellicrack\core\hexpat\stdlib.py:_mem_base_address:235: DAR101: - *_args
-
-src\intellicrack\core\hexpat\stdlib.py:_core_get_endian:510: DAR101: - *_args
-
-src\intellicrack\core\hexpat\stdlib.py:_core_array_index:519: DAR101: - *_args
+src\intellicrack\bridges\base.py:calculate_checksum:1254: DAR202: + return
 
 
 6 findings in src\intellicrack\core\orchestrator.py
 
-src\intellicrack\core\orchestrator.py:_run_agent_loop:429: DAR401: -r CancelledError
+src\intellicrack\core\orchestrator.py:_run_agent_loop:430: DAR401: -r CancelledError
 
-src\intellicrack\core\orchestrator.py:_run_agent_loop:434: DAR402: +r asyncio.CancelledError
+src\intellicrack\core\orchestrator.py:_run_agent_loop:435: DAR402: +r asyncio.CancelledError
 
-src\intellicrack\core\orchestrator.py:_stream_response:921: DAR401: -r CancelledError
+src\intellicrack\core\orchestrator.py:_stream_response:920: DAR401: -r CancelledError
 
-src\intellicrack\core\orchestrator.py:_stream_response:941: DAR402: +r asyncio.CancelledError
+src\intellicrack\core\orchestrator.py:_stream_response:940: DAR402: +r asyncio.CancelledError
 
-src\intellicrack\core\orchestrator.py:_execute_tool_calls:1037: DAR401: -r CancelledError
+src\intellicrack\core\orchestrator.py:_execute_tool_calls:1039: DAR401: -r CancelledError
 
-src\intellicrack\core\orchestrator.py:_execute_tool_calls:1047: DAR402: +r asyncio.CancelledError
-
-
-5 findings in src\intellicrack\core\hexpat_compiler.py
-
-src\intellicrack\core\hexpat_compiler.py:_skip_whitespace_and_comments:625: DAR401: -r HexPatError
-
-src\intellicrack\core\hexpat_compiler.py:_read_string:653: DAR401: -r HexPatError
-
-src\intellicrack\core\hexpat_compiler.py:parse:731: DAR402: +r HexPatError
-
-src\intellicrack\core\hexpat_compiler.py:compile:1581: DAR402: +r HexPatError
-
-src\intellicrack\core\hexpat_compiler.py:compile_to_dict:1598: DAR402: +r HexPatError
-
-
-4 findings in src\intellicrack\sandbox\base.py
-
-src\intellicrack\sandbox\base.py:run_command:336: DAR202: + return
-
-src\intellicrack\sandbox\base.py:run_binary:369: DAR202: + return
-
-src\intellicrack\sandbox\base.py:take_snapshot:438: DAR202: + return
-
-src\intellicrack\sandbox\base.py:list_snapshots:472: DAR202: + return
-
-
-4 findings in src\intellicrack\core\hexpat\interpreter.py
-
-src\intellicrack\core\hexpat\interpreter.py:execute:103: DAR402: +r HexPatError
-
-src\intellicrack\core\hexpat\interpreter.py:execute_file:158: DAR402: +r HexPatError
-
-src\intellicrack\core\hexpat\interpreter.py:execute_file:159: DAR402: +r FileNotFoundError
-
-src\intellicrack\core\hexpat\interpreter.py:execute_bytes:186: DAR402: +r HexPatError
-
-
-2 findings in src\intellicrack\ui\panels\hex_tools_panel.py
-
-src\intellicrack\ui\panels\hex_tools_panel.py:_safe_eval_expr:236: DAR402: +r SyntaxError
-
-src\intellicrack\ui\panels\hex_tools_panel.py:_safe_eval_expr:237: DAR402: +r ValueError
-
-
-2 findings in src\intellicrack\ui\panels\hex_editor\_search.py
-
-src\intellicrack\ui\panels\hex_editor\_search.py:_execute_search:110: DAR402: +r ValueError
-
-src\intellicrack\ui\panels\hex_editor\_search.py:_execute_search:111: DAR402: +r AttributeError
-
-
-2 findings in src\intellicrack\core\hexpat\preprocessor.py
-
-src\intellicrack\core\hexpat\preprocessor.py:process:105: DAR402: +r HexPatPreprocessorError
-
-src\intellicrack\core\hexpat\preprocessor.py:_resolve_include:316: DAR402: +r HexPatPreprocessorError
-
-
-1 findings in src\intellicrack\bridges\schemas.py
-
-src\intellicrack\bridges\schemas.py:_assert_never:37: DAR202: + return
-
-
-1 findings in src\intellicrack\core\disassembler.py
-
-src\intellicrack\core\disassembler.py:disassemble_to_lines:284: DAR402: +r ValueError
-
-
-1 findings in src\intellicrack\providers\base.py
-
-src\intellicrack\providers\base.py:_retry_with_backoff:329: DAR402: +r retryable_exceptions
-
-
-1 findings in src\intellicrack\core\hexpat\pattern_registry.py
-
-src\intellicrack\core\hexpat\pattern_registry.py:load_source:208: DAR402: +r FileNotFoundError
+src\intellicrack\core\orchestrator.py:_execute_tool_calls:1049: DAR402: +r asyncio.CancelledError

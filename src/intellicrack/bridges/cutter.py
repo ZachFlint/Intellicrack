@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Cutter/Rizin bridge for static and dynamic analysis.
 
@@ -19,9 +18,15 @@ from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import r2pipe
 
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager, ProcessType
-from ..core.types import (
+from intellicrack.bridges.base import (
+    BridgeCapabilities,
+    BridgeState,
+    DisassemblyLine,
+    StaticAnalysisBridge,
+)
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.types import (
     BinaryInfo,
     CrossReference,
     ExportInfo,
@@ -36,12 +41,6 @@ from ..core.types import (
     ToolName,
     ToolParameter,
     VariableInfo,
-)
-from .base import (
-    BridgeCapabilities,
-    BridgeState,
-    DisassemblyLine,
-    StaticAnalysisBridge,
 )
 
 
@@ -66,6 +65,7 @@ _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
 _ERR_CMD_TIMEOUT = "cutter command timed out"
 _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 60.0
+R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
 
 
 def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
@@ -200,6 +200,41 @@ class CutterBridge(StaticAnalysisBridge):
             supported_formats=["pe", "elf", "macho", "raw"],
         )
 
+    @property
+    def r2(self) -> r2pipe.open | None:
+        """
+        Access the r2pipe connection instance.
+
+        Returns:
+            r2pipe.open | None: The r2pipe connection or None if not connected.
+        """
+        return self._r2
+
+    @r2.setter
+    def r2(self, value: r2pipe.open | None) -> None:
+        """
+        Set the r2pipe connection instance.
+
+        Args:
+            value: The r2pipe connection instance or None.
+        """
+        self._r2 = value
+
+    async def r2_cmd(self, command: str) -> str:
+        """
+        Execute an r2 command and return a guaranteed string result.
+
+        Delegates to the internal ``_r2_cmd`` method which raises
+        ``ToolError`` on failure.
+
+        Args:
+            command: The r2 command to execute.
+
+        Returns:
+            str: Command output as string, empty string if None.
+        """
+        return await self._r2_cmd(command)
+
     async def _r2_cmd(self, command: str) -> str:
         """
         Execute an r2 command and return a guaranteed string result.
@@ -228,9 +263,10 @@ class CutterBridge(StaticAnalysisBridge):
             )
             msg = f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}"
             raise ToolError(msg) from None
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             _logger.warning("r2_command_failed", command=command, error=str(e))
-            raise ToolError(f"{_ERR_CMD_FAILED}: {command}") from e
+            msg = f"{_ERR_CMD_FAILED}: {command}"
+            raise ToolError(msg) from e
         return "" if result is None else result
 
     @property
@@ -570,7 +606,7 @@ class CutterBridge(StaticAnalysisBridge):
             tool_path: Optional path to Cutter/Rizin installation.
         """
         del tool_path
-        self._state = BridgeState(
+        self.state = BridgeState(
             connected=True,
             tool_running=True,
             binary_loaded=False,
@@ -586,7 +622,7 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is not None:
             try:
                 await asyncio.to_thread(self._r2.quit)
-            except Exception as e:
+            except (OSError, RuntimeError) as e:
                 _logger.warning("cutter_close_failed", error=str(e))
             self._r2 = None
 
@@ -612,7 +648,7 @@ class CutterBridge(StaticAnalysisBridge):
         try:
             r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             _logger.debug("cutter_availability_check_failed", error=str(e))
             return False
         else:
@@ -621,7 +657,7 @@ class CutterBridge(StaticAnalysisBridge):
             if r2 is not None:
                 try:
                     await asyncio.to_thread(r2.quit)
-                except Exception as e:
+                except (OSError, RuntimeError) as e:
                     _logger.debug("cutter_cleanup_failed", error=str(e))
 
     async def _close_existing_r2(self) -> None:
@@ -715,7 +751,7 @@ class CutterBridge(StaticAnalysisBridge):
         Raises:
             ToolError: If load fails.
         """
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             raise ToolError(_ERR_FILE_NOT_FOUND)
 
         if not await self.is_available():
@@ -725,7 +761,7 @@ class CutterBridge(StaticAnalysisBridge):
             await self._close_existing_r2()
 
             self._r2 = await asyncio.to_thread(r2pipe.open, str(path), ["-2"])
-            self._binary_path = path.resolve()
+            self._binary_path = await asyncio.to_thread(path.resolve)
             self._analyzed = False
 
             self._register_rizin_process(path)
@@ -738,17 +774,17 @@ class CutterBridge(StaticAnalysisBridge):
             imports = await self._get_imports_internal()
             exports = await self._get_exports_internal()
 
-            self._state.connected = True
-            self._state.tool_running = True
-            self._state.binary_loaded = True
-            self._state.target_path = self._binary_path
+            self.state.connected = True
+            self.state.tool_running = True
+            self.state.binary_loaded = True
+            self.state.target_path = self._binary_path
 
             _logger.info("binary_loaded", path=path.name, file_type=file_type, arch=arch, bits=bits)
 
             return BinaryInfo(
                 path=self._binary_path,
                 name=path.name,
-                size=path.stat().st_size,
+                size=(await asyncio.to_thread(path.stat)).st_size,
                 md5=md5,
                 sha256=sha256,
                 file_type=file_type.lower(),
@@ -760,7 +796,7 @@ class CutterBridge(StaticAnalysisBridge):
                 exports=exports,
             )
 
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             _logger.warning("binary_load_failed", path=str(self._binary_path), error=str(e))
             raise ToolError(_ERR_LOAD_FAILED) from e
 
@@ -831,7 +867,7 @@ class CutterBridge(StaticAnalysisBridge):
                     local_variables=[],
                     decompiled_code=None,
                     disassembly=None,
-                )
+                ),
             )
 
         _logger.debug("functions_queried", filter_pattern=filter_pattern, result_count=len(result))
@@ -887,7 +923,7 @@ class CutterBridge(StaticAnalysisBridge):
                         type=var_type,
                         size=0,
                         location="stack",
-                    )
+                    ),
                 )
             else:
                 locals_list.append(
@@ -896,7 +932,7 @@ class CutterBridge(StaticAnalysisBridge):
                         type=var_type,
                         offset=var_offset,
                         size=0,
-                    )
+                    ),
                 )
 
         _logger.debug("function_queried", address=hex(address), found=True)
@@ -983,7 +1019,7 @@ class CutterBridge(StaticAnalysisBridge):
                     mnemonic=mnemonic,
                     operands=operands,
                     comment=_get_optional_str(insn, "comment"),
-                )
+                ),
             )
 
         return result
@@ -1026,7 +1062,7 @@ class CutterBridge(StaticAnalysisBridge):
                     ref_type=xref_type,
                     from_function=_get_optional_str(x, "fcn_name"),
                     to_function=None,
-                )
+                ),
             )
 
         _logger.debug("xrefs_to_queried", address=hex(address), result_count=len(result))
@@ -1070,7 +1106,7 @@ class CutterBridge(StaticAnalysisBridge):
                     ref_type=xref_type,
                     from_function=None,
                     to_function=_get_optional_str(x, "fcn_name"),
-                )
+                ),
             )
 
         _logger.debug("xrefs_from_queried", address=hex(address), result_count=len(result))
@@ -1119,7 +1155,7 @@ class CutterBridge(StaticAnalysisBridge):
                         value=string_val,
                         encoding=encoding,
                         section=_get_str(s, "section"),
-                    )
+                    ),
                 )
 
         _logger.debug("string_search_completed", pattern=pattern, result_count=len(result))

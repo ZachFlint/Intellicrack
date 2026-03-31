@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Main application window for Intellicrack.
 
@@ -16,7 +15,6 @@ import importlib
 import json
 import os
 import sys
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
@@ -46,26 +44,26 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .._metadata import __copyright__, __license__, __version__
-from ..bridges.installer import ToolInstaller
-from ..core.config import get_config_dir, get_config_file
-from ..core.logging import get_logger
-from ..core.script_gen import ScriptManager
-from ..core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
-from ..providers.discovery import ModelDiscovery
-from ..sandbox import SandboxManager
-from ._screen_compat import get_screen_geometry, move_widget
-from .chat import ChatPanel
-from .provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
-from .resources import FontManager, IconManager, ThemeManager
-from .sandbox_config import SandboxConfigDialog
-from .session_manager import SessionManagerDialog
-from .tool_config import ToolConfigDialog, ToolStatusDialog
-from .tools import ToolOutputPanel
+from intellicrack._metadata import __copyright__, __license__, __version__
+from intellicrack.bridges.installer import ToolInstaller
+from intellicrack.core.config import get_config_dir, get_config_file
+from intellicrack.core.logging import get_logger
+from intellicrack.core.script_gen import ScriptManager
+from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
+from intellicrack.providers.discovery import ModelDiscovery
+from intellicrack.sandbox import SandboxManager
+from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
+from intellicrack.ui.chat import ChatPanel
+from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
+from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
+from intellicrack.ui.sandbox_config import SandboxConfigDialog
+from intellicrack.ui.session_manager import SessionManagerDialog
+from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog
+from intellicrack.ui.tools import ToolOutputPanel
 
 
 try:
-    from ..providers.model_loader import get_global_model_cache, set_global_cache_size
+    from intellicrack.providers.model_loader import get_global_model_cache, set_global_cache_size
 except ImportError:
     get_logger("ui.app").debug("model_loader_unavailable")
     get_global_model_cache = None
@@ -78,8 +76,8 @@ if TYPE_CHECKING:
 
     from PyQt6.QtGui import QCloseEvent
 
-    from ..core.config import Config
-    from ..core.orchestrator import Orchestrator
+    from intellicrack.core.config import Config
+    from intellicrack.core.orchestrator import Orchestrator
 
 
 _logger = get_logger("ui.app")
@@ -146,7 +144,7 @@ class AsyncWorker(QThread):
             asyncio.set_event_loop(loop)
             result: object = loop.run_until_complete(self._coro)
             self.finished.emit(result)
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError, TypeError, AttributeError, KeyError) as e:
             _logger.exception("async_worker_failed")
             self.error.emit(e)
         finally:
@@ -194,15 +192,15 @@ class MainWindow(QMainWindow):
         self._orchestrator = orchestrator
         self._current_worker: AsyncWorker | None = None
         self._stream_append: Callable[[str], None] | None = None
-        self._sandbox_manager = SandboxManager()
-        self._model_refresh_worker: ModelRefreshWorker | None = None
-        self._model_browse_worker: AsyncWorker | None = None
+        self.sandbox_manager = SandboxManager()
+        self.model_refresh_worker: ModelRefreshWorker | None = None
+        self.model_browse_worker: AsyncWorker | None = None
         self._shutting_down: bool = False
 
-        self._current_binary: Path | None = None
+        self.current_binary: Path | None = None
         self._script_manager: object | None = None
         self._script_validator: object | None = None
-        self._model_discovery: ModelDiscovery | None = None
+        self.model_discovery: ModelDiscovery | None = None
 
         _logger.debug("loading_icon_manager")
         self._icon_manager = IconManager.get_instance()
@@ -269,7 +267,7 @@ class MainWindow(QMainWindow):
                 avail_x + (avail_w - target_w) // 2,
                 avail_y + (avail_h - target_h) // 2,
             )
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             _logger.debug("screen_detection_failed_using_default_size", exc_info=True)
             self.resize(max_w, max_h)
 
@@ -279,12 +277,12 @@ class MainWindow(QMainWindow):
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("splitter_sizes", self._splitter.sizes())
 
-        tab_state = self._tool_panel.save_tab_state()
+        tab_state = self.tool_panel.save_tab_state()
         settings.setValue("tab_state/tab_names", tab_state.get("tab_names"))
         settings.setValue("tab_state/active_index", tab_state.get("active_index"))
         settings.setValue("tab_state/splitter_sizes", tab_state.get("splitter_sizes"))
 
-        detached_titles = self._tool_panel.get_detached_state()
+        detached_titles = self.tool_panel.get_detached_state()
         settings.setValue("detached_panels", detached_titles)
 
         _logger.debug("window_state_saved")
@@ -317,15 +315,15 @@ class MainWindow(QMainWindow):
             tab_state["splitter_sizes"] = tool_splitter
 
         if tab_state:
-            self._tool_panel.restore_tab_state(tab_state)
+            self.tool_panel.restore_tab_state(tab_state)
 
         detached_raw = settings.value("detached_panels")
         if isinstance(detached_raw, list):
             detached_list = cast("list[str]", detached_raw)
             for title in detached_list:
-                tab_idx = self._tool_panel.find_tab_by_title(title)
+                tab_idx = self.tool_panel.find_tab_by_title(title)
                 if tab_idx >= 0:
-                    self._tool_panel.detach_tab(tab_idx)
+                    self.tool_panel.detach_tab(tab_idx)
 
         _logger.debug("window_state_restored")
 
@@ -342,7 +340,7 @@ class MainWindow(QMainWindow):
         """
         self._script_manager = manager
         self._script_validator = validator
-        self._tool_panel.wire_script_backend(manager, validator)
+        self.tool_panel.wire_script_backend(manager, validator)
         _logger.debug("script_manager_wired")
 
     def set_model_discovery(self, discovery: ModelDiscovery) -> None:
@@ -352,7 +350,7 @@ class MainWindow(QMainWindow):
         Args:
             discovery: ModelDiscovery for provider model enumeration.
         """
-        self._model_discovery = discovery
+        self.model_discovery = discovery
         _logger.debug("model_discovery_set")
 
     def _initialize_model_cache(self) -> None:
@@ -363,7 +361,7 @@ class MainWindow(QMainWindow):
             max_cache = getattr(self._config, "max_model_cache_bytes", None)
             if isinstance(max_cache, int) and max_cache > 0:
                 set_global_cache_size(max_cache)
-        except Exception:
+        except (RuntimeError, ValueError, TypeError):
             _logger.debug("model_cache_init_skipped", exc_info=True)
 
     def _setup_ui(self) -> None:
@@ -381,9 +379,9 @@ class MainWindow(QMainWindow):
         self._chat_panel.setMinimumWidth(400)
         self._splitter.addWidget(self._chat_panel)
 
-        self._tool_panel = ToolOutputPanel()
-        self._tool_panel.setMinimumWidth(500)
-        self._splitter.addWidget(self._tool_panel)
+        self.tool_panel = ToolOutputPanel()
+        self.tool_panel.setMinimumWidth(500)
+        self._splitter.addWidget(self.tool_panel)
 
         self._splitter.setSizes([500, 900])
 
@@ -496,25 +494,25 @@ class MainWindow(QMainWindow):
 
     def _on_view_analysis(self) -> None:
         """Show the bridge analysis panel."""
-        self._tool_panel.activate_analysis_tab()
+        self.tool_panel.activate_analysis_tab()
 
     def _on_view_scripts(self) -> None:
         """Show the scripts manager panel."""
-        script_state = self._tool_panel.get_script_panel_state()
+        script_state = self.tool_panel.get_script_panel_state()
         selected_id, current_script = script_state
         if selected_id is not None:
             _logger.debug("scripts_panel_state", selected=selected_id)
         if current_script is not None:
             _logger.debug("current_script", script_name=current_script[0])
-        self._tool_panel.activate_scripts_tab()
+        self.tool_panel.activate_scripts_tab()
 
     def _on_view_stack(self) -> None:
         """Show the stack viewer panel."""
-        self._tool_panel.activate_stack_tab()
+        self.tool_panel.activate_stack_tab()
 
     def _on_detach_current(self) -> None:
         """Detach the currently active tool panel into a floating window."""
-        self._tool_panel.detach_current_tab()
+        self.tool_panel.detach_current_tab()
 
     def _setup_tools_menu(self, menubar: QMenuBar) -> None:
         """
@@ -676,10 +674,10 @@ class MainWindow(QMainWindow):
         model_label.setObjectName("toolbar_label")
         toolbar.addWidget(model_label)
 
-        self._model_combo = QComboBox()
-        self._model_combo.setMinimumWidth(200)
-        self._model_combo.setObjectName("toolbar_combo")
-        toolbar.addWidget(self._model_combo)
+        self.model_combo = QComboBox()
+        self.model_combo.setMinimumWidth(200)
+        self.model_combo.setObjectName("toolbar_combo")
+        toolbar.addWidget(self.model_combo)
 
         toolbar.addSeparator()
 
@@ -687,17 +685,23 @@ class MainWindow(QMainWindow):
         tools_label.setObjectName("toolbar_label")
         toolbar.addWidget(tools_label)
 
-        self._x64dbg_btn = QPushButton("x64dbg")
-        self._x64dbg_btn.setObjectName("tool_button")
-        self._x64dbg_btn.setToolTip("Open x64dbg Debugger")
-        self._x64dbg_btn.clicked.connect(self._on_open_x64dbg)
-        toolbar.addWidget(self._x64dbg_btn)
+        self.x64dbg_btn = QPushButton("x64dbg")
+        self.x64dbg_btn.setObjectName("tool_button")
+        self.x64dbg_btn.setToolTip("Open x64dbg Debugger")
+        self.x64dbg_btn.clicked.connect(self._on_open_x64dbg)
+        toolbar.addWidget(self.x64dbg_btn)
 
-        self._cutter_btn = QPushButton("Cutter")
-        self._cutter_btn.setObjectName("tool_button")
-        self._cutter_btn.setToolTip("Open Cutter Analysis")
-        self._cutter_btn.clicked.connect(self._on_open_cutter)
-        toolbar.addWidget(self._cutter_btn)
+        self.cutter_btn = QPushButton("Cutter")
+        self.cutter_btn.setObjectName("tool_button")
+        self.cutter_btn.setToolTip("Open Cutter Analysis")
+        self.cutter_btn.clicked.connect(self._on_open_cutter)
+        toolbar.addWidget(self.cutter_btn)
+
+        self.hxd_btn = QPushButton("HxD")
+        self.hxd_btn.setObjectName("tool_button")
+        self.hxd_btn.setToolTip("Open HxD Hex Editor")
+        self.hxd_btn.clicked.connect(self.on_open_hxd)
+        toolbar.addWidget(self.hxd_btn)
 
         self._hex_editor_btn = QPushButton("Hex Editor")
         self._hex_editor_btn.setObjectName("tool_button")
@@ -717,11 +721,11 @@ class MainWindow(QMainWindow):
         self._frida_btn.clicked.connect(self._on_open_frida)
         toolbar.addWidget(self._frida_btn)
 
-        self._process_btn = QPushButton("Process")
-        self._process_btn.setObjectName("tool_button")
-        self._process_btn.setToolTip("Open Process Manager")
-        self._process_btn.clicked.connect(self._on_open_process)
-        toolbar.addWidget(self._process_btn)
+        self.process_btn = QPushButton("Process")
+        self.process_btn.setObjectName("tool_button")
+        self.process_btn.setToolTip("Open Process Manager")
+        self.process_btn.clicked.connect(self._on_open_process)
+        toolbar.addWidget(self.process_btn)
 
         self._binary_btn = QPushButton("Binary")
         self._binary_btn.setObjectName("tool_button")
@@ -742,13 +746,21 @@ class MainWindow(QMainWindow):
         self._auto_approve_btn = QPushButton("Auto-approve: OFF")
         self._auto_approve_btn.setCheckable(True)
         self._auto_approve_btn.setObjectName("toggle_button")
-        self._auto_approve_btn.toggled.connect(self._on_auto_approve_toggled)
+
+        def _auto_approve_slot(state: int) -> None:
+            self._on_auto_approve_toggled(checked=bool(state))
+
+        self._auto_approve_btn.toggled.connect(_auto_approve_slot)
         toolbar.addWidget(self._auto_approve_btn)
 
         self._sandbox_btn = QPushButton("Sandbox: OFF")
         self._sandbox_btn.setCheckable(True)
         self._sandbox_btn.setObjectName("toggle_button")
-        self._sandbox_btn.toggled.connect(self._on_sandbox_toggled)
+
+        def _sandbox_slot(state: int) -> None:
+            self._on_sandbox_toggled(checked=bool(state))
+
+        self._sandbox_btn.toggled.connect(_sandbox_slot)
         toolbar.addWidget(self._sandbox_btn)
 
         cancel_btn = QPushButton("Cancel")
@@ -761,8 +773,8 @@ class MainWindow(QMainWindow):
         self._statusbar = QStatusBar()
         self.setStatusBar(self._statusbar)
 
-        self._status_label = QLabel("Ready")
-        self._statusbar.addWidget(self._status_label)
+        self.status_label = QLabel("Ready")
+        self._statusbar.addWidget(self.status_label)
 
         self._binary_label = QLabel()
         self._statusbar.addPermanentWidget(self._binary_label)
@@ -770,8 +782,8 @@ class MainWindow(QMainWindow):
         self._memory_label = QLabel()
         self._statusbar.addPermanentWidget(self._memory_label)
 
-        self._model_status_label = QLabel()
-        self._statusbar.addPermanentWidget(self._model_status_label)
+        self.model_status_label = QLabel()
+        self._statusbar.addPermanentWidget(self.model_status_label)
 
         self._token_label = QLabel()
         self._statusbar.addPermanentWidget(self._token_label)
@@ -784,7 +796,7 @@ class MainWindow(QMainWindow):
         """Periodically refresh the system status display."""
         if self._shutting_down:
             return
-        from .panels.async_bridge import run_bridge_coroutine
+        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
         async def fetch_status() -> dict[str, object]:
             return await self._orchestrator.get_system_status()
@@ -795,8 +807,8 @@ class MainWindow(QMainWindow):
                 state = status.get("state", "unknown")
                 session_id = status.get("session_id")
                 session_text = f" | Session: {session_id}" if session_id else ""
-                self._status_label.setText(f"State: {state}{session_text}")
-        except Exception:
+                self.status_label.setText(f"State: {state}{session_text}")
+        except (RuntimeError, AttributeError, OSError):
             _logger.debug("system_status_refresh_failed", exc_info=True)
 
         self._refresh_memory_status()
@@ -814,21 +826,21 @@ class MainWindow(QMainWindow):
                 self._memory_label.setText(f"Cache: {mb:.0f}MB")
             else:
                 self._memory_label.setText("")
-        except Exception:
+        except (RuntimeError, AttributeError, ValueError):
             _logger.debug("memory_label_update_failed", exc_info=True)
             self._memory_label.setText("")
 
     def _refresh_model_discovery_status(self) -> None:
         """Update the model discovery status in the status bar."""
-        if self._model_discovery is None:
+        if self.model_discovery is None:
             return
         try:
-            if events := self._model_discovery.get_discovery_events():
+            if events := self.model_discovery.get_discovery_events():
                 last_event = events[-1]
                 provider_str = last_event.provider.value
                 status_str = "OK" if last_event.success else (last_event.error_message or "failed")
-                self._model_status_label.setText(f"Discovery: {provider_str} {status_str}")
-        except Exception:
+                self.model_status_label.setText(f"Discovery: {provider_str} {status_str}")
+        except (RuntimeError, AttributeError, ValueError):
             _logger.debug("model_discovery_status_refresh_failed", exc_info=True)
 
     def _connect_signals(self) -> None:
@@ -839,7 +851,7 @@ class MainWindow(QMainWindow):
         self.tool_result_received.connect(self._on_tool_result)
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
-        self._tool_panel.address_clicked.connect(self._on_address_clicked)
+        self.tool_panel.address_clicked.connect(self._on_address_clicked)
         self.bridge_analysis_received.connect(self._on_bridge_analysis_activated)
 
     def _configure_orchestrator(self) -> None:
@@ -854,7 +866,7 @@ class MainWindow(QMainWindow):
             on_bridge_analysis=self._on_bridge_analysis_received,
             on_confirmation=None,
         )
-        self.bridge_analysis_received.connect(self._tool_panel.update_bridge_analysis)
+        self.bridge_analysis_received.connect(self.tool_panel.update_bridge_analysis)
 
         try:
             scripts_dir = get_config_dir() / "scripts"
@@ -869,7 +881,7 @@ class MainWindow(QMainWindow):
 
         tool_reg = getattr(self._orchestrator, "_tool_registry", None)
         if tool_reg is not None:
-            self._tool_panel.set_tool_registry(tool_reg)
+            self.tool_panel.set_tool_registry(tool_reg)
             _logger.info("tool_registry_wired_to_panel", registry=type(tool_reg).__name__)
 
         bridge = self._orchestrator.get_typed_bridge("process")
@@ -918,8 +930,8 @@ class MainWindow(QMainWindow):
         Args:
             analysis: The BridgeAnalysisSummary result from the orchestrator.
         """
-        self._tool_panel.clear_analysis_tab("analysis")
-        self._tool_panel.display_analysis_result("analysis", str(analysis))
+        self.tool_panel.clear_analysis_tab("analysis")
+        self.tool_panel.display_analysis_result("analysis", str(analysis))
         self.bridge_analysis_received.emit(analysis)
 
     def _on_bridge_analysis_activated(self, _analysis: object) -> None:
@@ -929,7 +941,7 @@ class MainWindow(QMainWindow):
         Args:
             _analysis: The bridge analysis result (unused here).
         """
-        self._tool_panel.activate_analysis_tab()
+        self.tool_panel.activate_analysis_tab()
 
     def _request_tool_confirmation(self, call: ToolCall) -> asyncio.Future[bool]:
         """
@@ -948,7 +960,7 @@ class MainWindow(QMainWindow):
         def show_dialog() -> None:
             dialog = confirmation_module.ToolConfirmationDialog(call, self)
             dialog.exec()
-            self._orchestrator.resolve_confirmation(dialog.approved)
+            self._orchestrator.resolve_confirmation(approved=dialog.approved)
             try:
                 future.set_result(dialog.approved)
             except asyncio.InvalidStateError:
@@ -965,11 +977,11 @@ class MainWindow(QMainWindow):
         Args:
             text: User's message text.
         """
-        self._chat_panel.set_input_enabled(False)
+        self._chat_panel.set_input_enabled(enabled=False)
         self._stream_append = self._chat_panel.add_streaming_message()
         self.status_update.emit("Processing...")
 
-        active_pid = self._tool_panel.get_active_process_pid()
+        active_pid = self.tool_panel.get_active_process_pid()
         if active_pid is not None:
             _logger.debug("user_message_process_context", pid=active_pid)
 
@@ -996,7 +1008,7 @@ class MainWindow(QMainWindow):
             call: The tool call being executed.
         """
         self.status_update.emit(f"Running: {call.tool_name}.{call.function_name}")
-        self._tool_panel.log(f"[CALL] {call.tool_name}.{call.function_name}")
+        self.tool_panel.log(f"[CALL] {call.tool_name}.{call.function_name}")
 
     def _on_tool_result(self, result: ToolResult) -> None:
         """
@@ -1006,13 +1018,13 @@ class MainWindow(QMainWindow):
             result: The tool execution result.
         """
         status = "SUCCESS" if result.success else "FAILED"
-        self._tool_panel.log(f"[{status}] Duration: {result.duration_ms:.1f}ms")
+        self.tool_panel.log(f"[{status}] Duration: {result.duration_ms:.1f}ms")
 
         if result.success and result.result:
             result_str = str(result.result)
             if len(result_str) > _MAX_RESULT_DISPLAY_LEN:
                 result_str = f"{result_str[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
-            self._tool_panel.log(f"Result: {result_str}")
+            self.tool_panel.log(f"Result: {result_str}")
 
             tool_name = getattr(result, "tool_name", "")
             if tool_name == "patch_binary" and isinstance(result.result, dict):
@@ -1027,11 +1039,11 @@ class MainWindow(QMainWindow):
                         original_bytes=bytes(orig_val) if isinstance(orig_val, (bytes, bytearray)) else b"",
                         new_bytes=bytes(new_val) if isinstance(new_val, (bytes, bytearray)) else b"",
                         description=str(desc_val),
-                    )
+                    ),
                 )
 
         if result.error:
-            self._tool_panel.log(f"Error: {result.error}")
+            self.tool_panel.log(f"Error: {result.error}")
 
     def _run_async(self, coro: Coroutine[object, object, object]) -> None:
         """
@@ -1053,7 +1065,7 @@ class MainWindow(QMainWindow):
             result: Operation result.
         """
         del result
-        self._chat_panel.set_input_enabled(True)
+        self._chat_panel.set_input_enabled(enabled=True)
         self._stream_append = None
         self.status_update.emit("Ready")
 
@@ -1064,7 +1076,7 @@ class MainWindow(QMainWindow):
         Args:
             error: The error that occurred.
         """
-        self._chat_panel.set_input_enabled(True)
+        self._chat_panel.set_input_enabled(enabled=True)
         self._stream_append = None
         self.status_update.emit("Error")
         QMessageBox.critical(self, "Error", str(error))
@@ -1076,7 +1088,7 @@ class MainWindow(QMainWindow):
         Args:
             status: Status message.
         """
-        self._status_label.setText(status)
+        self.status_label.setText(status)
 
     def _on_address_clicked(self, address: int) -> None:
         """
@@ -1085,7 +1097,7 @@ class MainWindow(QMainWindow):
         Args:
             address: The clicked memory address.
         """
-        self._tool_panel.set_current_address(address)
+        self.tool_panel.set_current_address(address)
         self.status_update.emit(f"Navigated to 0x{address:08X}")
 
     def _on_load_binary(self) -> None:
@@ -1106,7 +1118,7 @@ class MainWindow(QMainWindow):
         Args:
             path: Path to the binary.
         """
-        self._current_binary = path
+        self.current_binary = path
         binary_name = path.name
 
         async def load() -> None:
@@ -1117,11 +1129,11 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Loading {binary_name}...")
         self._run_async(load())
 
-        self._tool_panel.open_in_hex_editor(str(path))
+        self.tool_panel.open_in_hex_editor(str(path))
 
         cached_analysis = self._orchestrator.get_current_bridge_analysis(binary_name)
         if cached_analysis is not None:
-            self._tool_panel.display_analysis_result(
+            self.tool_panel.display_analysis_result(
                 "analysis",
                 str(cached_analysis),
             )
@@ -1138,7 +1150,7 @@ class MainWindow(QMainWindow):
             _logger.debug("new_session_dialog", description=description)
 
         provider_data: object = self._provider_combo.currentData()
-        model = self._model_combo.currentText()
+        model = self.model_combo.currentText()
 
         if not model:
             QMessageBox.warning(self, "Warning", "Please select a model first.")
@@ -1150,7 +1162,7 @@ class MainWindow(QMainWindow):
             await self._orchestrator.start_session(provider, model)
 
         self._chat_panel.clear_messages()
-        self._tool_panel.clear_all()
+        self.tool_panel.clear_all()
         self.status_update.emit("Creating new session...")
         self._run_async(create_session())
 
@@ -1165,7 +1177,7 @@ class MainWindow(QMainWindow):
                     await self._orchestrator.load_session(session_id)
 
                 self._chat_panel.clear_messages()
-                self._tool_panel.clear_all()
+                self.tool_panel.clear_all()
                 self.status_update.emit(f"Loading session {session_id}...")
                 self._run_async(load_session())
 
@@ -1192,7 +1204,7 @@ class MainWindow(QMainWindow):
             "Text Files (*.txt);;Markdown (*.md);;All Files (*)",
         )
         if path:
-            with open(path, "w", encoding="utf-8") as f:
+            with Path(path).open("w", encoding="utf-8") as f:
                 for msg in messages:
                     role = msg.role.upper()
                     f.write(f"[{role}] {msg.timestamp.strftime('%H:%M:%S')}\n")
@@ -1251,7 +1263,7 @@ class MainWindow(QMainWindow):
 
     def _on_save_patched_binary(self) -> None:
         """Save the currently loaded binary with applied patches."""
-        binary_panel = self._tool_panel.get_panel("binary")
+        binary_panel = self.tool_panel.get_panel("binary")
         if binary_panel is None:
             QMessageBox.information(self, "Save", "No binary panel loaded.")
             return
@@ -1274,8 +1286,7 @@ class MainWindow(QMainWindow):
             "Executable Files (*.exe *.dll *.so *.dylib);;All Files (*)",
         )
         if path:
-            with open(path, "wb") as f:
-                f.write(file_data)
+            Path(path).write_bytes(file_data)
 
             patches: list[object] = []
             get_patches = getattr(binary_panel, "get_patches", None)
@@ -1285,18 +1296,17 @@ class MainWindow(QMainWindow):
                     patches = cast("list[object]", raw_patches)
 
             report_path = Path(path).with_suffix(".patch_report.txt")
-            with open(report_path, "w", encoding="utf-8") as f:
+            with report_path.open("w", encoding="utf-8") as f:
                 f.write(f"Patch Report for {Path(path).name}\n")
                 f.write(f"{'=' * 40}\n")
                 f.write(f"Total patches applied: {len(patches)}\n\n")
-                for i, patch in enumerate(patches, 1):
-                    f.write(f"Patch {i}: {patch}\n")
+                f.writelines(f"Patch {i}: {patch}\n" for i, patch in enumerate(patches, 1))
 
             QMessageBox.information(self, "Save", f"Patched binary saved to {path}\nReport: {report_path}")
 
     def _on_export_analysis(self) -> None:
         """Export the current bridge analysis to a JSON file."""
-        analysis_panel = self._tool_panel.get_panel("analysis")
+        analysis_panel = self.tool_panel.get_panel("analysis")
         if analysis_panel is None:
             QMessageBox.information(self, "Export", "No analysis available.")
             return
@@ -1323,15 +1333,15 @@ class MainWindow(QMainWindow):
             else:
                 analysis_dict = str(analysis)
 
-            with open(path, "w", encoding="utf-8") as f:
+            with Path(path).open("w", encoding="utf-8") as f:
                 json.dump(analysis_dict, f, indent=2, default=str)
 
             QMessageBox.information(self, "Export", f"Analysis exported to {path}")
 
     def _on_tool_status(self) -> None:
         """Handle tool status action."""
-        success_pixmap = self._icon_manager.get_status_pixmap(True, 16)
-        failure_pixmap = self._icon_manager.get_status_pixmap(False, 16)
+        success_pixmap = self._icon_manager.get_status_pixmap(success=True, size=16)
+        failure_pixmap = self._icon_manager.get_status_pixmap(success=False, size=16)
         _logger.debug(
             "tool_status_icons",
             success_icon=not success_pixmap.isNull(),
@@ -1339,14 +1349,14 @@ class MainWindow(QMainWindow):
         )
 
         try:
-            from .panels.async_bridge import run_bridge_coroutine
+            from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
             tool_statuses = run_bridge_coroutine(self._refresh_tool_status())
             _logger.info(
                 "tool_status_dialog_opened",
                 tool_count=len(tool_statuses) if tool_statuses is not None else 0,
             )
-        except Exception:
+        except (RuntimeError, AttributeError, OSError):
             _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
 
         dialog = ToolStatusDialog(parent=self)
@@ -1394,7 +1404,7 @@ class MainWindow(QMainWindow):
                     try:
                         await self._orchestrator.initialize_tool(tid)
                         _logger.info("tool_reinitialized", tool_id=tid)
-                    except Exception as e:
+                    except (RuntimeError, OSError, ValueError) as e:
                         _logger.warning("tool_reinit_failed", tool_id=tid, error=str(e))
 
             worker = AsyncWorker(_reinit_tools(), self)
@@ -1481,7 +1491,7 @@ class MainWindow(QMainWindow):
                     try:
                         await registry.connect_provider(pname, creds)
                         _logger.info("provider_reconnected", provider=pname.value)
-                    except Exception as e:
+                    except (RuntimeError, OSError, ValueError) as e:
                         _logger.warning(
                             "provider_reconnect_failed",
                             provider=pname.value,
@@ -1546,7 +1556,7 @@ class MainWindow(QMainWindow):
         config_path = get_config_file("providers.json")
         if config_path.exists():
             try:
-                with open(config_path, encoding="utf-8") as f:
+                with config_path.open(encoding="utf-8") as f:
                     loaded_json: dict[str, dict[str, str]] = json.load(f)
                     provider_section = loaded_json.get(provider_id, {})
                     if config_key := provider_section.get("api_key", ""):
@@ -1554,22 +1564,26 @@ class MainWindow(QMainWindow):
             except (json.JSONDecodeError, OSError):
                 _logger.debug("config_file_load_failed", exc_info=True)
         self.status_update.emit("Refreshing models...")
-        self._model_combo.clear()
-        self._model_combo.setEnabled(False)
+        self.model_combo.clear()
+        self.model_combo.setEnabled(False)
 
-        if self._model_discovery is not None:
+        if self.model_discovery is not None:
             try:
-                from .panels.async_bridge import run_bridge_coroutine
+                from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
-                run_bridge_coroutine(self._model_discovery.discover_all())
-            except Exception:
+                run_bridge_coroutine(self.model_discovery.discover_all())
+            except (RuntimeError, OSError):
                 _logger.debug("model_discovery_refresh_failed", exc_info=True)
 
-        self._model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
-        self._model_refresh_worker.refresh_finished.connect(self._on_models_refresh_finished)
-        self._model_refresh_worker.start()
+        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
 
-    def _on_models_refresh_finished(self, success: bool, models: list[str], message: str) -> None:
+        def _refresh_slot(s: int, m: list[str], msg: str) -> None:
+            self._on_models_refresh_finished(success=bool(s), models=m, message=msg)
+
+        self.model_refresh_worker.refresh_finished.connect(_refresh_slot)
+        self.model_refresh_worker.start()
+
+    def _on_models_refresh_finished(self, *, success: bool, models: list[str], message: str) -> None:
         """
         Handle models refresh completion.
 
@@ -1578,10 +1592,10 @@ class MainWindow(QMainWindow):
             models: List of available model names.
             message: Status message.
         """
-        self._model_combo.setEnabled(True)
+        self.model_combo.setEnabled(True)
         if success and models:
-            self._model_combo.clear()
-            self._model_combo.addItems(models)
+            self.model_combo.clear()
+            self.model_combo.addItems(models)
             self.status_update.emit(f"Found {len(models)} models")
         else:
             self.status_update.emit("Failed to refresh models")
@@ -1601,7 +1615,7 @@ class MainWindow(QMainWindow):
         worker = AsyncWorker(fetch(), self)
         worker.finished.connect(self._on_browse_models_result)
         worker.error.connect(self._on_async_error)
-        self._model_browse_worker = worker
+        self.model_browse_worker = worker
         worker.start()
         self.status_update.emit("Fetching models...")
 
@@ -1623,9 +1637,9 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Browse Models", "No models available.")
             return
 
-        if self._model_discovery is not None:
+        if self.model_discovery is not None:
             first_model = model_infos[0]
-            model_detail = self._model_discovery.get_by_id(first_model.provider, first_model.id)
+            model_detail = self.model_discovery.get_by_id(first_model.provider, first_model.id)
             if model_detail is not None:
                 _logger.debug(
                     "model_detail_fetched",
@@ -1634,14 +1648,14 @@ class MainWindow(QMainWindow):
 
         dialog = ModelSelectionDialog(models=model_infos, parent=self)
         if dialog.exec() and (selected := dialog.get_selected_model()):
-            idx = self._model_combo.findText(selected)
+            idx = self.model_combo.findText(selected)
             if idx >= 0:
-                self._model_combo.setCurrentIndex(idx)
+                self.model_combo.setCurrentIndex(idx)
 
     def _on_configure_sandbox(self) -> None:
         """Handle configure sandbox action."""
         dialog = SandboxConfigDialog(
-            sandbox_manager=self._sandbox_manager,
+            sandbox_manager=self.sandbox_manager,
             parent=self,
         )
         if dialog.exec():
@@ -1673,12 +1687,12 @@ class MainWindow(QMainWindow):
             return
 
         async def open_sandbox() -> object:
-            available_types = await self._sandbox_manager.get_available_types()
+            available_types = await self.sandbox_manager.get_available_types()
             if not available_types:
                 return None
 
             sandbox_type = available_types[0]
-            return await self._sandbox_manager.create(
+            return await self.sandbox_manager.create(
                 sandbox_type=sandbox_type,
                 auto_start=True,
             )
@@ -1695,10 +1709,10 @@ class MainWindow(QMainWindow):
                 self.status_update.emit("No sandbox available")
             else:
                 self._sandbox_btn.setChecked(True)
-                self._tool_panel.wire_sandbox_backend(result)
+                self.tool_panel.wire_sandbox_backend(result)
                 report_path = getattr(result, "last_report_path", None)
                 if isinstance(report_path, str):
-                    self._tool_panel.load_sandbox_report(report_path)
+                    self.tool_panel.load_sandbox_report(report_path)
                 self.status_update.emit("Sandbox opened")
 
         def on_sandbox_error(e: Exception) -> None:
@@ -1741,7 +1755,7 @@ class MainWindow(QMainWindow):
             ui_bold=ui_bold.family(),
         )
 
-        code_highlighter = self._tool_panel.get_code_highlighter()
+        code_highlighter = self.tool_panel.get_code_highlighter()
         if code_highlighter is not None:
             code_highlighter.rehighlight()
 
@@ -1758,7 +1772,7 @@ class MainWindow(QMainWindow):
         ui_font = font_info.get("ui_font", "unknown")
         custom_loaded = font_info.get("custom_fonts_available", False)
 
-        status_icon = self._icon_manager.get_status_icon(True)
+        status_icon = self._icon_manager.get_status_icon(success=True)
         has_icon = not status_icon.isNull()
 
         about_text = (
@@ -1775,6 +1789,10 @@ class MainWindow(QMainWindow):
         )
         QMessageBox.about(self, "About Intellicrack", about_text)
 
+    def on_open_x64dbg(self) -> None:
+        """Open x64dbg debugger panel."""
+        self._on_open_x64dbg()
+
     def _on_open_x64dbg(self) -> None:
         """Open x64dbg debugger panel."""
         try:
@@ -1784,36 +1802,58 @@ class MainWindow(QMainWindow):
                 if callable(ensure_ready):
                     ensure_ready("x64dbg")
 
-            widget = self._tool_panel.add_x64dbg_tab(is_64bit=True)
+            widget = self.tool_panel.add_x64dbg_tab(is_64bit=True)
             if widget is None:
                 self._show_tool_error("x64dbg", "Failed to initialize x64dbg panel")
                 return
             widget.start_tool()
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="x64dbg", error=str(e))
             self._show_tool_error("x64dbg", f"Failed to open x64dbg panel: {e}")
+
+    def on_open_cutter(self) -> None:
+        """Open Cutter reverse engineering panel."""
+        self._on_open_cutter()
 
     def _on_open_cutter(self) -> None:
         """Open Cutter reverse engineering panel."""
         try:
-            widget = self._tool_panel.add_cutter_tab()
+            widget = self.tool_panel.add_cutter_tab()
             if widget is None:
                 self._show_tool_error("Cutter", "Failed to initialize Cutter panel")
                 return
             widget.start_tool()
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Cutter", error=str(e))
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
+
+    def on_open_hxd(self) -> None:
+        """Open HxD hex editor panel."""
+        try:
+            add_hxd = getattr(self.tool_panel, "add_hxd_tab", None)
+            if not callable(add_hxd):
+                self._show_tool_error("HxD", "HxD panel not available")
+                return
+            widget = add_hxd()
+            if widget is None:
+                self._show_tool_error("HxD", "Failed to initialize HxD panel")
+                return
+            start = getattr(widget, "start_tool", None)
+            if callable(start):
+                start()
+        except (RuntimeError, ImportError, AttributeError) as e:
+            _logger.exception("tool_open_failed", tool_name="HxD", error=str(e))
+            self._show_tool_error("HxD", f"Failed to open HxD panel: {e}")
 
     def _on_open_hex_editor(self) -> None:
         """Open hex editor panel."""
         try:
-            widget = self._tool_panel.add_hex_editor_tab()
+            widget = self.tool_panel.add_hex_editor_tab()
             if widget is None:
                 self._show_tool_error("Hex Editor", "Failed to initialize hex editor panel")
                 return
             widget.start_tool()
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="HexEditor", error=str(e))
             self._show_tool_error("Hex Editor", f"Failed to open hex editor panel: {e}")
 
@@ -1826,12 +1866,12 @@ class MainWindow(QMainWindow):
                 if callable(ensure_ready):
                     ensure_ready("ghidra")
 
-            widget = self._tool_panel.add_ghidra_tab()
+            widget = self.tool_panel.add_ghidra_tab()
             if widget is None:
                 self._show_tool_error("Ghidra", "Failed to initialize Ghidra panel")
                 return
             widget.start_tool()
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Ghidra", error=str(e))
             self._show_tool_error("Ghidra", f"Failed to open Ghidra panel: {e}")
 
@@ -1844,33 +1884,33 @@ class MainWindow(QMainWindow):
                 if callable(ensure_ready):
                     ensure_ready("frida")
 
-            panel = self._tool_panel.add_frida_tab()
+            panel = self.tool_panel.add_frida_tab()
             if panel is None:
                 self._show_tool_error("Frida", "Failed to initialize Frida panel")
                 return
             panel.start_tool()
 
-            frida_bridge = self._tool_panel.get_bridge_for_tool("frida")
+            frida_bridge = self.tool_panel.get_bridge_for_tool("frida")
             if frida_bridge is not None:
                 set_handler = getattr(frida_bridge, "set_message_handler", None)
                 if callable(set_handler):
 
                     def _frida_msg_handler(message: object) -> None:
                         text = message if isinstance(message, str) else str(message)
-                        self._tool_panel.log_frida_message(text)
+                        self.tool_panel.log_frida_message(text)
                         if isinstance(message, dict):
                             msg_dict = cast("dict[str, object]", message)
                             if msg_dict.get("type") == "hook":
-                                self._tool_panel.add_frida_hook_entry(msg_dict)
+                                self.tool_panel.add_frida_hook_entry(msg_dict)
 
                     set_handler(_frida_msg_handler)
-        except Exception as e:
+        except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Frida", error=str(e))
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
 
     def _on_open_process(self) -> None:
         """Open process manager panel and wire process_attached signal."""
-        panel = self._tool_panel.add_process_tab()
+        panel = self.tool_panel.add_process_tab()
         if panel is None:
             self._show_tool_error("Process", "Failed to initialize Process panel")
             return
@@ -1879,7 +1919,7 @@ class MainWindow(QMainWindow):
         signal = getattr(panel, "process_attached", None)
         if signal is not None and not getattr(self, "_process_attached_wired", False):
             signal.connect(self._on_process_attached)
-            self._process_attached_wired = True
+            self.process_attached_wired = True
 
     def _on_process_attached(self, pid: int) -> None:
         """
@@ -1900,7 +1940,7 @@ class MainWindow(QMainWindow):
 
         try:
             regions: list[tuple[int, int, int, int]] = _hc.HexDocument.list_process_memory_regions(pid)
-        except Exception as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             _logger.warning("process_regions_list_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Process Memory", f"Failed to list memory regions: {exc}")
             return
@@ -1966,7 +2006,7 @@ class MainWindow(QMainWindow):
             try:
                 result = fut.result()
                 _logger.info("process_memory_loaded", pid=pid, address=hex(base_addr), length=result.get("document_length"))
-            except Exception as exc:
+            except (RuntimeError, OSError) as exc:
                 _logger.warning("process_memory_open_failed", pid=pid, error=str(exc))
                 QMessageBox.warning(self, "Process Memory", f"Failed to open memory: {exc}")
 
@@ -1974,61 +2014,61 @@ class MainWindow(QMainWindow):
 
     def _on_open_binary(self) -> None:
         """Open binary hex viewer panel."""
-        panel = self._tool_panel.add_binary_tab()
+        panel = self.tool_panel.add_binary_tab()
         if panel is None:
             self._show_tool_error("Binary", "Failed to initialize Binary panel")
             return
         panel.start_tool()
-        if self._current_binary is not None:
-            self._tool_panel.open_in_binary(self._current_binary)
+        if self.current_binary is not None:
+            self.tool_panel.open_in_binary(self.current_binary)
 
     def _on_open_sandbox_panel(self) -> None:
         """Open sandbox manager panel."""
-        panel = self._tool_panel.add_sandbox_tab()
+        panel = self.tool_panel.add_sandbox_tab()
         if panel is None:
             self._show_tool_error("Sandbox", "Failed to initialize Sandbox panel")
             return
-        self._tool_panel.wire_sandbox_backend(self._sandbox_manager, manager=self._sandbox_manager)
+        self.tool_panel.wire_sandbox_backend(self.sandbox_manager, manager=self.sandbox_manager)
         panel.start_tool()
 
-        sandbox_backend = self._tool_panel.get_sandbox_backend()
+        sandbox_backend = self.tool_panel.get_sandbox_backend()
         if sandbox_backend is not None:
             _logger.debug("sandbox_backend_available", backend_type=type(sandbox_backend).__name__)
 
-        sandbox_widget = self._tool_panel.get_active_tool_widget("sandbox")
+        sandbox_widget = self.tool_panel.get_active_tool_widget("sandbox")
         if sandbox_widget is not None:
             _logger.debug("sandbox_widget_active", widget_type=type(sandbox_widget).__name__)
 
     def _on_debug_current_binary(self) -> None:
         """Debug the currently loaded binary with x64dbg."""
-        if self._current_binary is None:
+        if self.current_binary is None:
             self._show_no_binary_warning("debug")
             return
-        if not self._tool_panel.open_in_x64dbg(self._current_binary):
+        if not self.tool_panel.open_in_x64dbg(self.current_binary):
             self._show_tool_error("x64dbg", "Failed to open binary in x64dbg")
 
     def _on_analyze_current_binary(self) -> None:
         """Analyze the currently loaded binary with Cutter."""
-        if self._current_binary is None:
+        if self.current_binary is None:
             self._show_no_binary_warning("analyze")
             return
-        if not self._tool_panel.open_in_cutter(self._current_binary):
+        if not self.tool_panel.open_in_cutter(self.current_binary):
             self._show_tool_error("Cutter", "Failed to open binary in Cutter")
 
     def _on_hex_edit_current_binary(self) -> None:
         """Open the currently loaded binary in the hex editor."""
-        if self._current_binary is None:
+        if self.current_binary is None:
             self._show_no_binary_warning("hex edit")
             return
-        if not self._tool_panel.open_in_hex_editor(self._current_binary):
+        if not self.tool_panel.open_in_hex_editor(self.current_binary):
             self._show_tool_error("Hex Editor", "Failed to open binary in hex editor")
 
     def _on_open_binary_in_ghidra(self) -> None:
         """Open the currently loaded binary in the Ghidra panel."""
-        if self._current_binary is None:
+        if self.current_binary is None:
             self._show_no_binary_warning("Ghidra analysis")
             return
-        if not self._tool_panel.open_in_ghidra(self._current_binary):
+        if not self.tool_panel.open_in_ghidra(self.current_binary):
             self._show_tool_error("Ghidra", "Failed to open binary in Ghidra")
 
     def _show_tool_error(self, tool_name: str, message: str) -> None:
@@ -2073,7 +2113,7 @@ class MainWindow(QMainWindow):
         provider_value = provider.value if isinstance(provider, ProviderName) else None
         _logger.info("provider_changed", provider=provider_value)
 
-    def _on_sandbox_toggled(self, checked: bool) -> None:
+    def _on_sandbox_toggled(self, *, checked: bool) -> None:
         """
         Handle sandbox toggle.
 
@@ -2082,7 +2122,7 @@ class MainWindow(QMainWindow):
         """
         self._sandbox_btn.setText(f"Sandbox: {'ON' if checked else 'OFF'}")
 
-    def _on_auto_approve_toggled(self, checked: bool) -> None:
+    def _on_auto_approve_toggled(self, *, checked: bool) -> None:
         """
         Handle auto-approve toggle.
 
@@ -2120,7 +2160,7 @@ class MainWindow(QMainWindow):
         Args:
             a0: Close event.
         """
-        if self._tool_panel.has_unsaved_changes():
+        if self.tool_panel.has_unsaved_changes():
             reply = QMessageBox.question(
                 self,
                 "Unsaved Changes",
@@ -2133,31 +2173,31 @@ class MainWindow(QMainWindow):
                     a0.ignore()
                 return
             if reply == QMessageBox.StandardButton.Save:
-                self._tool_panel.save_hex_editor()
+                self.tool_panel.save_hex_editor()
 
         self._shutting_down = True
         self._status_timer.stop()
 
         self._save_window_state()
-        self._tool_panel.close_detached_windows()
+        self.tool_panel.close_detached_windows()
 
         try:
-            from ..core.process_manager import ProcessManager
+            from intellicrack.core.process_manager import ProcessManager
 
             pm = ProcessManager.get_instance()
             request_shutdown = getattr(pm, "request_shutdown", None)
             if callable(request_shutdown):
                 request_shutdown()
-        except Exception as e:
+        except (RuntimeError, AttributeError, ImportError) as e:
             _logger.warning("process_manager_shutdown_failed", error=str(e))
 
-        self._tool_panel.close_embedded_tools()
+        self.tool_panel.close_embedded_tools()
 
         try:
-            from .panels.async_bridge import run_bridge_coroutine
+            from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
-            run_bridge_coroutine(self._sandbox_manager.destroy_all())
-        except Exception as e:
+            run_bridge_coroutine(self.sandbox_manager.destroy_all())
+        except (RuntimeError, OSError) as e:
             _logger.warning("sandbox_manager_destroy_all_failed", error=str(e))
 
         if self._current_worker and self._current_worker.isRunning():

@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Sections/imports/exports/strings mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -28,6 +27,9 @@ from intellicrack.ui.panels.hex_editor._base import (
 class SectionsMixin:
     """Mixin providing PE section/import/export/string parsing and file type detection."""
 
+    document: Any | None
+    file_path: Path | None
+    sections_tree: QTreeWidget | None
     _document: Any | None
     _file_path: Path | None
     _hex_widget: Any | None
@@ -45,17 +47,17 @@ class SectionsMixin:
 
     def _populate_sections(self) -> None:
         """Populate the sections tree using pefile."""
-        if self._sections_tree is None or self._file_path is None:
+        if self.sections_tree is None or self.file_path is None:
             return
 
-        self._sections_tree.clear()
+        self.sections_tree.clear()
 
         if not pefile_available or pefile is None:
             logger.debug("pefile_not_available")
             return
 
         try:
-            pe = pefile.PE(str(self._file_path), fast_load=True)
+            pe = pefile.PE(str(self.file_path), fast_load=True)
         except (AttributeError, ValueError, OSError) as exc:
             logger.debug("sections_parse_failed", error=str(exc))
             return
@@ -69,7 +71,7 @@ class SectionsMixin:
                     vsize = f"0x{section.Misc_VirtualSize:08X}"
                     rawsize = f"0x{section.SizeOfRawData:08X}"
                     item = QTreeWidgetItem([name, vaddr, vsize, rawsize])
-                    self._sections_tree.addTopLevelItem(item)
+                    self.sections_tree.addTopLevelItem(item)
         except (AttributeError, ValueError) as exc:
             logger.debug("sections_parse_failed", error=str(exc))
         finally:
@@ -77,7 +79,7 @@ class SectionsMixin:
 
     def _populate_imports(self) -> None:
         """Populate the imports tree using pefile."""
-        if self._imports_tree is None or self._file_path is None:
+        if self._imports_tree is None or self.file_path is None:
             return
 
         self._imports_tree.clear()
@@ -87,7 +89,7 @@ class SectionsMixin:
             return
 
         try:
-            pe = pefile.PE(str(self._file_path), fast_load=True)
+            pe = pefile.PE(str(self.file_path), fast_load=True)
         except (AttributeError, ValueError, OSError) as exc:
             logger.debug("imports_parse_failed", error=str(exc))
             return
@@ -111,7 +113,7 @@ class SectionsMixin:
 
     def _populate_exports(self) -> None:
         """Populate the exports tree using pefile."""
-        if self._exports_tree is None or self._file_path is None:
+        if self._exports_tree is None or self.file_path is None:
             return
 
         self._exports_tree.clear()
@@ -121,7 +123,7 @@ class SectionsMixin:
             return
 
         try:
-            pe = pefile.PE(str(self._file_path), fast_load=True)
+            pe = pefile.PE(str(self.file_path), fast_load=True)
         except (AttributeError, ValueError, OSError) as exc:
             logger.debug("exports_parse_failed", error=str(exc))
             return
@@ -146,7 +148,7 @@ class SectionsMixin:
 
     def _populate_strings(self) -> None:
         """Scan the document for printable ASCII strings and populate the strings tab."""
-        if self._strings_tree is None or self._document is None:
+        if self._strings_tree is None or self.document is None:
             return
 
         self._strings_tree.clear()
@@ -155,7 +157,7 @@ class SectionsMixin:
         max_strings = 5000
         max_display_len = PREVIEW_BYTES
 
-        doc_len: int = self._document.length()
+        doc_len: int = self.document.length()
         string_count = 0
         current_string_start = -1
         current_chars: list[str] = []
@@ -163,7 +165,7 @@ class SectionsMixin:
 
         while offset < doc_len and string_count < max_strings:
             chunk_len = min(chunk_size, doc_len - offset)
-            raw = self._document.read(offset, chunk_len)
+            raw = self.document.read(offset, chunk_len)
             if isinstance(raw, (list, bytearray)):
                 raw = bytes(raw)
 
@@ -220,11 +222,11 @@ class SectionsMixin:
 
     def _auto_detect_file_type(self) -> None:
         """Detect the file type from magic bytes and auto-select the template."""
-        if self._document is None or self._template_combo is None:
+        if self.document is None or self._template_combo is None:
             return
 
         try:
-            magic_raw: object = self._document.read(0, 4)
+            magic_raw: object = self.document.read(0, 4)
         except (AttributeError, ValueError) as exc:
             logger.debug("auto_detect_failed", error=str(exc))
             return
@@ -270,7 +272,7 @@ class SectionsMixin:
 
     def _try_pattern_registry_match(self) -> None:
         """Attempt to match the open file against .hexpat patterns via magic bytes."""
-        if self._document is None or not hexpat_interpreter_available or PatternRegistryCls is None or DataReaderCls is None:
+        if self.document is None or not hexpat_interpreter_available or PatternRegistryCls is None or DataReaderCls is None:
             return
 
         if self._pattern_registry is None:
@@ -288,7 +290,7 @@ class SectionsMixin:
             return
 
         try:
-            data_reader = DataReaderCls.from_document(self._document)
+            data_reader = DataReaderCls.from_document(self.document)
             matches = registry.match_file(data_reader)
         except (AttributeError, ValueError) as exc:
             logger.debug("pattern_registry_match_failed", error=str(exc))

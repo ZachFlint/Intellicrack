@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-03-28T15:16:52.155783",
-  "total_findings": 67,
-  "total_files": 30,
+  "generated": "2026-03-31T03:10:08.118106+00:00",
+  "total_findings": 66,
+  "total_files": 31,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
@@ -233,78 +233,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\resources\\font_manager.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: code_font_family",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py: Unused function code_font_family"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py: Unused function reset_instance"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: ui_font_family",
-          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py: Unused function ui_font_family"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\resources\\icon_manager.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: icon_exists",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function icon_exists"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: list_available_icons",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function list_available_icons"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function reset_instance"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: current_theme",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py: Unused function current_theme"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_available_themes",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py: Unused function get_available_themes"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py: Unused function reset_instance"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\bridges\\base.py",
       "count": 2,
       "findings": [
@@ -395,6 +323,24 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mark_stage_failed",
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py: Unused function mark_stage_failed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py: Unused function paintEvent"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
       "count": 2,
       "findings": [
@@ -431,6 +377,72 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\resources\\font_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: code_font_family",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py: Unused function code_font_family"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: ui_font_family",
+          "raw": "src\\intellicrack\\ui\\resources\\font_manager.py: Unused function ui_font_family"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\resources\\icon_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: icon_exists",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function icon_exists"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: list_available_icons",
+          "raw": "src\\intellicrack\\ui\\resources\\icon_manager.py: Unused function list_available_icons"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\resources\\theme_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: current_theme",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py: Unused function current_theme"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_available_themes",
+          "raw": "src\\intellicrack\\ui\\resources\\theme_manager.py: Unused function get_available_themes"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\ghidra.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: bridge_script_path",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py: Unused function bridge_script_path"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\hexpat\\data_reader.py",
       "count": 1,
       "findings": [
@@ -463,18 +475,6 @@
           "column": null,
           "message": "Unused function: get_structlog_logger",
           "raw": "src\\intellicrack\\core\\logging.py: Unused function get_structlog_logger"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\process_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: reset_instance",
-          "raw": "src\\intellicrack\\core\\process_manager.py: Unused function reset_instance"
         }
       ]
     },

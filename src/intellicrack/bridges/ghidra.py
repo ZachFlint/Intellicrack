@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Ghidra bridge for static analysis and decompilation.
 
@@ -24,11 +23,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
+from intellicrack.bridges.base import (
+    BridgeCapabilities,
+    BridgeState,
+    DisassemblyLine,
+    StaticAnalysisBridge,
+)
 from intellicrack.core._subprocess import PIPE, Popen
-
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager, ProcessType
-from ..core.types import (
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.types import (
     BinaryInfo,
     CrossReference,
     DataTypeInfo,
@@ -44,12 +48,6 @@ from ..core.types import (
     ToolName,
     ToolParameter,
     VariableInfo,
-)
-from .base import (
-    BridgeCapabilities,
-    BridgeState,
-    DisassemblyLine,
-    StaticAnalysisBridge,
 )
 
 
@@ -491,7 +489,10 @@ class GhidraBridge(StaticAnalysisBridge):
                     parameters=[
                         ToolParameter(name="name", type="string", description="Structure name", required=True),
                         ToolParameter(
-                            name="fields", type="array", description="List of {name, type, size} field definitions", required=True
+                            name="fields",
+                            type="array",
+                            description="List of {name, type, size} field definitions",
+                            required=True,
                         ),
                     ],
                     returns="Structure definition result",
@@ -525,7 +526,11 @@ class GhidraBridge(StaticAnalysisBridge):
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Root function address", required=True),
                         ToolParameter(
-                            name="depth", type="integer", description="Maximum call depth to traverse", required=False, default=2
+                            name="depth",
+                            type="integer",
+                            description="Maximum call depth to traverse",
+                            required=False,
+                            default=2,
                         ),
                     ],
                     returns="Call graph tree structure",
@@ -548,7 +553,10 @@ class GhidraBridge(StaticAnalysisBridge):
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Address to write at", required=True),
                         ToolParameter(
-                            name="data", type="string", description="Hex string of bytes (e.g. '90 90 90' or '909090')", required=True
+                            name="data",
+                            type="string",
+                            description="Hex string of bytes (e.g. '90 90 90' or '909090')",
+                            required=True,
                         ),
                     ],
                     returns="Write result with bytes written",
@@ -582,7 +590,7 @@ class GhidraBridge(StaticAnalysisBridge):
         self._ghidra_path = tool_path
         if port is not None:
             self._port = port
-        self._state = BridgeState(
+        self.state = BridgeState(
             connected=False,
             tool_running=False,
             binary_loaded=False,
@@ -602,24 +610,24 @@ class GhidraBridge(StaticAnalysisBridge):
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
             )
-            self._state.connected = True
-            self._state.tool_running = True
+            self.state.connected = True
+            self.state.tool_running = True
             _logger.info("ghidra_bridge_connected", port=self._port)
 
         except ImportError as imp_err:
             _logger.warning("ghidra_bridge_not_installed", bridge="ghidra")
             self._bridge = None
-            self._state.connected = False
-            self._state.tool_running = False
+            self.state.connected = False
+            self.state.tool_running = False
             error_message = "ghidra_bridge package not installed"
             raise ToolError(error_message) from imp_err
 
         except Exception as exc:
             _logger.exception("ghidra_connect_failed", error=str(exc))
             self._bridge = None
-            self._state.connected = False
-            self._state.tool_running = False
-            self._state.last_error = str(exc)
+            self.state.connected = False
+            self.state.tool_running = False
+            self.state.last_error = str(exc)
             error_message = f"Failed to connect to Ghidra: {exc}"
             raise ToolError(error_message) from exc
 
@@ -645,11 +653,12 @@ class GhidraBridge(StaticAnalysisBridge):
 
         if self._bridge_script_path is not None:
             try:
-                if self._bridge_script_path.exists():
-                    self._bridge_script_path.unlink(missing_ok=True)
+                if await asyncio.to_thread(self._bridge_script_path.exists):
+                    await asyncio.to_thread(self._bridge_script_path.unlink, missing_ok=True)
                 parent = self._bridge_script_path.parent
-                if parent.exists() and not any(parent.iterdir()):
-                    parent.rmdir()
+                parent_children = await asyncio.to_thread(lambda: list(parent.iterdir()))
+                if await asyncio.to_thread(parent.exists) and not any(parent_children):
+                    await asyncio.to_thread(parent.rmdir)
             except OSError as e:
                 _logger.debug(
                     "bridge_script_cleanup_failed",
@@ -695,14 +704,14 @@ class GhidraBridge(StaticAnalysisBridge):
             raise ToolError(error_message)
 
         ghidra_run = self._ghidra_path / "support" / "analyzeHeadless.bat"
-        if not ghidra_run.exists():
+        if not await asyncio.to_thread(ghidra_run.exists):
             ghidra_run = self._ghidra_path / "support" / "analyzeHeadless"
 
-        if not ghidra_run.exists():
+        if not await asyncio.to_thread(ghidra_run.exists):
             error_message = f"Ghidra headless script not found: {ghidra_run}"
             raise ToolError(error_message)
 
-        project_dir.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
         self._project_path = project_dir / project_name
 
         bridge_script = self._create_bridge_script()
@@ -749,13 +758,13 @@ class GhidraBridge(StaticAnalysisBridge):
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
             )
-            self._state.connected = True
-            self._state.tool_running = True
+            self.state.connected = True
+            self.state.tool_running = True
             _logger.info("ghidra_headless_connected", port=self._port)
         except Exception as e:
             _logger.warning("ghidra_connect_failed", port=self._port, error=str(e))
             error_message = f"Failed to connect to Ghidra: {e}"
-            self._state.last_error = error_message
+            self.state.last_error = error_message
             raise ToolError(error_message) from e
 
     async def _wait_for_bridge_port(
@@ -836,6 +845,25 @@ ghidra_bridge_server.GhidraBridgeServer(
 
         return script_path
 
+    def create_bridge_script(self) -> Path:
+        """
+        Create the Ghidra bridge startup script.
+
+        Returns:
+            Path: Path to the created script.
+        """
+        return self._create_bridge_script()
+
+    @property
+    def bridge_script_path(self) -> Path | None:
+        """
+        Get the current bridge script path.
+
+        Returns:
+            Path | None: Path to the bridge script or None.
+        """
+        return self._bridge_script_path
+
     async def load_binary(self, path: Path) -> BinaryInfo:
         """
         Load a binary file into Ghidra.
@@ -849,11 +877,11 @@ ghidra_bridge_server.GhidraBridgeServer(
         Raises:
             ToolError: If load fails.
         """
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             error_message = f"File not found: {path}"
             raise ToolError(error_message)
 
-        self._binary_path = path.resolve()
+        self._binary_path = await asyncio.to_thread(path.resolve)
 
         if self._bridge is not None:
             try:
@@ -861,17 +889,17 @@ ghidra_bridge_server.GhidraBridgeServer(
             except Exception:
                 _logger.exception("ghidra_remote_import_failed", binary_path=str(path))
 
-        data = path.read_bytes()
+        data = await asyncio.to_thread(path.read_bytes)
         md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
         sha256 = hashlib.sha256(data).hexdigest()
 
         file_type = self._detect_format(data)
         arch, is_64 = self._detect_architecture(data)
 
-        self._state.connected = True
-        self._state.tool_running = True
-        self._state.binary_loaded = True
-        self._state.target_path = self._binary_path
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.binary_loaded = True
+        self.state.target_path = self._binary_path
 
         _logger.info("binary_loaded", path=path.name)
 
@@ -999,7 +1027,7 @@ except Exception as e:
     metadata['extraction_errors'].append(str(e))
 
 metadata
-            """
+            """,
         )
 
         if not isinstance(result, dict):
@@ -1177,7 +1205,7 @@ metadata
                         local_variables=[],
                         decompiled_code=None,
                         disassembly=None,
-                    )
+                    ),
                 )
 
         except Exception:

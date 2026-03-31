@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for binary panel fixes (Fixes 3, 5, 7, 8).
 
 Validates:
@@ -23,12 +28,12 @@ from intellicrack.ui.panels.qt_compat import tree_item_data
 if TYPE_CHECKING:
     from pathlib import Path
 
-CHUNK_SIZE: int = bp_mod._CHUNK_SIZE
-EDITED_HEX_BG = bp_mod._EDITED_HEX_BG
-HEX_BYTES_PER_ROW: int = bp_mod._HEX_BYTES_PER_ROW
-HEX_COL_ASCII: int = bp_mod._HEX_COL_ASCII
-HEX_COL_HEX: int = bp_mod._HEX_COL_HEX
-LARGE_FILE_THRESHOLD: int = bp_mod._LARGE_FILE_THRESHOLD
+CHUNK_SIZE: int = bp_mod.CHUNK_SIZE
+EDITED_HEX_BG = bp_mod.EDITED_HEX_BG
+HEX_BYTES_PER_ROW: int = bp_mod.HEX_BYTES_PER_ROW
+HEX_COL_ASCII: int = bp_mod.HEX_COL_ASCII
+HEX_COL_HEX: int = bp_mod.HEX_COL_HEX
+LARGE_FILE_THRESHOLD: int = bp_mod.LARGE_FILE_THRESHOLD
 
 PE_HEADER_OFFSET = 0x80
 PE_SIGNATURE_SIZE = 4
@@ -48,7 +53,7 @@ def _build_minimal_pe() -> bytearray:
     """Build a minimal valid PE binary with one .text section.
 
     Returns:
-        Bytearray containing a valid PE structure.
+        bytearray: Bytearray containing a valid PE structure.
     """
     data = bytearray(1024)
     data[:2] = b"MZ"
@@ -74,7 +79,7 @@ def _build_minimal_elf() -> bytearray:
     """Build a minimal ELF binary header.
 
     Returns:
-        Bytearray containing an ELF header (magic bytes sufficient for detection).
+        bytearray: Bytearray containing an ELF header (magic bytes sufficient for detection).
     """
     data = bytearray(256)
     data[:4] = b"\x7fELF"
@@ -88,7 +93,7 @@ def _build_minimal_macho() -> bytearray:
     """Build a minimal Mach-O binary header (64-bit little-endian).
 
     Returns:
-        Bytearray containing a Mach-O header (magic bytes sufficient for detection).
+        bytearray: Bytearray containing a Mach-O header (magic bytes sufficient for detection).
     """
     data = bytearray(256)
     data[:4] = b"\xcf\xfa\xed\xfe"
@@ -109,8 +114,8 @@ class TestLargeFileConfirmation:
         result = panel.load_file(binary)
 
         assert result is True
-        assert panel._file_path == binary
-        assert len(panel._file_data) > 0
+        assert panel.file_path == binary
+        assert len(panel.file_data) > 0
 
     @staticmethod
     def test_large_file_threshold_exists() -> None:
@@ -139,10 +144,10 @@ class TestPESectionParsing:
         panel = BinaryPanel()
         panel.load_file(binary)
 
-        section_count = panel._sections_tree.topLevelItemCount()
+        section_count = panel.sections_tree.topLevelItemCount()
         assert section_count >= 1
 
-        first_section = panel._sections_tree.topLevelItem(0)
+        first_section = panel.sections_tree.topLevelItem(0)
         assert first_section is not None
         assert ".text" in first_section.text(0)
 
@@ -155,7 +160,7 @@ class TestPESectionParsing:
         panel = BinaryPanel()
         panel.load_file(binary)
 
-        first_section = panel._sections_tree.topLevelItem(0)
+        first_section = panel.sections_tree.topLevelItem(0)
         assert first_section is not None
 
         raw_offset: object = tree_item_data(first_section, 0, Qt.ItemDataRole.UserRole)
@@ -176,9 +181,9 @@ class TestELFSectionParsing:
         panel = BinaryPanel()
         panel.load_file(binary)
 
-        top_count = panel._sections_tree.topLevelItemCount()
+        top_count = panel.sections_tree.topLevelItemCount()
         if top_count > 0:
-            first = panel._sections_tree.topLevelItem(0)
+            first = panel.sections_tree.topLevelItem(0)
             assert first is not None
             text = first.text(0)
             assert text
@@ -197,9 +202,9 @@ class TestELFSectionParsing:
         panel = BinaryPanel()
         panel.load_file(binary)
 
-        top_count = panel._sections_tree.topLevelItemCount()
+        top_count = panel.sections_tree.topLevelItemCount()
         assert top_count >= 1
-        first = panel._sections_tree.topLevelItem(0)
+        first = panel.sections_tree.topLevelItem(0)
         assert first is not None
         assert "lief" in first.text(0).lower()
 
@@ -217,9 +222,9 @@ class TestMachOSectionParsing:
         panel = BinaryPanel()
         panel.load_file(binary)
 
-        top_count = panel._sections_tree.topLevelItemCount()
+        top_count = panel.sections_tree.topLevelItemCount()
         if top_count > 0:
-            first = panel._sections_tree.topLevelItem(0)
+            first = panel.sections_tree.topLevelItem(0)
             assert first is not None
 
     @staticmethod
@@ -236,9 +241,9 @@ class TestMachOSectionParsing:
         panel = BinaryPanel()
         panel.load_file(binary)
 
-        top_count = panel._sections_tree.topLevelItemCount()
+        top_count = panel.sections_tree.topLevelItemCount()
         assert top_count >= 1
-        first = panel._sections_tree.topLevelItem(0)
+        first = panel.sections_tree.topLevelItem(0)
         assert first is not None
         assert "lief" in first.text(0).lower()
 
@@ -256,7 +261,7 @@ class TestHexPagination:
             size: Number of bytes in the test binary.
 
         Returns:
-            BinaryPanel with a loaded file.
+            BinaryPanel: BinaryPanel with a loaded file.
         """
         binary = tmp_path / "test.bin"
         binary.write_bytes(bytes(range(256)) * (size // 256 + 1))
@@ -269,43 +274,43 @@ class TestHexPagination:
     def test_initial_offset_is_zero(tmp_path: Path) -> None:
         """Verify hex view starts at offset 0."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
-        assert panel._current_offset == 0
+        assert panel.current_offset == 0
 
     @staticmethod
     def test_next_page_advances_by_chunk_size(tmp_path: Path) -> None:
         """Verify next page moves forward by one chunk."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
-        panel._on_next_page()
-        assert panel._current_offset == CHUNK_SIZE
+        panel.on_next_page()
+        assert panel.current_offset == CHUNK_SIZE
 
     @staticmethod
     def test_prev_page_from_start_stays_at_zero(tmp_path: Path) -> None:
         """Verify previous page at start stays at offset 0."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
-        panel._on_prev_page()
-        assert panel._current_offset == 0
+        panel.on_prev_page()
+        assert panel.current_offset == 0
 
     @staticmethod
     def test_prev_page_returns_to_previous(tmp_path: Path) -> None:
         """Verify prev page reverses a next page operation."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
-        panel._on_next_page()
-        panel._on_prev_page()
-        assert panel._current_offset == 0
+        panel.on_next_page()
+        panel.on_prev_page()
+        assert panel.current_offset == 0
 
     @staticmethod
     def test_page_label_updated(tmp_path: Path) -> None:
         """Verify page label shows correct page number."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
-        label_text = panel._page_label.text().strip()
+        label_text = panel.page_label.text().strip()
         assert "1/" in label_text
 
     @staticmethod
     def test_page_label_updates_on_navigation(tmp_path: Path) -> None:
         """Verify page label changes on next page."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
-        panel._on_next_page()
-        label_text = panel._page_label.text().strip()
+        panel.on_next_page()
+        label_text = panel.page_label.text().strip()
         assert "2/" in label_text
 
     @staticmethod
@@ -313,9 +318,9 @@ class TestHexPagination:
         """Verify next page does not exceed file boundaries."""
         panel = TestHexPagination._create_loaded_panel(tmp_path)
         for _ in range(100):
-            panel._on_next_page()
+            panel.on_next_page()
 
-        assert panel._current_offset <= len(panel._file_data)
+        assert panel.current_offset <= len(panel.file_data)
 
 
 @pytest.mark.usefixtures("qapp")
@@ -330,7 +335,7 @@ class TestHexEditValidation:
             tmp_path: Temporary directory for test files.
 
         Returns:
-            BinaryPanel with known binary content.
+            BinaryPanel: BinaryPanel with known binary content.
         """
         data = bytes(range(256)) * 4
         binary = tmp_path / "test.bin"
@@ -345,16 +350,16 @@ class TestHexEditValidation:
         """Verify valid hex string is accepted in cell edit."""
         panel = TestHexEditValidation._create_loaded_panel(tmp_path)
 
-        hex_item = panel._hex_table.item(0, HEX_COL_HEX)
+        hex_item = panel.hex_table.item(0, HEX_COL_HEX)
         assert hex_item is not None
 
-        panel._hex_table.blockSignals(True)
+        panel.hex_table.blockSignals(b=True)
         hex_item.setText("41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50")
-        panel._hex_table.blockSignals(False)
+        panel.hex_table.blockSignals(b=False)
 
-        panel._on_hex_cell_changed(0, HEX_COL_HEX)
+        panel.on_hex_cell_changed(0, HEX_COL_HEX)
 
-        ascii_item = panel._hex_table.item(0, HEX_COL_ASCII)
+        ascii_item = panel.hex_table.item(0, HEX_COL_ASCII)
         assert ascii_item is not None
         assert ascii_item.text() == "ABCDEFGHIJKLMNOP"
 
@@ -363,15 +368,15 @@ class TestHexEditValidation:
         """Verify non-hex characters are rejected and reverted."""
         panel = TestHexEditValidation._create_loaded_panel(tmp_path)
 
-        hex_item = panel._hex_table.item(0, HEX_COL_HEX)
+        hex_item = panel.hex_table.item(0, HEX_COL_HEX)
         assert hex_item is not None
         original_text = hex_item.text()
 
-        panel._hex_table.blockSignals(True)
+        panel.hex_table.blockSignals(b=True)
         hex_item.setText("ZZ XX YY")
-        panel._hex_table.blockSignals(False)
+        panel.hex_table.blockSignals(b=False)
 
-        panel._on_hex_cell_changed(0, HEX_COL_HEX)
+        panel.on_hex_cell_changed(0, HEX_COL_HEX)
 
         assert hex_item.text() == original_text
 
@@ -380,7 +385,7 @@ class TestHexEditValidation:
         """Verify ASCII column cells have editing disabled."""
         panel = TestHexEditValidation._create_loaded_panel(tmp_path)
 
-        ascii_item = panel._hex_table.item(0, HEX_COL_ASCII)
+        ascii_item = panel.hex_table.item(0, HEX_COL_ASCII)
         assert ascii_item is not None
         flags = ascii_item.flags()
         assert not (flags & Qt.ItemFlag.ItemIsEditable)
@@ -390,7 +395,7 @@ class TestHexEditValidation:
         """Verify offset column cells have editing disabled."""
         panel = TestHexEditValidation._create_loaded_panel(tmp_path)
 
-        offset_item = panel._hex_table.item(0, 0)
+        offset_item = panel.hex_table.item(0, 0)
         assert offset_item is not None
         flags = offset_item.flags()
         assert not (flags & Qt.ItemFlag.ItemIsEditable)
@@ -400,17 +405,17 @@ class TestHexEditValidation:
         """Verify patched rows show the edited background color."""
         panel = TestHexEditValidation._create_loaded_panel(tmp_path)
 
-        panel._hex_table.setCurrentCell(0, HEX_COL_HEX)
+        panel.hex_table.setCurrentCell(0, HEX_COL_HEX)
 
-        panel._hex_table.blockSignals(True)
-        hex_item = panel._hex_table.item(0, HEX_COL_HEX)
+        panel.hex_table.blockSignals(b=True)
+        hex_item = panel.hex_table.item(0, HEX_COL_HEX)
         assert hex_item is not None
         hex_item.setText("FF " * HEX_BYTES_PER_ROW)
-        panel._hex_table.blockSignals(False)
+        panel.hex_table.blockSignals(b=False)
 
-        panel._on_apply_patch()
+        panel.on_apply_patch()
 
-        hex_item_after = panel._hex_table.item(0, HEX_COL_HEX)
+        hex_item_after = panel.hex_table.item(0, HEX_COL_HEX)
         assert hex_item_after is not None
         bg = hex_item_after.background().color().getRgb()
         assert bg == EDITED_HEX_BG.getRgb()
@@ -420,10 +425,10 @@ class TestHexEditValidation:
         """Verify changes to non-hex columns are ignored."""
         panel = TestHexEditValidation._create_loaded_panel(tmp_path)
 
-        ascii_item = panel._hex_table.item(0, HEX_COL_ASCII)
+        ascii_item = panel.hex_table.item(0, HEX_COL_ASCII)
         assert ascii_item is not None
         original = ascii_item.text()
 
-        panel._on_hex_cell_changed(0, HEX_COL_ASCII)
+        panel.on_hex_cell_changed(0, HEX_COL_ASCII)
 
         assert ascii_item.text() == original

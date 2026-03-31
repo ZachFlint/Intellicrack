@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Intel XPU detection and initialization utilities for Intel Arc B580.
 
@@ -19,8 +18,8 @@ import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager
 
 
 try:
@@ -100,7 +99,7 @@ def is_xpu_available() -> bool:
         is_available: bool = torch.xpu.is_available()
         if is_available:
             _logger.debug("xpu_available", device_count=torch.xpu.device_count())
-    except Exception as exc:
+    except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("xpu_check_failed", error=str(exc))
         return False
     else:
@@ -122,7 +121,7 @@ def get_xpu_device_count() -> int:
         if not hasattr(torch, "xpu") or not torch.xpu.is_available():
             return 0
         count: int = torch.xpu.device_count()
-    except Exception as exc:
+    except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("xpu_device_count_failed", error=str(exc))
         return 0
     else:
@@ -151,7 +150,7 @@ def _get_device_name_from_sycl(device_index: int) -> str:
             props = torch.xpu.get_device_properties(device_index)
             if hasattr(props, "name"):
                 return str(props.name)
-    except Exception as exc:
+    except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("sycl_device_name_failed", error=str(exc))
     return ""
 
@@ -196,7 +195,7 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
                 }
                 for gpu in gpu_entries
             )
-    except Exception as exc:
+    except (OSError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
         _logger.debug("windows_gpu_info_failed", error=str(exc))
 
     return gpus
@@ -252,7 +251,7 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
                     driver_version = str(props.driver_version)
                 if not device_name and hasattr(props, "name"):
                     device_name = str(props.name)
-        except Exception as exc:
+        except (RuntimeError, OSError, AttributeError) as exc:
             _logger.debug("xpu_properties_failed", error=str(exc))
 
         if not device_name or not driver_version:
@@ -287,7 +286,7 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
             supports_int8=supports_int8,
         )
 
-    except Exception as exc:
+    except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("xpu_device_info_failed", device_index=device_index, error=str(exc))
         return None
 
@@ -422,7 +421,7 @@ def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> N
         del test_tensor
         torch_mod.xpu.synchronize()
         _logger.debug("xpu_device_validation_passed", device=str(device))
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         _logger.debug("xpu_device_validation_failed", device=str(device), error=str(exc))
         msg = f"XPU device validation failed: {exc}"
         raise RuntimeError(msg) from exc
@@ -461,7 +460,7 @@ def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
             info = get_xpu_device_info(device_index)
             if info is not None:
                 total = info.total_memory_bytes
-    except Exception as exc:
+    except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("xpu_memory_info_failed", device_index=device_index, error=str(exc))
         return (0, 0)
     else:
@@ -482,7 +481,7 @@ def clear_xpu_cache() -> None:
         if hasattr(torch, "xpu") and torch.xpu.is_available() and hasattr(torch.xpu, "empty_cache"):
             torch.xpu.empty_cache()
             _logger.debug("xpu_cache_cleared")
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         _logger.debug("xpu_cache_clear_failed", error=str(exc))
 
 
@@ -549,7 +548,7 @@ def _check_intel_driver() -> tuple[bool, str]:
             timeout=10,
             check=False,
         )
-    except Exception as exc:
+    except (OSError, ValueError, RuntimeError) as exc:
         _logger.debug("xpu_driver_check_failed", error=str(exc))
         return (False, "Could not verify Intel GPU driver status")
     else:
@@ -579,7 +578,7 @@ def _check_rebar_status() -> tuple[bool, str]:
             timeout=10,
             check=False,
         )
-    except Exception as exc:
+    except (OSError, ValueError, RuntimeError) as exc:
         _logger.debug("xpu_rebar_check_failed", error=str(exc))
         return (True, "")
     else:
@@ -617,7 +616,7 @@ def get_optimal_dtype_for_xpu() -> str:
         _ = test_bf16 + 1
         del test_bf16
         torch.xpu.synchronize()
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         _logger.debug("bf16_not_supported", error=str(exc))
     else:
         _logger.debug("xpu_dtype_selected", dtype="bfloat16")
@@ -629,7 +628,7 @@ def get_optimal_dtype_for_xpu() -> str:
         _ = test_fp16 + 1
         del test_fp16
         torch.xpu.synchronize()
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         _logger.debug("fp16_not_supported", error=str(exc))
     else:
         _logger.debug("xpu_dtype_selected", dtype="float16")

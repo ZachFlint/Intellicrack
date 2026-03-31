@@ -46,7 +46,7 @@ def bridge() -> X64DbgBridge:
     """Create a bridge instance.
 
     Returns:
-        X64DbgBridge instance.
+        X64DbgBridge: X64DbgBridge instance.
     """
     return X64DbgBridge()
 
@@ -56,7 +56,7 @@ def attached_bridge() -> X64DbgBridge:
     """Create a bridge attached to current process.
 
     Returns:
-        X64DbgBridge with attached_pid set.
+        X64DbgBridge: X64DbgBridge with attached_pid set.
     """
     b = X64DbgBridge()
     b.attached_pid = os.getpid()
@@ -416,7 +416,7 @@ class TestParseSectionEntry:
             chars: Characteristics flags.
 
         Returns:
-            40-byte section header.
+            bytes: 40-byte section header.
         """
         data = bytearray(40)
         data[: len(name)] = name

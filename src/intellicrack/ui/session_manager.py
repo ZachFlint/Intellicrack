@@ -11,9 +11,9 @@ This module provides the UI for managing analysis sessions, including listing, l
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -37,8 +37,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.config import get_config_dir
-from ..core.logging import get_logger
+from intellicrack.core.config import get_config_dir
+from intellicrack.core.logging import get_logger
 
 
 _logger = get_logger("ui.session_manager")
@@ -92,7 +92,7 @@ class SessionManagerDialog(QDialog):
         super().__init__(parent)
         self._manager = session_manager
         self._current_session_id = current_session_id
-        self._sessions: list[dict[str, Any]] = []
+        self._sessions: list[dict[str, object]] = []
 
         self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -137,10 +137,10 @@ class SessionManagerDialog(QDialog):
         self._session_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         sm_v_header = self._session_table.verticalHeader()
         if sm_v_header is not None:
-            sm_v_header.setVisible(False)
+            sm_v_header.setVisible(v=False)
         header = self._session_table.horizontalHeader()
         if header is not None:
-            header.setStretchLastSection(True)
+            header.setStretchLastSection(stretch=True)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
@@ -217,7 +217,7 @@ class SessionManagerDialog(QDialog):
         group = QGroupBox("Preview")
         layout = QVBoxLayout()
         self._preview_text = QTextEdit()
-        self._preview_text.setReadOnly(True)
+        self._preview_text.setReadOnly(ro=True)
         self._preview_text.setStyleSheet("font-family: 'Consolas', 'Courier New', monospace; font-size: 10px;")
         layout.addWidget(self._preview_text)
         group.setLayout(layout)
@@ -268,7 +268,7 @@ class SessionManagerDialog(QDialog):
             row = self._session_table.rowCount()
             self._session_table.insertRow(row)
 
-            name_item = QTableWidgetItem(session["name"])
+            name_item = QTableWidgetItem(str(session["name"]))
             name_item.setData(Qt.ItemDataRole.UserRole, session["id"])
             self._session_table.setItem(row, 0, name_item)
 
@@ -297,7 +297,7 @@ class SessionManagerDialog(QDialog):
                 for col in range(4):
                     if item := self._session_table.item(row, col):
                         font = item.font()
-                        font.setBold(True)
+                        font.setBold(enable=True)
                         item.setFont(font)
 
         _logger.info("session_list_refreshed", count=len(self._sessions))
@@ -309,7 +309,7 @@ class SessionManagerDialog(QDialog):
 
         for session_file in self.SESSIONS_DIR.glob("*.json"):
             try:
-                with open(session_file, encoding="utf-8") as f:
+                with session_file.open(encoding="utf-8") as f:
                     session_data = json.load(f)
 
                 if "id" not in session_data:
@@ -323,14 +323,14 @@ class SessionManagerDialog(QDialog):
                         session_data["created_at"] = datetime.fromisoformat(session_data["created_at"])
                     except ValueError as e:
                         _logger.debug("session_datetime_parse_failed", error=str(e))
-                        session_data["created_at"] = datetime.now()
+                        session_data["created_at"] = datetime.now(tz=UTC)
 
                 if "updated_at" in session_data and isinstance(session_data["updated_at"], str):
                     try:
                         session_data["updated_at"] = datetime.fromisoformat(session_data["updated_at"])
                     except ValueError as e:
                         _logger.debug("session_datetime_parse_failed", error=str(e))
-                        session_data["updated_at"] = datetime.now()
+                        session_data["updated_at"] = datetime.now(tz=UTC)
 
                 self._sessions.append(session_data)
 
@@ -342,13 +342,16 @@ class SessionManagerDialog(QDialog):
                 )
                 continue
 
-        self._sessions.sort(
-            key=lambda s: s.get("updated_at", datetime.min),
-            reverse=True,
-        )
+        sort_sentinel = datetime.min.replace(tzinfo=UTC)
+
+        def _sort_key(s: dict[str, object]) -> datetime:
+            val = s.get("updated_at")
+            return val if isinstance(val, datetime) else sort_sentinel
+
+        self._sessions.sort(key=_sort_key, reverse=True)
 
     @staticmethod
-    def _metadata_to_dict(metadata: SessionMetadata) -> dict[str, Any]:
+    def _metadata_to_dict(metadata: SessionMetadata) -> dict[str, object]:
         """
         Convert a SessionMetadata object to a dictionary.
 
@@ -356,7 +359,7 @@ class SessionManagerDialog(QDialog):
             metadata: SessionMetadata object to convert.
 
         Returns:
-            dict[str, Any]: Dictionary representation of the session metadata.
+            dict[str, object]: Dictionary representation of the session metadata.
         """
         try:
             return {
@@ -375,8 +378,8 @@ class SessionManagerDialog(QDialog):
             return {
                 "id": str(metadata) if metadata else "unknown",
                 "name": "Unknown Session",
-                "created_at": datetime.now(),
-                "updated_at": datetime.now(),
+                "created_at": datetime.now(tz=UTC),
+                "updated_at": datetime.now(tz=UTC),
                 "message_count": 0,
                 "provider": "-",
                 "model": "-",
@@ -415,14 +418,14 @@ class SessionManagerDialog(QDialog):
         """
         self._load_selected_session()
 
-    def _update_details(self, session: dict[str, Any]) -> None:
+    def _update_details(self, session: dict[str, object]) -> None:
         """
         Update the details panel with session info.
 
         Args:
             session: Session data dictionary.
         """
-        self._id_label.setText(session["id"])
+        self._id_label.setText(str(session["id"]))
 
         created_at = session.get("created_at")
         if isinstance(created_at, datetime):
@@ -440,30 +443,37 @@ class SessionManagerDialog(QDialog):
         else:
             self._modified_label.setText("-")
 
-        self._provider_label.setText(session.get("provider", "-"))
-        self._model_label.setText(session.get("model", "-"))
+        provider_val = session.get("provider")
+        self._provider_label.setText(str(provider_val) if isinstance(provider_val, str) else "-")
+        model_val = session.get("model")
+        self._model_label.setText(str(model_val) if isinstance(model_val, str) else "-")
         self._messages_label.setText(str(session.get("message_count", 0)))
 
-        binaries = session.get("binaries", [])
+        binaries_raw = session.get("binaries")
+        binaries: list[str] = [str(b) for b in cast("list[object]", binaries_raw)] if isinstance(binaries_raw, list) else []
         self._binaries_label.setText(", ".join(binaries) if binaries else "-")
 
         preview_text = f"Session: {session['name']}\n"
-        preview_text += f"Provider: {session.get('provider', 'N/A')}\n"
-        preview_text += f"Model: {session.get('model', 'N/A')}\n"
+        preview_text += f"Provider: {provider_val or 'N/A'}\n"
+        preview_text += f"Model: {model_val or 'N/A'}\n"
         preview_text += "\nBinaries analyzed:\n"
         for binary in binaries:
             preview_text += f"  - {binary}\n"
         preview_text += f"\nTotal messages: {session.get('message_count', 0)}"
 
-        if session.get("messages"):
+        messages_raw = session.get("messages")
+        if isinstance(messages_raw, list) and messages_raw:
             preview_text += "\n\nRecent messages:\n"
-            recent_messages = session["messages"][-3:]
-            for msg in recent_messages:
-                role = msg.get("role", "unknown")
-                content = msg.get("content", "")
-                if len(content) > MESSAGE_PREVIEW_MAX_LENGTH:
-                    content = f"{content[:MESSAGE_PREVIEW_MAX_LENGTH]}..."
-                preview_text += f"  [{role}]: {content}\n"
+            recent_messages = cast("list[object]", messages_raw[-3:])
+            for msg_obj in recent_messages:
+                if isinstance(msg_obj, dict):
+                    msg_dict = cast("dict[str, object]", msg_obj)
+                    role = str(msg_dict.get("role", "unknown"))
+                    content_raw = msg_dict.get("content", "")
+                    content_str = str(content_raw) if content_raw else ""
+                    if len(content_str) > MESSAGE_PREVIEW_MAX_LENGTH:
+                        content_str = f"{content_str[:MESSAGE_PREVIEW_MAX_LENGTH]}..."
+                    preview_text += f"  [{role}]: {content_str}\n"
 
         self._preview_text.setText(preview_text)
 
@@ -621,7 +631,7 @@ class SessionManagerDialog(QDialog):
             try:
                 export_data = self._prepare_export_data(session_data)
 
-                with open(path, "w", encoding="utf-8") as f:
+                with Path(path).open("w", encoding="utf-8") as f:
                     json.dump(export_data, f, indent=2, default=str)
 
                 _logger.debug(
@@ -647,7 +657,7 @@ class SessionManagerDialog(QDialog):
                 )
 
     @staticmethod
-    def _prepare_export_data(session_data: dict[str, Any]) -> dict[str, Any]:
+    def _prepare_export_data(session_data: dict[str, object]) -> dict[str, object]:
         """
         Prepare session data for export.
 
@@ -655,7 +665,7 @@ class SessionManagerDialog(QDialog):
             session_data: Raw session data.
 
         Returns:
-            dict[str, Any]: Cleaned session data suitable for JSON export.
+            dict[str, object]: Cleaned session data suitable for JSON export.
         """
         export_data = {
             "id": session_data.get("id"),
@@ -665,7 +675,7 @@ class SessionManagerDialog(QDialog):
             "message_count": session_data.get("message_count", 0),
             "binaries": session_data.get("binaries", []),
             "export_version": "1.0",
-            "exported_at": datetime.now().isoformat(),
+            "exported_at": datetime.now(tz=UTC).isoformat(),
         }
 
         created_at = session_data.get("created_at")
@@ -680,14 +690,16 @@ class SessionManagerDialog(QDialog):
         elif updated_at:
             export_data["updated_at"] = str(updated_at)
 
-        if "messages" in session_data:
-            messages: list[dict[str, Any]] = []
-            for msg in session_data["messages"]:
-                if isinstance(msg, dict):
-                    messages.append(cast("dict[str, Any]", msg))
-                elif hasattr(msg, "__dict__"):
-                    messages.append(msg.__dict__)
-            export_data["messages"] = messages
+        messages_export_raw = session_data.get("messages")
+        if isinstance(messages_export_raw, list):
+            messages_export: list[dict[str, object]] = []
+            msg_items = cast("list[object]", messages_export_raw)
+            for msg_item in msg_items:
+                if isinstance(msg_item, dict):
+                    messages_export.append(cast("dict[str, object]", msg_item))
+                elif hasattr(msg_item, "__dict__"):
+                    messages_export.append(cast("dict[str, object]", msg_item.__dict__))
+            export_data["messages"] = messages_export
 
         if "tool_states" in session_data:
             export_data["tool_states"] = session_data["tool_states"]
@@ -710,7 +722,7 @@ class SessionManagerDialog(QDialog):
             return
 
         try:
-            with open(path, encoding="utf-8") as f:
+            with Path(path).open(encoding="utf-8") as f:
                 raw_data: object = json.load(f)
 
             if not isinstance(raw_data, dict):
@@ -721,7 +733,7 @@ class SessionManagerDialog(QDialog):
                 )
                 return
 
-            import_data = cast("dict[str, Any]", raw_data)
+            import_data = cast("dict[str, object]", raw_data)
 
             required_fields = {"id", "name"}
             if not required_fields.issubset(import_data.keys()):
@@ -739,7 +751,7 @@ class SessionManagerDialog(QDialog):
                 if reply != QMessageBox.StandardButton.Yes:
                     return
 
-            import_data["imported_at"] = datetime.now().isoformat()
+            import_data["imported_at"] = datetime.now(tz=UTC).isoformat()
 
             self._save_session_to_disk(import_data)
 
@@ -778,7 +790,7 @@ class SessionManagerDialog(QDialog):
                 f"Failed to read file:\n{e}",
             )
 
-    def _save_session_to_disk(self, session_data: dict[str, Any]) -> None:
+    def _save_session_to_disk(self, session_data: dict[str, object]) -> None:
         """
         Save session data to disk.
 
@@ -787,10 +799,10 @@ class SessionManagerDialog(QDialog):
         """
         self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
-        session_id = session_data.get("id", datetime.now().strftime("%Y%m%d_%H%M%S"))
+        session_id = session_data.get("id", datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S"))
         session_file = self.SESSIONS_DIR / f"{session_id}.json"
 
-        with open(session_file, "w", encoding="utf-8") as f:
+        with session_file.open("w", encoding="utf-8") as f:
             json.dump(session_data, f, indent=2, default=str)
 
         _logger.debug(
@@ -841,7 +853,7 @@ class NewSessionDialog(QDialog):
         form_layout = QFormLayout()
 
         self._name_input = QLineEdit()
-        self._name_input.setText(f"Session {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+        self._name_input.setText(f"Session {datetime.now(tz=UTC).strftime('%Y-%m-%d %H:%M')}")
         form_layout.addRow("Session Name:", self._name_input)
 
         self._description_input = QLineEdit()

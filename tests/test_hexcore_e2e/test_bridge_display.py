@@ -7,17 +7,23 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 
-def _run(coro: Any) -> Any:
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
+
+
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -33,7 +39,7 @@ def _run(coro: Any) -> Any:
 class TestBridgeDisplayMode:
     """Tests covering display mode get and set operations."""
 
-    def test_get_display_mode_returns_hex8_by_default(self, bridge: Any) -> None:
+    def test_get_display_mode_returns_hex8_by_default(self, bridge: HexEditorBridge) -> None:
         """Verify that the default display mode is hex8 after initialization.
 
         Args:
@@ -42,7 +48,7 @@ class TestBridgeDisplayMode:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex8"
 
-    def test_set_display_mode_returns_true(self, bridge: Any) -> None:
+    def test_set_display_mode_returns_true(self, bridge: HexEditorBridge) -> None:
         """Verify that set_display_mode always returns True.
 
         Args:
@@ -51,7 +57,7 @@ class TestBridgeDisplayMode:
         result: bool = _run(bridge.set_display_mode("hex16_le"))
         assert result
 
-    def test_get_display_mode_returns_new_mode_after_set(self, bridge: Any) -> None:
+    def test_get_display_mode_returns_new_mode_after_set(self, bridge: HexEditorBridge) -> None:
         """Verify that get_display_mode reflects the mode set by set_display_mode.
 
         Args:
@@ -61,7 +67,7 @@ class TestBridgeDisplayMode:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "float32"
 
-    def test_set_display_mode_binary(self, bridge: Any) -> None:
+    def test_set_display_mode_binary(self, bridge: HexEditorBridge) -> None:
         """Verify that the binary display mode can be set and retrieved.
 
         Args:
@@ -71,7 +77,7 @@ class TestBridgeDisplayMode:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "binary"
 
-    def test_set_display_mode_dec_u32(self, bridge: Any) -> None:
+    def test_set_display_mode_dec_u32(self, bridge: HexEditorBridge) -> None:
         """Verify that the dec_u32 display mode can be set and retrieved.
 
         Args:
@@ -85,7 +91,7 @@ class TestBridgeDisplayMode:
 class TestBridgeHighlights:
     """Tests covering highlight rule add, list, and remove operations."""
 
-    def test_add_highlight_rule_returns_nonempty_string_id(self, bridge: Any) -> None:
+    def test_add_highlight_rule_returns_nonempty_string_id(self, bridge: HexEditorBridge) -> None:
         """Verify that add_highlight_rule returns a non-empty string rule ID.
 
         Args:
@@ -96,12 +102,12 @@ class TestBridgeHighlights:
                 "byte_value",
                 json.dumps({"value": 0}),
                 "#FF0000",
-            )
+            ),
         )
         assert isinstance(rule_id, str)
-        assert rule_id != ""
+        assert rule_id
 
-    def test_list_highlight_rules_contains_added_rule(self, bridge: Any) -> None:
+    def test_list_highlight_rules_contains_added_rule(self, bridge: HexEditorBridge) -> None:
         """Verify that list_highlight_rules returns the newly added rule.
 
         Args:
@@ -112,13 +118,13 @@ class TestBridgeHighlights:
                 "byte_value",
                 json.dumps({"value": 255}),
                 "#00FF00",
-            )
+            ),
         )
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
         ids = [r["id"] for r in rules]
         assert rule_id in ids
 
-    def test_remove_highlight_rule_returns_true_for_valid_id(self, bridge: Any) -> None:
+    def test_remove_highlight_rule_returns_true_for_valid_id(self, bridge: HexEditorBridge) -> None:
         """Verify that remove_highlight_rule returns True for an existing rule.
 
         Args:
@@ -129,12 +135,12 @@ class TestBridgeHighlights:
                 "byte_range",
                 json.dumps({"min": 0, "max": 127}),
                 "#0000FF",
-            )
+            ),
         )
         removed: bool = _run(bridge.remove_highlight_rule(rule_id))
         assert removed
 
-    def test_remove_highlight_rule_no_longer_in_list(self, bridge: Any) -> None:
+    def test_remove_highlight_rule_no_longer_in_list(self, bridge: HexEditorBridge) -> None:
         """Verify that a removed rule does not appear in list_highlight_rules.
 
         Args:
@@ -145,14 +151,14 @@ class TestBridgeHighlights:
                 "byte_value",
                 json.dumps({"value": 42}),
                 "#FFFF00",
-            )
+            ),
         )
         _run(bridge.remove_highlight_rule(rule_id))
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
         ids = [r["id"] for r in rules]
         assert rule_id not in ids
 
-    def test_remove_highlight_rule_invalid_id_returns_false(self, bridge: Any) -> None:
+    def test_remove_highlight_rule_invalid_id_returns_false(self, bridge: HexEditorBridge) -> None:
         """Verify that remove_highlight_rule returns False for an unknown ID.
 
         Args:
@@ -161,7 +167,7 @@ class TestBridgeHighlights:
         removed: bool = _run(bridge.remove_highlight_rule("nonexistent-rule-id-00000000"))
         assert not removed
 
-    def test_list_highlight_rules_empty_on_fresh_bridge(self, bridge: Any) -> None:
+    def test_list_highlight_rules_empty_on_fresh_bridge(self, bridge: HexEditorBridge) -> None:
         """Verify that a fresh bridge starts with no highlight rules.
 
         Args:

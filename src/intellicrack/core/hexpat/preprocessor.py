@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Preprocessor for HexPat .hexpat pattern files.
 
@@ -55,9 +54,9 @@ def _parse_int_value(value_str: str) -> int:
         value_str: The string to parse, optionally prefixed with 0x.
 
     Returns:
-        The parsed integer value.
+        int: The parsed integer value.
     """
-    if value_str.startswith("0x") or value_str.startswith("0X"):
+    if value_str.startswith(("0x", "0X")):
         return int(value_str, 16)
     return int(value_str)
 
@@ -70,18 +69,11 @@ class HexPatPreprocessor:
     conditional compilation (#ifdef/#ifndef/#endif), and extracts
     #pragma metadata.
 
-    Attributes:
-        include_paths: Ordered list of directories to search for includes.
+    Args:
+        include_paths: Directories to search for included files.
     """
 
     def __init__(self, include_paths: list[Path] | None = None) -> None:
-        """
-        Initialize the preprocessor.
-
-        Args:
-            include_paths: Directories to search for included files.
-                Defaults to an empty list.
-        """
         self._include_paths: list[Path] = list(include_paths) if include_paths else []
         self._defines: dict[str, str] = {}
         self._included_files: set[str] = set()
@@ -101,11 +93,7 @@ class HexPatPreprocessor:
                 resolution. None for inline source.
 
         Returns:
-            A tuple of (preprocessed_source, pragma_info).
-
-        Raises:
-            HexPatPreprocessorError: On include resolution failure or
-                preprocessing errors.
+            tuple[str, PragmaInfo]: A tuple of (preprocessed_source, pragma_info).
         """
         self._defines = {}
         self._included_files = set()
@@ -222,7 +210,7 @@ class HexPatPreprocessor:
             depth: Current include nesting depth.
 
         Returns:
-            Processed source with includes inlined and conditionals resolved.
+            str: Processed source with includes inlined and conditionals resolved.
 
         Raises:
             HexPatPreprocessorError: On circular includes, missing files,
@@ -315,11 +303,8 @@ class HexPatPreprocessor:
             depth: Current include nesting depth.
 
         Returns:
-            The preprocessed contents of the included file, or None if
+            str | None: The preprocessed contents of the included file, or None if
             the file was already included with #pragma once.
-
-        Raises:
-            HexPatPreprocessorError: If the included file cannot be found.
         """
         search_paths: list[Path] = []
 
@@ -365,7 +350,7 @@ class HexPatPreprocessor:
             source: Source code with conditional directives.
 
         Returns:
-            Source with conditional blocks resolved based on current defines.
+            str: Source with conditional blocks resolved based on current defines.
         """
         output_lines: list[str] = []
         skip_stack: list[bool] = []
@@ -420,7 +405,7 @@ class HexPatPreprocessor:
             source: Source code with potential macro references.
 
         Returns:
-            Source with all defined macros expanded.
+            str: Source with all defined macros expanded.
         """
         result = source
         for name, value in self._defines.items():
@@ -440,7 +425,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
         source: The .hexpat source code.
 
     Returns:
-        A PragmaInfo with extracted metadata.
+        PragmaInfo: A PragmaInfo with extracted metadata.
     """
     endian: str | None = None
     mime: str | None = None

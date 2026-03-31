@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Disassembly mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -39,6 +38,7 @@ class DisassemblyMixin:
     """Mixin providing disassembly functionality for the hex editor panel."""
 
     _document: Any | None
+    document: Any | None
     _hex_widget: Any | None
     _disasm_arch_combo: QComboBox | None
     _disasm_mode_combo: QComboBox | None
@@ -100,17 +100,17 @@ class DisassemblyMixin:
         self._disasm_table.setHorizontalHeaderLabels(["Address", "Hex Bytes", "Mnemonic", "Operands"])
         self._disasm_table.setSelectionBehavior(self._disasm_table.SelectionBehavior.SelectRows)
         self._disasm_table.setEditTriggers(self._disasm_table.EditTrigger.NoEditTriggers)
-        self._disasm_table.setAlternatingRowColors(True)
+        self._disasm_table.setAlternatingRowColors(enable=True)
         table_font = self._disasm_table.font()
         table_font.setFamily("Consolas")
         table_font.setPointSize(9)
         self._disasm_table.setFont(table_font)
         h_header = self._disasm_table.horizontalHeader()
         if h_header is not None:
-            h_header.setStretchLastSection(True)
+            h_header.setStretchLastSection(stretch=True)
         v_header = self._disasm_table.verticalHeader()
         if v_header is not None:
-            v_header.setVisible(False)
+            v_header.setVisible(v=False)
         self._disasm_table.cellDoubleClicked.connect(self._on_disasm_row_double_clicked)
         layout.addWidget(self._disasm_table)
 
@@ -118,7 +118,7 @@ class DisassemblyMixin:
 
     def _on_disassemble(self) -> None:
         """Disassemble bytes at the current cursor offset and populate the table."""
-        if self._document is None or self._disasm_table is None:
+        if self.document is None or self._disasm_table is None:
             return
 
         if not disassembler_available or HexDisassembler_cls is None:
@@ -137,12 +137,12 @@ class DisassemblyMixin:
 
         read_len = count * MAX_INSN_BYTES
         try:
-            doc_len: int = self._document.length()
+            doc_len: int = self.document.length()
             available = doc_len - cursor_offset
             if available <= 0:
                 return
             read_len = min(read_len, available)
-            raw: object = self._document.read(cursor_offset, read_len)
+            raw: object = self.document.read(cursor_offset, read_len)
             if isinstance(raw, (list, bytearray)):
                 data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
             elif isinstance(raw, bytes):

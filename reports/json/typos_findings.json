@@ -1,0 +1,23 @@
+{
+  "tool": "typos",
+  "generated": "2026-03-31T03:24:14.016465+00:00",
+  "total_findings": 1,
+  "total_files": 1,
+  "files": [
+    {
+      "path": ".\\src\\piece_table.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": 297,
+          "column": 40,
+          "severity": "warning",
+          "misspelling": "Helo",
+          "correction": "Hello",
+          "message": "`Helo` should be `Hello`",
+          "raw": ".\\src\\piece_table.rs:297:40: `Helo` should be `Hello`"
+        }
+      ]
+    }
+  ]
+}

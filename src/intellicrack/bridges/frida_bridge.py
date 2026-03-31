@@ -19,9 +19,15 @@ from typing import TYPE_CHECKING, Any, cast, override
 
 import frida
 
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager, ProcessType
-from ..core.types import (
+from intellicrack.bridges.base import (
+    BridgeCapabilities,
+    BridgeState,
+    InstrumentationBridge,
+    MemorySearchResult,
+)
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.types import (
     ApiResolverMatch,
     ChildProcessInfo,
     CrashInfo,
@@ -40,12 +46,6 @@ from ..core.types import (
     ToolFunction,
     ToolName,
     ToolParameter,
-)
-from .base import (
-    BridgeCapabilities,
-    BridgeState,
-    InstrumentationBridge,
-    MemorySearchResult,
 )
 
 
@@ -526,7 +526,7 @@ class FridaBridge(InstrumentationBridge):
         del tool_path
         try:
             self._device = await asyncio.to_thread(frida.get_local_device)
-            self._state = BridgeState(
+            self.state = BridgeState(
                 connected=True,
                 tool_running=True,
                 binary_loaded=False,
@@ -538,9 +538,9 @@ class FridaBridge(InstrumentationBridge):
             _logger.info("frida_bridge_initialized", bridge="frida")
         except Exception as e:
             _logger.warning("frida_init_failed", error=str(e))
-            self._state.connected = False
-            self._state.tool_running = False
-            self._state.last_error = str(e)
+            self.state.connected = False
+            self.state.tool_running = False
+            self.state.last_error = str(e)
             raise ToolError(_ERR_INIT_FAILED) from e
 
     async def shutdown(self) -> None:
@@ -613,7 +613,7 @@ class FridaBridge(InstrumentationBridge):
         """
         try:
             await asyncio.to_thread(frida.get_local_device)
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             _logger.debug("frida_availability_check_failed", error=str(e))
             return False
         else:
@@ -642,10 +642,10 @@ class FridaBridge(InstrumentationBridge):
                 pid,
             )
             self._pid = pid
-            self._state.connected = True
-            self._state.tool_running = True
-            self._state.process_attached = True
-            self._state.target_pid = pid
+            self.state.connected = True
+            self.state.tool_running = True
+            self.state.process_attached = True
+            self.state.target_pid = pid
 
             _logger.info("process_attached", pid=pid)
         except frida.ProcessNotFoundError as e:
@@ -695,10 +695,10 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
         self._pid = target_pid
-        self._state.connected = True
-        self._state.tool_running = True
-        self._state.process_attached = True
-        self._state.target_pid = self._pid
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = True
+        self.state.target_pid = self._pid
 
         _logger.info("process_attached_by_name", process_name=name, pid=self._pid)
 
@@ -757,17 +757,17 @@ class FridaBridge(InstrumentationBridge):
                 metadata={"path": str(path), "args": args or []},
             )
 
-            self._state.connected = True
-            self._state.tool_running = True
-            self._state.process_attached = True
-            self._state.target_path = path
-            self._state.target_pid = pid
+            self.state.connected = True
+            self.state.tool_running = True
+            self.state.process_attached = True
+            self.state.target_path = path
+            self.state.target_pid = pid
 
             _logger.info("process_spawned", process_name=path.name, pid=pid)
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             try:
                 await asyncio.to_thread(device.kill, pid)
-            except Exception as kill_err:
+            except (OSError, RuntimeError) as kill_err:
                 _logger.warning(
                     "failed_to_kill_leaked_process",
                     pid=pid,
@@ -794,7 +794,7 @@ class FridaBridge(InstrumentationBridge):
             _logger.warning("frida_resume_failed", pid=self._pid, error=str(e))
             raise ToolError(_ERR_NOT_ATTACHED) from e
 
-    async def detach(self, kill_spawned: bool = True) -> None:
+    async def detach(self, *, kill_spawned: bool = True) -> None:
         """
         Detach from the current process.
 
@@ -828,10 +828,10 @@ class FridaBridge(InstrumentationBridge):
 
             self._pid = None
             self._hooks = {}
-            self._state.connected = True
-            self._state.tool_running = True
-            self._state.process_attached = False
-            self._state.target_pid = None
+            self.state.connected = True
+            self.state.tool_running = True
+            self.state.process_attached = False
+            self.state.target_pid = None
 
             _logger.info("process_detached", bridge="frida")
         except Exception as e:
@@ -962,7 +962,7 @@ class FridaBridge(InstrumentationBridge):
                         state="MEM_COMMIT",
                         type="MEM_PRIVATE",
                         module_name=str(file_val) if file_val is not None else None,
-                    )
+                    ),
                 )
 
         _logger.debug("memory_regions_enumerated", count=len(regions))
@@ -1024,7 +1024,7 @@ class FridaBridge(InstrumentationBridge):
                         matched_bytes=hex_pattern,
                         context_before="",
                         context_after="",
-                    )
+                    ),
                 )
 
         _logger.debug("memory_scan_completed", matches=len(matches))
@@ -1080,7 +1080,7 @@ class FridaBridge(InstrumentationBridge):
                         base_address=base,
                         size=int(size_val) if isinstance(size_val, (int, float)) else 0,
                         entry_point=0,
-                    )
+                    ),
                 )
 
         _logger.debug("modules_enumerated", count=len(modules))
@@ -1139,7 +1139,7 @@ class FridaBridge(InstrumentationBridge):
                         name=str(name_val) if name_val else "",
                         ordinal=idx,
                         address=addr,
-                    )
+                    ),
                 )
 
         _logger.debug("exports_enumerated", module=module_name, count=len(exports))
@@ -1403,14 +1403,14 @@ class FridaBridge(InstrumentationBridge):
     async def _execute_script_and_wait(
         self,
         script_code: str,
-        timeout: float = 5.0,
+        max_wait: float = 5.0,
     ) -> dict[str, Any]:
         """
         Execute a script and wait for result.
 
         Args:
             script_code: JavaScript code to execute.
-            timeout: Timeout in seconds.
+            max_wait: Maximum seconds to wait for a response.
 
         Returns:
             dict[str, Any]: Script result as dictionary.
@@ -1440,9 +1440,9 @@ class FridaBridge(InstrumentationBridge):
         await asyncio.to_thread(script.load)
 
         try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
+            await asyncio.wait_for(event.wait(), timeout=max_wait)
         except TimeoutError:
-            _logger.warning("frida_script_execution_timeout", timeout=timeout)
+            _logger.warning("frida_script_execution_timeout", max_wait=max_wait)
             result["error"] = "Script execution timed out"
 
         await asyncio.to_thread(script.unload)
@@ -1540,7 +1540,7 @@ class FridaBridge(InstrumentationBridge):
                         function=str(name_val) if name_val else "",
                         ordinal=None,
                         address=addr,
-                    )
+                    ),
                 )
 
         _logger.debug("imports_enumerated", module=module_name, count=len(imports))
@@ -1594,7 +1594,7 @@ class FridaBridge(InstrumentationBridge):
                         start_address=pc,
                         state=str(state_val) if state_val else "waiting",
                         priority=0,
-                    )
+                    ),
                 )
 
         _logger.debug("threads_enumerated", count=len(threads))
@@ -1857,7 +1857,7 @@ class FridaBridge(InstrumentationBridge):
                         module_name=str(mod_name) if mod_name else None,
                         file_name=str(file_name) if file_name else None,
                         line_number=int(line_num) if isinstance(line_num, (int, float)) else None,
-                    )
+                    ),
                 )
 
         _logger.debug("functions_found", func_name=name, count=len(symbols))
@@ -1910,7 +1910,7 @@ class FridaBridge(InstrumentationBridge):
                     ApiResolverMatch(
                         name=str(name_val) if name_val else "",
                         address=addr,
-                    )
+                    ),
                 )
 
         _logger.debug("api_resolved", query=query, matches=len(matches))
@@ -2062,7 +2062,7 @@ class FridaBridge(InstrumentationBridge):
                     from_address=from_addr,
                     to_address=to_addr,
                     depth=depth,
-                )
+                ),
             )
         with self._stalker_traces_lock:
             trace_list = self._stalker_traces.get(tid)
@@ -2208,7 +2208,7 @@ class FridaBridge(InstrumentationBridge):
         send({{ type: 'stalker_unfollowed', tid: tid }});
         """
 
-        await self._execute_script_and_wait(unfollow_code, timeout=3.0)
+        await self._execute_script_and_wait(unfollow_code, max_wait=3.0)
 
         script_id = self._stalker_scripts.pop(effective_tid, None)
         if script_id is not None:
@@ -2393,7 +2393,7 @@ class FridaBridge(InstrumentationBridge):
         Returns:
             list[FridaDeviceInfo]: List of device information.
         """
-        _ = self._state
+        _ = self.state
         devices = await asyncio.to_thread(frida.enumerate_devices)
         _logger.debug("devices_enumerated", count=len(devices))
         return [
@@ -2449,8 +2449,8 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_DEVICE_FAILED) from e
 
         self._device = device
-        self._state.connected = True
-        self._state.tool_running = True
+        self.state.connected = True
+        self.state.tool_running = True
 
         _logger.info("device_connected", device_type=device_type, device_id=str(device.id))
 

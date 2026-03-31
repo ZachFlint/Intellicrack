@@ -18,13 +18,13 @@ import re
 import time
 import uuid
 from dataclasses import replace as dataclass_replace
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import httpx
 
-from ..core.logging import get_logger
-from ..core.types import (
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
@@ -35,8 +35,8 @@ from ..core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_openai_tool_schema
-from .model_loader import (
+from intellicrack.providers.base import LLMProviderBase, create_openai_tool_schema
+from intellicrack.providers.model_loader import (
     RECOMMENDED_MODELS_B580,
     DtypeOption,
     LoadedModel,
@@ -48,7 +48,7 @@ from .model_loader import (
     load_model_for_cpu,
     load_model_for_xpu,
 )
-from .xpu_utils import (
+from intellicrack.providers.xpu_utils import (
     check_windows_requirements,
     clear_xpu_cache,
     get_xpu_device_info,
@@ -115,8 +115,8 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
             response.raise_for_status()
             result: dict[str, Any] = response.json()
             return result
-    except Exception:
-        _logger.debug("huggingface_config_fetch_failed", exc_info=True, url=url)
+    except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
+        _logger.debug("huggingface_config_fetch_failed", url=url, error=str(exc))
         return {}
 
 
@@ -169,6 +169,7 @@ class LocalTransformersProvider(LLMProviderBase):
     def __init__(
         self,
         model_cache: ModelCache | None = None,
+        *,
         prefer_xpu: bool = True,
     ) -> None:
         super().__init__()
@@ -292,7 +293,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
             await super().disconnect()
             self._logger.info("local_transformers_disconnected", device_type=self._device_type)
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
@@ -364,7 +365,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     supports_streaming=True,
                     input_cost_per_1m_tokens=None,
                     output_cost_per_1m_tokens=None,
-                )
+                ),
             )
 
         return models
@@ -378,6 +379,7 @@ class LocalTransformersProvider(LLMProviderBase):
         max_tokens: int = _DEFAULT_MAX_NEW_TOKENS,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -442,7 +444,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 role="assistant",
                 content=response_text,
                 tool_calls=tool_calls,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
             )
 
             self._logger.info(
@@ -452,7 +454,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 duration_ms=duration_ms,
                 has_tool_calls=tool_calls is not None,
             )
-        except Exception as exc:
+        except (RuntimeError, ImportError, ValueError, OSError) as exc:
             self._logger.warning("local_chat_failed", model=model_id, error=str(exc))
             raise ProviderError(_ERR_INFERENCE_FAILED % exc) from exc
         else:
@@ -467,6 +469,7 @@ class LocalTransformersProvider(LLMProviderBase):
         max_tokens: int = _DEFAULT_MAX_NEW_TOKENS,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -525,7 +528,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 if parsed_calls := self._parse_tool_calls(full_text):
                     self._pending_tool_calls = parsed_calls
 
-        except Exception as exc:
+        except (RuntimeError, ImportError, ValueError, OSError) as exc:
             if not self._cancel_requested:
                 self._logger.warning("local_stream_failed", model=model_id, error=str(exc))
                 raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
@@ -571,7 +574,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 load_time_s=self._loaded_model.load_time_seconds,
             )
 
-        except Exception as exc:
+        except (RuntimeError, ImportError, ValueError, OSError) as exc:
             self._logger.exception("model_load_failed", model_id=model_id, error=str(exc))
 
             if self._device_type == "xpu":
@@ -584,7 +587,7 @@ class LocalTransformersProvider(LLMProviderBase):
                         config,
                         self._model_cache,
                     )
-                except Exception as cpu_exc:
+                except (RuntimeError, ImportError, ValueError, OSError) as cpu_exc:
                     raise ProviderError(_ERR_LOAD_BOTH_FAILED % cpu_exc) from cpu_exc
             else:
                 raise ProviderError(_ERR_LOAD_FAILED % exc) from exc
@@ -687,16 +690,16 @@ class LocalTransformersProvider(LLMProviderBase):
                 break
 
             def _forward_pass(
-                _model: PreTrainedModel,
-                _gen_ids: torch.Tensor,
-                _attn_mask: torch.Tensor | None,
-                _past_kv: tuple[tuple[torch.Tensor, ...], ...] | None,
+                fwd_model: PreTrainedModel,
+                fwd_gen_ids: torch.Tensor,
+                fwd_attn_mask: torch.Tensor | None,
+                fwd_past_kv: tuple[tuple[torch.Tensor, ...], ...] | None,
             ) -> CausalLMOutputWithPast:
-                use_ids = _gen_ids[:, -1:] if _past_kv else _gen_ids
-                return _model(
+                use_ids = fwd_gen_ids[:, -1:] if fwd_past_kv else fwd_gen_ids
+                return fwd_model(
                     input_ids=use_ids,
-                    attention_mask=_attn_mask,
-                    past_key_values=_past_kv,
+                    attention_mask=fwd_attn_mask,
+                    past_key_values=fwd_past_kv,
                     use_cache=True,
                 )
 
@@ -837,7 +840,7 @@ class LocalTransformersProvider(LLMProviderBase):
                         add_generation_prompt=True,
                     )
                     return str(result)
-                except Exception as exc:
+                except (ValueError, KeyError, TypeError, AttributeError) as exc:
                     self._logger.debug(
                         "chat_template_failed_using_fallback",
                         error=str(exc),
@@ -985,7 +988,7 @@ class LocalTransformersProvider(LLMProviderBase):
                         tool_name=name.split(".", maxsplit=1)[0] if "." in name else name,
                         function_name=name,
                         arguments=parsed_arguments,
-                    )
+                    ),
                 ]
         except json.JSONDecodeError:
             _logger.warning("tool_call_json_decode_failed")

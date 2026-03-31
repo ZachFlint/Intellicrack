@@ -32,7 +32,7 @@ def _make_x64dbg_tree(root: Path) -> Path:
         root: Parent directory for the x64dbg installation.
 
     Returns:
-        Path to the x64dbg root.
+        Path: Path to the x64dbg root.
     """
     x64dbg = root / "x64dbg"
     (x64dbg / "release" / "x64" / "plugins").mkdir(parents=True)
@@ -55,7 +55,7 @@ def _make_plugin_source(
         subdir: Sub-directory within x64dbg_plugin.
 
     Returns:
-        Path to the written file.
+        Path: Path to the written file.
     """
     plugin_dir = tools_dir / "x64dbg_plugin" / subdir
     plugin_dir.mkdir(parents=True, exist_ok=True)
