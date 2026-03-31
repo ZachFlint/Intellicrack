@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
 """Intellicrack Directory Tree Generator - Fixed Version.
 
 Generates an HTA application with clickable file links using data attributes to avoid escaping issues.
 """
 
+import datetime
 import hashlib
 import os
 import subprocess
-from datetime import datetime
 from pathlib import Path
 
 
@@ -106,7 +110,7 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
         item_id = hashlib.sha256(path.encode()).hexdigest()[:8]
 
         html = ""
-        name = os.path.basename(path) or path
+        name = Path(path).name or path
 
         if Path(path).is_dir():
             folder_count += 1
@@ -120,11 +124,10 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
 
             try:
                 items = []
-                for item in os.listdir(path):
-                    if item in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
+                for entry in Path(path).iterdir():
+                    if entry.name in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
                         continue
-                    item_path = os.path.join(path, item)
-                    items.append(item_path)
+                    items.append(str(entry))
 
                 # Sort: directories first, then files
                 items.sort(key=lambda x: (not Path(x).is_dir(), x.lower()))
@@ -153,7 +156,7 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
                 file_class += " json"
 
             try:
-                size = os.path.getsize(path)
+                size = Path(path).stat().st_size
                 size_str = format_size(size)
             except (OSError, ValueError, TypeError):
                 size_str = ""
@@ -201,17 +204,13 @@ def generate_txt_tree(root_path: str, output_file: str) -> None:
     Args:
         root_path: Root directory path to generate tree from.
         output_file: Output file path for the text tree structure.
-
-    Returns:
-        None
-
     """
     print(f"Generating text tree for: {root_path}")
 
     header_content = f"""INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: {datetime.now().strftime("%a, %b %d, %Y %I:%M:%S %p")}
+Generated: {datetime.datetime.now(tz=datetime.UTC).strftime("%a, %b %d, %Y %I:%M:%S %p")}
 Directory: {root_path}
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -231,11 +230,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
             if not tree_output:
                 tree_output = generate_fallback_tree(root_path)
 
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         print(f"Warning: Could not generate tree with system command: {e}")
         tree_output = generate_fallback_tree(root_path)
 
-    with open(output_file, "w", encoding="utf-8") as f:
+    with Path(output_file).open("w", encoding="utf-8") as f:
         f.write(header_content)
         f.write(tree_output)
 
@@ -243,7 +242,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
     print(f"TXT tree generated: {output_file} ({line_count} lines)")
 
 
-def generate_fallback_tree(root_path: str, prefix: str = "", _is_last: bool = True) -> str:
+def generate_fallback_tree(root_path: str, prefix: str = "", *, _is_last: bool = True) -> str:
     """Generate tree structure as fallback if tree command fails.
 
     Args:
@@ -259,11 +258,10 @@ def generate_fallback_tree(root_path: str, prefix: str = "", _is_last: bool = Tr
 
     try:
         items = []
-        for item in os.listdir(root_path):
-            if item in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
+        for entry in Path(root_path).iterdir():
+            if entry.name in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
                 continue
-            item_path = os.path.join(root_path, item)
-            items.append((item, item_path))
+            items.append((entry.name, str(entry)))
 
         items.sort(key=lambda x: (not Path(x[1]).is_dir(), x[0].lower()))
 
@@ -275,7 +273,7 @@ def generate_fallback_tree(root_path: str, prefix: str = "", _is_last: bool = Tr
             if Path(path).is_dir():
                 tree_str += "/\n"
                 extension = "    " if is_last_item else "│   "
-                tree_str += generate_fallback_tree(path, prefix + extension, is_last_item)
+                tree_str += generate_fallback_tree(path, prefix + extension, _is_last=is_last_item)
             else:
                 tree_str += "\n"
     except PermissionError:
@@ -290,10 +288,6 @@ def generate_hta(root_path: str, output_file: str) -> None:
     Args:
         root_path: Root directory path to generate HTA for.
         output_file: Output file path for the HTA application.
-
-    Returns:
-        None
-
     """
     print(f"Scanning directory: {root_path}")
     html_tree, file_count, folder_count = scan_directory(root_path)
@@ -832,8 +826,7 @@ function hasHighlightedChildren(element) {{
 </body>
 </html>"""
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(hta_content)
+    Path(output_file).write_text(hta_content, encoding="utf-8")
 
     print(f"HTA file generated successfully: {output_file}")
     print(f"Root path: {root_path}")

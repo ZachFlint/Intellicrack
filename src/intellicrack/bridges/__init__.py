@@ -11,7 +11,7 @@ binary/process manipulation.
 
 from __future__ import annotations
 
-from .base import (
+from intellicrack.bridges.base import (
     BinaryOperationsBridge,
     BridgeCapabilities,
     BridgeState,
@@ -25,15 +25,15 @@ from .base import (
     ToolBridgeBase,
     WatchpointInfo,
 )
-from .binary import BinaryBridge
-from .cutter import CutterBridge
-from .frida_bridge import FridaBridge
-from .ghidra import GhidraBridge
-from .hex_editor import HexEditorBridge
-from .installer import ToolInstaller
-from .process import ProcessBridge
-from .sandbox_bridge import SandboxBridge
-from .x64dbg import X64DbgBridge
+from intellicrack.bridges.binary import BinaryBridge
+from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.frida_bridge import FridaBridge
+from intellicrack.bridges.ghidra import GhidraBridge
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.bridges.installer import ToolInstaller
+from intellicrack.bridges.process import ProcessBridge
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
+from intellicrack.bridges.x64dbg import X64DbgBridge
 
 
 __all__: list[str] = [

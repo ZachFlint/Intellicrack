@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Main HexEditorPanel class assembling all mixin functionality."""
 
 from __future__ import annotations
@@ -114,12 +113,12 @@ class HexEditorPanel(
 
     def __init__(self, parent: QWidget | None = None) -> None:
         self._hex_widget: Any | None = None
-        self._document: Any | None = None
-        self._file_path: Path | None = None
+        self.document: Any | None = None
+        self.file_path: Path | None = None
 
         self._data_inspector_tree: QTreeWidget | None = None
         self._bookmarks_tree: QTreeWidget | None = None
-        self._sections_tree: QTreeWidget | None = None
+        self.sections_tree: QTreeWidget | None = None
         self._imports_tree: QTreeWidget | None = None
         self._exports_tree: QTreeWidget | None = None
         self._strings_tree: QTreeWidget | None = None
@@ -140,7 +139,7 @@ class HexEditorPanel(
         self._search_results: list[tuple[int, int]] = []
         self._search_index: int = 0
         self._original_data_cache: dict[int, int] = {}
-        self._state_holder: HexDocumentState | None = None
+        self.state_holder: HexDocumentState | None = None
         self._find_next_btn: QPushButton | None = None
         self._find_prev_btn: QPushButton | None = None
         self._state_callback: Any | None = None
@@ -294,11 +293,11 @@ class HexEditorPanel(
         self._main_vsplit.addWidget(hsplit)
 
         self._pattern_frame = self._build_pattern_editor()
-        self._pattern_frame.setVisible(False)
+        self._pattern_frame.setVisible(visible=False)
         self._main_vsplit.addWidget(self._pattern_frame)
 
         self._numeric_search_frame = self._build_numeric_search_panel()
-        self._numeric_search_frame.setVisible(False)
+        self._numeric_search_frame.setVisible(visible=False)
         self._main_vsplit.addWidget(self._numeric_search_frame)
 
         if self._search_mode_combo is not None:
@@ -362,8 +361,8 @@ class HexEditorPanel(
         bm_layout.addLayout(bm_btn_layout)
         self._side_tabs.addTab(bookmarks_container, "Bookmarks")
 
-        self._sections_tree = self._make_tree(["Name", "VAddr", "VSize", "RawSize"])
-        self._side_tabs.addTab(self._sections_tree, "Sections")
+        self.sections_tree = self._make_tree(["Name", "VAddr", "VSize", "RawSize"])
+        self._side_tabs.addTab(self.sections_tree, "Sections")
 
         self._imports_tree = self._make_tree(["Library", "Function", "Address"])
         self._side_tabs.addTab(self._imports_tree, "Imports")
@@ -390,10 +389,13 @@ class HexEditorPanel(
         self._byte_dist_widget = ByteDistributionWidget()
         dist_ref = self._byte_dist_widget
 
-        def _on_log_toggled(_checked: bool) -> None:
+        def _on_log_toggled() -> None:
             dist_ref.toggle_log_scale()
 
-        log_btn.toggled.connect(_on_log_toggled)
+        def _log_toggled_slot(_checked: int) -> None:
+            _on_log_toggled()
+
+        log_btn.toggled.connect(_log_toggled_slot)
         dist_header.addWidget(log_btn)
         stats_layout.addLayout(dist_header)
         stats_layout.addWidget(self._byte_dist_widget)
@@ -461,7 +463,7 @@ class HexEditorPanel(
         hash_row.addWidget(custom_crc_btn)
         hashes_layout.addLayout(hash_row)
         self._hash_result_label = QLabel("")
-        self._hash_result_label.setWordWrap(True)
+        self._hash_result_label.setWordWrap(on=True)
         self._hash_result_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         hashes_layout.addWidget(self._hash_result_label)
         hashes_layout.addStretch()
@@ -484,8 +486,8 @@ class HexEditorPanel(
         """
         tree = QTreeWidget()
         tree.setHeaderLabels(headers)
-        tree.setRootIsDecorated(False)
-        tree.setAlternatingRowColors(True)
+        tree.setRootIsDecorated(show=False)
+        tree.setAlternatingRowColors(enable=True)
         return tree
 
     def load_file(self, file_path: Path | str) -> bool:
@@ -510,17 +512,17 @@ class HexEditorPanel(
         path = Path(file_path) if isinstance(file_path, str) else file_path
 
         try:
-            self._document = hexcore.HexDocument.open(str(path))
-            self._file_path = path
+            self.document = hexcore.HexDocument.open(str(path))
+            self.file_path = path
 
             if self._hex_widget is not None:
                 set_doc = getattr(self._hex_widget, "set_document", None)
                 if callable(set_doc):
-                    set_doc(self._document)
+                    set_doc(self.document)
 
-            if self._document is None:
+            if self.document is None:
                 return False
-            doc_len: int = self._document.length()
+            doc_len: int = self.document.length()
             if self._file_info_label is not None:
                 self._file_info_label.setText(f"  {path.name} ({format_size(doc_len)})")
 
@@ -535,8 +537,8 @@ class HexEditorPanel(
             self._search_results.clear()
             self._search_index = 0
 
-            if self._state_holder is not None:
-                self._state_holder.set_document(self._document, path, source="panel")
+            if self.state_holder is not None:
+                self.state_holder.set_document(self.document, path, source="panel")
 
         except OSError as exc:
             logger.warning("file_load_failed", path=str(path), error=str(exc))
@@ -560,12 +562,12 @@ class HexEditorPanel(
 
     def _on_save(self) -> None:
         """Save the current document."""
-        if self._document is None:
+        if self.document is None:
             return
         try:
-            file_path = self._document.file_path()
+            file_path = self.document.file_path()
             if file_path is not None:
-                self._document.save(file_path)
+                self.document.save(file_path)
             else:
                 self._on_save_as()
                 return
@@ -577,17 +579,17 @@ class HexEditorPanel(
 
     def _on_save_as(self) -> None:
         """Save the current document to a new path."""
-        if self._document is None:
+        if self.document is None:
             return
         result = QFileDialog.getSaveFileName(self, "Save As", "", "All Files (*)")
         save_path = result[0] if result else ""
         if save_path:
             try:
-                self._document.save(save_path)
+                self.document.save(save_path)
             except OSError as exc:
                 QMessageBox.warning(self, "Save Failed", f"Failed to save:\n{exc}")
             else:
-                self._file_path = Path(save_path)
+                self.file_path = Path(save_path)
                 self._on_data_changed()
                 logger.info("file_saved_as", path=save_path)
 
@@ -632,10 +634,10 @@ class HexEditorPanel(
 
     def _on_data_changed(self) -> None:
         """Handle data modification events."""
-        if self._document is not None and self._file_info_label is not None:
-            modified_mark = " *" if self._document.is_modified() else ""
-            name = self._file_path.name if self._file_path is not None else "untitled"
-            size = self._document.length()
+        if self.document is not None and self._file_info_label is not None:
+            modified_mark = " *" if self.document.is_modified() else ""
+            name = self.file_path.name if self.file_path is not None else "untitled"
+            size = self.document.length()
             self._file_info_label.setText(f"  {name}{modified_mark} ({format_size(size)})")
         self._update_patches()
 
@@ -651,14 +653,14 @@ class HexEditorPanel(
 
     def _on_send_to_ai(self) -> None:
         """Emit context for AI analysis from the current hex editor state."""
-        if self._document is None:
+        if self.document is None:
             return
 
         context: dict[str, Any] = {
-            "file_path": str(self._file_path) if self._file_path else None,
-            "size": self._document.length(),
+            "file_path": str(self.file_path) if self.file_path else None,
+            "size": self.document.length(),
         }
-        context["modified"] = self._document.is_modified()
+        context["modified"] = self.document.is_modified()
 
         cursor_offset = 0
         if self._hex_widget is not None:
@@ -667,8 +669,8 @@ class HexEditorPanel(
 
         try:
             read_start = max(0, cursor_offset - CURSOR_CONTEXT_BYTES)
-            read_len = min(PREVIEW_BYTES, self._document.length() - read_start)
-            raw = self._document.read(read_start, read_len) if read_len > 0 else None
+            read_len = min(PREVIEW_BYTES, self.document.length() - read_start)
+            raw = self.document.read(read_start, read_len) if read_len > 0 else None
         except (AttributeError, ValueError):
             logger.debug("ai_context_bytes_read_failed")
         else:
@@ -677,7 +679,7 @@ class HexEditorPanel(
                 context["bytes_offset"] = read_start
 
         try:
-            inspection = self._document.inspect_at(cursor_offset)
+            inspection = self.document.inspect_at(cursor_offset)
         except (AttributeError, ValueError):
             logger.debug("ai_context_inspection_failed")
         else:
@@ -688,8 +690,8 @@ class HexEditorPanel(
 
     def _on_undo(self) -> None:
         """Undo the last edit operation."""
-        if self._document is not None:
-            self._document.undo()
+        if self.document is not None:
+            self.document.undo()
             if self._hex_widget is not None:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
                 if callable(update_fn):
@@ -698,8 +700,8 @@ class HexEditorPanel(
 
     def _on_redo(self) -> None:
         """Redo the last undone operation."""
-        if self._document is not None:
-            self._document.redo()
+        if self.document is not None:
+            self.document.redo()
             if self._hex_widget is not None:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
                 if callable(update_fn):
@@ -713,15 +715,15 @@ class HexEditorPanel(
         Args:
             state_holder: The shared HexDocumentState instance.
         """
-        self._state_holder = state_holder
+        self.state_holder = state_holder
 
-        def on_state_event(event_type: Any, data: dict[str, Any]) -> None:
+        def on_state_event(event_type: object, data: dict[str, Any]) -> None:
             evt = HexDocumentEvent_cls
             if evt is None:
                 return
             if event_type == evt.DOCUMENT_OPENED:
                 file_path_str = data.get("file_path")
-                if file_path_str and self._document is None:
+                if file_path_str and self.document is None:
                     self.load_file(file_path_str)
             elif event_type == evt.CURSOR_MOVED:
                 offset = data.get("offset", 0)
@@ -741,8 +743,9 @@ class HexEditorPanel(
                 end = data.get("end", -1)
                 if self._hex_widget is not None and start >= 0 and end >= 0:
                     widget = self._hex_widget
-                    widget._selection_start = start
-                    widget._selection_end = end
+                    set_sel_fn = getattr(widget, "set_selection_range", None)
+                    if callable(set_sel_fn):
+                        set_sel_fn(start, end)
                     update_fn = getattr(widget, "_update_viewport", None)
                     if callable(update_fn):
                         update_fn()
@@ -790,9 +793,9 @@ class HexEditorPanel(
         Returns:
             bool: True if unsaved changes exist.
         """
-        if self._document is None:
+        if self.document is None:
             return False
-        is_modified = getattr(self._document, "is_modified", None)
+        is_modified = getattr(self.document, "is_modified", None)
         return bool(is_modified()) if callable(is_modified) else False
 
     def save(self) -> bool:
@@ -802,7 +805,7 @@ class HexEditorPanel(
         Returns:
             bool: True if the save completed successfully.
         """
-        if self._document is None:
+        if self.document is None:
             return False
         try:
             self._on_save()
@@ -820,12 +823,12 @@ class HexEditorPanel(
         self._search_worker = None
         self._numeric_search_worker = None
 
-        if self._state_holder is not None and self._state_callback is not None:
-            self._state_holder.unregister_callback(self._state_callback)
+        if self.state_holder is not None and self._state_callback is not None:
+            self.state_holder.unregister_callback(self._state_callback)
         self._state_callback = None
 
-        self._document = None
-        self._file_path = None
+        self.document = None
+        self.file_path = None
         self._original_data_cache.clear()
         self._search_results.clear()
         if self._hex_widget is not None:

@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Python implementations of builtin:: namespace functions.
 
 The standard library .pat files define public APIs (std::mem, std::string,
@@ -37,23 +36,17 @@ class BuiltinFunctions:
     Registered into the evaluator's global scope so that the real
     std/*.pat library files can call them transparently.
 
-    Attributes:
-        data: The DataReader providing binary access.
+    Args:
+            data_reader: The DataReader wrapping the target binary.
     """
 
     def __init__(self, data_reader: DataReader) -> None:
-        """
-        Initialize with a data reader for binary access.
-
-        Args:
-            data_reader: The DataReader wrapping the target binary.
-        """
         self._data: DataReader = data_reader
         self._endian: str = "little"
         self._array_index: int = 0
 
     @staticmethod
-    def _unwrap(arg: Any) -> Any:
+    def _unwrap(arg: object) -> int | float | str:
         """
         Extract the raw value from a PatternValue argument.
 
@@ -61,9 +54,16 @@ class BuiltinFunctions:
             arg: A PatternValue or raw value.
 
         Returns:
-            The unwrapped raw value.
+            int | float | str: The unwrapped raw value as a primitive.
         """
-        return arg.value if isinstance(arg, PatternValue) else arg
+        if isinstance(arg, PatternValue):
+            val = arg.value
+            if isinstance(val, (int, float, str)):
+                return val
+            return 0
+        if isinstance(arg, (int, float, str)):
+            return arg
+        return 0
 
     def set_array_index(self, index: int) -> None:
         """
@@ -141,7 +141,7 @@ class BuiltinFunctions:
         for name, func in builtins.items():
             scope.define(name, PatternValue(value=BuiltinCallable(fn=func, name=name)))
 
-    def _mem_read_unsigned(self, *args: Any) -> PatternValue:
+    def _mem_read_unsigned(self, *args: object) -> PatternValue:
         """
         Read an unsigned integer from binary data.
 
@@ -149,10 +149,7 @@ class BuiltinFunctions:
             *args: (offset: int, size: int) where size is byte count (1,2,4,8,16).
 
         Returns:
-            A PatternValue containing the unsigned integer value.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            PatternValue: A PatternValue containing the unsigned integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 1
@@ -160,7 +157,7 @@ class BuiltinFunctions:
         byteorder = "little" if self._endian == "little" else "big"
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))
 
-    def _mem_read_signed(self, *args: Any) -> PatternValue:
+    def _mem_read_signed(self, *args: object) -> PatternValue:
         """
         Read a signed integer from binary data.
 
@@ -168,10 +165,7 @@ class BuiltinFunctions:
             *args: (offset: int, size: int) where size is byte count.
 
         Returns:
-            A PatternValue containing the signed integer value.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            PatternValue: A PatternValue containing the signed integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 1
@@ -179,7 +173,7 @@ class BuiltinFunctions:
         byteorder = "little" if self._endian == "little" else "big"
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=True))
 
-    def _mem_read_string(self, *args: Any) -> PatternValue:
+    def _mem_read_string(self, *args: object) -> PatternValue:
         """
         Read a string from binary data.
 
@@ -187,10 +181,7 @@ class BuiltinFunctions:
             *args: (offset: int, length: int).
 
         Returns:
-            A PatternValue containing the decoded string.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            PatternValue: A PatternValue containing the decoded string.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         length = int(self._unwrap(args[1])) if len(args) > 1 else 256
@@ -200,7 +191,7 @@ class BuiltinFunctions:
             raw = raw[:null_idx]
         return PatternValue(value=raw.decode("utf-8", errors="replace"))
 
-    def _mem_find_sequence(self, *args: Any) -> PatternValue:
+    def _mem_find_sequence(self, *args: object) -> PatternValue:
         """
         Find a byte sequence in a range of binary data.
 
@@ -208,7 +199,7 @@ class BuiltinFunctions:
             *args: (start: int, end: int, pattern_bytes...).
 
         Returns:
-            A PatternValue containing the offset of the first match, or -1.
+            PatternValue: A PatternValue containing the offset of the first match, or -1.
         """
         if len(args) < 3:
             return PatternValue(value=-1)
@@ -221,26 +212,32 @@ class BuiltinFunctions:
             return PatternValue(value=-1)
         return PatternValue(value=result)
 
-    def _mem_size(self, *_args: Any) -> PatternValue:
+    def _mem_size(self, *_args: object) -> PatternValue:
         """
         Get the total size of the binary data.
 
+        Args:
+            *_args: Unused arguments for API compatibility.
+
         Returns:
-            A PatternValue containing the data size in bytes.
+            PatternValue: A PatternValue containing the data size in bytes.
         """
         return PatternValue(value=self._data.size)
 
     @staticmethod
-    def _mem_base_address(*_args: Any) -> PatternValue:
+    def _mem_base_address(*_args: object) -> PatternValue:
         """
         Get the base address (always 0 for file-based analysis).
 
+        Args:
+            *_args: Unused arguments for API compatibility.
+
         Returns:
-            A PatternValue containing the base address.
+            PatternValue: A PatternValue containing the base address.
         """
         return PatternValue(value=0)
 
-    def _string_length(self, *args: Any) -> PatternValue:
+    def _string_length(self, *args: object) -> PatternValue:
         """
         Get the length of a string.
 
@@ -248,11 +245,11 @@ class BuiltinFunctions:
             *args: (s: str).
 
         Returns:
-            A PatternValue containing the string length.
+            PatternValue: A PatternValue containing the string length.
         """
         return PatternValue(value=len(str(self._unwrap(args[0]))) if args else 0)
 
-    def _string_at(self, *args: Any) -> PatternValue:
+    def _string_at(self, *args: object) -> PatternValue:
         """
         Get a character at an index.
 
@@ -260,7 +257,7 @@ class BuiltinFunctions:
             *args: (s: str, index: int).
 
         Returns:
-            A PatternValue containing the character at the given index.
+            PatternValue: A PatternValue containing the character at the given index.
         """
         if len(args) < 2:
             return PatternValue(value="")
@@ -270,7 +267,7 @@ class BuiltinFunctions:
             return PatternValue(value=s[idx])
         return PatternValue(value="")
 
-    def _string_substr(self, *args: Any) -> PatternValue:
+    def _string_substr(self, *args: object) -> PatternValue:
         """
         Extract a substring.
 
@@ -278,7 +275,7 @@ class BuiltinFunctions:
             *args: (s: str, start: int, length: int).
 
         Returns:
-            A PatternValue containing the extracted substring.
+            PatternValue: A PatternValue containing the extracted substring.
         """
         if len(args) < 3:
             return PatternValue(value="")
@@ -287,7 +284,7 @@ class BuiltinFunctions:
         length = int(self._unwrap(args[2]))
         return PatternValue(value=s[start : start + length])
 
-    def _string_contains(self, *args: Any) -> PatternValue:
+    def _string_contains(self, *args: object) -> PatternValue:
         """
         Check if a string contains a substring.
 
@@ -295,13 +292,13 @@ class BuiltinFunctions:
             *args: (s: str, sub: str).
 
         Returns:
-            A PatternValue containing True if the substring is found.
+            PatternValue: A PatternValue containing True if the substring is found.
         """
         if len(args) < 2:
             return PatternValue(value=False)
         return PatternValue(value=str(self._unwrap(args[1])) in str(self._unwrap(args[0])))
 
-    def _string_starts_with(self, *args: Any) -> PatternValue:
+    def _string_starts_with(self, *args: object) -> PatternValue:
         """
         Check if a string starts with a prefix.
 
@@ -309,13 +306,13 @@ class BuiltinFunctions:
             *args: (s: str, prefix: str).
 
         Returns:
-            A PatternValue containing True if the string starts with the prefix.
+            PatternValue: A PatternValue containing True if the string starts with the prefix.
         """
         if len(args) < 2:
             return PatternValue(value=False)
         return PatternValue(value=str(self._unwrap(args[0])).startswith(str(self._unwrap(args[1]))))
 
-    def _string_ends_with(self, *args: Any) -> PatternValue:
+    def _string_ends_with(self, *args: object) -> PatternValue:
         """
         Check if a string ends with a suffix.
 
@@ -323,13 +320,13 @@ class BuiltinFunctions:
             *args: (s: str, suffix: str).
 
         Returns:
-            A PatternValue containing True if the string ends with the suffix.
+            PatternValue: A PatternValue containing True if the string ends with the suffix.
         """
         if len(args) < 2:
             return PatternValue(value=False)
         return PatternValue(value=str(self._unwrap(args[0])).endswith(str(self._unwrap(args[1]))))
 
-    def _string_to_int(self, *args: Any) -> PatternValue:
+    def _string_to_int(self, *args: object) -> PatternValue:
         """
         Parse a string as an integer.
 
@@ -337,7 +334,7 @@ class BuiltinFunctions:
             *args: (s: str, base: int).
 
         Returns:
-            A PatternValue containing the parsed integer value.
+            PatternValue: A PatternValue containing the parsed integer value.
         """
         if not args:
             return PatternValue(value=0)
@@ -350,7 +347,7 @@ class BuiltinFunctions:
         else:
             return PatternValue(value=result)
 
-    def _string_reverse(self, *args: Any) -> PatternValue:
+    def _string_reverse(self, *args: object) -> PatternValue:
         """
         Reverse a string.
 
@@ -358,11 +355,11 @@ class BuiltinFunctions:
             *args: (s: str).
 
         Returns:
-            A PatternValue containing the reversed string.
+            PatternValue: A PatternValue containing the reversed string.
         """
         return PatternValue(value=str(self._unwrap(args[0]))[::-1] if args else "")
 
-    def _math_abs(self, *args: Any) -> PatternValue:
+    def _math_abs(self, *args: object) -> PatternValue:
         """
         Compute the absolute value.
 
@@ -370,7 +367,7 @@ class BuiltinFunctions:
             *args: (x: int | float).
 
         Returns:
-            A PatternValue containing the absolute value.
+            PatternValue: A PatternValue containing the absolute value.
         """
         if not args:
             return PatternValue(value=0)
@@ -379,7 +376,7 @@ class BuiltinFunctions:
             return PatternValue(value=abs(val))
         return PatternValue(value=abs(int(val)))
 
-    def _math_min(self, *args: Any) -> PatternValue:
+    def _math_min(self, *args: object) -> PatternValue:
         """
         Return the minimum of two values.
 
@@ -387,7 +384,7 @@ class BuiltinFunctions:
             *args: (a: int | float, b: int | float).
 
         Returns:
-            A PatternValue containing the smaller value.
+            PatternValue: A PatternValue containing the smaller value.
         """
         if len(args) < 2:
             return PatternValue(value=int(self._unwrap(args[0])) if args else 0)
@@ -396,7 +393,7 @@ class BuiltinFunctions:
             return PatternValue(value=min(float(a), float(b)))
         return PatternValue(value=min(int(a), int(b)))
 
-    def _math_max(self, *args: Any) -> PatternValue:
+    def _math_max(self, *args: object) -> PatternValue:
         """
         Return the maximum of two values.
 
@@ -404,7 +401,7 @@ class BuiltinFunctions:
             *args: (a: int | float, b: int | float).
 
         Returns:
-            A PatternValue containing the larger value.
+            PatternValue: A PatternValue containing the larger value.
         """
         if len(args) < 2:
             return PatternValue(value=int(self._unwrap(args[0])) if args else 0)
@@ -413,7 +410,7 @@ class BuiltinFunctions:
             return PatternValue(value=max(float(a), float(b)))
         return PatternValue(value=max(int(a), int(b)))
 
-    def _math_floor(self, *args: Any) -> PatternValue:
+    def _math_floor(self, *args: object) -> PatternValue:
         """
         Compute the floor of a value.
 
@@ -421,11 +418,11 @@ class BuiltinFunctions:
             *args: (x: float).
 
         Returns:
-            A PatternValue containing the floor as an integer.
+            PatternValue: A PatternValue containing the floor as an integer.
         """
         return PatternValue(value=math.floor(float(self._unwrap(args[0]))) if args else 0)
 
-    def _math_ceil(self, *args: Any) -> PatternValue:
+    def _math_ceil(self, *args: object) -> PatternValue:
         """
         Compute the ceiling of a value.
 
@@ -433,11 +430,11 @@ class BuiltinFunctions:
             *args: (x: float).
 
         Returns:
-            A PatternValue containing the ceiling as an integer.
+            PatternValue: A PatternValue containing the ceiling as an integer.
         """
         return PatternValue(value=math.ceil(float(self._unwrap(args[0]))) if args else 0)
 
-    def _math_log2(self, *args: Any) -> PatternValue:
+    def _math_log2(self, *args: object) -> PatternValue:
         """
         Compute the base-2 logarithm.
 
@@ -445,7 +442,7 @@ class BuiltinFunctions:
             *args: (x: float).
 
         Returns:
-            A PatternValue containing the log base 2 value.
+            PatternValue: A PatternValue containing the log base 2 value.
 
         Raises:
             HexPatRuntimeError: If the value is non-positive.
@@ -458,7 +455,7 @@ class BuiltinFunctions:
             raise HexPatRuntimeError(msg)
         return PatternValue(value=math.log2(val))
 
-    def _math_pow(self, *args: Any) -> PatternValue:
+    def _math_pow(self, *args: object) -> PatternValue:
         """
         Compute a power.
 
@@ -466,13 +463,13 @@ class BuiltinFunctions:
             *args: (base: float, exp: float).
 
         Returns:
-            A PatternValue containing base raised to the power of exp.
+            PatternValue: A PatternValue containing base raised to the power of exp.
         """
         if len(args) < 2:
             return PatternValue(value=0.0)
         return PatternValue(value=math.pow(float(self._unwrap(args[0])), float(self._unwrap(args[1]))))
 
-    def _math_sqrt(self, *args: Any) -> PatternValue:
+    def _math_sqrt(self, *args: object) -> PatternValue:
         """
         Compute the square root.
 
@@ -480,7 +477,7 @@ class BuiltinFunctions:
             *args: (x: float).
 
         Returns:
-            A PatternValue containing the square root.
+            PatternValue: A PatternValue containing the square root.
 
         Raises:
             HexPatRuntimeError: If the value is negative.
@@ -493,7 +490,7 @@ class BuiltinFunctions:
             raise HexPatRuntimeError(msg)
         return PatternValue(value=math.sqrt(val))
 
-    def _core_set_endian(self, *args: Any) -> PatternValue:
+    def _core_set_endian(self, *args: object) -> PatternValue:
         """
         Set the default endianness.
 
@@ -501,31 +498,37 @@ class BuiltinFunctions:
             *args: (endian: int) where 0=little, 1=big.
 
         Returns:
-            A PatternValue containing None.
+            PatternValue: A PatternValue containing None.
         """
         if args:
             self._endian = "big" if int(self._unwrap(args[0])) != 0 else "little"
         return PatternValue(value=None)
 
-    def _core_get_endian(self, *_args: Any) -> PatternValue:
+    def _core_get_endian(self, *_args: object) -> PatternValue:
         """
         Get the current endianness.
 
+        Args:
+            *_args: Unused arguments for API compatibility.
+
         Returns:
-            A PatternValue containing 0 for little-endian, 1 for big-endian.
+            PatternValue: A PatternValue containing 0 for little-endian, 1 for big-endian.
         """
         return PatternValue(value=1 if self._endian == "big" else 0)
 
-    def _core_array_index(self, *_args: Any) -> PatternValue:
+    def _core_array_index(self, *_args: object) -> PatternValue:
         """
         Get the current array iteration index.
 
+        Args:
+            *_args: Unused arguments for API compatibility.
+
         Returns:
-            A PatternValue containing the current array index.
+            PatternValue: A PatternValue containing the current array index.
         """
         return PatternValue(value=self._array_index)
 
-    def _io_print(self, *args: Any) -> PatternValue:
+    def _io_print(self, *args: object) -> PatternValue:
         """
         Print a message to the log.
 
@@ -533,13 +536,13 @@ class BuiltinFunctions:
             *args: Values to print.
 
         Returns:
-            A PatternValue containing None.
+            PatternValue: A PatternValue containing None.
         """
         message = " ".join(str(self._unwrap(a)) for a in args)
         _logger.info("hexpat_print", output=message)
         return PatternValue(value=None)
 
-    def _io_format(self, *args: Any) -> PatternValue:
+    def _io_format(self, *args: object) -> PatternValue:
         """
         Format a string with arguments.
 
@@ -547,7 +550,7 @@ class BuiltinFunctions:
             *args: (format_str: str, ...values).
 
         Returns:
-            A PatternValue containing the formatted string.
+            PatternValue: A PatternValue containing the formatted string.
         """
         if not args:
             return PatternValue(value="")
@@ -563,7 +566,7 @@ class BuiltinFunctions:
         else:
             return PatternValue(value=result)
 
-    def _read_struct_field(self, *args: Any) -> PatternValue:
+    def _read_struct_field(self, *args: object) -> PatternValue:
         """
         Read a struct field as unsigned integer (internal helper).
 
@@ -571,7 +574,7 @@ class BuiltinFunctions:
             *args: (offset: int, size: int).
 
         Returns:
-            A PatternValue containing the unsigned integer value.
+            PatternValue: A PatternValue containing the unsigned integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 4

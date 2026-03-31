@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Shared hex document state manager for bridge-GUI synchronization.
 
@@ -19,11 +18,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from ..core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from intellicrack.core.types import HexDocumentFull
 
 
 _logger = get_logger("bridges.hex_state")
@@ -88,7 +89,7 @@ class HexDocumentState:
     """
 
     def __init__(self) -> None:
-        self._document: Any | None = None
+        self._document: HexDocumentFull | None = None
         self._file_path: Path | None = None
         self._cursor_offset: int = 0
         self._selection: tuple[int, int] | None = None
@@ -99,12 +100,12 @@ class HexDocumentState:
         self._display_mode: str = "hex8"
 
     @property
-    def document(self) -> Any | None:
+    def document(self) -> HexDocumentFull | None:
         """
         Get the active HexDocument instance.
 
         Returns:
-            Any | None: Active HexDocument or None if no document is open.
+            HexDocumentFull | None: Active HexDocument or None if no document is open.
         """
         return self._document
 
@@ -188,7 +189,7 @@ class HexDocumentState:
 
     def set_document(
         self,
-        document: Any | None,
+        document: HexDocumentFull | None,
         file_path: Path | None,
         *,
         source: str = "",
@@ -508,7 +509,7 @@ class HexDocumentState:
                     continue
                 try:
                     entry.fn(event_type, data)
-                except Exception:
+                except (RuntimeError, TypeError, ValueError, OSError):
                     _logger.warning(
                         "callback_error",
                         event_type_value=event_type.value,

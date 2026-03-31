@@ -1,45 +1,45 @@
 11 findings in ui\app.py
 
-ui\app.py:789: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'
+ui\app.py:801: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'
 
-ui\app.py:976: INT001 Missing docstring for 'MainWindow._on_user_message.process'
+ui\app.py:988: INT001 Missing docstring for 'MainWindow._on_user_message.process'
 
-ui\app.py:1112: INT001 Missing docstring for 'MainWindow._load_binary.load'
+ui\app.py:1124: INT001 Missing docstring for 'MainWindow._load_binary.load'
 
-ui\app.py:1149: INT001 Missing docstring for 'MainWindow._on_new_session.create_session'
+ui\app.py:1161: INT001 Missing docstring for 'MainWindow._on_new_session.create_session'
 
-ui\app.py:1164: INT001 Missing docstring for 'MainWindow._on_load_session.load_session'
+ui\app.py:1176: INT001 Missing docstring for 'MainWindow._on_load_session.load_session'
 
-ui\app.py:1175: INT001 Missing docstring for 'MainWindow._on_save_session.save_session'
+ui\app.py:1187: INT001 Missing docstring for 'MainWindow._on_save_session.save_session'
 
-ui\app.py:1392: INT001 Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'
+ui\app.py:1402: INT001 Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'
 
-ui\app.py:1479: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'
+ui\app.py:1489: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'
 
-ui\app.py:1598: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'
+ui\app.py:1612: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'
 
-ui\app.py:1675: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'
+ui\app.py:1689: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'
 
-ui\app.py:2106: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'
+ui\app.py:2146: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'
 
 
 8 findings in bridges\frida_bridge.py
 
-bridges\frida_bridge.py:1194: INT001 Missing docstring for 'FridaBridge.hook_function.on_message'
+bridges\frida_bridge.py:1198: INT001 Missing docstring for 'FridaBridge.hook_function.on_message'
 
-bridges\frida_bridge.py:1309: INT001 Missing docstring for 'FridaBridge.execute_persistent_script.on_message'
+bridges\frida_bridge.py:1313: INT001 Missing docstring for 'FridaBridge.execute_persistent_script.on_message'
 
-bridges\frida_bridge.py:1423: INT001 Missing docstring for 'FridaBridge._execute_script_and_wait.on_message'
+bridges\frida_bridge.py:1427: INT001 Missing docstring for 'FridaBridge._execute_script_and_wait.on_message'
 
-bridges\frida_bridge.py:1628: INT001 Missing docstring for 'FridaBridge.allocate_memory.on_message'
+bridges\frida_bridge.py:1632: INT001 Missing docstring for 'FridaBridge.allocate_memory.on_message'
 
-bridges\frida_bridge.py:1946: INT001 Missing docstring for 'FridaBridge.replace_function.on_message'
+bridges\frida_bridge.py:1950: INT001 Missing docstring for 'FridaBridge.replace_function.on_message'
 
-bridges\frida_bridge.py:2141: INT001 Missing docstring for 'FridaBridge.stalker_follow.on_stalker_message'
+bridges\frida_bridge.py:2149: INT001 Missing docstring for 'FridaBridge.stalker_follow.on_stalker_message'
 
-bridges\frida_bridge.py:2235: INT001 Missing docstring for 'FridaBridge.enable_child_gating.on_child_added'
+bridges\frida_bridge.py:2247: INT001 Missing docstring for 'FridaBridge.enable_child_gating.on_child_added'
 
-bridges\frida_bridge.py:2335: INT001 Missing docstring for 'FridaBridge.enable_crash_reporting.on_process_crashed'
+bridges\frida_bridge.py:2347: INT001 Missing docstring for 'FridaBridge.enable_crash_reporting.on_process_crashed'
 
 
 5 findings in bridges\named_pipe_client.py
@@ -57,110 +57,120 @@ bridges\named_pipe_client.py:420: INT001 Missing docstring for 'NamedPipeClient.
 
 5 findings in bridges\x64dbg.py
 
-bridges\x64dbg.py:1840: INT001 Missing docstring for 'X64DbgBridge.get_registers.parse_int'
+bridges\x64dbg.py:1841: INT001 Missing docstring for 'X64DbgBridge.get_registers.parse_int'
 
-bridges\x64dbg.py:1851: INT001 Missing docstring for 'X64DbgBridge.get_registers.get_reg'
+bridges\x64dbg.py:1852: INT001 Missing docstring for 'X64DbgBridge.get_registers.get_reg'
 
-bridges\x64dbg.py:2153: INT001 Missing docstring for 'X64DbgBridge.get_memory_regions.MemoryBasicInformation'
+bridges\x64dbg.py:2154: INT001 Missing docstring for 'X64DbgBridge.get_memory_regions.MemoryBasicInformation'
 
-bridges\x64dbg.py:2473: INT001 Missing docstring for 'X64DbgBridge._get_threads.ThreadEntry32'
+bridges\x64dbg.py:2474: INT001 Missing docstring for 'X64DbgBridge._get_threads.ThreadEntry32'
 
-bridges\x64dbg.py:2543: INT001 Missing docstring for 'X64DbgBridge._get_modules.ModuleEntry32W'
+bridges\x64dbg.py:2544: INT001 Missing docstring for 'X64DbgBridge._get_modules.ModuleEntry32W'
 
 
 5 findings in credentials\store.py
 
-credentials\store.py:281: INT001 Missing docstring for 'CredentialStore._get_from_keyring._fetch'
+credentials\store.py:275: INT001 Missing docstring for 'CredentialStore._get_from_keyring._fetch'
 
-credentials\store.py:333: INT001 Missing docstring for 'CredentialStore._set_to_keyring._store'
+credentials\store.py:327: INT001 Missing docstring for 'CredentialStore._set_to_keyring._store'
 
-credentials\store.py:361: INT001 Missing docstring for 'CredentialStore._get_metadata._fetch'
+credentials\store.py:355: INT001 Missing docstring for 'CredentialStore._get_metadata._fetch'
 
-credentials\store.py:462: INT001 Missing docstring for 'CredentialStore.delete._delete'
+credentials\store.py:456: INT001 Missing docstring for 'CredentialStore.delete._delete'
 
-credentials\store.py:624: INT001 Missing docstring for '_CredentialStoreHolder'
+credentials\store.py:619: INT001 Missing docstring for '_CredentialStoreHolder'
 
 
 4 findings in ui\provider_config.py
 
 ui\provider_config.py:888: INT001 Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'
 
-ui\provider_config.py:1296: INT001 Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'
+ui\provider_config.py:1307: INT001 Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'
 
-ui\provider_config.py:1336: INT001 Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'
+ui\provider_config.py:1347: INT001 Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'
 
-ui\provider_config.py:2354: INT001 Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'
+ui\provider_config.py:2377: INT001 Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'
 
 
 4 findings in ui\panels\process_panel.py
 
-ui\panels\process_panel.py:83: INT001 Missing docstring for '_PROCESSENTRY32'
+ui\panels\process_panel.py:82: INT001 Missing docstring for '_PROCESSENTRY32'
 
-ui\panels\process_panel.py:97: INT001 Missing docstring for '_MODULEENTRY32'
+ui\panels\process_panel.py:96: INT001 Missing docstring for '_MODULEENTRY32'
 
-ui\panels\process_panel.py:111: INT001 Missing docstring for '_THREADENTRY32'
+ui\panels\process_panel.py:110: INT001 Missing docstring for '_THREADENTRY32'
 
-ui\panels\process_panel.py:122: INT001 Missing docstring for '_ProcessMemoryCounters'
+ui\panels\process_panel.py:121: INT001 Missing docstring for '_ProcessMemoryCounters'
 
 
 3 findings in ui\panels\hex_editor\_pattern_editor.py
 
-ui\panels\hex_editor\_pattern_editor.py:68: INT001 Missing docstring for 'PatternEditorMixin._populate_template_tree'
+ui\panels\hex_editor\_pattern_editor.py:70: INT001 Missing docstring for 'PatternEditorMixin._populate_template_tree'
 
-ui\panels\hex_editor\_pattern_editor.py:69: INT001 Missing docstring for 'PatternEditorMixin._highlight_template_fields'
+ui\panels\hex_editor\_pattern_editor.py:71: INT001 Missing docstring for 'PatternEditorMixin._highlight_template_fields'
 
-ui\panels\hex_editor\_pattern_editor.py:70: INT001 Missing docstring for 'PatternEditorMixin._populate_template_combo'
+ui\panels\hex_editor\_pattern_editor.py:72: INT001 Missing docstring for 'PatternEditorMixin._populate_template_combo'
 
 
 2 findings in providers\discovery.py
 
-providers\discovery.py:362: INT001 Missing docstring for 'ModelDiscovery.discover_all.discover_one'
+providers\discovery.py:365: INT001 Missing docstring for 'ModelDiscovery.discover_all.discover_one'
 
-providers\discovery.py:722: INT001 Missing docstring for 'ModelDiscovery.get_recommended_model.cost_key'
+providers\discovery.py:726: INT001 Missing docstring for 'ModelDiscovery.get_recommended_model.cost_key'
 
 
 2 findings in providers\google.py
 
-providers\google.py:288: INT001 Missing docstring for 'GoogleProvider.chat._generate'
+providers\google.py:289: INT001 Missing docstring for 'GoogleProvider.chat._generate'
 
-providers\google.py:403: INT001 Missing docstring for 'GoogleProvider.chat_stream._start_stream'
+providers\google.py:405: INT001 Missing docstring for 'GoogleProvider.chat_stream._start_stream'
 
 
 2 findings in ui\panels\hex_editor\_sections.py
 
-ui\panels\hex_editor\_sections.py:43: INT001 Missing docstring for 'SectionsMixin.goto_offset'
+ui\panels\hex_editor\_sections.py:46: INT001 Missing docstring for 'SectionsMixin.goto_offset'
 
-ui\panels\hex_editor\_sections.py:44: INT001 Missing docstring for 'SectionsMixin._select_template'
+ui\panels\hex_editor\_sections.py:47: INT001 Missing docstring for 'SectionsMixin._select_template'
 
 
 1 findings in main.py
 
-main.py:421: INT001 Missing docstring for '_initialize_providers._init_one'
+main.py:446: INT001 Missing docstring for '_initialize_providers._init_one'
 
 
 1 findings in bridges\ghidra.py
 
-bridges\ghidra.py:722: INT001 Missing docstring for 'GhidraBridge.start_headless._start_process'
+bridges\ghidra.py:732: INT001 Missing docstring for 'GhidraBridge.start_headless._start_process'
 
 
 1 findings in bridges\hex_editor.py
 
-bridges\hex_editor.py:2693: INT001 Missing docstring for 'HexEditorBridge.calculate_hash_custom_crc.reflect'
+bridges\hex_editor.py:2702: INT001 Missing docstring for 'HexEditorBridge.calculate_hash_custom_crc.reflect'
 
 
 1 findings in credentials\oauth.py
 
-credentials\oauth.py:957: INT001 Missing docstring for '_OAuthManagerHolder'
+credentials\oauth.py:964: INT001 Missing docstring for '_OAuthManagerHolder'
 
 
 1 findings in providers\local_transformers.py
 
-providers\local_transformers.py:689: INT001 Missing docstring for 'LocalTransformersProvider._stream_generate._forward_pass'
+providers\local_transformers.py:692: INT001 Missing docstring for 'LocalTransformersProvider._stream_generate._forward_pass'
 
 
 1 findings in providers\ollama.py
 
 providers\ollama.py:392: INT001 Missing docstring for 'OllamaProvider._fetch_model_metadata._query_single'
+
+
+1 findings in sandbox\qemu.py
+
+sandbox\qemu.py:707: INT001 Missing docstring for 'QEMUSandbox._find_qemu._find_existing'
+
+
+1 findings in sandbox\windows.py
+
+sandbox\windows.py:371: INT001 Missing docstring for 'WindowsSandbox._generate_wsb_config._write_config'
 
 
 1 findings in ui\panels\hex_editor\_disassembly.py

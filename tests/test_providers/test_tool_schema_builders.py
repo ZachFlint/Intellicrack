@@ -50,7 +50,7 @@ def _make_tool(
         multi_function: Include two functions instead of one.
 
     Returns:
-        A ToolDefinition for testing.
+        ToolDefinition: A ToolDefinition for testing.
     """
     params: list[ToolParameter] = [
         ToolParameter(
@@ -74,7 +74,7 @@ def _make_tool(
                 description="Output format",
                 required=False,
                 enum=_ENUM_VALUES,
-            )
+            ),
         )
     if with_default:
         params.append(
@@ -84,7 +84,7 @@ def _make_tool(
                 description="Timeout in seconds",
                 required=False,
                 default=_EXPECTED_DEFAULT_TIMEOUT,
-            )
+            ),
         )
 
     functions = [
@@ -123,7 +123,7 @@ def _make_empty_tool() -> ToolDefinition:
     """Build a ToolDefinition with no functions.
 
     Returns:
-        An empty ToolDefinition.
+        ToolDefinition: An empty ToolDefinition.
     """
     return ToolDefinition(
         tool_name=ToolName.GHIDRA,

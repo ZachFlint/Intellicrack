@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Lexer for the HexPat pattern language."""
 
 from __future__ import annotations
+
+import string
 
 from intellicrack.core.hexpat.errors import HexPatParseError
 from intellicrack.core.hexpat.tokens import KEYWORDS, Token, TokenType
@@ -17,28 +18,17 @@ class HexPatLexer:
     Converts raw source text into a flat list of Token objects.  The final
     token in the returned list is always an EOF token.
 
-    Attributes:
-        _source: The raw source text being tokenized.
-        _pos: Current character position within _source.
-        _line: Current 1-based source line number.
-        _column: Current 1-based source column number.
-        _file_path: Source file path reported in error messages.
-        _tokens: Accumulated list of tokens produced so far.
+    Args:
+            source: The raw source text to tokenize.
+            file_path: Optional file path used in error messages.
     """
 
     def __init__(self, source: str, file_path: str = "<input>") -> None:
-        """
-        Initialize the lexer with source text.
-
-        Args:
-            source: The raw source text to tokenize.
-            file_path: Optional file path used in error messages.
-        """
         self._source = source
         self._pos = 0
         self._line = 1
         self._column = 1
-        self._file_path = file_path
+        self.file_path = file_path
         self._tokens: list[Token] = []
 
     def tokenize(self) -> list[Token]:
@@ -46,10 +36,7 @@ class HexPatLexer:
         Tokenize the source into a list of Tokens.
 
         Returns:
-            A list of Token objects ending with an EOF token.
-
-        Raises:
-            HexPatParseError: If an unexpected character is encountered.
+            list[Token]: A list of Token objects ending with an EOF token.
         """
         while self._pos < len(self._source):
             self._scan_token()
@@ -64,7 +51,7 @@ class HexPatLexer:
             offset: How many characters ahead to look.
 
         Returns:
-            The character at the requested position, or empty string if past end.
+            str: The character at the requested position, or empty string if past end.
         """
         idx = self._pos + offset
         return self._source[idx] if idx < len(self._source) else ""
@@ -74,7 +61,7 @@ class HexPatLexer:
         Consume and return the current character, updating position tracking.
 
         Returns:
-            The consumed character.
+            str: The consumed character.
         """
         ch = self._source[self._pos]
         self._pos += 1
@@ -93,7 +80,7 @@ class HexPatLexer:
             expected: The single character to match.
 
         Returns:
-            True if the character was consumed, False otherwise.
+            bool: True if the character was consumed, False otherwise.
         """
         if self._pos < len(self._source) and self._source[self._pos] == expected:
             self._advance()
@@ -112,26 +99,12 @@ class HexPatLexer:
         """
         self._tokens.append(Token(ttype, value, line, column))
 
-    def _error(self, msg: str, line: int, column: int) -> HexPatParseError:
-        """
-        Create a HexPatParseError at the given source location.
-
-        Args:
-            msg: The error description.
-            line: The 1-based line number of the error.
-            column: The 1-based column number of the error.
-
-        Returns:
-            A HexPatParseError ready to be raised.
-        """
-        return HexPatParseError(msg, line, column, self._file_path)
-
     def _skip_whitespace(self) -> bool:
         """
         Skip whitespace characters.
 
         Returns:
-            True if any whitespace was skipped.
+            bool: True if any whitespace was skipped.
         """
         ch = self._peek()
         if ch in {" ", "\t", "\r", "\n"}:
@@ -144,7 +117,7 @@ class HexPatLexer:
         Skip a single-line comment starting with //.
 
         Returns:
-            True if a line comment was skipped.
+            bool: True if a line comment was skipped.
         """
         if self._peek() == "/" and self._peek(1) == "/":
             while self._pos < len(self._source) and self._peek() != "\n":
@@ -157,10 +130,10 @@ class HexPatLexer:
         Skip a block comment delimited by /* and */, supporting nesting.
 
         Returns:
-            True if a block comment was skipped.
+            bool: True if a block comment was skipped.
 
         Raises:
-            HexPatParseError: If the block comment is not terminated.
+            HexPatParseError: If the input is malformed.
         """
         if self._peek() != "/" or self._peek(1) != "*":
             return False
@@ -183,7 +156,7 @@ class HexPatLexer:
             else:
                 self._advance()
         msg = "Unterminated block comment"
-        raise self._error(msg, line, col)
+        raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_string(self, line: int, col: int) -> None:
         """
@@ -194,8 +167,7 @@ class HexPatLexer:
             col: The 1-based column number where the string started.
 
         Raises:
-            HexPatParseError: If the string is unterminated or contains an
-                invalid escape sequence.
+            HexPatParseError: If the input is malformed.
         """
         self._advance()
         buf: list[str] = []
@@ -207,7 +179,7 @@ class HexPatLexer:
                 return
             if ch == "\n":
                 msg = "Unterminated string literal"
-                raise self._error(msg, line, col)
+                raise HexPatParseError(msg, line, col, self.file_path)
             if ch == "\\":
                 self._advance()
                 buf.append(self._scan_escape(line, col))
@@ -215,7 +187,7 @@ class HexPatLexer:
                 buf.append(ch)
                 self._advance()
         msg = "Unterminated string literal"
-        raise self._error(msg, line, col)
+        raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_char(self, line: int, col: int) -> None:
         """
@@ -226,26 +198,25 @@ class HexPatLexer:
             col: The 1-based column number where the literal started.
 
         Raises:
-            HexPatParseError: If the literal is empty, unterminated, or contains
-                an invalid escape sequence.
+            HexPatParseError: If the input is malformed.
         """
         self._advance()
         if self._pos >= len(self._source):
             msg = "Unterminated character literal"
-            raise self._error(msg, line, col)
+            raise HexPatParseError(msg, line, col, self.file_path)
         ch = self._peek()
         if ch == "\\":
             self._advance()
             value = self._scan_escape(line, col)
         elif ch == "'":
             msg = "Empty character literal"
-            raise self._error(msg, line, col)
+            raise HexPatParseError(msg, line, col, self.file_path)
         else:
             value = ch
             self._advance()
         if self._pos >= len(self._source) or self._peek() != "'":
             msg = "Unterminated character literal"
-            raise self._error(msg, line, col)
+            raise HexPatParseError(msg, line, col, self.file_path)
         self._advance()
         self._add(TokenType.CHAR_LITERAL, value, line, col)
 
@@ -258,14 +229,14 @@ class HexPatLexer:
             col: The 1-based column number where the escape started.
 
         Returns:
-            The decoded character or characters.
+            str: The decoded character or characters.
 
         Raises:
-            HexPatParseError: If the escape sequence is invalid or truncated.
+            HexPatParseError: If the input is malformed.
         """
         if self._pos >= len(self._source):
             msg = "Truncated escape sequence"
-            raise self._error(msg, line, col)
+            raise HexPatParseError(msg, line, col, self.file_path)
         ch = self._source[self._pos]
         self._advance()
         simple = {
@@ -282,15 +253,15 @@ class HexPatLexer:
         if ch == "x":
             hex_digits: list[str] = []
             for _ in range(2):
-                if self._pos < len(self._source) and self._source[self._pos] in "0123456789abcdefABCDEF":
+                if self._pos < len(self._source) and self._source[self._pos] in string.hexdigits:
                     hex_digits.append(self._source[self._pos])
                     self._advance()
                 else:
                     msg = "Invalid \\x escape sequence"
-                    raise self._error(msg, line, col)
+                    raise HexPatParseError(msg, line, col, self.file_path)
             return chr(int("".join(hex_digits), 16))
         msg = f"Unknown escape sequence \\{ch}"
-        raise self._error(msg, line, col)
+        raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_number(self, line: int, col: int) -> None:
         """
@@ -304,7 +275,7 @@ class HexPatLexer:
             col: The 1-based column number where the literal started.
 
         Raises:
-            HexPatParseError: If the numeric literal has an invalid format.
+            HexPatParseError: If the input is malformed.
         """
         start = self._pos
         ch = self._peek()
@@ -314,7 +285,7 @@ class HexPatLexer:
             self._advance()
             if self._pos >= len(self._source) or self._source[self._pos] not in "0123456789abcdefABCDEF_":
                 msg = "Invalid hexadecimal literal"
-                raise self._error(msg, line, col)
+                raise HexPatParseError(msg, line, col, self.file_path)
             while self._pos < len(self._source) and self._source[self._pos] in "0123456789abcdefABCDEF_":
                 self._advance()
             raw = self._source[start : self._pos].replace("_", "")
@@ -326,7 +297,7 @@ class HexPatLexer:
             self._advance()
             if self._pos >= len(self._source) or self._source[self._pos] not in "01_":
                 msg = "Invalid binary literal"
-                raise self._error(msg, line, col)
+                raise HexPatParseError(msg, line, col, self.file_path)
             while self._pos < len(self._source) and self._source[self._pos] in "01_":
                 self._advance()
             raw = self._source[start : self._pos].replace("_", "")
@@ -338,7 +309,7 @@ class HexPatLexer:
             self._advance()
             if self._pos >= len(self._source) or self._source[self._pos] not in "01234567_":
                 msg = "Invalid octal literal"
-                raise self._error(msg, line, col)
+                raise HexPatParseError(msg, line, col, self.file_path)
             while self._pos < len(self._source) and self._source[self._pos] in "01234567_":
                 self._advance()
             raw = self._source[start : self._pos].replace("_", "")
@@ -366,7 +337,7 @@ class HexPatLexer:
                 self._advance()
             if self._pos >= len(self._source) or not self._source[self._pos].isdigit():
                 msg = "Invalid float exponent"
-                raise self._error(msg, line, col)
+                raise HexPatParseError(msg, line, col, self.file_path)
             while self._pos < len(self._source) and self._source[self._pos].isdigit():
                 self._advance()
 
@@ -401,7 +372,7 @@ class HexPatLexer:
             col: The 1-based column number of the operator start.
 
         Raises:
-            HexPatParseError: If an incomplete operator sequence is encountered.
+            HexPatParseError: If the input is malformed.
         """
         if ch == "!":
             if self._match("="):
@@ -442,7 +413,8 @@ class HexPatLexer:
                 if self._match("."):
                     self._add(TokenType.ELLIPSIS, "...", line, col)
                 else:
-                    raise self._error("Expected '...' but got '..'", line, col)
+                    msg = "Expected '...' but got '..'"
+                    raise HexPatParseError(msg, line, col, self.file_path)
             else:
                 self._add(TokenType.DOT, ch, line, col)
         elif ch == "/":
@@ -506,15 +478,10 @@ class HexPatLexer:
                 self._add(TokenType.PIPE, ch, line, col)
         else:
             msg = f"Unexpected character: {ch!r}"
-            raise self._error(msg, line, col)
+            raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_token(self) -> None:
-        """
-        Scan and emit the next token from the current position.
-
-        Raises:
-            HexPatParseError: If an unexpected character is encountered.
-        """
+        """Scan and emit the next token from the current position."""
         while self._pos < len(self._source):
             if self._skip_whitespace():
                 continue

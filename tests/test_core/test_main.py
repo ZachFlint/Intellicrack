@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for Intellicrack main module initialization.
 
 Tests validate:
@@ -36,7 +41,7 @@ class TestSessionStoreInitialization:
         store = SessionStore(db_path)
 
         assert db_path.exists()
-        assert store._db_path == db_path
+        assert store.db_path == db_path
 
     @staticmethod
     def test_session_store_creates_parent_directories(tmp_path: Path) -> None:
@@ -55,7 +60,7 @@ class TestSessionStoreInitialization:
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
 
-        with store._connection() as conn:
+        with store.connection() as conn:
             tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
             table_names = {row["name"] for row in tables}
 
@@ -74,7 +79,7 @@ class TestSessionManagerInitialization:
 
         manager = SessionManager(store)
 
-        assert manager._store is store
+        assert manager.store is store
         assert manager.current is None
 
     @staticmethod
@@ -89,9 +94,9 @@ class TestSessionManagerInitialization:
             store = SessionStore(db_path)
             manager = SessionManager(store)
 
-            assert hasattr(manager._store, "save")
-            assert hasattr(manager._store, "load")
-            assert hasattr(manager._store, "list_all")
+            assert hasattr(manager.store, "save")
+            assert hasattr(manager.store, "load")
+            assert hasattr(manager.store, "list_all")
 
     @staticmethod
     def test_session_manager_auto_save_default(tmp_path: Path) -> None:
@@ -99,7 +104,7 @@ class TestSessionManagerInitialization:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store)
 
-        assert manager._auto_save is True
+        assert manager.auto_save is True
 
     @staticmethod
     def test_session_manager_auto_save_can_be_disabled(tmp_path: Path) -> None:
@@ -107,7 +112,7 @@ class TestSessionManagerInitialization:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, auto_save=False)
 
-        assert manager._auto_save is False
+        assert manager.auto_save is False
 
     @staticmethod
     def test_session_manager_save_interval_default(tmp_path: Path) -> None:
@@ -115,7 +120,7 @@ class TestSessionManagerInitialization:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store)
 
-        assert manager._save_interval == DEFAULT_SAVE_INTERVAL
+        assert manager.save_interval == DEFAULT_SAVE_INTERVAL
 
     @staticmethod
     def test_session_manager_save_interval_configurable(tmp_path: Path) -> None:
@@ -123,7 +128,7 @@ class TestSessionManagerInitialization:
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, save_interval=CUSTOM_SAVE_INTERVAL)
 
-        assert manager._save_interval == CUSTOM_SAVE_INTERVAL
+        assert manager.save_interval == CUSTOM_SAVE_INTERVAL
 
 
 class TestSessionManagerOperations:
@@ -132,7 +137,14 @@ class TestSessionManagerOperations:
     @staticmethod
     @pytest.fixture
     def manager(tmp_path: Path) -> SessionManager:
-        """Create a SessionManager with temporary database."""
+        """Create a SessionManager with temporary database.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+
+        Returns:
+            SessionManager: A session manager with a temporary database.
+        """
         store = SessionStore(tmp_path / "sessions.db")
         return SessionManager(store)
 
@@ -164,7 +176,7 @@ class TestSessionManagerOperations:
 
         await manager.save()
 
-        new_store = SessionStore(manager._store._db_path)
+        new_store = SessionStore(manager.store.db_path)
         new_manager = SessionManager(new_store)
 
         loaded = await new_manager.load(session_id)
@@ -205,7 +217,14 @@ class TestSessionDataIntegrity:
     @staticmethod
     @pytest.fixture
     def store(tmp_path: Path) -> SessionStore:
-        """Create a SessionStore with temporary database."""
+        """Create a SessionStore with temporary database.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+
+        Returns:
+            SessionStore: A session store with a temporary database.
+        """
         return SessionStore(tmp_path / "sessions.db")
 
     @staticmethod

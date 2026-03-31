@@ -12,15 +12,149 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-__all__ = [
+@runtime_checkable
+class HexDocumentLike(Protocol):
+    """Protocol for objects providing hex document read access."""
+
+    def read(self, offset: int, length: int) -> list[int]:
+        """
+        Read bytes from the document.
+
+        Args:
+            offset: Byte offset to start reading from.
+            length: Number of bytes to read.
+
+        Returns:
+            list[int]: List of byte values.
+        """
+        _ = (self, offset, length)
+        return []
+
+    def length(self) -> int:
+        """
+        Get the total length of the document in bytes.
+
+        Returns:
+            int: Document length.
+        """
+        _ = self
+        return 0
+
+
+@runtime_checkable
+class HexDocumentFull(HexDocumentLike, Protocol):
+    """Protocol for full HexDocument with template and write support."""
+
+    def write(self, offset: int, data: bytes) -> None:
+        """
+        Write bytes to the document.
+
+        Args:
+            offset: Byte offset to write at.
+            data: Bytes to write.
+        """
+        _ = (self, offset, data)
+
+    def list_templates(self) -> list[tuple[str, str]]:
+        """
+        List available templates.
+
+        Returns:
+            list[tuple[str, str]]: List of (name, description) tuples.
+        """
+        _ = self
+        return []
+
+    def list_templates_detailed(self) -> list[object]:
+        """
+        List templates with full detail objects.
+
+        Returns:
+            list[object]: List of template detail objects.
+        """
+        _ = self
+        return []
+
+    def register_json_template(self, name: str, json_str: str) -> None:
+        """
+        Register a JSON-defined template.
+
+        Args:
+            name: Template name.
+            json_str: JSON string defining the template.
+        """
+        _ = (self, name, json_str)
+
+    def remove_template(self, name: str) -> None:
+        """
+        Remove a registered template.
+
+        Args:
+            name: Template name to remove.
+        """
+        _ = (self, name)
+
+    def export_template_json(self, name: str) -> str:
+        """
+        Export a template as a JSON string.
+
+        Args:
+            name: Template name to export.
+
+        Returns:
+            str: JSON representation of the template.
+        """
+        _ = (self, name)
+        return ""
+
+    def inspect_at(self, offset: int) -> dict[str, object]:
+        """
+        Inspect data at the given offset.
+
+        Args:
+            offset: Byte offset to inspect.
+
+        Returns:
+            dict[str, object]: Inspection results.
+        """
+        _ = (self, offset)
+        return {}
+
+
+@runtime_checkable
+class CompiledYaraRules(Protocol):
+    """Protocol for compiled YARA rules objects."""
+
+    def match(
+        self,
+        data: bytes | None = None,
+        filepath: str | None = None,
+        timeout: int = 60,
+    ) -> list[object]:
+        """
+        Match rules against data or a file.
+
+        Args:
+            data: Binary data to scan.
+            filepath: File path to scan.
+            timeout: Scan timeout in seconds.
+
+        Returns:
+            list[object]: List of match result objects.
+        """
+        _ = (self, data, filepath, timeout)
+        return []
+
+
+__all__: list[str] = [
     "ApiResolverMatch",
     "AttachError",
     "AuthenticationError",
@@ -29,6 +163,7 @@ __all__ = [
     "BridgeAnalysisSummary",
     "CacheConfig",
     "ChildProcessInfo",
+    "CompiledYaraRules",
     "ConfigurationError",
     "ConfirmationLevel",
     "CrashInfo",
@@ -37,6 +172,8 @@ __all__ = [
     "ExportInfo",
     "FridaDeviceInfo",
     "FunctionInfo",
+    "HexDocumentFull",
+    "HexDocumentLike",
     "HookInfo",
     "ImportInfo",
     "InitializationError",
@@ -228,7 +365,7 @@ class Message:
     tool_calls: list[ToolCall] | None = None
     tool_results: list[ToolResult] | None = None
     thinking_content: str | None = None
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 @dataclass

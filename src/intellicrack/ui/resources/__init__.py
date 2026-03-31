@@ -10,10 +10,10 @@ This package provides asset loading, icon management, font handling, and theme m
 
 from __future__ import annotations
 
-from .font_manager import FontManager
-from .icon_manager import IconManager
-from .resource_helper import get_assets_path, get_resource_path
-from .theme_manager import ThemeManager
+from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.icon_manager import IconManager
+from intellicrack.ui.resources.resource_helper import get_assets_path, get_resource_path
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 __all__: list[str] = [

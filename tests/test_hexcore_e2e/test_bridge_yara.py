@@ -12,20 +12,23 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 yara = pytest.importorskip("yara", reason="yara module not installed")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -73,7 +76,7 @@ _EXPECTED_MATCH_KEYS = {"rule", "tags", "meta", "strings"}
 class TestBridgeYaraScan:
     """Tests covering YARA scanning of document data via inline rule source."""
 
-    def test_yara_scan_returns_list(self, loaded_bridge: Any) -> None:
+    def test_yara_scan_returns_list(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that yara_scan returns a list.
 
         Args:
@@ -82,7 +85,7 @@ class TestBridgeYaraScan:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
         assert isinstance(results, list)
 
-    def test_yara_scan_mz_rule_matches_pe_file(self, loaded_bridge: Any) -> None:
+    def test_yara_scan_mz_rule_matches_pe_file(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the MZ header rule returns at least one match on a PE file.
 
         Args:
@@ -91,7 +94,7 @@ class TestBridgeYaraScan:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
         assert results
 
-    def test_yara_scan_match_has_required_keys(self, loaded_bridge: Any) -> None:
+    def test_yara_scan_match_has_required_keys(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that each match dict has the rule, tags, meta, and strings keys.
 
         Args:
@@ -102,7 +105,7 @@ class TestBridgeYaraScan:
         for match in results:
             assert _EXPECTED_MATCH_KEYS.issubset(match.keys())
 
-    def test_yara_scan_match_rule_name_matches_rule_identifier(self, loaded_bridge: Any) -> None:
+    def test_yara_scan_match_rule_name_matches_rule_identifier(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the rule field in the match equals the declared rule name.
 
         Args:
@@ -111,7 +114,7 @@ class TestBridgeYaraScan:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
         assert results[0]["rule"] == "MZHeader"
 
-    def test_yara_scan_no_match_returns_empty_list(self, loaded_bridge: Any) -> None:
+    def test_yara_scan_no_match_returns_empty_list(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that a rule with no matches returns an empty list.
 
         Args:
@@ -120,7 +123,7 @@ class TestBridgeYaraScan:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_NO_MATCH_RULE))
         assert not results
 
-    def test_yara_scan_custom_bytes_match(self, bridge: Any, tmp_path: Path) -> None:
+    def test_yara_scan_custom_bytes_match(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a DEADBEEF rule matches a document containing those bytes.
 
         Args:
@@ -139,7 +142,7 @@ class TestBridgeYaraScan:
 class TestBridgeYaraScanFiles:
     """Tests covering YARA scanning with rule files loaded from disk."""
 
-    def test_yara_scan_files_with_rule_file_matches_pe(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_yara_scan_files_with_rule_file_matches_pe(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that yara_scan_files with a .yar file on disk produces matches.
 
         Args:
@@ -152,7 +155,7 @@ class TestBridgeYaraScanFiles:
         assert isinstance(results, list)
         assert results
 
-    def test_yara_scan_files_no_match_rule_returns_empty(self, loaded_bridge: Any, tmp_path: Path) -> None:
+    def test_yara_scan_files_no_match_rule_returns_empty(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a rule file with no matches returns an empty list.
 
         Args:

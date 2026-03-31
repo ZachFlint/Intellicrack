@@ -18,7 +18,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 import structlog
 
@@ -165,6 +165,7 @@ def _add_call_info(
 def _configure_structlog(
     log_level: str,
     log_dir: Path | None,
+    *,
     file_enabled: bool,
     console_enabled: bool,
     max_file_size_mb: int,
@@ -287,6 +288,7 @@ class IntellicrackLogger:
     def configure(
         level: str = "INFO",
         log_dir: Path | None = None,
+        *,
         file_enabled: bool = True,
         console_enabled: bool = True,
         max_file_size_mb: int = 10,
@@ -408,6 +410,7 @@ def log_tool_call(
     function_name: str,
     arguments: dict[str, object],
     duration_ms: float | None = None,
+    *,
     success: bool | None = None,
 ) -> None:
     """
@@ -642,12 +645,12 @@ class OperationTimer:
             return 0.0
         return (time.perf_counter() - self._start_time) * 1000
 
-    def __enter__(self) -> OperationTimer:
+    def __enter__(self) -> Self:
         """
         Start the timer and log operation start.
 
         Returns:
-            OperationTimer: Self for context manager use.
+            Self: Self for context manager use.
         """
         self._start_time = time.perf_counter()
         self._slog.debug(f"{self.operation}_started", **self.context)

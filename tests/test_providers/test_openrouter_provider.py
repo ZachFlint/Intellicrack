@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Integration tests for OpenRouterProvider model listing.
 
 These tests require a valid OPENROUTER_API_KEY in the .env file.
@@ -8,7 +13,13 @@ All tests use LIVE API calls - NO hardcoded model names.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+
+if TYPE_CHECKING:
+    from intellicrack.credentials.store import CredentialLoader
 
 from intellicrack.core.types import (
     AuthenticationError,
@@ -215,7 +226,8 @@ class TestOpenRouterConnection:
     @pytest.mark.asyncio
     @staticmethod
     async def test_disconnect_clears_connection_state(
-        credential_loader,
+        credential_loader: CredentialLoader,
+        *,
         has_openrouter_key: bool,
     ) -> None:
         """Test disconnect properly clears connection state."""

@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, TypeVar, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from ...core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 __all__ = [
@@ -83,6 +83,16 @@ def _ensure_loop() -> asyncio.AbstractEventLoop:
     return _state.loop
 
 
+def ensure_loop() -> asyncio.AbstractEventLoop:
+    """
+    Lazily start and return the persistent background event loop.
+
+    Returns:
+        asyncio.AbstractEventLoop: The running background event loop.
+    """
+    return _ensure_loop()
+
+
 class BridgeCallWorker(QThread):
     """
     Worker thread for non-blocking bridge coroutine execution.
@@ -121,7 +131,7 @@ class BridgeCallWorker(QThread):
             future = asyncio.run_coroutine_threadsafe(self._coro, loop)
             result = future.result()
             self.call_finished.emit(result)
-        except Exception as exc:
+        except (TimeoutError, RuntimeError, OSError, ValueError, TypeError, asyncio.CancelledError) as exc:
             _logger.exception("async_bridge_worker_failed")
             self.call_error.emit(exc)
 

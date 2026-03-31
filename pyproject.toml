@@ -331,7 +331,10 @@ exclude = [
   "tests/",
   "tools/",
   "typings/",
+  "vendor/",
+  "vulture_whitelist.py",
 ]
+force-exclude = true
 preview = true
 format.indent-style = "space"
 format.quote-style = "double"
@@ -869,6 +872,10 @@ ignore-names = [
   "quantization_config",
   "_config_dir",
   "preview",
+  "get_structlog_logger",
+  "connect_hex_widget_to_tools",
+  "execute_pattern_bytes",
+  "load_template",
 ]
 ignore-definitions-if-decorated-with = [
   "abstractmethod",
@@ -958,6 +965,7 @@ dependencies.yamlfmt = ">=0.21.0,<0.22"
 dependencies.pixi-pycharm = ">=0.0.10,<0.0.11"
 dependencies.capstone = ">=5.0.7,<6"
 dependencies.rust = ">=1.94.0,<1.95"
+dependencies.rust-src = ">=1.94.0,<2"
 pypi-dependencies.intellicrack = { path = ".", editable = true }
 # Build/packaging
 pypi-dependencies.pip = ">=26.0.1, <27"

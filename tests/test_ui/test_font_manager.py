@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for FontManager module.
 
 Validates font loading, fallback behavior, and font configuration
@@ -48,7 +53,7 @@ def font_manager(
         qapp: Qt application fixture.
 
     Yields:
-        A fresh FontManager instance.
+        Generator[FontManager]:: A fresh FontManager instance.
     """
     del qapp
     FontManager.reset_instance()
@@ -100,7 +105,7 @@ class TestFontLoading:
     def test_fonts_loaded_flag_set(font_manager: FontManager) -> None:
         """_fonts_loaded flag is set after loading."""
         font_manager.load_fonts()
-        assert font_manager._fonts_loaded
+        assert font_manager.fonts_loaded
 
     @staticmethod
     def test_loaded_families_populated(font_manager: FontManager) -> None:
@@ -233,7 +238,7 @@ class TestFontFamilyProperties:
         FontManager.reset_instance()
         manager = FontManager.get_instance()
         _ = manager.code_font_family
-        assert manager._fonts_loaded
+        assert manager.fonts_loaded
 
     @staticmethod
     @pytest.mark.usefixtures("font_manager")
@@ -242,7 +247,7 @@ class TestFontFamilyProperties:
         FontManager.reset_instance()
         manager = FontManager.get_instance()
         _ = manager.ui_font_family
-        assert manager._fonts_loaded
+        assert manager.fonts_loaded
 
     @staticmethod
     def test_loaded_families_is_copy(font_manager: FontManager) -> None:
@@ -392,7 +397,7 @@ class TestFontAssets:
         assets = get_assets_path()
         config_path = assets / "fonts" / "font_config.json"
 
-        with open(config_path, encoding="utf-8") as f:
+        with config_path.open(encoding="utf-8") as f:
             config = json.load(f)
 
         assert isinstance(config, dict), "Font config should be a dict"

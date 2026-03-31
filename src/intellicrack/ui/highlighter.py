@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Syntax highlighting for code display.
 
@@ -164,6 +163,7 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
     @staticmethod
     def _create_format(
         color: str,
+        *,
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
@@ -515,6 +515,7 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
     @staticmethod
     def _create_format(
         color: str,
+        *,
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
@@ -722,6 +723,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
     @staticmethod
     def _create_format(
         color: str,
+        *,
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
@@ -966,6 +968,7 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
     @staticmethod
     def _create_format(
         color: str,
+        *,
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:
@@ -1144,6 +1147,7 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
     @staticmethod
     def _create_format(
         color: str,
+        *,
         bold: bool = False,
         italic: bool = False,
     ) -> QTextCharFormat:

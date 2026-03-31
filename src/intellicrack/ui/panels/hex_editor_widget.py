@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Custom hex editor widget using QPainter rendering.
 
@@ -14,9 +13,10 @@ from __future__ import annotations
 
 import base64
 import math
+import string
 import struct
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal, cast, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, override
 
 from PyQt6.QtCore import QPoint, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
@@ -36,6 +36,10 @@ from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QMenu, QWidget
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 _logger = get_logger("ui.panels.hex_editor_widget")
@@ -358,10 +362,12 @@ class HexEditorWidget(QAbstractScrollArea):
         parent: Parent widget.
 
     Attributes:
+        DISPLAY_MODES: Available display mode names.
         cursor_moved: Signal emitted when the cursor position changes.
         selection_changed: Signal emitted when the selection range changes.
         data_changed: Signal emitted when data is modified.
         edit_mode_changed: Signal emitted when the edit mode changes.
+        about_to_modify: Signal emitted before data modification at offset.
     """
 
     DISPLAY_MODES: ClassVar[list[str]] = list(_MODE_PARAMS.keys())
@@ -388,7 +394,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._highlight_sources: dict[str, list[tuple[int, int, str]]] = {}
         self._selecting: bool = False
         self._display_mode: str = "hex8"
-        self._encoding: str = "ascii"
+        self.encoding: str = "ascii"
         self._highlight_rules: list[HighlightRule] = []
 
         self._setup_font()
@@ -506,7 +512,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return 0
         return (doc_len + self._bytes_per_row - 1) // self._bytes_per_row
 
-    def set_document(self, document: Any) -> None:
+    def set_document(self, document: object) -> None:
         """
         Attach a HexDocument to this widget.
 
@@ -695,7 +701,7 @@ class HexEditorWidget(QAbstractScrollArea):
             )
 
     @staticmethod
-    def _read_row_data(read_fn: Any, offset: int, length: int) -> bytes:
+    def _read_row_data(read_fn: Callable[[int, int], object] | None, offset: int, length: int) -> bytes:
         """
         Read a row of bytes from the document.
 
@@ -707,7 +713,7 @@ class HexEditorWidget(QAbstractScrollArea):
         Returns:
             bytes: Bytes data for the row.
         """
-        if not callable(read_fn):
+        if read_fn is None:
             return b""
         raw = read_fn(offset, length)
         if isinstance(raw, (bytes, bytearray)):
@@ -775,9 +781,8 @@ class HexEditorWidget(QAbstractScrollArea):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            else:
-                return f"{val_f:13.6g}"
-        elif mode == "float64":
+            return f"{val_f:13.6g}"
+        if mode == "float64":
             try:
                 val_d = cast("float", struct.unpack_from("<d", padded)[0])
             except struct.error:
@@ -830,7 +835,7 @@ class HexEditorWidget(QAbstractScrollArea):
             group_bytes,
             actual_size,
             group_offset,
-            any_selected,
+            any_selected=any_selected,
         )
 
         self._paint_hex_group_background(
@@ -839,14 +844,14 @@ class HexEditorWidget(QAbstractScrollArea):
             group_bytes,
             actual_size,
             highlight_color,
-            any_selected,
+            any_selected=any_selected,
         )
         self._set_hex_group_pen(
             painter,
             group_bytes,
             actual_size,
-            any_selected,
-            any_modified,
+            any_selected=any_selected,
+            any_modified=any_modified,
         )
 
         text = self._format_group(group_bytes, group_size)
@@ -881,6 +886,7 @@ class HexEditorWidget(QAbstractScrollArea):
         group_bytes: bytes,
         actual_size: int,
         group_offset: int,
+        *,
         any_selected: bool,
     ) -> str | None:
         """
@@ -911,6 +917,7 @@ class HexEditorWidget(QAbstractScrollArea):
         group_bytes: bytes,
         actual_size: int,
         highlight_color: str | None,
+        *,
         any_selected: bool,
     ) -> None:
         """
@@ -944,6 +951,7 @@ class HexEditorWidget(QAbstractScrollArea):
         painter: QPainter,
         group_bytes: bytes,
         actual_size: int,
+        *,
         any_selected: bool,
         any_modified: bool,
     ) -> None:
@@ -1028,11 +1036,11 @@ class HexEditorWidget(QAbstractScrollArea):
             sel_end: Selection end offset (-1 if none).
         """
         ascii_x = self._ascii_col_x + col * self._char_width
-        if self._encoding == "ascii":
+        if self.encoding == "ascii":
             ascii_ch = chr(byte_val) if _PRINTABLE_MIN <= byte_val <= _PRINTABLE_MAX else "."
         else:
             try:
-                ascii_ch = bytes([byte_val]).decode(self._encoding, errors="replace")
+                ascii_ch = bytes([byte_val]).decode(self.encoding, errors="replace")
                 if len(ascii_ch) != 1 or not ascii_ch.isprintable():
                     ascii_ch = "."
             except (UnicodeDecodeError, LookupError):
@@ -1217,31 +1225,31 @@ class HexEditorWidget(QAbstractScrollArea):
             return
 
         if key == Qt.Key.Key_Left:
-            self._move_cursor(self._cursor_offset - 1, shift)
+            self._move_cursor(self._cursor_offset - 1, extend_selection=shift)
         elif key == Qt.Key.Key_Right:
-            self._move_cursor(self._cursor_offset + 1, shift)
+            self._move_cursor(self._cursor_offset + 1, extend_selection=shift)
         elif key == Qt.Key.Key_Up:
-            self._move_cursor(self._cursor_offset - self._bytes_per_row, shift)
+            self._move_cursor(self._cursor_offset - self._bytes_per_row, extend_selection=shift)
         elif key == Qt.Key.Key_Down:
-            self._move_cursor(self._cursor_offset + self._bytes_per_row, shift)
+            self._move_cursor(self._cursor_offset + self._bytes_per_row, extend_selection=shift)
         elif key == Qt.Key.Key_Home:
             if ctrl:
-                self._move_cursor(0, shift)
+                self._move_cursor(0, extend_selection=shift)
             else:
                 row_start = (self._cursor_offset // self._bytes_per_row) * self._bytes_per_row
-                self._move_cursor(row_start, shift)
+                self._move_cursor(row_start, extend_selection=shift)
         elif key == Qt.Key.Key_End:
             if ctrl:
-                self._move_cursor(doc_len - 1, shift)
+                self._move_cursor(doc_len - 1, extend_selection=shift)
             else:
                 row_start = (self._cursor_offset // self._bytes_per_row) * self._bytes_per_row
                 row_end = min(row_start + self._bytes_per_row - 1, doc_len - 1)
-                self._move_cursor(row_end, shift)
+                self._move_cursor(row_end, extend_selection=shift)
         elif key in {Qt.Key.Key_PageUp, Qt.Key.Key_PageDown}:
             delta = self._visible_row_count() * self._bytes_per_row
             if key == Qt.Key.Key_PageUp:
                 delta = -delta
-            self._move_cursor(self._cursor_offset + delta, shift)
+            self._move_cursor(self._cursor_offset + delta, extend_selection=shift)
         elif key == Qt.Key.Key_Tab:
             self._active_column = "ascii" if self._active_column == "hex" else "hex"
             self._nibble_index = 0
@@ -1251,15 +1259,15 @@ class HexEditorWidget(QAbstractScrollArea):
             self.edit_mode_changed.emit(self._edit_mode)
             self._update_viewport()
         elif key in {Qt.Key.Key_Delete, Qt.Key.Key_Backspace}:
-            self._do_delete(key == Qt.Key.Key_Backspace)
+            self._do_delete(backspace=key == Qt.Key.Key_Backspace)
         elif text := event.text():
             if self._active_column == "hex":
-                if text in "0123456789abcdefABCDEF":
+                if text in string.hexdigits:
                     self._handle_hex_input(text)
             elif self._active_column == "ascii" and len(text) == 1 and _PRINTABLE_MIN <= ord(text) <= _PRINTABLE_MAX:
                 self._handle_ascii_input(text)
 
-    def _move_cursor(self, new_offset: int, extend_selection: bool = False) -> None:
+    def _move_cursor(self, new_offset: int, *, extend_selection: bool = False) -> None:
         """
         Move the cursor to a new offset.
 
@@ -1364,7 +1372,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self.data_changed.emit()
         self._move_cursor(self._cursor_offset + 1)
 
-    def _do_delete(self, backspace: bool) -> None:
+    def _do_delete(self, *, backspace: bool) -> None:
         """
         Delete byte(s) at cursor or selection.
 
@@ -1450,7 +1458,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
         data: bytes = b""
         stripped = text.replace(" ", "").replace("\n", "").replace("\r", "")
-        if all(c in "0123456789abcdefABCDEF" for c in stripped) and len(stripped) % 2 == 0:
+        if all(c in string.hexdigits for c in stripped) and len(stripped) % 2 == 0:
             try:
                 data = bytes.fromhex(stripped)
             except ValueError:
@@ -1605,7 +1613,7 @@ class HexEditorWidget(QAbstractScrollArea):
         mm_h = vp.geometry().height()
         self._minimap.setGeometry(mm_x, mm_y, _MINIMAP_WIDTH, mm_h)
 
-    def show_minimap(self, visible: bool = True) -> None:
+    def show_minimap(self, *, visible: bool = True) -> None:
         """
         Show or hide the entropy minimap.
 
@@ -1702,6 +1710,17 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         self._move_cursor(offset, extend_selection=False)
 
+    def set_selection_range(self, start: int, end: int) -> None:
+        """
+        Set the selection range programmatically.
+
+        Args:
+            start: Start byte offset of the selection.
+            end: End byte offset of the selection.
+        """
+        self._selection_start = start
+        self._selection_end = end
+
     def get_selection_bytes(self) -> bytes:
         """
         Get the bytes in the current selection.
@@ -1781,7 +1800,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if fmt == "base64":
             return base64.b64encode(data).decode("ascii")
         if fmt == "rust_array":
-            parts = []
+            parts: list[str] = []
             for i, b in enumerate(data):
                 suffix = "_u8" if i == 0 else ""
                 parts.append(f"0x{b:02X}{suffix}")
@@ -1790,13 +1809,13 @@ class HexEditorWidget(QAbstractScrollArea):
             inner = ", ".join(f"0x{b:02X}" for b in data)
             return f"new byte[] {{ {inner} }}"
         if fmt == "java_array":
-            parts = []
+            java_parts: list[str] = []
             for b in data:
                 if b > _ASCII_MAX:
-                    parts.append(f"(byte)0x{b:02X}")
+                    java_parts.append(f"(byte)0x{b:02X}")
                 else:
-                    parts.append(f"0x{b:02X}")
-            return f"new byte[] {{ {', '.join(parts)} }}"
+                    java_parts.append(f"0x{b:02X}")
+            return f"new byte[] {{ {', '.join(java_parts)} }}"
         if fmt == "javascript_array":
             inner = ", ".join(f"0x{b:02X}" for b in data)
             return f"new Uint8Array([{inner}])"
@@ -1869,7 +1888,11 @@ class HexEditorWidget(QAbstractScrollArea):
                 action = copy_as_menu.addAction(fmt_label)
                 if action is not None:
                     action.setEnabled(has_selection or has_data)
-                    action.triggered.connect(lambda _checked, k=fmt_key: self._copy_as_action(k))
+
+                    def _copy_as_slot(_checked: int, k: str = fmt_key) -> None:
+                        self._copy_as_action(k)
+
+                    action.triggered.connect(_copy_as_slot)
 
         display_menu = menu.addMenu("Display Mode")
         if display_menu is not None:
@@ -1898,13 +1921,21 @@ class HexEditorWidget(QAbstractScrollArea):
                 if action is not None:
                     action.setCheckable(True)
                     action.setChecked(self._display_mode == mode_key)
-                    action.triggered.connect(lambda _checked, m=mode_key: self.set_display_mode(m))
+
+                    def _mode_slot(_checked: int, m: str = mode_key) -> None:
+                        self.set_display_mode(m)
+
+                    action.triggered.connect(_mode_slot)
 
         minimap_action = menu.addAction("Show Entropy Minimap")
         if minimap_action is not None:
             minimap_action.setCheckable(True)
             minimap_action.setChecked(self._minimap.isVisible())
-            minimap_action.triggered.connect(self.show_minimap)
+
+            def _minimap_slot(v: int) -> None:
+                self.show_minimap(visible=bool(v))
+
+            minimap_action.triggered.connect(_minimap_slot)
 
         menu.exec(a0.globalPos())
 
@@ -1966,5 +1997,5 @@ class HexEditorWidget(QAbstractScrollArea):
         Args:
             encoding: Encoding name (e.g. "ascii", "utf-8", "latin-1").
         """
-        self._encoding = encoding
+        self.encoding = encoding
         self._update_viewport()

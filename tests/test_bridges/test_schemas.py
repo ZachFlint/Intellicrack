@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for bridges.schemas module - JSON Schema generation for LLM tool calling."""
 
 from __future__ import annotations
@@ -44,9 +49,10 @@ def _param(
     name: str = "target",
     param_type: str = "string",
     description: str = _PARAM_DESC,
+    *,
     required: bool = True,
     enum: list[str] | None = None,
-    default: str | int | float | bool | None = None,
+    default: str | float | bool | None = None,
 ) -> ToolParameter:
     """Build a ToolParameter with defaults for concise test setup.
 
@@ -59,7 +65,7 @@ def _param(
         default: Optional default value.
 
     Returns:
-        Configured ToolParameter instance.
+        ToolParameter: Configured ToolParameter instance.
     """
     return ToolParameter(
         name=name,
@@ -84,7 +90,7 @@ def _func(
         params: Optional parameter list.
 
     Returns:
-        Configured ToolFunction instance.
+        ToolFunction: Configured ToolFunction instance.
     """
     return ToolFunction(
         name=name,
@@ -103,7 +109,7 @@ def _tool(
         functions: Optional function list.
 
     Returns:
-        Configured ToolDefinition instance.
+        ToolDefinition: Configured ToolDefinition instance.
     """
     return ToolDefinition(
         tool_name=ToolName.BINARY,

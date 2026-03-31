@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Final
 
-from ...core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 _logger = get_logger("ui.resources.helper")

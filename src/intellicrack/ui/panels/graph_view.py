@@ -20,6 +20,7 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
+    QMouseEvent,
     QPainter,
     QPainterPath,
     QPen,
@@ -154,7 +155,7 @@ class BasicBlockItem(QGraphicsRectItem):
         super().__init__(0, 0, width, height, parent)
         self.setPen(QPen(self._colors["block_border"], 1.5))
         self.setBrush(QBrush(self._colors["block_bg"]))
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=True)
 
     @override
     def paint(
@@ -310,7 +311,7 @@ class CFGGraphScene(QGraphicsScene):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._block_items: dict[int, BasicBlockItem] = {}
+        self.block_items: dict[int, BasicBlockItem] = {}
 
     def load_graph(self, blocks: list[dict[str, Any]]) -> None:
         """
@@ -321,11 +322,27 @@ class CFGGraphScene(QGraphicsScene):
         """
         _logger.debug("graph_loading", block_count=len(blocks))
         self.clear()
-        self._block_items.clear()
+        self.block_items.clear()
 
         if not blocks:
             return
 
+        block_map = self._build_block_map(blocks)
+        layers = self._compute_layers(block_map)
+        self._position_layers(layers)
+        self._create_edges(block_map)
+        _logger.debug("graph_loaded", blocks=len(self.block_items), layers=len(layers))
+
+    def _build_block_map(self, blocks: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+        """
+        Build a mapping of offsets to blocks and create scene items.
+
+        Args:
+            blocks: Raw block dicts from r2 ``agj`` output.
+
+        Returns:
+            dict[int, dict[str, Any]]: Mapping of offset to block data.
+        """
         block_map: dict[int, dict[str, Any]] = {}
         for block in blocks:
             offset = int(block.get("offset", 0))
@@ -336,14 +353,21 @@ class CFGGraphScene(QGraphicsScene):
             if not isinstance(ops, list):
                 ops = []
             item = BasicBlockItem(offset, cast("list[dict[str, Any]]", ops))
-            self._block_items[offset] = item
+            self.block_items[offset] = item
             self.addItem(item)
 
-        layers = self._compute_layers(block_map)
+        return block_map
 
+    def _position_layers(self, layers: dict[int, list[int]]) -> None:
+        """
+        Compute positions for blocks in each layer and apply them.
+
+        Args:
+            layers: Mapping of layer index to list of block addresses.
+        """
         layer_widths: dict[int, float] = {}
         for layer_idx, addrs in layers.items():
-            total_w = sum(self._block_items[a].rect().width() for a in addrs if a in self._block_items)
+            total_w = sum(self.block_items[a].rect().width() for a in addrs if a in self.block_items)
             total_w += _LAYER_SPACING_H * max(0, len(addrs) - 1)
             layer_widths[layer_idx] = total_w
 
@@ -353,24 +377,20 @@ class CFGGraphScene(QGraphicsScene):
         for layer_idx in sorted(layers.keys()):
             addrs = layers[layer_idx]
             layer_w = layer_widths[layer_idx]
-            x_start = (max_width - layer_w) / 2
-            x = x_start
+            x = (max_width - layer_w) / 2
 
             for addr in addrs:
-                if addr not in self._block_items:
+                if addr not in self.block_items:
                     continue
-                item = self._block_items[addr]
+                item = self.block_items[addr]
                 item.setPos(x, y_offset)
                 x += item.rect().width() + _LAYER_SPACING_H
 
             max_height = max(
-                (self._block_items[a].rect().height() for a in addrs if a in self._block_items),
+                (self.block_items[a].rect().height() for a in addrs if a in self.block_items),
                 default=0,
             )
             y_offset += max_height + _LAYER_SPACING_V
-
-        self._create_edges(block_map)
-        _logger.debug("graph_loaded", blocks=len(self._block_items), layers=len(layers))
 
     def _create_edges(self, block_map: dict[int, dict[str, Any]]) -> None:
         """
@@ -380,9 +400,9 @@ class CFGGraphScene(QGraphicsScene):
             block_map: Mapping of block address to block data.
         """
         for offset, block in block_map.items():
-            if offset not in self._block_items:
+            if offset not in self.block_items:
                 continue
-            src_item = self._block_items[offset]
+            src_item = self.block_items[offset]
             src_rect = src_item.rect()
             src_pos = src_item.pos()
             src_bottom = QPointF(
@@ -395,8 +415,8 @@ class CFGGraphScene(QGraphicsScene):
 
             has_conditional = jump_target is not None and fail_target is not None
 
-            if jump_target is not None and int(jump_target) in self._block_items:
-                dst_item = self._block_items[int(jump_target)]
+            if jump_target is not None and int(jump_target) in self.block_items:
+                dst_item = self.block_items[int(jump_target)]
                 dst_pos = dst_item.pos()
                 dst_top = QPointF(
                     dst_pos.x() + dst_item.rect().width() / 2,
@@ -406,8 +426,8 @@ class CFGGraphScene(QGraphicsScene):
                 edge = EdgeItem(src_bottom, dst_top, edge_type)
                 self.addItem(edge)
 
-            if fail_target is not None and int(fail_target) in self._block_items:
-                dst_item = self._block_items[int(fail_target)]
+            if fail_target is not None and int(fail_target) in self.block_items:
+                dst_item = self.block_items[int(fail_target)]
                 dst_pos = dst_item.pos()
                 dst_top = QPointF(
                     dst_pos.x() + dst_item.rect().width() / 2,
@@ -534,7 +554,7 @@ class CFGGraphView(QGraphicsView):
             self.scale(1.0 / _ZOOM_FACTOR, 1.0 / _ZOOM_FACTOR)
 
     @override
-    def mousePressEvent(self, event: Any) -> None:
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:
         """
         Handle mouse press and emit block_clicked for block selection.
 
@@ -542,6 +562,8 @@ class CFGGraphView(QGraphicsView):
             event: Mouse event.
         """
         super().mousePressEvent(event)
+        if event is None:
+            return
         item = self.itemAt(event.pos())
         if isinstance(item, BasicBlockItem):
             self.block_clicked.emit(item.block_address)

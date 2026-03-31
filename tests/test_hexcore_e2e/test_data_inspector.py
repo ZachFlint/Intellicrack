@@ -6,11 +6,15 @@
 from __future__ import annotations
 
 import struct
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 
+if TYPE_CHECKING:
+    import types
+
+    from intellicrack_hexcore import HexDocument
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     "u8",
     "i8",
@@ -40,7 +44,7 @@ class TestInspectAtBasic:
     all standard data-type interpretation keys.
     """
 
-    def test_inspect_at_returns_dict(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_returns_dict(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() returns a dict object.
 
         Args:
@@ -49,7 +53,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert isinstance(result, dict)
 
-    def test_inspect_at_has_u8_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_u8_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'u8' key.
 
         Args:
@@ -58,7 +62,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "u8" in result
 
-    def test_inspect_at_has_i8_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_i8_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'i8' key.
 
         Args:
@@ -67,7 +71,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "i8" in result
 
-    def test_inspect_at_has_u16_le_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_u16_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'u16_le' key.
 
         Args:
@@ -76,7 +80,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "u16_le" in result
 
-    def test_inspect_at_has_u32_le_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_u32_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'u32_le' key.
 
         Args:
@@ -85,7 +89,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "u32_le" in result
 
-    def test_inspect_at_has_u32_be_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_u32_be_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'u32_be' key.
 
         Args:
@@ -94,7 +98,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "u32_be" in result
 
-    def test_inspect_at_has_u64_le_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_u64_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'u64_le' key.
 
         Args:
@@ -103,7 +107,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "u64_le" in result
 
-    def test_inspect_at_has_f32_le_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_f32_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'f32_le' key.
 
         Args:
@@ -112,7 +116,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "f32_le" in result
 
-    def test_inspect_at_has_f64_le_key(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_has_f64_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains the 'f64_le' key.
 
         Args:
@@ -121,7 +125,7 @@ class TestInspectAtBasic:
         result = sample_doc_from_bytes.inspect_at(0)
         assert "f64_le" in result
 
-    def test_inspect_at_contains_all_expected_keys(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_contains_all_expected_keys(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() result contains all keys defined in _EXPECTED_KEYS.
 
         Args:
@@ -131,7 +135,7 @@ class TestInspectAtBasic:
         for key in _EXPECTED_KEYS:
             assert key in result, f"Missing expected key: {key!r}"
 
-    def test_inspect_at_all_values_are_strings(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_all_values_are_strings(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that all values in the inspect_at() dict are strings.
 
         Args:
@@ -150,14 +154,14 @@ class TestInspectAtValues:
     """
 
     @pytest.fixture
-    def known_doc(self, hexcore: Any) -> Any:
+    def known_doc(self, hexcore: types.ModuleType) -> HexDocument:
         """Build a 64-byte document with known values at specific offsets.
 
         Args:
             hexcore: The native hexcore module fixture.
 
         Returns:
-            Any: A HexDocument containing 64 bytes of controlled test data.
+            HexDocument: A HexDocument containing 64 bytes of controlled test data.
         """
         data = bytearray(64)
         struct.pack_into("<I", data, 0, 0xDEADBEEF)
@@ -168,7 +172,7 @@ class TestInspectAtValues:
         struct.pack_into(">H", data, 42, 0x5678)
         return hexcore.HexDocument.open_bytes(bytes(data))
 
-    def test_u8_at_zero_byte_in_known_data(self, hexcore: Any) -> None:
+    def test_u8_at_zero_byte_in_known_data(self, hexcore: types.ModuleType) -> None:
         """Verify that inspect_at(0) on bytes(range(256)) gives u8='0' for the first byte.
 
         Args:
@@ -178,7 +182,7 @@ class TestInspectAtValues:
         result = doc.inspect_at(0)
         assert result["u8"] == "0"
 
-    def test_u8_at_offset_255(self, hexcore: Any) -> None:
+    def test_u8_at_offset_255(self, hexcore: types.ModuleType) -> None:
         """Verify that inspect_at(255) on bytes(range(256)) gives u8='255' for the last byte.
 
         Args:
@@ -188,7 +192,7 @@ class TestInspectAtValues:
         result = doc.inspect_at(255)
         assert result["u8"] == "255"
 
-    def test_u32_le_known_value(self, known_doc: Any) -> None:
+    def test_u32_le_known_value(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(0) gives u32_le='3735928559' for 0xDEADBEEF at offset 0.
 
         Args:
@@ -197,7 +201,7 @@ class TestInspectAtValues:
         result = known_doc.inspect_at(0)
         assert result["u32_le"] == str(0xDEADBEEF)
 
-    def test_u32_be_known_value(self, known_doc: Any) -> None:
+    def test_u32_be_known_value(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(0) gives the byte-swapped u32_be for 0xDEADBEEF bytes.
 
         Args:
@@ -207,7 +211,7 @@ class TestInspectAtValues:
         expected = struct.unpack(">I", struct.pack("<I", 0xDEADBEEF))[0]
         assert result["u32_be"] == str(expected)
 
-    def test_u8_at_known_byte(self, known_doc: Any) -> None:
+    def test_u8_at_known_byte(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(32) gives u8='42' for the byte set to 42.
 
         Args:
@@ -216,7 +220,7 @@ class TestInspectAtValues:
         result = known_doc.inspect_at(32)
         assert result["u8"] == "42"
 
-    def test_u16_le_known_value(self, known_doc: Any) -> None:
+    def test_u16_le_known_value(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(40) gives u16_le='4660' for 0x1234 stored little-endian.
 
         Args:
@@ -225,7 +229,7 @@ class TestInspectAtValues:
         result = known_doc.inspect_at(40)
         assert result["u16_le"] == str(0x1234)
 
-    def test_u16_be_known_value(self, known_doc: Any) -> None:
+    def test_u16_be_known_value(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(42) gives u16_be='22136' for 0x5678 stored big-endian.
 
         Args:
@@ -234,7 +238,7 @@ class TestInspectAtValues:
         result = known_doc.inspect_at(42)
         assert result["u16_be"] == str(0x5678)
 
-    def test_f32_le_known_value(self, known_doc: Any) -> None:
+    def test_f32_le_known_value(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(16) gives f32_le near 1.0 for IEEE 754 1.0 float.
 
         Args:
@@ -245,7 +249,7 @@ class TestInspectAtValues:
         parsed = float(f32_str)
         assert abs(parsed - 1.0) < 1e-5
 
-    def test_f64_le_known_value(self, known_doc: Any) -> None:
+    def test_f64_le_known_value(self, known_doc: HexDocument) -> None:
         """Verify that inspect_at(24) gives f64_le near 1.0 for IEEE 754 double 1.0.
 
         Args:
@@ -265,7 +269,7 @@ class TestInspectAtEdge:
     return a result dict without raising an exception.
     """
 
-    def test_inspect_at_last_valid_offset(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_last_valid_offset(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() at the last byte offset returns a dict without error.
 
         Args:
@@ -276,7 +280,7 @@ class TestInspectAtEdge:
         assert isinstance(result, dict)
         assert "u8" in result
 
-    def test_inspect_at_near_end_partial_types(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_near_end_partial_types(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() near the end still returns a dict for partial multi-byte types.
 
         Args:
@@ -286,7 +290,7 @@ class TestInspectAtEdge:
         assert isinstance(result, dict)
         assert "u8" in result
 
-    def test_inspect_at_mid_document_offset(self, sample_doc_from_bytes: Any) -> None:
+    def test_inspect_at_mid_document_offset(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that inspect_at() at a mid-document offset returns a non-empty dict.
 
         Args:
@@ -296,7 +300,7 @@ class TestInspectAtEdge:
         assert isinstance(result, dict)
         assert result
 
-    def test_inspect_at_offset_zero_u8_value(self, hexcore: Any) -> None:
+    def test_inspect_at_offset_zero_u8_value(self, hexcore: types.ModuleType) -> None:
         """Verify that inspect_at(0) on a single-byte document returns u8 for that byte.
 
         Args:

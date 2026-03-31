@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Sandbox manager for coordinating sandbox instances.
 
@@ -12,20 +11,20 @@ This module provides a manager for creating, tracking, and coordinating multiple
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, assert_never
 from uuid import uuid4
 
-from ..core.logging import get_logger
-from .base import (
+from intellicrack.core.logging import get_logger
+from intellicrack.sandbox.base import (
     ExecutionReport,
     SandboxBase,
     SandboxConfig,
     SandboxError,
     SandboxState,
 )
-from .qemu import QEMUConfig, QEMUSandbox
-from .windows import WindowsSandbox
+from intellicrack.sandbox.qemu import QEMUConfig, QEMUSandbox
+from intellicrack.sandbox.windows import WindowsSandbox
 
 
 if TYPE_CHECKING:
@@ -40,14 +39,6 @@ SandboxType = Literal["windows", "qemu"]
 class SandboxInstance:
     """
     Represents a managed sandbox instance.
-
-    Attributes:
-        id: Unique instance identifier (auto-generated UUID).
-        sandbox_type: Type of sandbox backing this instance.
-        sandbox: The sandbox implementation.
-        created_at: When this instance was created.
-        last_used: When this instance was last accessed.
-        binary_path: Path to the binary being analyzed, if any.
 
     Args:
         sandbox: The sandbox implementation.
@@ -64,8 +55,8 @@ class SandboxInstance:
         self.id = str(uuid4())
         self.sandbox_type = sandbox_type
         self.sandbox = sandbox
-        self.created_at = datetime.now()
-        self.last_used = datetime.now()
+        self.created_at = datetime.now(UTC)
+        self.last_used = datetime.now(UTC)
         self.binary_path = binary_path
 
     @property
@@ -80,7 +71,7 @@ class SandboxInstance:
 
     def touch(self) -> None:
         """Update last used timestamp."""
-        self.last_used = datetime.now()
+        self.last_used = datetime.now(UTC)
 
 
 class SandboxManager:
@@ -154,8 +145,9 @@ class SandboxManager:
         sandbox_type: SandboxType = "windows",
         config: SandboxConfig | None = None,
         binary_path: Path | None = None,
-        auto_start: bool = True,
         qemu_config: QEMUConfig | None = None,
+        *,
+        auto_start: bool = True,
     ) -> SandboxInstance:
         """
         Create a new sandbox instance.
@@ -164,8 +156,8 @@ class SandboxManager:
             sandbox_type: Type of sandbox to create.
             config: Optional configuration override.
             binary_path: Optional binary to associate.
-            auto_start: Whether to start the sandbox immediately.
             qemu_config: Optional QEMU-specific configuration.
+            auto_start: Whether to start the sandbox immediately.
 
         Returns:
             SandboxInstance: Created sandbox instance.
@@ -211,7 +203,7 @@ class SandboxManager:
                         sandbox.enable_vnc_display()
                     await sandbox.start()
                     _logger.info("sandbox_instance_started", instance_id=instance.id)
-                except Exception as e:
+                except (OSError, RuntimeError, SandboxError) as e:
                     _logger.warning("sandbox_auto_start_failed", instance_id=instance.id, error=str(e))
                     del self._instances[instance.id]
                     error_message = f"Failed to start sandbox: {e}"
@@ -249,7 +241,7 @@ class SandboxManager:
 
             try:
                 await instance.sandbox.stop()
-            except Exception as e:
+            except (OSError, RuntimeError, SandboxError) as e:
                 _logger.warning("sandbox_stop_error", instance_id=instance_id, error=str(e))
 
             del self._instances[instance_id]
@@ -261,7 +253,7 @@ class SandboxManager:
         for instance_id in instance_ids:
             try:
                 await self.destroy(instance_id)
-            except Exception as e:
+            except (OSError, RuntimeError, SandboxError) as e:
                 _logger.warning("sandbox_destroy_error", instance_id=instance_id, error=str(e))
 
     async def run_binary(
@@ -270,10 +262,11 @@ class SandboxManager:
         args: list[str] | None = None,
         sandbox_type: SandboxType = "windows",
         config: SandboxConfig | None = None,
-        timeout: int | None = None,
+        time_limit: int | None = None,
+        qemu_config: QEMUConfig | None = None,
+        *,
         monitor: bool = True,
         reuse_instance: bool = False,
-        qemu_config: QEMUConfig | None = None,
     ) -> tuple[SandboxInstance, ExecutionReport]:
         """
         Run a binary in a sandbox.
@@ -286,16 +279,18 @@ class SandboxManager:
             args: Optional command line arguments.
             sandbox_type: Type of sandbox to use.
             config: Optional configuration override.
-            timeout: Optional timeout override.
+            time_limit: Optional timeout override in seconds.
+            qemu_config: Optional QEMU-specific configuration.
             monitor: Whether to monitor behavior.
             reuse_instance: Whether to reuse an existing idle instance.
-            qemu_config: Optional QEMU-specific configuration.
 
         Returns:
             tuple[SandboxInstance, ExecutionReport]: Tuple of (sandbox instance, execution report).
 
         Raises:
-            Exception: If binary execution fails in the sandbox.
+            OSError: If a system-level I/O error occurs.
+            RuntimeError: If a runtime error occurs during sandbox operations.
+            SandboxError: If binary execution fails in the sandbox.
         """
         instance: SandboxInstance | None = None
 
@@ -319,11 +314,11 @@ class SandboxManager:
             report = await instance.sandbox.run_binary(
                 binary_path=binary_path,
                 args=args,
-                timeout=timeout,
+                time_limit=time_limit,
                 monitor=monitor,
             )
 
-        except Exception:
+        except (OSError, RuntimeError, SandboxError):
             _logger.warning("binary_execution_failed", instance_id=instance.id)
             raise
 
@@ -382,7 +377,7 @@ class SandboxManager:
             int: Number of instances cleaned up.
         """
         _logger.debug("stale_cleanup_starting", max_idle_seconds=max_idle_seconds, total_instances=len(self._instances))
-        now = datetime.now()
+        now = datetime.now(UTC)
         stale_ids: list[str] = []
 
         for instance_id, instance in self._instances.items():
@@ -393,7 +388,7 @@ class SandboxManager:
         for instance_id in stale_ids:
             try:
                 await self.destroy(instance_id)
-            except Exception as e:
+            except (OSError, RuntimeError, SandboxError) as e:
                 _logger.warning("stale_sandbox_cleanup_error", instance_id=instance_id, error=str(e))
 
         return len(stale_ids)

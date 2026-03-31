@@ -12,21 +12,25 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
+
 
 pytest.importorskip("intellicrack_hexcore")
 
 _REQUIRED_KEYS: frozenset[str] = frozenset({"file_path", "size", "modified", "cursor", "selection"})
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -42,7 +46,7 @@ def _run(coro: Any) -> Any:
 class TestDocumentInfoNoDocument:
     """Tests covering get_document_info when no file is open."""
 
-    def test_no_document_file_path_is_none(self, bridge: Any) -> None:
+    def test_no_document_file_path_is_none(self, bridge: HexEditorBridge) -> None:
         """Verify file_path is None when no document is open.
 
         Args:
@@ -51,7 +55,7 @@ class TestDocumentInfoNoDocument:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["file_path"] is None
 
-    def test_no_document_size_is_zero(self, bridge: Any) -> None:
+    def test_no_document_size_is_zero(self, bridge: HexEditorBridge) -> None:
         """Verify size is 0 when no document is open.
 
         Args:
@@ -60,7 +64,7 @@ class TestDocumentInfoNoDocument:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["size"] == 0
 
-    def test_no_document_modified_is_false(self, bridge: Any) -> None:
+    def test_no_document_modified_is_false(self, bridge: HexEditorBridge) -> None:
         """Verify modified is False when no document is open.
 
         Args:
@@ -69,7 +73,7 @@ class TestDocumentInfoNoDocument:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["modified"] is False
 
-    def test_no_document_cursor_is_zero(self, bridge: Any) -> None:
+    def test_no_document_cursor_is_zero(self, bridge: HexEditorBridge) -> None:
         """Verify cursor is 0 when no document is open.
 
         Args:
@@ -78,7 +82,7 @@ class TestDocumentInfoNoDocument:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["cursor"] == 0
 
-    def test_no_document_selection_is_none(self, bridge: Any) -> None:
+    def test_no_document_selection_is_none(self, bridge: HexEditorBridge) -> None:
         """Verify selection is None when no document is open.
 
         Args:
@@ -87,7 +91,7 @@ class TestDocumentInfoNoDocument:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["selection"] is None
 
-    def test_no_document_all_required_keys_present(self, bridge: Any) -> None:
+    def test_no_document_all_required_keys_present(self, bridge: HexEditorBridge) -> None:
         """Verify all required keys are present even with no document open.
 
         Args:
@@ -100,7 +104,7 @@ class TestDocumentInfoNoDocument:
 class TestDocumentInfoWithFile:
     """Tests covering get_document_info after a file has been opened."""
 
-    def test_open_pe_file_path_matches(self, bridge: Any, pe_binary: Path) -> None:
+    def test_open_pe_file_path_matches(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify file_path matches the opened PE file path.
 
         Args:
@@ -111,7 +115,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["file_path"] == str(pe_binary)
 
-    def test_open_pe_size_is_1024(self, bridge: Any, pe_binary: Path) -> None:
+    def test_open_pe_size_is_1024(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify size equals the on-disk PE file size (1024 bytes).
 
         Args:
@@ -122,7 +126,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["size"] == pe_binary.stat().st_size
 
-    def test_open_pe_modified_is_false(self, bridge: Any, pe_binary: Path) -> None:
+    def test_open_pe_modified_is_false(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify modified is False immediately after opening a file.
 
         Args:
@@ -133,7 +137,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["modified"] is False
 
-    def test_write_bytes_sets_modified_true(self, bridge: Any, pe_binary: Path) -> None:
+    def test_write_bytes_sets_modified_true(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify modified becomes True after writing bytes.
 
         Args:
@@ -145,7 +149,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["modified"] is True
 
-    def test_goto_offset_updates_cursor(self, bridge: Any, pe_binary: Path) -> None:
+    def test_goto_offset_updates_cursor(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify cursor field reflects the offset set by goto_offset.
 
         Args:
@@ -157,7 +161,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["cursor"] == 256
 
-    def test_select_range_sets_selection(self, bridge: Any, pe_binary: Path) -> None:
+    def test_select_range_sets_selection(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify selection reflects the range set by select_range.
 
         Args:
@@ -169,7 +173,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["selection"] == [10, 20]
 
-    def test_all_required_keys_present_with_file(self, bridge: Any, pe_binary: Path) -> None:
+    def test_all_required_keys_present_with_file(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify all required keys are present after opening a file.
 
         Args:
@@ -180,7 +184,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert _REQUIRED_KEYS.issubset(info.keys())
 
-    def test_multiple_operations_info_consistency(self, bridge: Any, pe_binary: Path) -> None:
+    def test_multiple_operations_info_consistency(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify info remains self-consistent after a sequence of operations.
 
         Opens a file, moves cursor, selects a range, and confirms info fields
@@ -201,7 +205,7 @@ class TestDocumentInfoWithFile:
         assert info["selection"] == [32, 96]
         assert info["modified"] is True
 
-    def test_size_matches_actual_file_size(self, bridge: Any, pe_binary: Path) -> None:
+    def test_size_matches_actual_file_size(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify size in document info exactly matches the file's on-disk size.
 
         Args:
@@ -213,7 +217,7 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["size"] == expected_size
 
-    def test_undo_after_write_may_clear_modified(self, bridge: Any, pe_binary: Path) -> None:
+    def test_undo_after_write_may_clear_modified(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify undo after a single write may restore unmodified state.
 
         After writing and then undoing, the document may report modified as

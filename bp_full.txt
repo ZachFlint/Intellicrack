@@ -1,0 +1,948 @@
+d:\Intellicrack\src\intellicrack\bridges\binary.py
+  d:\Intellicrack\src\intellicrack\bridges\binary.py:398:22 - error: Cannot assign to attribute "state" for class "BinaryBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\bridges\cutter.py
+  d:\Intellicrack\src\intellicrack\bridges\cutter.py:561:22 - error: Cannot assign to attribute "state" for class "CutterBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\bridges\frida_bridge.py
+  d:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:524:26 - error: Cannot assign to attribute "state" for class "FridaBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\bridges\ghidra.py
+  d:\Intellicrack\src\intellicrack\bridges\ghidra.py:586:22 - error: Cannot assign to attribute "state" for class "GhidraBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\bridges\process.py
+  d:\Intellicrack\src\intellicrack\bridges\process.py:475:26 - error: Cannot assign to attribute "state" for class "ProcessBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\bridges\process.py:487:26 - error: Cannot assign to attribute "state" for class "ProcessBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py
+  d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:397:22 - error: Cannot assign to attribute "state" for class "SandboxBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:415:22 - error: Cannot assign to attribute "state" for class "SandboxBridge*"
+    "BridgeState" is not assignable to "property" (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\bridges\x64dbg.py
+  d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1241:35 - error: Type of "handle_event" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1241:35 - error: Argument type is unknown
+    Argument corresponds to parameter "event_handler" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1241:40 - error: Cannot access attribute "handle_event" for class "X64DbgBridge*"
+    Attribute "handle_event" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1244:49 - error: Type of "handle_event" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1244:49 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "set_event_handler" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1244:54 - error: Cannot access attribute "handle_event" for class "X64DbgBridge*"
+    Attribute "handle_event" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\core\config.py
+  d:\Intellicrack\src\intellicrack\core\config.py:500:9 - error: Type of "data" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\config.py:500:16 - error: Type of "to_dict" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\config.py:500:21 - error: Cannot access attribute "to_dict" for class "Config*"
+    Attribute "to_dict" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\core\orchestrator.py
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:290:13 - error: Type of "binary_info" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:290:33 - error: Type of "load_binary" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:290:38 - error: Cannot access attribute "load_binary" for class "Orchestrator*"
+    Attribute "load_binary" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:291:37 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "append" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:1299:9 - error: Type of "binary_info" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:1299:29 - error: Type of "load_binary" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:1299:34 - error: Cannot access attribute "load_binary" for class "Orchestrator*"
+    Attribute "load_binary" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:1300:47 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "append" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:1304:56 - error: Argument type is unknown
+    Argument corresponds to parameter "binary_info" in function "_run_bridge_analysis" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\orchestrator.py:1311:16 - error: Return type is unknown (reportUnknownVariableType)
+d:\Intellicrack\src\intellicrack\core\session.py
+  d:\Intellicrack\src\intellicrack\core\session.py:247:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:247:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:247:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:248:13 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:262:13 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:267:13 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:292:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:292:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:292:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:293:13 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:312:13 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:318:17 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:335:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:335:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:335:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:336:13 - error: Type of "row" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:336:19 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:336:19 - error: Type of "fetchone" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:345:13 - error: Type of "tags_rows" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:345:25 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:345:25 - error: Type of "fetchall" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:350:13 - error: Type of "tags" is partially unknown
+    Type of "tags" is "list[Unknown]" (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:350:34 - error: Type of "r" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:352:31 - error: Argument type is unknown
+    Argument corresponds to parameter "s" in function "loads" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:355:20 - error: Argument type is unknown
+    Argument corresponds to parameter "id" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:356:22 - error: Argument type is unknown
+    Argument corresponds to parameter "name" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:357:51 - error: Argument type is unknown
+    Argument corresponds to parameter "date_string" in function "fromisoformat" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:358:51 - error: Argument type is unknown
+    Argument corresponds to parameter "date_string" in function "fromisoformat" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:360:23 - error: Argument type is unknown
+    Argument corresponds to parameter "model" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:361:37 - error: Argument type is unknown
+    Argument corresponds to parameter "active_binary_index" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:362:23 - error: Argument type is unknown
+    Argument corresponds to parameter "notes" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:363:22 - error: Argument type is partially unknown
+    Argument corresponds to parameter "tags" in function "__init__"
+    Argument type is "list[Unknown]" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:383:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:383:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:383:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:384:13 - error: Type of "cursor" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:384:22 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:388:13 - error: Type of "deleted" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:388:23 - error: Type of "rowcount" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:393:16 - error: Return type is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:405:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:405:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:405:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:406:13 - error: Type of "rows" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:406:20 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:406:20 - error: Type of "fetchall" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:417:17 - error: Type of "row" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:418:35 - error: Argument type is unknown
+    Argument corresponds to parameter "s" in function "loads" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:421:28 - error: Argument type is unknown
+    Argument corresponds to parameter "id" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:422:30 - error: Argument type is unknown
+    Argument corresponds to parameter "name" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:423:59 - error: Argument type is unknown
+    Argument corresponds to parameter "date_string" in function "fromisoformat" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:424:59 - error: Argument type is unknown
+    Argument corresponds to parameter "date_string" in function "fromisoformat" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:426:31 - error: Argument type is unknown
+    Argument corresponds to parameter "model" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:445:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:445:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:445:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:446:13 - error: Type of "rows" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:446:20 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:446:20 - error: Type of "fetchall" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:458:17 - error: Type of "row" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:459:35 - error: Argument type is unknown
+    Argument corresponds to parameter "s" in function "loads" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:462:28 - error: Argument type is unknown
+    Argument corresponds to parameter "id" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:463:30 - error: Argument type is unknown
+    Argument corresponds to parameter "name" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:464:59 - error: Argument type is unknown
+    Argument corresponds to parameter "date_string" in function "fromisoformat" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:465:59 - error: Argument type is unknown
+    Argument corresponds to parameter "date_string" in function "fromisoformat" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:467:31 - error: Argument type is unknown
+    Argument corresponds to parameter "model" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:488:14 - error: Type of "connection" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:488:19 - error: Cannot access attribute "connection" for class "SessionStore*"
+    Attribute "connection" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\core\session.py:488:35 - error: Type of "conn" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:489:13 - error: Type of "cursor" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:489:22 - error: Type of "execute" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:497:13 - error: Type of "deleted" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:497:23 - error: Type of "rowcount" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:502:16 - error: Return type is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\core\session.py:1003:51 - error: Type of "auto_save_loop" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\core\session.py:1003:51 - error: Argument type is unknown
+    Argument corresponds to parameter "coro" in function "create_task" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\core\session.py:1003:56 - error: Cannot access attribute "auto_save_loop" for class "SessionManager*"
+    Attribute "auto_save_loop" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\anthropic.py
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:364:9 - error: Type of "anthropic_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:364:30 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:364:35 - error: Cannot access attribute "convert_messages_to_provider_format" for class "AnthropicProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:368:13 - error: Type of "anthropic_tools" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:368:31 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:368:36 - error: Cannot access attribute "convert_tools_to_provider_format" for class "AnthropicProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:384:19 - error: Argument type is partially unknown
+    Argument corresponds to parameter "tools" in function "_build_api_kwargs"
+    Argument type is "Unknown | list[dict[str, object]] | None" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:459:9 - error: Type of "anthropic_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:459:30 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:459:35 - error: Cannot access attribute "convert_messages_to_provider_format" for class "AnthropicProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:463:13 - error: Type of "anthropic_tools" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:463:31 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:463:36 - error: Cannot access attribute "convert_tools_to_provider_format" for class "AnthropicProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\anthropic.py:471:19 - error: Argument type is partially unknown
+    Argument corresponds to parameter "tools" in function "_build_api_kwargs"
+    Argument type is "Unknown | list[dict[str, object]] | None" (reportUnknownArgumentType)
+d:\Intellicrack\src\intellicrack\providers\google.py
+  d:\Intellicrack\src\intellicrack\providers\google.py:258:9 - error: Type of "gemini_contents" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\google.py:258:27 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\google.py:258:32 - error: Cannot access attribute "convert_messages_to_provider_format" for class "GoogleProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\google.py:381:9 - error: Type of "gemini_contents" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\google.py:381:27 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\google.py:381:32 - error: Cannot access attribute "convert_messages_to_provider_format" for class "GoogleProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\grok.py
+  d:\Intellicrack\src\intellicrack\providers\grok.py:268:9 - error: Type of "grok_messages_raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:268:29 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:268:34 - error: Cannot access attribute "convert_messages_to_provider_format" for class "GrokProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:273:13 - error: Type of "grok_tools_raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:273:30 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:273:35 - error: Cannot access attribute "convert_tools_to_provider_format" for class "GrokProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:454:9 - error: Type of "grok_messages_raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:454:29 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:454:34 - error: Cannot access attribute "convert_messages_to_provider_format" for class "GrokProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:459:13 - error: Type of "grok_tools_raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:459:30 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\grok.py:459:35 - error: Cannot access attribute "convert_tools_to_provider_format" for class "GrokProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\huggingface.py
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:289:9 - error: Type of "hf_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:289:23 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:289:28 - error: Cannot access attribute "convert_messages_to_provider_format" for class "HuggingFaceProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:306:37 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:306:42 - error: Cannot access attribute "convert_tools_to_provider_format" for class "HuggingFaceProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:479:9 - error: Type of "hf_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:479:23 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:479:28 - error: Cannot access attribute "convert_messages_to_provider_format" for class "HuggingFaceProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:500:41 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\huggingface.py:500:46 - error: Cannot access attribute "convert_tools_to_provider_format" for class "HuggingFaceProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\local_transformers.py
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:414:13 - error: Type of "prompt" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:414:22 - error: Type of "format_prompt" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:414:27 - error: Cannot access attribute "format_prompt" for class "LocalTransformersProvider*"
+    Attribute "format_prompt" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:418:17 - error: Argument type is unknown
+    Argument corresponds to parameter "prompt" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:425:17 - error: Type of "tool_calls" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:425:30 - error: Type of "parse_tool_calls" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:425:35 - error: Cannot access attribute "parse_tool_calls" for class "LocalTransformersProvider*"
+    Attribute "parse_tool_calls" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:434:28 - error: Argument type is partially unknown
+    Argument corresponds to parameter "tool_calls" in function "__init__"
+    Argument type is "Unknown | list[ToolCall] | None" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:449:20 - error: Return type, "tuple[Message, Unknown | list[ToolCall] | None]", is partially unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:504:13 - error: Type of "prompt" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:504:22 - error: Type of "format_prompt" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:504:27 - error: Cannot access attribute "format_prompt" for class "LocalTransformersProvider*"
+    Attribute "format_prompt" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:507:54 - error: Argument type is unknown
+    Argument corresponds to parameter "prompt" in function "_stream_generate" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:515:20 - error: Type of "parsed_calls" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:515:36 - error: Type of "parse_tool_calls" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:515:41 - error: Cannot access attribute "parse_tool_calls" for class "LocalTransformersProvider*"
+    Attribute "parse_tool_calls" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:830:16 - error: Type of "format_prompt_chatml_fallback" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:830:16 - error: Return type is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\local_transformers.py:830:21 - error: Cannot access attribute "format_prompt_chatml_fallback" for class "LocalTransformersProvider*"
+    Attribute "format_prompt_chatml_fallback" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\ollama.py
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:455:9 - error: Type of "ollama_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:455:27 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:455:32 - error: Cannot access attribute "convert_messages_to_provider_format" for class "OllamaProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:474:37 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:474:42 - error: Cannot access attribute "convert_tools_to_provider_format" for class "OllamaProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:630:9 - error: Type of "ollama_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:630:27 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\ollama.py:630:32 - error: Cannot access attribute "convert_messages_to_provider_format" for class "OllamaProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\openai.py
+  d:\Intellicrack\src\intellicrack\providers\openai.py:299:9 - error: Type of "openai_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:299:27 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:299:32 - error: Cannot access attribute "convert_messages_to_provider_format" for class "OpenAIProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:300:9 - error: Type of "openai_tools" is partially unknown
+    Type of "openai_tools" is "Unknown | None" (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:300:24 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:300:29 - error: Cannot access attribute "convert_tools_to_provider_format" for class "OpenAIProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:496:9 - error: Type of "openai_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:496:27 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:496:32 - error: Cannot access attribute "convert_messages_to_provider_format" for class "OpenAIProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:497:9 - error: Type of "openai_tools" is partially unknown
+    Type of "openai_tools" is "Unknown | None" (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:497:24 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openai.py:497:29 - error: Cannot access attribute "convert_tools_to_provider_format" for class "OpenAIProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\providers\openrouter.py
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:254:9 - error: Type of "openrouter_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:254:31 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:254:36 - error: Cannot access attribute "convert_messages_to_provider_format" for class "OpenRouterProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:283:37 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:283:42 - error: Cannot access attribute "convert_tools_to_provider_format" for class "OpenRouterProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:423:9 - error: Type of "openrouter_messages" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:423:31 - error: Type of "convert_messages_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:423:36 - error: Cannot access attribute "convert_messages_to_provider_format" for class "OpenRouterProvider*"
+    Attribute "convert_messages_to_provider_format" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:447:41 - error: Type of "convert_tools_to_provider_format" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\providers\openrouter.py:447:46 - error: Cannot access attribute "convert_tools_to_provider_format" for class "OpenRouterProvider*"
+    Attribute "convert_tools_to_provider_format" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\sandbox\qemu.py
+  d:\Intellicrack\src\intellicrack\sandbox\qemu.py:808:19 - error: Type of "cleanup" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\sandbox\qemu.py:808:24 - error: Cannot access attribute "cleanup" for class "QEMUSandbox*"
+    Attribute "cleanup" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\sandbox\qemu.py:1033:19 - error: Type of "cleanup" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\sandbox\qemu.py:1033:24 - error: Cannot access attribute "cleanup" for class "QEMUSandbox*"
+    Attribute "cleanup" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\sandbox\qemu.py:1066:19 - error: Type of "cleanup" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\sandbox\qemu.py:1066:24 - error: Cannot access attribute "cleanup" for class "QEMUSandbox*"
+    Attribute "cleanup" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\sandbox\windows.py
+  d:\Intellicrack\src\intellicrack\sandbox\windows.py:233:19 - error: Type of "cleanup" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\sandbox\windows.py:233:24 - error: Cannot access attribute "cleanup" for class "WindowsSandbox*"
+    Attribute "cleanup" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\sandbox\windows.py:285:19 - error: Type of "cleanup" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\sandbox\windows.py:285:24 - error: Cannot access attribute "cleanup" for class "WindowsSandbox*"
+    Attribute "cleanup" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\app.py
+  d:\Intellicrack\src\intellicrack\ui\app.py:531:70 - error: Type of "on_open_x64dbg" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:531:70 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "_add_menu_action" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:531:75 - error: Cannot access attribute "on_open_x64dbg" for class "MainWindow*"
+    Attribute "on_open_x64dbg" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:532:70 - error: Type of "on_open_cutter" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:532:70 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "_add_menu_action" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:532:75 - error: Cannot access attribute "on_open_cutter" for class "MainWindow*"
+    Attribute "on_open_cutter" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:535:73 - error: Type of "on_debug_current_binary" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:535:73 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "_add_menu_action" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:535:78 - error: Cannot access attribute "on_debug_current_binary" for class "MainWindow*"
+    Attribute "on_debug_current_binary" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:536:75 - error: Type of "on_analyze_current_binary" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:536:75 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "_add_menu_action" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:536:80 - error: Cannot access attribute "on_analyze_current_binary" for class "MainWindow*"
+    Attribute "on_analyze_current_binary" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:537:76 - error: Type of "on_hex_edit_current_binary" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:537:76 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "_add_menu_action" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:537:81 - error: Cannot access attribute "on_hex_edit_current_binary" for class "MainWindow*"
+    Attribute "on_hex_edit_current_binary" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:676:41 - error: Type of "on_open_x64dbg" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:676:41 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:676:46 - error: Cannot access attribute "on_open_x64dbg" for class "MainWindow*"
+    Attribute "on_open_x64dbg" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:682:41 - error: Type of "on_open_cutter" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:682:41 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:682:46 - error: Cannot access attribute "on_open_cutter" for class "MainWindow*"
+    Attribute "on_open_cutter" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1078:13 - error: Type of "load_binary" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1078:18 - error: Cannot access attribute "load_binary" for class "MainWindow*"
+    Attribute "load_binary" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1759:17 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1759:22 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1764:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1764:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1771:17 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1771:22 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1776:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1776:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1783:17 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1783:22 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1788:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1788:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1801:17 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1801:22 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1806:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1806:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1819:17 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1819:22 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1839:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1839:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1845:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1845:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1948:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1948:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1958:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1958:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1974:13 - error: Type of "show_no_binary_warning" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1974:18 - error: Cannot access attribute "show_no_binary_warning" for class "MainWindow*"
+    Attribute "show_no_binary_warning" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1977:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1977:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1982:13 - error: Type of "show_no_binary_warning" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1982:18 - error: Cannot access attribute "show_no_binary_warning" for class "MainWindow*"
+    Attribute "show_no_binary_warning" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1985:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1985:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1990:13 - error: Type of "show_no_binary_warning" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1990:18 - error: Cannot access attribute "show_no_binary_warning" for class "MainWindow*"
+    Attribute "show_no_binary_warning" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1993:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1993:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1998:13 - error: Type of "show_no_binary_warning" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:1998:18 - error: Cannot access attribute "show_no_binary_warning" for class "MainWindow*"
+    Attribute "show_no_binary_warning" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\app.py:2001:13 - error: Type of "show_tool_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\app.py:2001:18 - error: Cannot access attribute "show_tool_error" for class "MainWindow*"
+    Attribute "show_tool_error" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panel_dock.py
+  d:\Intellicrack\src\intellicrack\ui\panel_dock.py:79:36 - error: Type of "on_redock" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panel_dock.py:79:36 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panel_dock.py:79:41 - error: Cannot access attribute "on_redock" for class "DetachedPanelWindow*"
+    Attribute "on_redock" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\base_panel.py
+  d:\Intellicrack\src\intellicrack\ui\panels\base_panel.py:277:9 - error: Type of "cleanup" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\base_panel.py:277:14 - error: Cannot access attribute "cleanup" for class "AnalysisPanelBase*"
+    Attribute "cleanup" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:222:41 - error: Type of "on_apply_patch" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:222:41 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:222:46 - error: Cannot access attribute "on_apply_patch" for class "BinaryPanel*"
+    Attribute "on_apply_patch" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:242:45 - error: Type of "on_prev_page" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:242:45 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:242:50 - error: Cannot access attribute "on_prev_page" for class "BinaryPanel*"
+    Attribute "on_prev_page" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:253:45 - error: Type of "on_next_page" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:253:45 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:253:50 - error: Cannot access attribute "on_next_page" for class "BinaryPanel*"
+    Attribute "on_next_page" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:282:46 - error: Type of "on_hex_cell_changed" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:282:46 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect_cell_changed" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:282:51 - error: Cannot access attribute "on_hex_cell_changed" for class "BinaryPanel*"
+    Attribute "on_hex_cell_changed" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:500:13 - error: Type of "on_prev_page" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:500:18 - error: Cannot access attribute "on_prev_page" for class "BinaryPanel*"
+    Attribute "on_prev_page" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:503:13 - error: Type of "on_next_page" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\binary_panel.py:503:18 - error: Cannot access attribute "on_next_page" for class "BinaryPanel*"
+    Attribute "on_next_page" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\graph_view.py
+  d:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:323:9 - error: Type of "layers" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:323:18 - error: Type of "compute_layers" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:323:23 - error: Cannot access attribute "compute_layers" for class "CFGGraphScene*"
+    Attribute "compute_layers" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:324:31 - error: Argument type is unknown
+    Argument corresponds to parameter "layers" in function "_position_layers" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:326:80 - error: Argument type is unknown
+    Argument corresponds to parameter "obj" in function "len" (reportUnknownArgumentType)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:24:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:24:17 - error: Cannot access attribute "document" for class "BookmarksMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:45:9 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:45:9 - error: Type of "add_bookmark" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:45:14 - error: Cannot access attribute "document" for class "<subclass of BookmarksMixin* and QWidget>*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:45:14 - error: Cannot access attribute "document" for class "BookmarksMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:50:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:50:17 - error: Cannot access attribute "document" for class "BookmarksMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:59:13 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:59:13 - error: Type of "remove_bookmark" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:59:18 - error: Cannot access attribute "document" for class "BookmarksMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:64:44 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:64:49 - error: Cannot access attribute "document" for class "BookmarksMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:68:9 - error: Type of "bookmarks" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:68:21 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:68:21 - error: Type of "list_bookmarks" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:68:26 - error: Cannot access attribute "document" for class "BookmarksMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:69:13 - error: Type of "bm" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:71:30 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py:72:25 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py:28:49 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py:28:54 - error: Cannot access attribute "document" for class "DataInspectorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py:33:13 - error: Type of "result" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py:33:22 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py:33:22 - error: Type of "inspect_at" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py:33:27 - error: Cannot access attribute "document" for class "DataInspectorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:120:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:120:17 - error: Cannot access attribute "document" for class "DisassemblyMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:139:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:139:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:139:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:139:33 - error: Cannot access attribute "document" for class "DisassemblyMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:140:13 - error: Type of "available" is partially unknown
+    Type of "available" is "Unknown | Any | int" (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:143:38 - error: Argument type is partially unknown
+    Argument corresponds to parameter "arg2" in function "min"
+    Argument type is "Unknown | Any | int" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:144:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:144:27 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:144:27 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py:144:32 - error: Cannot access attribute "document" for class "DisassemblyMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:26:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:26:17 - error: Cannot access attribute "document" for class "HashingMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:30:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:30:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:30:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:30:33 - error: Cannot access attribute "document" for class "HashingMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:31:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:31:50 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:31:50 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:31:55 - error: Cannot access attribute "document" for class "HashingMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:32:61 - error: Argument type is partially unknown
+    Argument corresponds to parameter "o" in function "__new__"
+    Argument type is "Unknown | bytearray | list[int]" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:43:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:43:17 - error: Cannot access attribute "document" for class "HashingMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:46:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:46:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:46:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:46:33 - error: Cannot access attribute "document" for class "HashingMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:47:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:47:50 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:47:50 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:47:55 - error: Cannot access attribute "document" for class "HashingMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py:48:61 - error: Argument type is partially unknown
+    Argument corresponds to parameter "o" in function "__new__"
+    Argument type is "Unknown | bytearray | list[int]" (reportUnknownArgumentType)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:37:42 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:37:47 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:51:17 - error: Type of "raw_patch" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:51:37 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:51:37 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:51:42 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:85:51 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:85:56 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:88:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:88:19 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:88:19 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:88:24 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:97:42 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:97:47 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:143:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:143:17 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:194:17 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:194:17 - error: Type of "write_bytes" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:194:22 - error: Cannot access attribute "document" for class "<subclass of PatchesMixin* and QWidget>*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:194:22 - error: Cannot access attribute "document" for class "PatchesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:226:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:226:17 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:247:13 - error: Type of "name" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:247:25 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:247:25 - error: Type of "register_json_template" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:247:30 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:248:13 - error: Type of "result" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:248:22 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:248:22 - error: Type of "apply_template" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:248:27 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:268:16 - error: Type of "state_holder" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:268:21 - error: Cannot access attribute "state_holder" for class "PatternEditorMixin*"
+    Attribute "state_holder" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:269:17 - error: Type of "state_holder" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:269:17 - error: Type of "notify_template_registered" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:269:22 - error: Cannot access attribute "state_holder" for class "PatternEditorMixin*"
+    Attribute "state_holder" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:280:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:280:17 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:290:72 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:290:77 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:410:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:410:17 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:424:13 - error: Type of "json_str_val" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:424:33 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:424:33 - error: Type of "export_template_json" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:424:38 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:431:57 - error: Argument type is partially unknown
+    Argument corresponds to parameter "text" in function "setPlainText"
+    Argument type is "Unknown | str" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:463:50 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:463:55 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:469:13 - error: Type of "templates" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:469:25 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:469:25 - error: Type of "list_templates" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:469:30 - error: Cannot access attribute "document" for class "PatternEditorMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:482:13 - error: Type of "tpl_entry" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:483:28 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:484:28 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:48:12 - error: Type of "sections_tree" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:48:17 - error: Cannot access attribute "sections_tree" for class "SectionsMixin*"
+    Attribute "sections_tree" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:48:42 - error: Type of "file_path" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:48:47 - error: Cannot access attribute "file_path" for class "SectionsMixin*"
+    Attribute "file_path" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:51:9 - error: Type of "sections_tree" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:51:9 - error: Type of "clear" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:51:14 - error: Cannot access attribute "sections_tree" for class "SectionsMixin*"
+    Attribute "sections_tree" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:58:32 - error: Type of "file_path" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:58:32 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:58:37 - error: Cannot access attribute "file_path" for class "SectionsMixin*"
+    Attribute "file_path" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:72:21 - error: Type of "sections_tree" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:72:21 - error: Type of "addTopLevelItem" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:72:26 - error: Cannot access attribute "sections_tree" for class "SectionsMixin*"
+    Attribute "sections_tree" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:80:42 - error: Type of "file_path" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:80:47 - error: Cannot access attribute "file_path" for class "SectionsMixin*"
+    Attribute "file_path" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:90:32 - error: Type of "file_path" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:90:32 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:90:37 - error: Cannot access attribute "file_path" for class "SectionsMixin*"
+    Attribute "file_path" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:114:42 - error: Type of "file_path" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:114:47 - error: Cannot access attribute "file_path" for class "SectionsMixin*"
+    Attribute "file_path" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:124:32 - error: Type of "file_path" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:124:32 - error: Argument type is unknown
+    Argument corresponds to parameter "object" in function "__new__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:124:37 - error: Cannot access attribute "file_path" for class "SectionsMixin*"
+    Attribute "file_path" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:149:42 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:149:47 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:158:9 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:158:24 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:158:24 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:158:29 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:166:19 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:166:19 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:166:24 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:222:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:222:17 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:226:13 - error: Type of "magic_raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:226:33 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:226:33 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:226:38 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:272:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:272:17 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:290:55 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:290:60 - error: Cannot access attribute "document" for class "SectionsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py:216:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py:216:17 - error: Cannot access attribute "document" for class "StatisticsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py:233:35 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py:233:35 - error: Argument type is unknown
+    Argument corresponds to parameter "document" in function "__init__" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py:233:40 - error: Cannot access attribute "document" for class "<subclass of StatisticsMixin* and QThread>*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py:233:40 - error: Cannot access attribute "document" for class "StatisticsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:43:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:43:17 - error: Cannot access attribute "document" for class "TemplatesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:55:13 - error: Type of "result" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:55:22 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:55:22 - error: Type of "apply_template" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:55:27 - error: Cannot access attribute "document" for class "TemplatesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:157:44 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:157:49 - error: Cannot access attribute "document" for class "TemplatesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:162:13 - error: Type of "templates" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:162:48 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:162:48 - error: Type of "list_templates" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:162:53 - error: Cannot access attribute "document" for class "TemplatesMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:166:13 - error: Type of "name" is partially unknown
+    Type of "name" is "Unknown | str" (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:166:19 - error: Type of "_description" is partially unknown
+    Type of "_description" is "Unknown | str" (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py:167:46 - error: Argument type is partially unknown
+    Argument corresponds to parameter "object" in function "__new__"
+    Argument type is "Unknown | str" (reportUnknownArgumentType)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:251:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:251:17 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:260:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:260:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:260:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:260:33 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:261:41 - error: Argument type is partially unknown
+    Argument corresponds to parameter "arg2" in function "min"
+    Argument type is "Unknown | Any | int" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:264:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:264:27 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:264:27 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:264:32 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:290:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:290:17 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:304:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:304:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:304:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:304:33 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:305:39 - error: Argument type is partially unknown
+    Argument corresponds to parameter "arg2" in function "min"
+    Argument type is "Unknown | int | Any" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:308:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:308:27 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:308:27 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:308:32 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:332:13 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:332:13 - error: Type of "write_bytes" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:332:18 - error: Cannot access attribute "document" for class "<subclass of TransformsMixin* and QWidget>*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:332:18 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:425:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:425:17 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:442:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:442:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:442:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:442:33 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:443:39 - error: Argument type is partially unknown
+    Argument corresponds to parameter "arg2" in function "min"
+    Argument type is "Unknown | int | Any" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:446:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:446:27 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:446:27 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:446:32 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:484:13 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:484:13 - error: Type of "write_bytes" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:484:18 - error: Cannot access attribute "document" for class "<subclass of TransformsMixin* and QWidget>*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py:484:18 - error: Cannot access attribute "document" for class "TransformsMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:118:12 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:118:17 - error: Cannot access attribute "document" for class "YaraMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:153:13 - error: Type of "doc_len" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:153:28 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:153:28 - error: Type of "length" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:153:33 - error: Cannot access attribute "document" for class "YaraMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:154:13 - error: Type of "raw" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:154:27 - error: Type of "document" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:154:27 - error: Type of "read" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py:154:32 - error: Cannot access attribute "document" for class "YaraMixin*"
+    Attribute "document" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:100:68 - error: Type of "on_create" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:100:68 - error: Argument type is unknown
+    Argument corresponds to parameter "handler" in function "_add_tool_button" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:100:73 - error: Cannot access attribute "on_create" for class "SandboxPanel*"
+    Attribute "on_create" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:286:13 - error: Type of "sandbox_type" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:286:28 - error: Type of "selected_sandbox_type" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:286:33 - error: Cannot access attribute "selected_sandbox_type" for class "SandboxPanel*"
+    Attribute "selected_sandbox_type" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:290:59 - error: Argument type is unknown
+    Argument corresponds to parameter "sandbox_type" in function "create" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:292:26 - error: Type of "on_create_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:292:26 - error: Argument type is unknown
+    Argument corresponds to parameter "on_error" in function "_run_async" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:292:31 - error: Cannot access attribute "on_create_error" for class "SandboxPanel*"
+    Attribute "on_create_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:308:24 - error: Type of "on_create_success" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:308:24 - error: Argument type is unknown
+    Argument corresponds to parameter "on_success" in function "_run_async" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:308:29 - error: Cannot access attribute "on_create_success" for class "SandboxPanel*"
+    Attribute "on_create_success" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:309:22 - error: Type of "on_create_error" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:309:22 - error: Argument type is unknown
+    Argument corresponds to parameter "on_error" in function "_run_async" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:309:27 - error: Cannot access attribute "on_create_error" for class "SandboxPanel*"
+    Attribute "on_create_error" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:326:9 - error: Type of "on_create_success" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:326:14 - error: Cannot access attribute "on_create_success" for class "SandboxPanel*"
+    Attribute "on_create_success" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:338:9 - error: Type of "set_sandbox_controls_active" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:338:14 - error: Cannot access attribute "set_sandbox_controls_active" for class "SandboxPanel*"
+    Attribute "set_sandbox_controls_active" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:386:24 - error: Type of "on_destroy_success" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:386:24 - error: Argument type is unknown
+    Argument corresponds to parameter "on_success" in function "_run_async" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:386:29 - error: Cannot access attribute "on_destroy_success" for class "SandboxPanel*"
+    Attribute "on_destroy_success" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:400:9 - error: Type of "set_sandbox_controls_active" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:400:14 - error: Cannot access attribute "set_sandbox_controls_active" for class "SandboxPanel*"
+    Attribute "set_sandbox_controls_active" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:414:9 - error: Type of "set_sandbox_controls_active" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:414:14 - error: Cannot access attribute "set_sandbox_controls_active" for class "SandboxPanel*"
+    Attribute "set_sandbox_controls_active" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\script_manager.py
+  d:\Intellicrack\src\intellicrack\ui\panels\script_manager.py:317:34 - error: Type of "on_item_clicked" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\script_manager.py:317:34 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\script_manager.py:317:39 - error: Cannot access attribute "on_item_clicked" for class "ScriptListWidget*"
+    Attribute "on_item_clicked" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:102:63 - error: Type of "client_init" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:102:68 - error: Cannot access attribute "client_init" for class "RFBClient*"
+    Attribute "client_init" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:103:39 - error: Type of "width" is partially unknown
+    Type of "width" is "Unknown | int" (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:103:39 - error: Argument type is partially unknown
+    Argument corresponds to parameter "width" in function "__init__"
+    Argument type is "Unknown | int" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:103:51 - error: Type of "height" is partially unknown
+    Type of "height" is "Unknown | int" (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:103:51 - error: Argument type is partially unknown
+    Argument corresponds to parameter "height" in function "__init__"
+    Argument type is "Unknown | int" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:115:19 - error: Type of "width" is partially unknown
+    Type of "width" is "Unknown | int" (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:116:20 - error: Type of "height" is partially unknown
+    Type of "height" is "Unknown | int" (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:117:25 - error: Type of "server_name" is partially unknown
+    Type of "server_name" is "Unknown | str" (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:302:17 - error: Type of "apply_raw_rect" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:302:22 - error: Cannot access attribute "apply_raw_rect" for class "RFBClient*"
+    Attribute "apply_raw_rect" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:597:71 - error: Type of "button_mask" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:597:71 - error: Argument type is unknown
+    Argument corresponds to parameter "button_mask" in function "send_pointer_event" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:597:76 - error: Cannot access attribute "button_mask" for class "VNCWidget*"
+    Attribute "button_mask" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:612:71 - error: Type of "button_mask" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:612:71 - error: Argument type is unknown
+    Argument corresponds to parameter "button_mask" in function "send_pointer_event" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:612:76 - error: Cannot access attribute "button_mask" for class "VNCWidget*"
+    Attribute "button_mask" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\provider_config.py
+  d:\Intellicrack\src\intellicrack\ui\provider_config.py:2404:52 - error: Type of "on_item_double_clicked" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\provider_config.py:2404:52 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\provider_config.py:2404:57 - error: Cannot access attribute "on_item_double_clicked" for class "ModelSelectionDialog*"
+    Attribute "on_item_double_clicked" is unknown (reportAttributeAccessIssue)
+d:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py
+  d:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py:255:9 - error: Type of "icon" is unknown (reportUnknownVariableType)
+  d:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py:255:16 - error: Type of "load_icon" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py:255:21 - error: Cannot access attribute "load_icon" for class "IconManager*"
+    Attribute "load_icon" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py:257:16 - error: Return type is unknown (reportUnknownVariableType)
+d:\Intellicrack\src\intellicrack\ui\tools.py
+  d:\Intellicrack\src\intellicrack\ui\tools.py:666:47 - error: Type of "on_item_clicked" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:666:47 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:666:52 - error: Cannot access attribute "on_item_clicked" for class "XRefPanel*"
+    Attribute "on_item_clicked" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:785:51 - error: Type of "on_tab_close_requested" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:785:51 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:785:56 - error: Cannot access attribute "on_tab_close_requested" for class "ToolOutputPanel*"
+    Attribute "on_tab_close_requested" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1629:25 - error: Type of "cleanup_bridge" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1629:30 - error: Cannot access attribute "cleanup_bridge" for class "ToolOutputPanel*"
+    Attribute "cleanup_bridge" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1724:52 - error: Type of "on_tab_close_requested" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1724:52 - error: Return type of lambda is unknown (reportUnknownLambdaType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1724:57 - error: Cannot access attribute "on_tab_close_requested" for class "ToolOutputPanel*"
+    Attribute "on_tab_close_requested" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1728:59 - error: Type of "close_other_tabs" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1728:59 - error: Return type of lambda is unknown (reportUnknownLambdaType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1728:64 - error: Cannot access attribute "close_other_tabs" for class "ToolOutputPanel*"
+    Attribute "close_other_tabs" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1732:48 - error: Type of "close_all_tabs" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1732:48 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1732:53 - error: Cannot access attribute "close_all_tabs" for class "ToolOutputPanel*"
+    Attribute "close_all_tabs" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1759:43 - error: Type of "reattach_panel" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1759:43 - error: Argument type is unknown
+    Argument corresponds to parameter "slot" in function "connect" (reportUnknownArgumentType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1759:48 - error: Cannot access attribute "reattach_panel" for class "ToolOutputPanel*"
+    Attribute "reattach_panel" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1790:13 - error: Type of "on_tab_close_requested" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1790:18 - error: Cannot access attribute "on_tab_close_requested" for class "ToolOutputPanel*"
+    Attribute "on_tab_close_requested" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1795:13 - error: Type of "on_tab_close_requested" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1795:18 - error: Cannot access attribute "on_tab_close_requested" for class "ToolOutputPanel*"
+    Attribute "on_tab_close_requested" is unknown (reportAttributeAccessIssue)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1812:17 - error: Type of "reattach_panel" is unknown (reportUnknownMemberType)
+  d:\Intellicrack\src\intellicrack\ui\tools.py:1812:22 - error: Cannot access attribute "reattach_panel" for class "ToolOutputPanel*"
+    Attribute "reattach_panel" is unknown (reportAttributeAccessIssue)
+605 errors, 0 warnings, 0 notes

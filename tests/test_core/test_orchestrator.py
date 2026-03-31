@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for core.orchestrator module - AI agent orchestration."""
 
 from __future__ import annotations
@@ -39,7 +44,7 @@ def _make_orchestrator(tmp_path: Path) -> Orchestrator:
         tmp_path: Pytest temporary directory.
 
     Returns:
-        Orchestrator instance.
+        Orchestrator: Orchestrator instance.
     """
     tools_dir = tmp_path / "tools"
     tools_dir.mkdir(parents=True, exist_ok=True)

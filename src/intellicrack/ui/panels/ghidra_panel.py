@@ -104,7 +104,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
+        self.status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
     @override
     def _create_content(self) -> QWidget:
@@ -149,13 +149,13 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._decompiled_view = QPlainTextEdit()
         self._decompiled_view.setFont(fm.get_code_font(10))
-        self._decompiled_view.setReadOnly(True)
+        self._decompiled_view.setReadOnly(ro=True)
         set_max_block_count(self._decompiled_view, 50000)
         tabs.addTab(self._decompiled_view, self.tr("Decompiled"))
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(True)
+        self._disasm_view.setReadOnly(ro=True)
         set_max_block_count(self._disasm_view, 50000)
         tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
@@ -253,7 +253,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._func_tree = QTreeWidget()
         set_header_labels(self._func_tree, _FUNC_COLUMNS)
-        set_sorting_enabled(self._func_tree, True)
+        set_sorting_enabled(self._func_tree, enable=True)
         set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
         self._func_tree.itemClicked.connect(self._on_function_clicked)
         layout.addWidget(self._func_tree)
@@ -502,7 +502,7 @@ class GhidraPanel(AnalysisPanelBase):
         """
         functions: list[object] = [*result] if isinstance(result, list) else []
 
-        set_sorting_enabled(self._func_tree, False)
+        set_sorting_enabled(self._func_tree, enable=False)
         self._func_tree.clear()
 
         for func in functions:
@@ -514,7 +514,7 @@ class GhidraPanel(AnalysisPanelBase):
             tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, getattr(func, "address", 0))
             self._func_tree.addTopLevelItem(item)
 
-        set_sorting_enabled(self._func_tree, True)
+        set_sorting_enabled(self._func_tree, enable=True)
         self._func_count_label.setText(f"Functions ({len(functions)})")
         self._refresh_funcs_btn.setEnabled(True)
         _logger.debug("ghidra_functions_refreshed", count=len(functions))

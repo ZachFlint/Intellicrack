@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Byte-access abstraction over HexDocument or raw bytes for the .hexpat interpreter."""
 
 from __future__ import annotations
@@ -14,7 +13,9 @@ from intellicrack.core.hexpat.errors import HexPatRuntimeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, Literal
+    from typing import Literal
+
+    from intellicrack.core.types import HexDocumentLike
 
 
 class DataReader:
@@ -24,25 +25,18 @@ class DataReader:
     Wraps either a HexDocument PyO3 object or raw bytes behind a uniform
     read interface used by the HexPat evaluator.
 
-    Attributes:
-        _read_fn: Callable that reads a slice of bytes given (offset, length).
-        _length: Total number of bytes available in the data source.
+    Args:
+        read_fn: A callable ``(offset, length) -> bytes`` that returns
+            the requested byte slice from the underlying data source.
+        length: Total number of bytes available in the data source.
     """
 
     def __init__(self, read_fn: Callable[[int, int], bytes], length: int) -> None:
-        """
-        Initialize the DataReader with a read callable and data length.
-
-        Args:
-            read_fn: A callable ``(offset, length) -> bytes`` that returns
-                the requested byte slice from the underlying data source.
-            length: Total number of bytes available in the data source.
-        """
         self._read_fn = read_fn
         self._length = length
 
     @staticmethod
-    def from_document(document: Any) -> DataReader:
+    def from_document(document: HexDocumentLike) -> DataReader:
         """
         Create a DataReader from a HexDocument PyO3 object.
 
@@ -54,7 +48,7 @@ class DataReader:
                 methods.
 
         Returns:
-            A DataReader backed by the supplied HexDocument.
+            DataReader: A DataReader backed by the supplied HexDocument.
         """
         doc_read = document.read
         doc_length = document.length
@@ -74,7 +68,7 @@ class DataReader:
             data: The raw binary data to wrap.
 
         Returns:
-            A DataReader backed by the supplied bytes object.
+            DataReader: A DataReader backed by the supplied bytes object.
         """
 
         def read_fn(offset: int, length: int) -> bytes:
@@ -88,7 +82,7 @@ class DataReader:
         Total number of bytes available in the data source.
 
         Returns:
-            The length of the underlying data in bytes.
+            int: The length of the underlying data in bytes.
         """
         return self._length
 
@@ -101,7 +95,7 @@ class DataReader:
             length: Number of bytes to read.
 
         Returns:
-            A bytes object of exactly ``length`` bytes starting at ``offset``.
+            bytes: A bytes object of exactly ``length`` bytes starting at ``offset``.
 
         Raises:
             HexPatRuntimeError: If ``offset`` is negative or the requested
@@ -120,10 +114,7 @@ class DataReader:
             offset: Zero-based byte offset.
 
         Returns:
-            An unsigned integer in the range [0, 255].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: An unsigned integer in the range [0, 255].
         """
         (value,) = struct.unpack("B", self.read(offset, 1))
         return int(value)
@@ -137,10 +128,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            An unsigned integer in the range [0, 65535].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: An unsigned integer in the range [0, 65535].
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}H", self.read(offset, 2))
@@ -155,10 +143,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            An unsigned integer in the range [0, 2**32-1].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: An unsigned integer in the range [0, 2**32-1].
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}I", self.read(offset, 4))
@@ -173,10 +158,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            An unsigned integer in the range [0, 2**64-1].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: An unsigned integer in the range [0, 2**64-1].
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}Q", self.read(offset, 8))
@@ -191,10 +173,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            An unsigned integer in the range [0, 2**128-1].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: An unsigned integer in the range [0, 2**128-1].
         """
         raw = self.read(offset, 16)
         byteorder: Literal["little", "big"] = "little" if endian != "big" else "big"
@@ -208,10 +187,7 @@ class DataReader:
             offset: Zero-based byte offset.
 
         Returns:
-            A signed integer in the range [-128, 127].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: A signed integer in the range [-128, 127].
         """
         (value,) = struct.unpack("b", self.read(offset, 1))
         return int(value)
@@ -225,10 +201,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A signed integer in the range [-32768, 32767].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: A signed integer in the range [-32768, 32767].
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}h", self.read(offset, 2))
@@ -243,10 +216,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A signed integer in the range [-2**31, 2**31-1].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: A signed integer in the range [-2**31, 2**31-1].
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}i", self.read(offset, 4))
@@ -261,10 +231,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A signed integer in the range [-2**63, 2**63-1].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: A signed integer in the range [-2**63, 2**63-1].
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}q", self.read(offset, 8))
@@ -279,10 +246,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A signed integer in the range [-2**127, 2**127-1].
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            int: A signed integer in the range [-2**127, 2**127-1].
         """
         raw = self.read(offset, 16)
         byteorder: Literal["little", "big"] = "little" if endian != "big" else "big"
@@ -297,10 +261,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A Python float parsed as a 32-bit IEEE 754 value.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            float: A Python float parsed as a 32-bit IEEE 754 value.
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}f", self.read(offset, 4))
@@ -315,10 +276,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A Python float parsed as a 64-bit IEEE 754 value.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            float: A Python float parsed as a 64-bit IEEE 754 value.
         """
         prefix = "<" if endian == "little" else ">"
         (value,) = struct.unpack(f"{prefix}d", self.read(offset, 8))
@@ -335,10 +293,7 @@ class DataReader:
             offset: Zero-based byte offset.
 
         Returns:
-            A single-character string decoded as ASCII.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            str: A single-character string decoded as ASCII.
         """
         raw = self.read(offset, 1)
         return raw.decode("ascii", errors="replace")
@@ -352,10 +307,7 @@ class DataReader:
             endian: Byte order — ``"little"`` (default) or ``"big"``.
 
         Returns:
-            A single-character string decoded as UTF-16.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            str: A single-character string decoded as UTF-16.
         """
         raw = self.read(offset, 2)
         encoding = "utf-16-le" if endian == "little" else "utf-16-be"
@@ -371,10 +323,7 @@ class DataReader:
             offset: Zero-based byte offset.
 
         Returns:
-            ``True`` if the byte is non-zero, ``False`` otherwise.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            bool: ``True`` if the byte is non-zero, ``False`` otherwise.
         """
         return self.read_u8(offset) != 0
 
@@ -392,11 +341,8 @@ class DataReader:
                 Defaults to 4096.
 
         Returns:
-            A tuple of ``(decoded_string, bytes_consumed)`` where
-            ``bytes_consumed`` includes the terminating NUL byte.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            tuple[str, int]: A tuple of ``(decoded_string, bytes_consumed)``
+                where ``bytes_consumed`` includes the terminating NUL byte.
         """
         read_len = min(max_length, self._length - offset)
         chunk = self.read(offset, read_len)
@@ -416,11 +362,8 @@ class DataReader:
             length: Number of bytes to read.
 
         Returns:
-            A string decoded from the fixed-length byte range with trailing
-            NUL bytes removed.
-
-        Raises:
-            HexPatRuntimeError: If the read is out of bounds.
+            str: A string decoded from the fixed-length byte range with
+                trailing NUL bytes removed.
         """
         raw = self.read(offset, length)
         return raw.rstrip(b"\x00").decode("utf-8", errors="replace")
@@ -439,11 +382,8 @@ class DataReader:
                 Defaults to 0.
 
         Returns:
-            The zero-based byte offset of the first occurrence of ``pattern``
-            at or after ``start``, or ``-1`` if the pattern is not found.
-
-        Raises:
-            HexPatRuntimeError: If an internal read is out of bounds.
+            int: The zero-based byte offset of the first occurrence of
+                ``pattern`` at or after ``start``, or ``-1`` if not found.
         """
         chunk_size = 65536
         pat_len = len(pattern)

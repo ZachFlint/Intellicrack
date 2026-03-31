@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Process management panel for Intellicrack.
 
@@ -185,7 +184,8 @@ def _get_process_memory_mb(pid: int) -> float:
     if not _WINDOWS:
         return 0.0
 
-    handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ, False, pid)
+    inherit_handle = False
+    handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ, inherit_handle, pid)
     if not handle:
         return 0.0
 
@@ -213,12 +213,13 @@ def _detect_process_architecture(pid: int) -> str:
     if not _WINDOWS:
         return "Unknown"
 
-    handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION, False, pid)
+    inherit_handle = False
+    handle = _kernel32.OpenProcess(_PROCESS_QUERY_INFORMATION, inherit_handle, pid)
     if not handle:
         return "Unknown"
 
     try:
-        is_wow64 = ctypes.wintypes.BOOL(False)
+        is_wow64 = ctypes.wintypes.BOOL(0)
         if hasattr(_kernel32, "IsWow64Process"):
             _kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
             if is_wow64.value:
@@ -451,7 +452,7 @@ class ProcessPanel(QWidget):
         system_layout.setSpacing(4)
 
         toolbar = QToolBar()
-        toolbar.setMovable(False)
+        toolbar.setMovable(movable=False)
         toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
 
         self._search_input = QLineEdit()
@@ -471,7 +472,11 @@ class ProcessPanel(QWidget):
         self._auto_refresh_btn = QPushButton("Auto-Refresh: OFF")
         self._auto_refresh_btn.setCheckable(True)
         self._auto_refresh_btn.setObjectName("toggle_button")
-        self._auto_refresh_btn.toggled.connect(self._on_auto_refresh_toggled)
+
+        def _auto_refresh_slot(c: int) -> None:
+            self._on_auto_refresh_toggled(checked=bool(c))
+
+        self._auto_refresh_btn.toggled.connect(_auto_refresh_slot)
         toolbar.addWidget(self._auto_refresh_btn)
 
         toolbar.addSeparator()
@@ -532,7 +537,7 @@ class ProcessPanel(QWidget):
         self._info_label = QLabel("Select a process to view details")
         self._info_label.setFont(FontManager.get_instance().get_ui_font(9))
         self._info_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._info_label.setWordWrap(True)
+        self._info_label.setWordWrap(on=True)
         self._details_tabs.addTab(self._info_label, "Info")
 
         details_layout.addWidget(self._details_tabs)
@@ -564,7 +569,7 @@ class ProcessPanel(QWidget):
         tab_layout.setSpacing(4)
 
         tracked_toolbar = QToolBar()
-        tracked_toolbar.setMovable(False)
+        tracked_toolbar.setMovable(movable=False)
         tracked_toolbar.setFixedHeight(32)
 
         self._tracked_refresh_btn = QPushButton("Refresh")
@@ -575,7 +580,11 @@ class ProcessPanel(QWidget):
         self._tracked_auto_refresh_btn = QPushButton("Auto-Refresh: OFF")
         self._tracked_auto_refresh_btn.setCheckable(True)
         self._tracked_auto_refresh_btn.setObjectName("toggle_button")
-        self._tracked_auto_refresh_btn.toggled.connect(self._on_tracked_auto_refresh_toggled)
+
+        def _tracked_auto_refresh_slot(c: int) -> None:
+            self._on_tracked_auto_refresh_toggled(checked=bool(c))
+
+        self._tracked_auto_refresh_btn.toggled.connect(_tracked_auto_refresh_slot)
         tracked_toolbar.addWidget(self._tracked_auto_refresh_btn)
 
         tracked_toolbar.addSeparator()
@@ -680,7 +689,7 @@ class ProcessPanel(QWidget):
         """
         self._on_refresh()
 
-    def _on_auto_refresh_toggled(self, checked: bool) -> None:
+    def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
         """
         Toggle automatic process list refresh.
 
@@ -694,7 +703,7 @@ class ProcessPanel(QWidget):
             self._auto_refresh_btn.setText("Auto-Refresh: OFF")
             self._auto_refresh_timer.stop()
 
-    def _on_tracked_auto_refresh_toggled(self, checked: bool) -> None:
+    def _on_tracked_auto_refresh_toggled(self, *, checked: bool) -> None:
         """
         Toggle automatic refresh for the tracked processes tab.
 
@@ -840,7 +849,7 @@ class ProcessPanel(QWidget):
             f"Executable: {exe_path}\n"
             f"Modules: {len(modules)}\n"
             f"Threads: {len(threads)}\n"
-            f"Memory: {mem_mb:.1f} MB"
+            f"Memory: {mem_mb:.1f} MB",
         )
 
     def _on_attach(self) -> None:
@@ -856,7 +865,8 @@ class ProcessPanel(QWidget):
             return
 
         try:
-            if handle := _kernel32.OpenProcess(_PROCESS_TERMINATE, False, self._selected_pid):
+            inherit_handle = False
+            if handle := _kernel32.OpenProcess(_PROCESS_TERMINATE, inherit_handle, self._selected_pid):
                 _kernel32.TerminateProcess(handle, 1)
                 _kernel32.CloseHandle(handle)
                 _logger.info("process_terminated", pid=self._selected_pid)

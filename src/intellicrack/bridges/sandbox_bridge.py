@@ -10,28 +10,29 @@ This module provides a tool bridge that wraps the SandboxManager to expose sandb
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..core.logging import get_logger
-from ..core.types import (
+from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import (
     ToolDefinition,
     ToolError,
     ToolFunction,
     ToolName,
     ToolParameter,
 )
-from ..sandbox import (
+from intellicrack.sandbox import (
     SandboxConfig,
     SandboxError,
     SandboxManager,
     SandboxType,
 )
-from .base import BridgeCapabilities, BridgeState, ToolBridgeBase
 
 
 if TYPE_CHECKING:
-    from ..sandbox import ExecutionReport
+    from intellicrack.sandbox import ExecutionReport
 
 
 _logger = get_logger("bridges.sandbox")
@@ -398,7 +399,7 @@ class SandboxBridge(ToolBridgeBase):
         if self._manager is None:
             self._manager = SandboxManager()
 
-        self._state = BridgeState(
+        self.state = BridgeState(
             connected=True,
             tool_running=True,
             binary_loaded=False,
@@ -416,7 +417,7 @@ class SandboxBridge(ToolBridgeBase):
             await self._manager.destroy_all()
             self._manager = None
 
-        self._state = BridgeState()
+        self.state = BridgeState()
         _logger.info("sandbox_bridge_shutdown", bridge="sandbox")
 
     async def is_available(self) -> bool:
@@ -447,6 +448,7 @@ class SandboxBridge(ToolBridgeBase):
         self,
         sandbox_type: str = "windows",
         timeout_seconds: int = 300,
+        *,
         network_enabled: bool = False,
         memory_limit_mb: int = 2048,
     ) -> dict[str, Any]:
@@ -525,7 +527,8 @@ class SandboxBridge(ToolBridgeBase):
         binary_path: str,
         args: list[str] | None = None,
         sandbox_type: str = "windows",
-        timeout: int | None = None,
+        max_wait: int | None = None,
+        *,
         monitor: bool = True,
     ) -> dict[str, Any]:
         """
@@ -535,7 +538,7 @@ class SandboxBridge(ToolBridgeBase):
             binary_path: Path to the binary to execute.
             args: Optional command line arguments.
             sandbox_type: Type of sandbox to use.
-            timeout: Optional timeout override.
+            max_wait: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
 
         Returns:
@@ -547,7 +550,7 @@ class SandboxBridge(ToolBridgeBase):
         manager = self._ensure_manager()
 
         path = Path(binary_path)
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             msg = f"{_ERR_BINARY_NOT_FOUND}: {binary_path}"
             raise ToolError(msg)
 
@@ -557,12 +560,12 @@ class SandboxBridge(ToolBridgeBase):
                 binary_path=path,
                 args=args,
                 sandbox_type=sb_type,
-                timeout=timeout,
+                time_limit=max_wait,
                 monitor=monitor,
             )
 
             _logger.info("binary_execution_completed", instance_id=instance.id, result=report.result, exit_code=report.exit_code)
-        except Exception as e:
+        except (SandboxError, OSError, RuntimeError) as e:
             _logger.warning("binary_execution_failed", error=str(e))
             msg = f"{_ERR_EXECUTION_FAILED}: {e}"
             raise ToolError(msg) from e
@@ -573,7 +576,7 @@ class SandboxBridge(ToolBridgeBase):
         self,
         instance_id: str,
         command: str,
-        timeout: int | None = None,
+        max_wait: int | None = None,
         working_directory: str | None = None,
     ) -> dict[str, Any]:
         """
@@ -582,7 +585,7 @@ class SandboxBridge(ToolBridgeBase):
         Args:
             instance_id: ID of the sandbox instance.
             command: Command to execute.
-            timeout: Optional timeout.
+            max_wait: Optional command timeout in seconds.
             working_directory: Optional working directory.
 
         Returns:
@@ -601,7 +604,7 @@ class SandboxBridge(ToolBridgeBase):
         try:
             exit_code, stdout, stderr = await instance.sandbox.run_command(
                 command=command,
-                timeout=timeout,
+                time_limit=max_wait,
                 working_directory=working_directory,
             )
 
@@ -646,7 +649,7 @@ class SandboxBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         source_path = Path(source)
-        if not source_path.exists():
+        if not await asyncio.to_thread(source_path.exists):
             msg = f"{_ERR_SRC_NOT_FOUND}: {source}"
             raise ToolError(msg)
 

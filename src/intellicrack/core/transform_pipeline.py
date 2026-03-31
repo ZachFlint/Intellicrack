@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Transform pipeline system for chaining binary data transformations.
 
@@ -15,7 +14,9 @@ from __future__ import annotations
 import ast
 import operator
 import re
+import string
 from dataclasses import dataclass, field
+from itertools import starmap
 from typing import Any, override
 
 from intellicrack.core.logging import get_logger
@@ -24,6 +25,15 @@ from intellicrack.core.logging import get_logger
 _logger = get_logger("core.transform_pipeline")
 
 _MAX_BYTE_VALUE = 255
+
+_NODE_REGEX = "RegexReplaceNode"
+_NODE_EXPR = "CustomExpressionNode"
+_NODE_REPEAT = "RepeatNode"
+_NODE_TRUNCATE = "TruncateNode"
+_NODE_PAD = "PadNode"
+_ERR_REQUIRES_PATTERN = "requires 'pattern'"
+_ERR_REQUIRES_EXPRESSION = "requires 'expression'"
+_ERR_REQUIRES_LENGTH = "requires 'length'"
 
 
 class ExpressionError(ValueError):
@@ -320,7 +330,7 @@ class RustTransformNode(TransformNode):
                 else:
                     rust_params[key] = val.to_bytes(8, "little")
             elif isinstance(val, str):
-                is_hex = len(val) > 0 and len(val) % 2 == 0 and all(c in "0123456789abcdefABCDEF" for c in val)
+                is_hex = len(val) > 0 and len(val) % 2 == 0 and all(c in string.hexdigits for c in val)
                 rust_params[key] = bytes.fromhex(val) if is_hex else val.encode("utf-8")
             else:
                 rust_params[key] = str(val).encode("utf-8")
@@ -389,7 +399,7 @@ class RegexReplaceNode(TransformNode):
         """
         raw_pattern = params.get("pattern")
         if not isinstance(raw_pattern, str) or not raw_pattern:
-            raise TransformParamError("RegexReplaceNode", "requires 'pattern'")
+            raise TransformParamError(_NODE_REGEX, _ERR_REQUIRES_PATTERN)
 
         raw_replacement = params.get("replacement", "")
         if isinstance(raw_replacement, bytes):
@@ -402,7 +412,8 @@ class RegexReplaceNode(TransformNode):
         try:
             compiled = re.compile(raw_pattern.encode("latin-1"))
         except re.error as exc:
-            raise TransformParamError("RegexReplaceNode", f"invalid regex: {exc}") from exc
+            detail = f"invalid regex: {exc}"
+            raise TransformParamError(_NODE_REGEX, detail) from exc
 
         return compiled.sub(replacement, data)
 
@@ -478,12 +489,13 @@ class CustomExpressionNode(TransformNode):
         """
         expression = params.get("expression")
         if not isinstance(expression, str) or not expression:
-            raise TransformParamError("CustomExpressionNode", "requires 'expression'")
+            raise TransformParamError(_NODE_EXPR, _ERR_REQUIRES_EXPRESSION)
 
         try:
             tree = ast.parse(expression, mode="eval")
         except SyntaxError as exc:
-            raise TransformParamError("CustomExpressionNode", f"bad syntax: {exc}") from exc
+            detail = f"bad syntax: {exc}"
+            raise TransformParamError(_NODE_EXPR, detail) from exc
 
         expr_node = tree.body
         result = bytearray(len(data))
@@ -550,10 +562,12 @@ class RepeatNode(TransformNode):
         try:
             count = int(raw_count)
         except (TypeError, ValueError) as exc:
-            raise TransformParamError("RepeatNode", f"'count' not int: {raw_count!r}") from exc
+            detail = f"'count' not int: {raw_count!r}"
+            raise TransformParamError(_NODE_REPEAT, detail) from exc
 
         if count < 1:
-            raise TransformParamError("RepeatNode", f"'count' must be >= 1, got {count}")
+            detail = f"'count' must be >= 1, got {count}"
+            raise TransformParamError(_NODE_REPEAT, detail)
 
         return data * count
 
@@ -613,15 +627,17 @@ class TruncateNode(TransformNode):
         """
         raw_length = params.get("length")
         if raw_length is None:
-            raise TransformParamError("TruncateNode", "requires 'length'")
+            raise TransformParamError(_NODE_TRUNCATE, _ERR_REQUIRES_LENGTH)
 
         try:
             length = int(raw_length)
         except (TypeError, ValueError) as exc:
-            raise TransformParamError("TruncateNode", f"'length' not int: {raw_length!r}") from exc
+            detail = f"'length' not int: {raw_length!r}"
+            raise TransformParamError(_NODE_TRUNCATE, detail) from exc
 
         if length < 0:
-            raise TransformParamError("TruncateNode", f"'length' must be >= 0, got {length}")
+            detail = f"'length' must be >= 0, got {length}"
+            raise TransformParamError(_NODE_TRUNCATE, detail)
 
         return data[:length]
 
@@ -687,24 +703,28 @@ class PadNode(TransformNode):
         """
         raw_length = params.get("length")
         if raw_length is None:
-            raise TransformParamError("PadNode", "requires 'length'")
+            raise TransformParamError(_NODE_PAD, _ERR_REQUIRES_LENGTH)
 
         try:
             length = int(raw_length)
         except (TypeError, ValueError) as exc:
-            raise TransformParamError("PadNode", f"'length' not int: {raw_length!r}") from exc
+            detail = f"'length' not int: {raw_length!r}"
+            raise TransformParamError(_NODE_PAD, detail) from exc
 
         if length < 0:
-            raise TransformParamError("PadNode", f"'length' must be >= 0, got {length}")
+            detail = f"'length' must be >= 0, got {length}"
+            raise TransformParamError(_NODE_PAD, detail)
 
         raw_byte = params.get("byte", 0)
         try:
             fill_byte = int(raw_byte)
         except (TypeError, ValueError) as exc:
-            raise TransformParamError("PadNode", f"'byte' not int: {raw_byte!r}") from exc
+            detail = f"'byte' not int: {raw_byte!r}"
+            raise TransformParamError(_NODE_PAD, detail) from exc
 
         if not 0 <= fill_byte <= _MAX_BYTE_VALUE:
-            raise TransformParamError("PadNode", f"'byte' must be 0-255, got {fill_byte}")
+            detail = f"'byte' must be 0-255, got {fill_byte}"
+            raise TransformParamError(_NODE_PAD, detail)
 
         if len(data) >= length:
             return data
@@ -870,8 +890,7 @@ def get_all_transform_nodes() -> list[TransformNode]:
     if _hexcore_available and _hexcore_mod is not None:
         doc = _hexcore_mod.HexDocument()
         nodes.extend(
-            RustTransformNode(transform_name, transform_category, transform_description)
-            for transform_name, transform_category, transform_description in doc.list_transforms()
+            starmap(RustTransformNode, doc.list_transforms()),
         )
         _logger.debug("hexcore_transforms_loaded", count=len(nodes))
 

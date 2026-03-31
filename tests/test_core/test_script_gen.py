@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for core.script_gen module - script infrastructure."""
 
 from __future__ import annotations
@@ -254,14 +259,14 @@ def test_script_context_target_function_unknown_strategy() -> None:
 # --- Script ---
 
 
-def _make_script(**overrides: Any) -> Script:
+def _make_script(**overrides: str | int | ScriptLanguage) -> Script:
     """Create a Script with sensible defaults.
 
     Args:
         **overrides: Field overrides for the Script.
 
     Returns:
-        Script instance.
+        Script: Script instance.
     """
     defaults: dict[str, Any] = {
         "name": "test_script",

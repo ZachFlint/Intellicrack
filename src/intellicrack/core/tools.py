@@ -22,22 +22,22 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-from .logging import get_logger, log_tool_call
-from .types import ToolDefinition, ToolError, ToolName
+from intellicrack.core.logging import get_logger, log_tool_call
+from intellicrack.core.types import ToolDefinition, ToolError, ToolName
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from ..bridges.base import ToolBridgeBase
-    from ..bridges.binary import BinaryBridge
-    from ..bridges.cutter import CutterBridge
-    from ..bridges.frida_bridge import FridaBridge
-    from ..bridges.ghidra import GhidraBridge
-    from ..bridges.hex_editor import HexEditorBridge
-    from ..bridges.process import ProcessBridge
-    from ..bridges.sandbox_bridge import SandboxBridge
-    from ..bridges.x64dbg import X64DbgBridge
+    from intellicrack.bridges.base import ToolBridgeBase
+    from intellicrack.bridges.binary import BinaryBridge
+    from intellicrack.bridges.cutter import CutterBridge
+    from intellicrack.bridges.frida_bridge import FridaBridge
+    from intellicrack.bridges.ghidra import GhidraBridge
+    from intellicrack.bridges.hex_editor import HexEditorBridge
+    from intellicrack.bridges.process import ProcessBridge
+    from intellicrack.bridges.sandbox_bridge import SandboxBridge
+    from intellicrack.bridges.x64dbg import X64DbgBridge
 
 
 _logger = get_logger("core.tools")
@@ -83,7 +83,7 @@ class ToolRegistry:
 
     def __init__(self, tools_dir: Path) -> None:
         self._bridges: dict[ToolName, ToolBridgeBase] = {}
-        from ..bridges.installer import ToolInstaller
+        from intellicrack.bridges.installer import ToolInstaller
 
         self._installer = ToolInstaller(tools_dir)
         self._tools_dir = tools_dir
@@ -109,13 +109,13 @@ class ToolRegistry:
             _logger.debug("tool_registry_initialize_early_return", reason="already_initialized")
             return
 
-        from ..bridges.binary import BinaryBridge as _BinaryBridge
-        from ..bridges.cutter import CutterBridge as _CutterBridge
-        from ..bridges.frida_bridge import FridaBridge as _FridaBridge
-        from ..bridges.ghidra import GhidraBridge as _GhidraBridge
-        from ..bridges.process import ProcessBridge as _ProcessBridge
-        from ..bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
-        from ..bridges.x64dbg import X64DbgBridge as _X64DbgBridge
+        from intellicrack.bridges.binary import BinaryBridge as _BinaryBridge
+        from intellicrack.bridges.cutter import CutterBridge as _CutterBridge
+        from intellicrack.bridges.frida_bridge import FridaBridge as _FridaBridge
+        from intellicrack.bridges.ghidra import GhidraBridge as _GhidraBridge
+        from intellicrack.bridges.process import ProcessBridge as _ProcessBridge
+        from intellicrack.bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
+        from intellicrack.bridges.x64dbg import X64DbgBridge as _X64DbgBridge
 
         self._bridges[ToolName.BINARY] = _BinaryBridge()
         self._bridges[ToolName.PROCESS] = _ProcessBridge()
@@ -125,7 +125,7 @@ class ToolRegistry:
         self._bridges[ToolName.X64DBG] = _X64DbgBridge()
         self._bridges[ToolName.SANDBOX] = _SandboxBridge()
 
-        from ..bridges.hex_editor import HexEditorBridge as _HexEditorBridge
+        from intellicrack.bridges.hex_editor import HexEditorBridge as _HexEditorBridge
 
         self._bridges[ToolName.HEX_EDITOR] = _HexEditorBridge()
         _logger.debug(
@@ -179,8 +179,8 @@ class ToolRegistry:
                 await bridge.initialize(tool_path)
             _logger.info("tool_initialized", tool_name=name.value, tool_path=str(tool_path))
             success = True
-        except Exception:
-            _logger.exception("tool_initialization_failed", tool_name=name.value)
+        except (OSError, RuntimeError, ToolError) as exc:
+            _logger.warning("tool_initialization_failed", tool_name=name.value, error=str(exc))
 
         return success
 
@@ -190,7 +190,7 @@ class ToolRegistry:
             try:
                 await bridge.shutdown()
                 _logger.debug("bridge_shutdown", bridge_name=name.value)
-            except Exception as e:
+            except (OSError, RuntimeError, ToolError) as e:
                 _logger.warning("bridge_shutdown_error", bridge_name=name.value, error=str(e))
 
         self._initialized = False
@@ -221,7 +221,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.binary import BinaryBridge as _BinaryBridge
+        from intellicrack.bridges.binary import BinaryBridge as _BinaryBridge
 
         bridge = self._bridges.get(ToolName.BINARY)
         if bridge is None or not isinstance(bridge, _BinaryBridge):
@@ -238,7 +238,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.process import ProcessBridge as _ProcessBridge
+        from intellicrack.bridges.process import ProcessBridge as _ProcessBridge
 
         bridge = self._bridges.get(ToolName.PROCESS)
         if bridge is None or not isinstance(bridge, _ProcessBridge):
@@ -255,7 +255,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.frida_bridge import FridaBridge as _FridaBridge
+        from intellicrack.bridges.frida_bridge import FridaBridge as _FridaBridge
 
         bridge = self._bridges.get(ToolName.FRIDA)
         if bridge is None or not isinstance(bridge, _FridaBridge):
@@ -272,7 +272,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.ghidra import GhidraBridge as _GhidraBridge
+        from intellicrack.bridges.ghidra import GhidraBridge as _GhidraBridge
 
         bridge = self._bridges.get(ToolName.GHIDRA)
         if bridge is None or not isinstance(bridge, _GhidraBridge):
@@ -289,7 +289,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.cutter import CutterBridge as _CutterBridge
+        from intellicrack.bridges.cutter import CutterBridge as _CutterBridge
 
         bridge = self._bridges.get(ToolName.CUTTER)
         if bridge is None or not isinstance(bridge, _CutterBridge):
@@ -306,7 +306,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.x64dbg import X64DbgBridge as _X64DbgBridge
+        from intellicrack.bridges.x64dbg import X64DbgBridge as _X64DbgBridge
 
         bridge = self._bridges.get(ToolName.X64DBG)
         if bridge is None or not isinstance(bridge, _X64DbgBridge):
@@ -323,7 +323,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
+        from intellicrack.bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
 
         bridge = self._bridges.get(ToolName.SANDBOX)
         if bridge is None or not isinstance(bridge, _SandboxBridge):
@@ -340,7 +340,7 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from ..bridges.hex_editor import HexEditorBridge as _HexEditorBridge
+        from intellicrack.bridges.hex_editor import HexEditorBridge as _HexEditorBridge
 
         bridge = self._bridges.get(ToolName.HEX_EDITOR)
         if bridge is None or not isinstance(bridge, _HexEditorBridge):
@@ -380,7 +380,7 @@ class ToolRegistry:
                     path = await self._installer.find_tool(name)
                     if path is not None:
                         version = await self._installer.get_version(name, path)
-                except Exception as e:
+                except (OSError, RuntimeError, ToolError) as e:
                     _logger.debug(
                         "tool_path_version_lookup_failed",
                         tool_name=name.value,
@@ -396,8 +396,8 @@ class ToolRegistry:
                 error=state.last_error,
             )
 
-        except Exception as e:
-            _logger.exception("tool_status_check_failed", tool=name)
+        except (OSError, RuntimeError, ToolError) as e:
+            _logger.warning("tool_status_check_failed", tool=name, error=str(e))
             return ToolStatus(
                 name=name,
                 available=False,
@@ -429,7 +429,7 @@ class ToolRegistry:
         for bridge in self._bridges.values():
             try:
                 definitions.append(bridge.tool_definition)
-            except Exception as e:
+            except (AttributeError, RuntimeError, ToolError) as e:
                 _logger.warning("tool_definition_retrieval_failed", error=str(e))
 
         _logger.debug("get_tool_definitions_complete", definition_count=len(definitions))
@@ -454,7 +454,7 @@ class ToolRegistry:
         tool_name: str,
         function_name: str,
         arguments: dict[str, Any],
-    ) -> Any:
+    ) -> object:
         """Execute a tool function call.
 
         Args:
@@ -463,7 +463,7 @@ class ToolRegistry:
             arguments: Function arguments.
 
         Returns:
-            Any: Result of the function call.
+            object: Result of the function call.
 
         Raises:
             ToolError: If execution fails.
@@ -524,7 +524,7 @@ class ToolRegistry:
                 result = await method(**arguments)
             else:
                 result = await asyncio.to_thread(method, **arguments)
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError, TypeError, ToolError, KeyError, AttributeError) as e:
             success = False
             _logger.warning("tool_call_failed", tool_name=tool_name, function_name=function_name, error=str(e))
             raise ToolError(_ERR_CALL_FAILED) from e

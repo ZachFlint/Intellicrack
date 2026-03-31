@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 QEMU sandbox implementation for isolated binary analysis.
 
@@ -20,16 +19,16 @@ import socket
 import tempfile
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal
 
 import psutil
 
-from ..core.logging import get_logger, log_sandbox_operation
-from ..core.process_manager import ProcessManager, ProcessType
-from .base import (
+from intellicrack.core.logging import get_logger, log_sandbox_operation
+from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.sandbox.base import (
     ExecutionReport,
     ExecutionResult,
     FileChange,
@@ -88,6 +87,8 @@ _PROCESS_LOG_NAME_INDEX = 3
 _PROCESS_LOG_PATH_INDEX = 4
 _PIDFILE_MAX_RETRIES = 3
 _PIDFILE_RETRY_DELAY = 2.0
+PIDFILE_MAX_RETRIES: int = _PIDFILE_MAX_RETRIES
+PIDFILE_RETRY_DELAY: float = _PIDFILE_RETRY_DELAY
 _ERR_UNSUPPORTED_GUEST_OS = "unsupported guest OS"
 
 
@@ -187,15 +188,15 @@ class QMPClient:
         self._port = port
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
-        self._connected = False
+        self.connected = False
         self._lock = asyncio.Lock()
 
-    async def connect(self, timeout: float = 30.0) -> bool:
+    async def connect(self, time_limit: float = 30.0) -> bool:
         """
         Connect to QMP server.
 
         Args:
-            timeout: Connection timeout in seconds.
+            time_limit: Connection timeout in seconds.
 
         Returns:
             bool: True if connected successfully.
@@ -203,7 +204,7 @@ class QMPClient:
         try:
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(self._host, self._port),
-                timeout=timeout,
+                timeout=time_limit,
             )
 
             greeting = await asyncio.wait_for(
@@ -213,10 +214,10 @@ class QMPClient:
             _logger.debug("qmp_greeting_received", greeting=greeting.decode().strip())
 
             await self._send_command({"execute": "qmp_capabilities"})
-            self._connected = True
+            self.connected = True
             _logger.info("qmp_connected", host=self._host, port=self._port)
 
-        except Exception as e:
+        except (OSError, TimeoutError, ConnectionError) as e:
             _logger.warning("qmp_connection_failed", error=str(e))
             return False
         else:
@@ -228,23 +229,23 @@ class QMPClient:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception as e:
+            except OSError as e:
                 _logger.debug("qmp_disconnect_error", error=str(e))
         self._reader = None
         self._writer = None
-        self._connected = False
+        self.connected = False
 
     async def _send_command(
         self,
         command: dict[str, object],
-        timeout: float = 10.0,
+        time_limit: float = 10.0,
     ) -> QMPResponse:
         """
         Send a QMP command and get response.
 
         Args:
             command: QMP command dictionary.
-            timeout: Response timeout.
+            time_limit: Response timeout in seconds.
 
         Returns:
             QMPResponse: QMP response.
@@ -260,7 +261,7 @@ class QMPClient:
 
                 response_line = await asyncio.wait_for(
                     self._reader.readline(),
-                    timeout=timeout,
+                    timeout=time_limit,
                 )
 
                 response = json.loads(response_line.decode())
@@ -276,8 +277,8 @@ class QMPClient:
             except TimeoutError:
                 _logger.warning("qmp_command_timeout")
                 return QMPResponse(success=False, error="Command timed out")
-            except Exception as e:
-                _logger.exception("qmp_command_failed")
+            except (OSError, json.JSONDecodeError, ConnectionError) as e:
+                _logger.warning("qmp_command_failed", error=str(e), exc_info=True)
                 return QMPResponse(success=False, error=str(e))
 
     async def query_status(self) -> QMPResponse:
@@ -391,7 +392,7 @@ class GuestAgentClient:
         self._port = port
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
-        self._connected = False
+        self.connected = False
         self._lock = asyncio.Lock()
         self._message_queue: asyncio.Queue[GuestAgentMessage] = asyncio.Queue()
         self._reader_task: asyncio.Task[None] | None = None
@@ -404,14 +405,14 @@ class GuestAgentClient:
         Returns:
             bool: True if the guest agent connection is active.
         """
-        return self._connected
+        return self.connected
 
-    async def connect(self, timeout: float = 60.0, retry_interval: float = 2.0) -> bool:
+    async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
         """
         Connect to guest agent with retry.
 
         Args:
-            timeout: Total timeout for connection attempts.
+            time_limit: Total timeout in seconds for connection attempts.
             retry_interval: Interval between retries.
 
         Returns:
@@ -420,13 +421,13 @@ class GuestAgentClient:
         start_time = time.time()
 
         connected = False
-        while time.time() - start_time < timeout:
+        while time.time() - start_time < time_limit:
             try:
                 self._reader, self._writer = await asyncio.wait_for(
                     asyncio.open_connection(self._host, self._port),
                     timeout=retry_interval,
                 )
-                self._connected = True
+                self.connected = True
 
                 self._reader_task = asyncio.create_task(self._read_messages())
 
@@ -439,7 +440,7 @@ class GuestAgentClient:
                 await asyncio.sleep(retry_interval)
 
         if not connected:
-            _logger.warning("guest_agent_connection_failed", timeout_seconds=timeout)
+            _logger.warning("guest_agent_connection_failed", timeout_seconds=time_limit)
         return connected
 
     async def disconnect(self) -> None:
@@ -456,19 +457,19 @@ class GuestAgentClient:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception as e:
+            except OSError as e:
                 _logger.debug("agent_disconnect_error", error=str(e))
 
         self._reader = None
         self._writer = None
-        self._connected = False
+        self.connected = False
 
     async def _read_messages(self) -> None:
         """Background task to read messages from agent."""
         if self._reader is None:
             return
 
-        while self._connected:
+        while self.connected:
             try:
                 line = await self._reader.readline()
                 if not line:
@@ -478,7 +479,7 @@ class GuestAgentClient:
                     data = json.loads(line.decode())
                     msg = GuestAgentMessage(
                         message_type=data.get("type", "unknown"),
-                        timestamp=datetime.now(),
+                        timestamp=datetime.now(UTC),
                         data=data.get("data", {}),
                     )
                     await self._message_queue.put(msg)
@@ -488,7 +489,7 @@ class GuestAgentClient:
             except asyncio.CancelledError:
                 _logger.debug("agent_read_cancelled", exc_info=True)
                 break
-            except Exception as e:
+            except (OSError, ConnectionError) as e:
                 _logger.debug("agent_read_error", error=str(e))
                 break
 
@@ -496,7 +497,7 @@ class GuestAgentClient:
         self,
         command: str,
         args: Sequence[str] | None = None,
-        timeout: float = 30.0,
+        time_limit: float = 30.0,
     ) -> tuple[int, str, str]:
         """
         Send a command to execute in the guest.
@@ -504,19 +505,19 @@ class GuestAgentClient:
         Args:
             command: Command to execute.
             args: Command arguments.
-            timeout: Execution timeout.
+            time_limit: Execution timeout in seconds.
 
         Returns:
             tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
         """
-        if self._writer is None or not self._connected:
+        if self._writer is None or not self.connected:
             return (-1, "", "Not connected to guest agent")
 
         request = {
             "type": "execute",
             "command": command,
             "args": list(args) if args else [],
-            "timeout": timeout,
+            "timeout": time_limit,
         }
 
         async with self._lock:
@@ -526,7 +527,7 @@ class GuestAgentClient:
                 await self._writer.drain()
 
                 start_time = time.time()
-                while time.time() - start_time < timeout:
+                while time.time() - start_time < time_limit:
                     try:
                         msg = await asyncio.wait_for(
                             self._message_queue.get(),
@@ -547,8 +548,8 @@ class GuestAgentClient:
                         _logger.debug("guest_command_poll_timeout")
                         continue
 
-            except Exception as e:
-                _logger.exception("guest_command_execution_failed")
+            except (OSError, ConnectionError) as e:
+                _logger.warning("guest_command_execution_failed", error=str(e), exc_info=True)
                 result = (-1, "", str(e))
 
             return result
@@ -601,7 +602,7 @@ class QEMUSandbox(SandboxBase):
     ) -> None:
         super().__init__(config)
         self._qemu_config = qemu_config or QEMUConfig()
-        self._process: asyncio.subprocess.Process | None = None
+        self.process: asyncio.subprocess.Process | None = None
         self._qmp: QMPClient | None = None
         self._agent: GuestAgentClient | None = None
         self._temp_dir: Path | None = None
@@ -687,7 +688,7 @@ class QEMUSandbox(SandboxBase):
         """
         search_paths: list[Path] = []
 
-        if self.TOOLS_PATH.exists():
+        if await asyncio.to_thread(self.TOOLS_PATH.exists):
             search_paths.append(self.TOOLS_PATH / f"{self.QEMU_EXE}.exe")
 
         if qemu_in_path := shutil.which(self.QEMU_EXE):
@@ -703,10 +704,13 @@ class QEMUSandbox(SandboxBase):
             exe_name = f"{self.QEMU_EXE}.exe" if base.drive else self.QEMU_EXE
             search_paths.append(base / exe_name)
 
-        return next(
-            (path for path in search_paths if path.exists() and path.is_file()),
-            None,
-        )
+        def _find_existing() -> Path | None:
+            return next(
+                (path for path in search_paths if path.exists() and path.is_file()),
+                None,
+            )
+
+        return await asyncio.to_thread(_find_existing)
 
     async def _detect_accelerator(self) -> AcceleratorType:
         """
@@ -724,7 +728,7 @@ class QEMUSandbox(SandboxBase):
             result = await process_manager.run_tracked_async(
                 [str(self._qemu_path), "-accel", "help"],
                 name="qemu-accel-help",
-                timeout=_ACCEL_DETECT_TIMEOUT,
+                process_timeout=_ACCEL_DETECT_TIMEOUT,
             )
             output = result.stdout + result.stderr
 
@@ -745,7 +749,7 @@ class QEMUSandbox(SandboxBase):
                     ],
                     name="qemu-whpx-test",
                     text=False,
-                    timeout=_ACCEL_TEST_TIMEOUT,
+                    process_timeout=_ACCEL_TEST_TIMEOUT,
                 )
                 stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
                 if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
@@ -769,13 +773,13 @@ class QEMUSandbox(SandboxBase):
                     ],
                     name="qemu-kvm-test",
                     text=False,
-                    timeout=_ACCEL_TEST_TIMEOUT,
+                    process_timeout=_ACCEL_TEST_TIMEOUT,
                 )
                 if kvm_test.returncode == _RETURNCODE_SUCCESS:
                     _logger.info("kvm_acceleration_available", accelerator="kvm")
                     return AcceleratorType.KVM
 
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             _logger.debug("acceleration_detection_failed", error=str(e))
 
         _logger.info("using_tcg_software_emulation", accelerator="tcg")
@@ -820,6 +824,21 @@ class QEMUSandbox(SandboxBase):
             _logger.warning("qemu_start_failed", error=error_msg)
             raise SandboxError(_ERR_QEMU_START)
 
+    async def _verify_qemu_pid(self, qemu_pid: int | None) -> None:
+        """
+        Verify that the QEMU process started and its PID was read successfully.
+
+        Args:
+            qemu_pid: The PID read from the pidfile, or None if unreadable.
+
+        Raises:
+            SandboxError: If the PID could not be read from the pidfile.
+        """
+        if qemu_pid is None:
+            _logger.warning("qemu_pidfile_unreadable", pidfile=str(self._pidfile_path))
+            await self._cleanup()
+            raise SandboxError(_ERR_PIDFILE_UNREADABLE)
+
     async def _connect_and_verify_qmp(self) -> None:
         """
         Connect to QMP and verify VM status.
@@ -828,7 +847,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If connection or status check fails.
         """
         self._qmp = QMPClient(port=self._qemu_config.monitor_port)
-        if not await self._qmp.connect(timeout=_QMP_CONNECT_TIMEOUT):
+        if not await self._qmp.connect(time_limit=_QMP_CONNECT_TIMEOUT):
             raise SandboxError(_ERR_QMP_CONNECT)
 
         status = await self._qmp.query_status()
@@ -850,7 +869,7 @@ class QEMUSandbox(SandboxBase):
         if self._qemu_path is None:
             raise SandboxError(_ERR_QEMU_PATH)
 
-        if self._qemu_config.image_path is None or not self._qemu_config.image_path.exists():
+        if self._qemu_config.image_path is None or not await asyncio.to_thread(self._qemu_config.image_path.exists):
             raise SandboxError(_ERR_NO_IMAGE)
 
         cmd: list[str] = [
@@ -938,6 +957,20 @@ class QEMUSandbox(SandboxBase):
 
         return cmd
 
+    @staticmethod
+    def _ensure_qemu_started(qemu_pid: int | None) -> None:
+        """
+        Raise SandboxError if QEMU failed to start.
+
+        Args:
+            qemu_pid: The QEMU process ID, or None if startup failed.
+
+        Raises:
+            SandboxError: If qemu_pid is None.
+        """
+        if qemu_pid is None:
+            raise SandboxError(_ERR_QEMU_START)
+
     async def start(self) -> None:
         """
         Start the QEMU virtual machine.
@@ -945,26 +978,26 @@ class QEMUSandbox(SandboxBase):
         Raises:
             SandboxError: If VM cannot be started.
         """
-        if self._state.status == "running":
-            _logger.warning("qemu_sandbox_already_running", state=self._state.status)
+        if self.state.status == "running":
+            _logger.warning("qemu_sandbox_already_running", state=self.state.status)
             return
 
         if not await self.is_available():
             raise SandboxError(_ERR_QEMU_NA)
 
         log_sandbox_operation("start", "qemu", guest_os=self._qemu_config.guest_os.value)
-        self._state.status = "starting"
-        self._state.last_error = None
+        self.state.status = "starting"
+        self.state.last_error = None
 
         try:
-            self._temp_dir = Path(tempfile.mkdtemp(prefix="intellicrack_qemu_"))
+            self._temp_dir = Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_qemu_"))
             self._shared_folder = self._temp_dir / "shared"
-            self._shared_folder.mkdir(parents=True, exist_ok=True)
+            await asyncio.to_thread(self._shared_folder.mkdir, parents=True, exist_ok=True)
 
-            (self._shared_folder / "input").mkdir(exist_ok=True)
-            (self._shared_folder / "output").mkdir(exist_ok=True)
-            (self._shared_folder / "logs").mkdir(exist_ok=True)
-            (self._shared_folder / "monitor").mkdir(exist_ok=True)
+            await asyncio.to_thread((self._shared_folder / "input").mkdir, exist_ok=True)
+            await asyncio.to_thread((self._shared_folder / "output").mkdir, exist_ok=True)
+            await asyncio.to_thread((self._shared_folder / "logs").mkdir, exist_ok=True)
+            await asyncio.to_thread((self._shared_folder / "monitor").mkdir, exist_ok=True)
 
             await self._create_guest_agent_script()
 
@@ -988,7 +1021,7 @@ class QEMUSandbox(SandboxBase):
             if self._pidfile_path is not None:
                 for attempt in range(_PIDFILE_MAX_RETRIES):
                     await asyncio.sleep(_PIDFILE_RETRY_DELAY)
-                    if self._pidfile_path.exists():
+                    if await asyncio.to_thread(self._pidfile_path.exists):
                         try:
                             pid_content = await asyncio.to_thread(
                                 self._pidfile_path.read_text,
@@ -1002,18 +1035,17 @@ class QEMUSandbox(SandboxBase):
                                 attempt=attempt + 1,
                             )
 
-            if qemu_pid is None:
-                _logger.warning("qemu_pidfile_unreadable", pidfile=str(self._pidfile_path))
-                await self._cleanup()
-                raise SandboxError(_ERR_PIDFILE_UNREADABLE)  # noqa: TRY301
+            await self._verify_qemu_pid(qemu_pid)
+            self._ensure_qemu_started(qemu_pid)
+            verified_pid: int = qemu_pid if qemu_pid is not None else -1
 
-            self._qemu_pid = qemu_pid
-            self._state.pid = qemu_pid
-            _logger.info("qemu_started", pid=qemu_pid)
+            self._qemu_pid = verified_pid
+            self.state.pid = verified_pid
+            _logger.info("qemu_started", pid=verified_pid)
 
             process_manager = ProcessManager.get_instance()
             process_manager.register_external_pid(
-                qemu_pid,
+                verified_pid,
                 name="qemu-vm",
                 process_type=ProcessType.SANDBOX,
                 metadata={
@@ -1026,13 +1058,13 @@ class QEMUSandbox(SandboxBase):
 
             self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
 
-            self._state.status = "running"
-            self._state.started_at = datetime.now()
-            _logger.info("qemu_sandbox_started_successfully", pid=self._qemu_pid, state=self._state.status)
+            self.state.status = "running"
+            self.state.started_at = datetime.now(UTC)
+            _logger.info("qemu_sandbox_started_successfully", pid=self._qemu_pid, state=self.state.status)
 
-        except Exception as e:
-            self._state.status = "error"
-            self._state.last_error = str(e)
+        except (OSError, RuntimeError, SandboxError, TimeoutError, ValueError) as e:
+            self.state.status = "error"
+            self.state.last_error = str(e)
             await self._cleanup()
             _logger.warning("qemu_sandbox_start_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_START) from e
@@ -1044,11 +1076,11 @@ class QEMUSandbox(SandboxBase):
         Raises:
             SandboxError: If VM cannot be stopped.
         """
-        if self._state.status == "stopped":
-            _logger.debug("qemu_sandbox_already_stopped", state=self._state.status)
+        if self.state.status == "stopped":
+            _logger.debug("qemu_sandbox_already_stopped", state=self.state.status)
             return
 
-        self._state.status = "stopping"
+        self.state.status = "stopping"
 
         try:
             if self._agent is not None:
@@ -1069,14 +1101,14 @@ class QEMUSandbox(SandboxBase):
 
             await self._cleanup()
 
-            self._state.status = "stopped"
-            self._state.pid = None
+            self.state.status = "stopped"
+            self.state.pid = None
             self._vnc_port = None
-            _logger.info("qemu_sandbox_stopped", state=self._state.status)
+            _logger.info("qemu_sandbox_stopped", state=self.state.status)
 
-        except Exception as e:
-            self._state.status = "error"
-            self._state.last_error = str(e)
+        except (OSError, RuntimeError, SandboxError) as e:
+            self.state.status = "error"
+            self.state.last_error = str(e)
             _logger.warning("qemu_sandbox_stop_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_STOP) from e
 
@@ -1084,7 +1116,7 @@ class QEMUSandbox(SandboxBase):
         """Clean up temporary files and resources."""
         if self._temp_dir is not None:
             pid_path = self._temp_dir / "qemu.pid"
-            if pid_path.exists():
+            if await asyncio.to_thread(pid_path.exists):
                 try:
                     pid_content = await asyncio.to_thread(pid_path.read_text, encoding="utf-8")
                     pid = int(pid_content.strip())
@@ -1093,17 +1125,17 @@ class QEMUSandbox(SandboxBase):
                         _logger.debug("cleanup_killed_orphan_qemu_tree", pid=pid)
                     except psutil.NoSuchProcess:
                         _logger.debug("cleanup_orphan_already_exited", pid=pid)
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     _logger.debug("cleanup_pid_check_failed", error=str(e))
 
-        if self._temp_dir is not None and self._temp_dir.exists():
+        if self._temp_dir is not None and await asyncio.to_thread(self._temp_dir.exists):
             try:
                 await asyncio.to_thread(
                     shutil.rmtree,
                     self._temp_dir,
                     ignore_errors=True,
                 )
-            except Exception as e:
+            except OSError as e:
                 _logger.warning("temp_dir_cleanup_failed", error=str(e))
 
         self._temp_dir = None
@@ -1227,7 +1259,7 @@ while ($true) {
     Start-Sleep -Seconds 1
 }
 """
-            agent_script.write_text(agent_content, encoding="utf-8")
+            await asyncio.to_thread(agent_script.write_text, agent_content, encoding="utf-8")
 
             startup_script = monitor_dir / "start_agent.cmd"
             startup_content = """@echo off
@@ -1294,7 +1326,7 @@ def file_monitor() -> None:
             operation = type_names[0].lower() if type_names else "unknown"
             try:
                 log_path = LOG_DIR / "file_changes.log"
-                with open(log_path, "a", encoding="utf-8") as log_file:
+                with log_path.open("a", encoding="utf-8") as log_file:
                     log_file.write(f"{timestamp}|{operation}|{watch_path}/{filename}\\n")
             except OSError as write_err:
                 _logger.debug("file_change_log_write_failed", extra={"error": str(write_err)})
@@ -1352,8 +1384,8 @@ def _get_process_name(pid: int) -> str | None:
         Process name string or None if not accessible.
     """
     try:
-        comm_path = f"/proc/{pid}/comm"
-        with open(comm_path, "r", encoding="utf-8") as comm_file:
+        comm_path = Path(f"/proc/{pid}/comm")
+        with comm_path.open("r", encoding="utf-8") as comm_file:
             return comm_file.read().strip()
     except (OSError, PermissionError, FileNotFoundError):
         _logger.debug("process_name_lookup_failed", exc_info=True)
@@ -1373,7 +1405,7 @@ def _log_process_activity(
     """
     try:
         log_path = LOG_DIR / "process_activity.log"
-        with open(log_path, "a", encoding="utf-8") as log_file:
+        with log_path.open("a", encoding="utf-8") as log_file:
             if name is not None:
                 log_file.write(f"{timestamp}|{operation}|{pid}|{name}\\n")
             else:
@@ -1526,7 +1558,7 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 '''
-            agent_script.write_text(agent_content, encoding="utf-8")
+            await asyncio.to_thread(agent_script.write_text, agent_content, encoding="utf-8")
 
             startup_script = monitor_dir / "start_agent.sh"
             startup_content = """#!/bin/bash
@@ -1534,14 +1566,14 @@ python3 /mnt/shared/monitor/agent.py &
 """
         else:
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
-        startup_script.write_text(startup_content, encoding="utf-8")
+        await asyncio.to_thread(startup_script.write_text, startup_content, encoding="utf-8")
 
         _logger.debug("guest_agent_scripts_created", extra={"path": str(monitor_dir)})
 
     async def run_command(
         self,
         command: str,
-        timeout: int | None = None,
+        time_limit: int | None = None,
         working_directory: str | None = None,
     ) -> tuple[int, str, str]:
         """
@@ -1549,7 +1581,7 @@ python3 /mnt/shared/monitor/agent.py &
 
         Args:
             command: Command to execute.
-            timeout: Optional timeout override.
+            time_limit: Optional timeout override in seconds.
             working_directory: Optional working directory.
 
         Returns:
@@ -1558,15 +1590,15 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If execution fails.
         """
-        if self._state.status != "running":
+        if self.state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
 
-        effective_timeout = timeout or self._config.timeout_seconds
+        effective_timeout = time_limit or self._config.timeout_seconds
 
         if self._agent is not None and self._agent.is_connected:
             if working_directory:
                 command = f"cd {working_directory} && {command}"
-            return await self._agent.send_command(command, timeout=effective_timeout)
+            return await self._agent.send_command(command, time_limit=effective_timeout)
 
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
@@ -1582,9 +1614,9 @@ python3 /mnt/shared/monitor/agent.py &
 
         script_path = self._shared_folder / "input" / script_name
         result_path = self._shared_folder / "output" / result_name
-        script_path.write_text(script_content, encoding="utf-8")
+        await asyncio.to_thread(script_path.write_text, script_content, encoding="utf-8")
 
-        return await self._poll_for_result(result_path=result_path, timeout=effective_timeout)
+        return await self._poll_for_result(result_path=result_path, time_limit=effective_timeout)
 
     def _generate_execution_script(
         self,
@@ -1631,14 +1663,14 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
     async def _poll_for_result(
         *,
         result_path: Path,
-        timeout: int,
+        time_limit: int,
     ) -> tuple[int, str, str]:
         """
         Poll the shared folder for command execution results.
 
         Args:
             result_path: Path to the expected result file.
-            timeout: Maximum time in seconds to wait.
+            time_limit: Maximum time in seconds to wait.
 
         Returns:
             tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
@@ -1647,25 +1679,30 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             SandboxTimeoutError: If the command times out.
         """
         start_time = time.time()
-        while time.time() - start_time < timeout:
+        while time.time() - start_time < time_limit:
             await asyncio.sleep(1)
-            if result_path.exists():
+            if await asyncio.to_thread(result_path.exists):
                 try:
-                    result_text = result_path.read_text(encoding="utf-8").strip()
+                    result_text = await asyncio.to_thread(
+                        result_path.read_text,
+                        encoding="utf-8",
+                    )
+                    result_text = result_text.strip()
                     exit_code = int(result_text) if result_text.isdigit() else -1
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     _logger.debug("result_read_failed", extra={"error": str(e)})
                 else:
                     return (exit_code, "", "")
 
-        _logger.warning("command_timed_out", extra={"timeout_seconds": timeout})
-        raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=timeout)
+        _logger.warning("command_timed_out", extra={"timeout_seconds": time_limit})
+        raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=time_limit)
 
     async def run_binary(
         self,
         binary_path: Path,
         args: list[str] | None = None,
-        timeout: int | None = None,
+        time_limit: int | None = None,
+        *,
         monitor: bool = True,
     ) -> ExecutionReport:
         """
@@ -1674,7 +1711,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         Args:
             binary_path: Path to the binary to run.
             args: Optional command line arguments.
-            timeout: Optional timeout override.
+            time_limit: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
 
         Returns:
@@ -1684,25 +1721,26 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             SandboxError: If execution fails.
             ValueError: If the guest OS type is unsupported.
         """
-        if self._state.status != "running":
+        if self.state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
 
-        if not binary_path.exists():
+        if not await asyncio.to_thread(binary_path.exists):
             _logger.warning("binary_not_found", extra={"path": str(binary_path)})
             raise SandboxError(_ERR_BINARY_NOT_FOUND)
 
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
-        effective_timeout = timeout or self._config.timeout_seconds
+        effective_timeout = time_limit or self._config.timeout_seconds
         start_time = time.time()
 
         await self.copy_to_sandbox(binary_path, f"input/{binary_path.name}")
 
         if monitor:
             logs_folder = self._shared_folder / "logs"
-            for log_file in logs_folder.glob("*.log"):
-                log_file.unlink()
+            log_files = await asyncio.to_thread(lambda: list(logs_folder.glob("*.log")))
+            for log_file in log_files:
+                await asyncio.to_thread(log_file.unlink)
 
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             binary_sandbox_path = f"{self.GUEST_SHARED_PATH_WINDOWS}input\\{binary_path.name}"
@@ -1711,14 +1749,13 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         else:
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
-        args_str = " ".join(f'"{a}"' for a in (args or []))
-        command = f'"{binary_sandbox_path}" {args_str}'
+        command = f'"{binary_sandbox_path}" {" ".join(f"{chr(34)}{a}{chr(34)}" for a in (args or []))}'
 
         result: ExecutionResult
         try:
             exit_code, stdout, stderr = await self.run_command(
                 command,
-                timeout=effective_timeout,
+                time_limit=effective_timeout,
             )
             result = "success"
         except SandboxTimeoutError as e:
@@ -1770,12 +1807,13 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             return []
 
         log_path = self._shared_folder / "logs" / "file_changes.log"
-        if not log_path.exists():
+        if not await asyncio.to_thread(log_path.exists):
             return []
 
         changes: list[FileChange] = []
         try:
-            for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
+            for line in raw_text.splitlines():
                 parts = line.split("|")
                 if len(parts) >= _FILE_LOG_MIN_PARTS:
                     changes.append(
@@ -1785,9 +1823,9 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                             old_path=None,
                             timestamp=parts[0],
                             size=None,
-                        )
+                        ),
                     )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             _logger.warning("file_log_parse_failed", extra={"error": str(e)})
 
         return changes
@@ -1803,12 +1841,13 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             return []
 
         log_path = self._shared_folder / "logs" / "registry_changes.log"
-        if not log_path.exists():
+        if not await asyncio.to_thread(log_path.exists):
             return []
 
         changes: list[RegistryChange] = []
         try:
-            for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
+            for line in raw_text.splitlines():
                 parts = line.split("|")
                 if len(parts) >= _FILE_LOG_MIN_PARTS:
                     changes.append(
@@ -1819,9 +1858,9 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                             value_type=None,
                             value_data=None,
                             timestamp=parts[0],
-                        )
+                        ),
                     )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             _logger.warning("registry_log_parse_failed", extra={"error": str(e)})
 
         return changes
@@ -1837,12 +1876,13 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             return []
 
         log_path = self._shared_folder / "logs" / "network_activity.log"
-        if not log_path.exists():
+        if not await asyncio.to_thread(log_path.exists):
             return []
 
         activities: list[NetworkActivity] = []
         try:
-            for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
+            for line in raw_text.splitlines():
                 parts = line.split("|")
                 if len(parts) >= _NETWORK_LOG_MIN_PARTS:
                     local_parts = parts[2].rsplit(":", 1)
@@ -1859,9 +1899,9 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                             timestamp=parts[0],
                             bytes_sent=0,
                             bytes_received=0,
-                        )
+                        ),
                     )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             _logger.warning("network_log_parse_failed", extra={"error": str(e)})
 
         return activities
@@ -1877,12 +1917,13 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             return []
 
         log_path = self._shared_folder / "logs" / "process_activity.log"
-        if not log_path.exists():
+        if not await asyncio.to_thread(log_path.exists):
             return []
 
         activities: list[ProcessActivity] = []
         try:
-            for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
+            for line in raw_text.splitlines():
                 parts = line.split("|")
                 if len(parts) >= _PROCESS_LOG_MIN_PARTS:
                     activities.append(
@@ -1895,9 +1936,9 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                             operation=validate_process_operation(parts[1]),
                             exit_code=None,
                             timestamp=parts[0],
-                        )
+                        ),
                     )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             _logger.warning("process_log_parse_failed", extra={"error": str(e)})
 
         return activities
@@ -1916,17 +1957,17 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
-        if not source.exists():
+        if not await asyncio.to_thread(source.exists):
             _logger.warning("source_file_not_found", extra={"path": str(source)})
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         dest_path = self._shared_folder / dest
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(dest_path.parent.mkdir, parents=True, exist_ok=True)
 
         try:
             await asyncio.to_thread(shutil.copy2, source, dest_path)
             _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": dest})
-        except Exception as e:
+        except OSError as e:
             _logger.warning("copy_to_sandbox_failed", error=str(e), source=str(source), dest=dest)
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
 
@@ -1946,16 +1987,16 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         source_path = self._shared_folder / source
 
-        if not source_path.exists():
+        if not await asyncio.to_thread(source_path.exists):
             _logger.warning("sandbox_source_file_not_found", extra={"path": source})
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
 
         try:
             await asyncio.to_thread(shutil.copy2, source_path, dest)
             _logger.debug("file_copied_from_sandbox", extra={"source": source, "dest": str(dest)})
-        except Exception as e:
+        except OSError as e:
             _logger.warning("copy_from_sandbox_failed", error=str(e), source=source, dest=str(dest))
             raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
 

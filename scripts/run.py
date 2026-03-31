@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
 """Intellicrack launcher with full DEBUG console logging.
 
 Convenience script that launches Intellicrack with --verbose

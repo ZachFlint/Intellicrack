@@ -12,20 +12,23 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 capstone = pytest.importorskip("capstone", reason="capstone not installed")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -49,7 +52,7 @@ _EXPECTED_INSN_KEYS = {"address", "bytes", "mnemonic", "operands", "size"}
 class TestBridgeDisassembly:
     """Tests covering disassemble with x86_64 machine code bytes."""
 
-    def test_disassemble_returns_list(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_returns_list(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that disassemble returns a list.
 
         Args:
@@ -63,7 +66,7 @@ class TestBridgeDisassembly:
         result: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="64"))
         assert isinstance(result, list)
 
-    def test_disassemble_int3_mnemonic(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_int3_mnemonic(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that INT3 bytes disassemble to the int3 mnemonic.
 
         Args:
@@ -78,7 +81,7 @@ class TestBridgeDisassembly:
         assert result
         assert result[0]["mnemonic"] == "int3"
 
-    def test_disassemble_result_items_have_required_keys(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_result_items_have_required_keys(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that each instruction dict contains the required keys.
 
         Args:
@@ -94,7 +97,7 @@ class TestBridgeDisassembly:
         for insn in result:
             assert _EXPECTED_INSN_KEYS.issubset(insn.keys())
 
-    def test_disassemble_instruction_address_starts_at_offset(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_instruction_address_starts_at_offset(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that the first instruction address equals the given offset.
 
         Args:
@@ -108,7 +111,7 @@ class TestBridgeDisassembly:
         result: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="64"))
         assert result[0]["address"] == 0
 
-    def test_disassemble_nop_has_size_one(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_nop_has_size_one(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that NOP instructions have size 1.
 
         Args:
@@ -122,7 +125,7 @@ class TestBridgeDisassembly:
         result: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="64"))
         assert result[0]["size"] == 1
 
-    def test_disassemble_bytes_field_is_hex_string(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_bytes_field_is_hex_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that the bytes field of an instruction is a hex string.
 
         Args:
@@ -137,7 +140,7 @@ class TestBridgeDisassembly:
         assert isinstance(result[0]["bytes"], str)
         bytes.fromhex(result[0]["bytes"])
 
-    def test_disassemble_pe_section_code_with_auto_arch(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_section_code_with_auto_arch(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that auto arch detection works on the PE text section code bytes.
 
         Args:

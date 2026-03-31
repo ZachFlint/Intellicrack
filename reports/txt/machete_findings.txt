@@ -1,0 +1,5 @@
+2 findings in Cargo.toml
+
+Cargo.toml: unused dependency cipher
+
+Cargo.toml: unused dependency md-5

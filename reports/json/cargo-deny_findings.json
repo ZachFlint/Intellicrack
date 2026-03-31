@@ -1,0 +1,27 @@
+{
+  "tool": "cargo-deny",
+  "generated": "2026-03-31T03:23:29.833288+00:00",
+  "total_findings": 1,
+  "total_files": 2,
+  "files": [
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack-hexcore\\deny.toml",
+      "count": 1,
+      "findings": [
+        {
+          "line": 6,
+          "column": 17,
+          "severity": "error",
+          "code": "unexpected-value",
+          "message": "expected '[\"all\", \"workspace\", \"transitive\", \"none\"]'",
+          "raw": "error[unexpected-value]: expected '[\"all\", \"workspace\", \"transitive\", \"none\"]'"
+        }
+      ]
+    },
+    {
+      "path": "Cargo.toml",
+      "count": 0,
+      "findings": []
+    }
+  ]
+}

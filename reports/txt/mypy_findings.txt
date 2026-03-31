@@ -1,285 +1,1391 @@
-33 findings in src\intellicrack\bridges\cutter.py
+43 findings in tests\test_hexcore_e2e\test_bridge_transforms_deep.py
 
-src\intellicrack\bridges\cutter.py:176: error: Redundant cast to "list[Any]"  [redundant-cast]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:62: error: "str" has no attribute "write_bytes"  [attr-defined]
 
-src\intellicrack\bridges\cutter.py:188: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:73: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
 
-src\intellicrack\bridges\cutter.py:188: note: Perhaps you need "Callable[...]" or a callback protocol?
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:94: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:218: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:97: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:584: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:114: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:608: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:117: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:608: note: Perhaps you need "Callable[...]" or a callback protocol?
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:132: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:610: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:135: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:610: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:155: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:611: error: "None" has no attribute "cmd"  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:161: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:619: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:176: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
 
-src\intellicrack\bridges\cutter.py:627: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:182: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:721: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:193: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:721: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:194: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:774: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:210: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:804: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:217: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:849: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:235: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:924: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:238: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:959: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:254: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:1000: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:257: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:1044: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:279: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:1088: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:287: error: Incompatible types in assignment (expression has type "object", variable has type "str | None")  [assignment]
 
-src\intellicrack\bridges\cutter.py:1137: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:309: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:1162: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:311: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:1183: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:325: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:1208: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:327: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:1231: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:339: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
 
-src\intellicrack\bridges\cutter.py:1292: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:346: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:1322: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:348: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
-src\intellicrack\bridges\cutter.py:1344: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:363: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:369: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:371: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:387: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:389: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:403: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:405: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:406: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:422: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:424: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:426: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:438: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:456: error: Argument 2 to "_open_with_payload" has incompatible type "Path"; expected "str"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_transforms_deep.py:466: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+37 findings in src\intellicrack\bridges\cutter.py
+
+src\intellicrack\bridges\cutter.py:177: error: Redundant cast to "list[Any]"  [redundant-cast]
+
+src\intellicrack\bridges\cutter.py:189: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\cutter.py:189: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\cutter.py:205: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\cutter.py:205: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\cutter.py:215: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\cutter.py:215: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\cutter.py:254: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:624: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:648: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\cutter.py:648: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\cutter.py:650: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+
+src\intellicrack\bridges\cutter.py:650: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+
+src\intellicrack\bridges\cutter.py:651: error: "None" has no attribute "cmd"  [attr-defined]
+
+src\intellicrack\bridges\cutter.py:659: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:667: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:764: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+
+src\intellicrack\bridges\cutter.py:764: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+
+src\intellicrack\bridges\cutter.py:817: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:847: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:892: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:967: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1002: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1043: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1087: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1131: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1180: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1205: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1226: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1251: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1274: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1335: error: Statement is unreachable  [unreachable]
 
 src\intellicrack\bridges\cutter.py:1365: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1405: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1387: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1449: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1408: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1448: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\bridges\cutter.py:1492: error: Statement is unreachable  [unreachable]
+
+
+31 findings in tests\test_hexcore_e2e\test_bridge_new_capabilities.py
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:69: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:84: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:99: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:116: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:117: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:141: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:151: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:160: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:170: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:184: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:208: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:231: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:235: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:259: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:280: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:298: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:299: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:333: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:351: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:420: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:427: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:430: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:450: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:466: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:467: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:489: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:506: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:520: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:534: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:548: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_new_capabilities.py:561: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+26 findings in tests\test_hexcore_e2e\test_bridge_display_modes_complete.py
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:52: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:62: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:72: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:82: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:92: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:102: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:112: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:122: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:132: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:142: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:152: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:162: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:172: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:182: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:193: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:207: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:219: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:220: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:231: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:232: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:244: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:245: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:257: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:258: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:268: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display_modes_complete.py:270: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+22 findings in tests\test_hexcore_e2e\test_bridge_encoding_decoding.py
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:66: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:83: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:100: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:117: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:135: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:153: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:154: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:174: error: Incompatible types in assignment (expression has type "object", variable has type "str | None")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:194: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:209: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:223: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:234: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:245: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:256: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:267: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:278: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:290: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:303: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:309: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:319: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:338: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_encoding_decoding.py:345: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+22 findings in tests\test_hexcore_e2e\test_bridge_concurrent.py
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:63: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:77: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:95: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:99: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:120: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:140: error: "HexEditorBridge" has no attribute "cursor_offset"; maybe "_cursor_offset"?  [attr-defined]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:153: error: "HexEditorBridge" has no attribute "selection"; maybe "_selection" or "get_selection"?  [attr-defined]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:178: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:196: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:202: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:252: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:253: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:279: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:283: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:314: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:315: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:316: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:345: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:359: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:364: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_concurrent.py:379: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+21 findings in tests\test_hexcore_e2e\test_bridge_hash_advanced.py
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:114: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:129: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:140: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:141: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:154: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:165: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:179: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:193: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:205: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:220: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:231: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:263: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:278: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:292: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:303: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:319: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:331: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:345: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:357: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:358: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_hash_advanced.py:384: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+20 findings in tests\test_ui\test_sandbox_panel_fixes.py
+
+tests\test_ui\test_sandbox_panel_fixes.py:56: error: "SandboxPanel" has no attribute "selected_sandbox_type"; maybe "_selected_sandbox_type"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:64: error: "SandboxPanel" has no attribute "selected_sandbox_type"; maybe "_selected_sandbox_type"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:76: error: "SandboxPanel" has no attribute "sandbox_manager"; maybe "_sandbox_manager"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:80: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
+
+tests\test_ui\test_sandbox_panel_fixes.py:81: error: "SandboxPanel" has no attribute "sandbox_manager"; maybe "_sandbox_manager"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:87: error: "SandboxPanel" has no attribute "sandbox"; maybe "_sandbox", "sandbox_id", or "get_sandbox"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:88: error: "SandboxPanel" has no attribute "sandbox_manager"; maybe "_sandbox_manager"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:90: error: "SandboxPanel" has no attribute "on_create"; maybe "_on_create"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:92: error: "SandboxPanel" has no attribute "console_output"; maybe "_console_output"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:108: error: "SandboxPanel" has no attribute "run_btn"; maybe "_run_btn"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:116: error: "SandboxPanel" has no attribute "set_sandbox_controls_active"; maybe "_set_sandbox_controls_active"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:121: error: "SandboxPanel" has no attribute "run_btn"; maybe "_run_btn"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:129: error: "SandboxPanel" has no attribute "set_sandbox_controls_active"; maybe "_set_sandbox_controls_active"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:130: error: "SandboxPanel" has no attribute "set_sandbox_controls_active"; maybe "_set_sandbox_controls_active"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:158: error: "SandboxPanel" has no attribute "on_create_success"; maybe "_on_create_success"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:160: error: "SandboxPanel" has no attribute "status_indicator"; maybe "_status_indicator"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:162: error: "SandboxPanel" has no attribute "run_btn"; maybe "_run_btn"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:168: error: "SandboxPanel" has no attribute "set_sandbox_controls_active"; maybe "_set_sandbox_controls_active"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:170: error: "SandboxPanel" has no attribute "on_destroy_success"; maybe "_on_destroy_success" or "_on_restart_success"?  [attr-defined]
+
+tests\test_ui\test_sandbox_panel_fixes.py:172: error: "SandboxPanel" has no attribute "status_indicator"; maybe "_status_indicator"?  [attr-defined]
+
+
+19 findings in tests\test_hexcore_e2e\test_bridge_document_info.py
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:55: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:64: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:73: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:82: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:91: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:100: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:115: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:126: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:137: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:149: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:161: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:173: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:184: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:201: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:217: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:231: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:233: error: Value of type "object" is not indexable  [index]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:234: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:236: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
 
 19 findings in src\intellicrack\ui\provider_config.py
 
-src\intellicrack\ui\provider_config.py:70: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
+src\intellicrack\ui\provider_config.py:68: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:76: error: Incompatible types in assignment (expression has type "None", variable has type "type[OllamaProvider]")  [assignment]
+src\intellicrack\ui\provider_config.py:74: error: Incompatible types in assignment (expression has type "None", variable has type "type[OllamaProvider]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:82: error: Incompatible types in assignment (expression has type "None", variable has type "type[OpenRouterProvider]")  [assignment]
+src\intellicrack\ui\provider_config.py:80: error: Incompatible types in assignment (expression has type "None", variable has type "type[OpenRouterProvider]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:96: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
+src\intellicrack\ui\provider_config.py:94: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:97: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
+src\intellicrack\ui\provider_config.py:95: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:98: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+src\intellicrack\ui\provider_config.py:96: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], int]")  [assignment]
+src\intellicrack\ui\provider_config.py:97: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], int]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:100: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
+src\intellicrack\ui\provider_config.py:98: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:101: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
+src\intellicrack\ui\provider_config.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:102: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
+src\intellicrack\ui\provider_config.py:100: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:111: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
+src\intellicrack\ui\provider_config.py:109: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:112: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
+src\intellicrack\ui\provider_config.py:110: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:1658: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1673: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1693: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1708: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1754: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1769: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:2307: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:2330: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:2325: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:2348: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:2346: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:2369: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:2374: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:2397: error: Statement is unreachable  [unreachable]
+
+
+19 findings in tests\test_ui\test_tools_logic.py
+
+tests\test_ui\test_tools_logic.py:42: error: "FunctionListPanel" has no attribute "on_item_double_clicked"; maybe "_on_item_double_clicked"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:68: error: "XRefPanel" has no attribute "on_item_clicked"; maybe "_on_item_clicked"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:103: error: Argument 1 to "MainWindow" has incompatible type "object"; expected "Config"  [arg-type]
+
+tests\test_ui\test_tools_logic.py:103: error: Argument 2 to "MainWindow" has incompatible type "object"; expected "Orchestrator"  [arg-type]
+
+tests\test_ui\test_tools_logic.py:211: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:223: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:241: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:244: error: Statement is unreachable  [unreachable]
+
+tests\test_ui\test_tools_logic.py:253: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:259: error: Statement is unreachable  [unreachable]
+
+tests\test_ui\test_tools_logic.py:270: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:273: error: Statement is unreachable  [unreachable]
+
+tests\test_ui\test_tools_logic.py:283: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:286: error: Statement is unreachable  [unreachable]
+
+tests\test_ui\test_tools_logic.py:292: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:304: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:307: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:310: error: "ToolOutputPanel" has no attribute "on_tab_close_requested"; maybe "_on_tab_close_requested"?  [attr-defined]
+
+tests\test_ui\test_tools_logic.py:348: error: Statement is unreachable  [unreachable]
+
+
+18 findings in tests\test_hexcore_e2e\test_bridge_pattern_engine.py
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:74: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:85: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:105: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:116: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:127: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:144: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:157: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:170: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:183: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:202: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:215: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:240: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:259: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:260: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:297: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:314: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:323: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_pattern_engine.py:344: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+
+17 findings in tests\test_hexcore_e2e\test_bridge_search.py
+
+tests\test_hexcore_e2e\test_bridge_search.py:49: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:58: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:70: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:80: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:94: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:103: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:117: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:135: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:150: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:164: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:179: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:197: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:211: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:230: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:245: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:263: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search.py:278: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+16 findings in tests\test_hexcore_e2e\test_bridge_disassembly_deep.py
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:61: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:71: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:80: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:89: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:99: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:110: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:119: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:120: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:136: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:146: error: Value of type "object" is not indexable  [index]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:163: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:182: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:199: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:217: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:234: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:251: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+15 findings in tests\test_hexcore_e2e\test_bridge_yara_deep.py
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:136: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:147: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:160: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:178: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:188: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:198: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:212: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:225: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:239: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:249: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:267: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:268: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:286: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:300: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara_deep.py:323: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+14 findings in tests\test_bridges\test_frida_bridge.py
+
+tests\test_bridges\test_frida_bridge.py:400: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:583: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:588: error: Incompatible types in assignment (expression has type "object", variable has type "bytes")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:595: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:596: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:603: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:608: error: Incompatible types in assignment (expression has type "object", variable has type "bytes")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:615: error: Incompatible types in assignment (expression has type "object", variable has type "HookInfo")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:620: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:630: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:642: error: Incompatible types in assignment (expression has type "object", variable has type "StalkerTrace")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:663: error: Incompatible types in assignment (expression has type "object", variable has type "list[ChildProcessInfo]")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:675: error: Incompatible types in assignment (expression has type "object", variable has type "list[CrashInfo]")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:688: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, object]]")  [assignment]
+
+
+14 findings in tests\test_hexcore_e2e\test_bridge_display.py
+
+tests\test_hexcore_e2e\test_bridge_display.py:48: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:57: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:67: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:77: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:87: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:100: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:116: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:123: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:133: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:140: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:149: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:157: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:167: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_display.py:176: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+13 findings in tests\test_core\test_process_manager.py
+
+tests\test_core\test_process_manager.py:264: error: Unexpected keyword argument "timeout" for "run_tracked_async" of "ProcessManager"  [call-arg]
+
+tests\test_core\test_process_manager.py:324: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:325: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:326: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:327: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:336: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:341: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:360: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:376: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:453: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:477: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:482: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:508: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+
+13 findings in tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:89: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:102: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:120: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:135: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:148: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:161: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:174: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:193: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:209: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:226: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:240: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:253: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:270: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
 
 
 12 findings in src\intellicrack\ui\xpu_status.py
 
-src\intellicrack\ui\xpu_status.py:44: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
+src\intellicrack\ui\xpu_status.py:48: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:45: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+src\intellicrack\ui\xpu_status.py:49: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:46: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
+src\intellicrack\ui\xpu_status.py:50: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:47: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
+src\intellicrack\ui\xpu_status.py:51: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:48: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
+src\intellicrack\ui\xpu_status.py:52: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:54: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
+src\intellicrack\ui\xpu_status.py:58: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:230: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:234: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:261: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:265: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:288: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:292: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:305: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:309: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:342: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:346: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:372: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:376: error: Statement is unreachable  [unreachable]
+
+
+12 findings in tests\test_hexcore_e2e\test_bridge_copy_as_complete.py
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:87: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:98: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:109: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:126: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:137: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:150: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:164: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:182: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:193: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:204: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:221: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as_complete.py:232: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+11 findings in tests\test_hexcore_e2e\test_bridge_transforms.py
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:60: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:70: error: "object" has no attribute "__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:97: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:106: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:117: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:126: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:136: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:145: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:162: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, str]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_transforms.py:173: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
 
 10 findings in tests\test_providers\test_registry.py
 
-tests\test_providers\test_registry.py:73: error: Signature of "chat" incompatible with supertype "intellicrack.providers.base.LLMProviderBase"  [override]
+tests\test_providers\test_registry.py:77: error: Signature of "chat" incompatible with supertype "intellicrack.providers.base.LLMProviderBase"  [override]
 
-tests\test_providers\test_registry.py:73: note:      Superclass:
+tests\test_providers\test_registry.py:77: note:      Superclass:
 
-tests\test_providers\test_registry.py:73: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]
+tests\test_providers\test_registry.py:77: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., *, enable_cache: bool = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]
 
-tests\test_providers\test_registry.py:73: note:      Subclass:
+tests\test_providers\test_registry.py:77: note:      Subclass:
 
-tests\test_providers\test_registry.py:73: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]
+tests\test_providers\test_registry.py:77: note:          def chat(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> Coroutine[Any, Any, tuple[Message, list[ToolCall] | None]]
 
-tests\test_providers\test_registry.py:96: error: Signature of "chat_stream" incompatible with supertype "intellicrack.providers.base.LLMProviderBase"  [override]
+tests\test_providers\test_registry.py:100: error: Signature of "chat_stream" incompatible with supertype "intellicrack.providers.base.LLMProviderBase"  [override]
 
-tests\test_providers\test_registry.py:96: note:      Superclass:
+tests\test_providers\test_registry.py:100: note:      Superclass:
 
-tests\test_providers\test_registry.py:96: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., enable_cache: bool = ...) -> AsyncIterator[str]
+tests\test_providers\test_registry.py:100: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ..., tool_choice: ToolChoice | None = ..., thinking: ThinkingConfig | None = ..., *, enable_cache: bool = ...) -> AsyncIterator[str]
 
-tests\test_providers\test_registry.py:96: note:      Subclass:
+tests\test_providers\test_registry.py:100: note:      Subclass:
 
-tests\test_providers\test_registry.py:96: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> AsyncIterator[str]
-
-
-9 findings in src\intellicrack\core\process_manager.py
-
-src\intellicrack\core\process_manager.py:139: error: Cannot determine type of "_initialized"  [has-type]
-
-src\intellicrack\core\process_manager.py:144: error: Cannot determine type of "_initialized"  [has-type]
-
-src\intellicrack\core\process_manager.py:147: error: Need type annotation for "_processes" (hint: "_processes: dict[<type>, <type>] = ...")  [var-annotated]
-
-src\intellicrack\core\process_manager.py:148: error: Need type annotation for "_external_pids" (hint: "_external_pids: dict[<type>, <type>] = ...")  [var-annotated]
-
-src\intellicrack\core\process_manager.py:207: error: Incompatible types in assignment (expression has type "Callable[[int, FrameType | None], Any] | int | None", variable has type "None")  [assignment]
-
-src\intellicrack\core\process_manager.py:224: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\core\process_manager.py:261: error: Right operand of "and" is never evaluated  [unreachable]
-
-src\intellicrack\core\process_manager.py:263: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\core\process_manager.py:464: error: Returning Any from function declared to return "TrackedProcess | None"  [no-any-return]
+tests\test_providers\test_registry.py:100: note:          def chat_stream(self, messages: list[Message], model: str, tools: list[ToolDefinition] | None = ..., temperature: float = ..., max_tokens: int = ...) -> AsyncIterator[str]
 
 
-7 findings in tests\test_ui\test_tools_logic.py
+10 findings in tests\test_hexcore_e2e\test_bridge_compare_files.py
 
-tests\test_ui\test_tools_logic.py:98: error: Argument 1 to "MainWindow" has incompatible type "object"; expected "Config"  [arg-type]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:73: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
-tests\test_ui\test_tools_logic.py:98: error: Argument 2 to "MainWindow" has incompatible type "object"; expected "Orchestrator"  [arg-type]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:89: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
-tests\test_ui\test_tools_logic.py:239: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:112: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
-tests\test_ui\test_tools_logic.py:254: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:128: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
-tests\test_ui\test_tools_logic.py:268: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:157: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
-tests\test_ui\test_tools_logic.py:281: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:170: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
-tests\test_ui\test_tools_logic.py:343: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\test_bridge_compare_files.py:183: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_compare_files.py:197: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_compare_files.py:211: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_compare_files.py:226: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
 
-5 findings in src\intellicrack\ui\panels\hex_tools_panel.py
+10 findings in tests\test_ui\test_binary_panel_fixes.py
 
-src\intellicrack\ui\panels\hex_tools_panel.py:57: error: Name "_cxxfilt_demangle" already defined on line 55  [no-redef]
+tests\test_ui\test_binary_panel_fixes.py:283: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
 
-src\intellicrack\ui\panels\hex_tools_panel.py:345: error: Argument 1 of "paintEvent" is incompatible with supertype "PyQt6.QtWidgets.QWidget"; supertype defines the argument type as "QPaintEvent | None"  [override]
+tests\test_ui\test_binary_panel_fixes.py:290: error: "BinaryPanel" has no attribute "on_prev_page"; maybe "_on_prev_page"?  [attr-defined]
 
-src\intellicrack\ui\panels\hex_tools_panel.py:345: note: This violates the Liskov substitution principle
+tests\test_ui\test_binary_panel_fixes.py:297: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
 
-src\intellicrack\ui\panels\hex_tools_panel.py:345: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+tests\test_ui\test_binary_panel_fixes.py:298: error: "BinaryPanel" has no attribute "on_prev_page"; maybe "_on_prev_page"?  [attr-defined]
 
-src\intellicrack\ui\panels\hex_tools_panel.py:559: error: Item "None" of "QHeaderView | None" has no attribute "setStretchLastSection"  [union-attr]
+tests\test_ui\test_binary_panel_fixes.py:312: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
+
+tests\test_ui\test_binary_panel_fixes.py:321: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
+
+tests\test_ui\test_binary_panel_fixes.py:360: error: "BinaryPanel" has no attribute "on_hex_cell_changed"; maybe "_on_hex_cell_changed"?  [attr-defined]
+
+tests\test_ui\test_binary_panel_fixes.py:379: error: "BinaryPanel" has no attribute "on_hex_cell_changed"; maybe "_on_hex_cell_changed"?  [attr-defined]
+
+tests\test_ui\test_binary_panel_fixes.py:416: error: "BinaryPanel" has no attribute "on_apply_patch"; maybe "_on_apply_patch"?  [attr-defined]
+
+tests\test_ui\test_binary_panel_fixes.py:432: error: "BinaryPanel" has no attribute "on_hex_cell_changed"; maybe "_on_hex_cell_changed"?  [attr-defined]
+
+
+9 findings in tests\test_hexcore_e2e\test_bridge_lifecycle.py
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:50: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:88: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:99: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:110: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:121: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:130: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:140: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:142: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_lifecycle.py:191: error: "HexEditorBridge" has no attribute "cursor_offset"; maybe "_cursor_offset"?  [attr-defined]
+
+
+9 findings in tests\test_hexcore_e2e\test_bridge_copy_as.py
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:69: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:82: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:93: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:105: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:117: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:129: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:140: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:152: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_copy_as.py:164: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+9 findings in tests\test_ui\test_app_embedded_tools.py
+
+tests\test_ui\test_app_embedded_tools.py:244: error: "MainWindow" has no attribute "on_debug_current_binary"; maybe "_on_debug_current_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:259: error: "MainWindow" has no attribute "on_analyze_current_binary"; maybe "_on_analyze_current_binary" or "_on_debug_current_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:274: error: "MainWindow" has no attribute "on_hex_edit_current_binary"; maybe "_on_hex_edit_current_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:290: error: "MainWindow" has no attribute "on_debug_current_binary"; maybe "_on_debug_current_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:307: error: "MainWindow" has no attribute "on_analyze_current_binary"; maybe "_on_analyze_current_binary" or "_on_debug_current_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:324: error: "MainWindow" has no attribute "on_hex_edit_current_binary"; maybe "_on_hex_edit_current_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:352: error: "MainWindow" has no attribute "load_binary"; maybe "_load_binary"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:371: error: "MainWindow" has no attribute "show_tool_error"; maybe "_show_tool_error"?  [attr-defined]
+
+tests\test_ui\test_app_embedded_tools.py:387: error: "MainWindow" has no attribute "show_no_binary_warning"; maybe "_show_no_binary_warning"?  [attr-defined]
+
+
+8 findings in tests\test_hexcore_e2e\test_bridge_yara.py
+
+tests\test_hexcore_e2e\test_bridge_yara.py:85: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:94: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:103: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:114: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:123: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:137: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:154: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_yara.py:167: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+8 findings in tests\test_ui\test_vnc_widget.py
+
+tests\test_ui\test_vnc_widget.py:96: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+
+tests\test_ui\test_vnc_widget.py:98: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+
+tests\test_ui\test_vnc_widget.py:105: error: Unexpected keyword argument "timeout" for "connect" of "RFBClient"  [call-arg]
+
+tests\test_ui\test_vnc_widget.py:199: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:214: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:220: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:230: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:353: error: "type[VNCWidget]" has no attribute "button_mask"  [attr-defined]
+
+
+7 findings in tests\test_hexcore_e2e\test_hex_document_state.py
+
+tests\test_hexcore_e2e\test_hex_document_state.py:81: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+tests\test_hexcore_e2e\test_hex_document_state.py:93: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+tests\test_hexcore_e2e\test_hex_document_state.py:112: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+tests\test_hexcore_e2e\test_hex_document_state.py:119: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+tests\test_hexcore_e2e\test_hex_document_state.py:126: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+tests\test_hexcore_e2e\test_hex_document_state.py:133: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+tests\test_hexcore_e2e\test_hex_document_state.py:688: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
+
+
+7 findings in tests\test_bridges\test_x64dbg_events.py
+
+tests\test_bridges\test_x64dbg_events.py:100: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+tests\test_bridges\test_x64dbg_events.py:122: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+tests\test_bridges\test_x64dbg_events.py:143: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+tests\test_bridges\test_x64dbg_events.py:151: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+tests\test_bridges\test_x64dbg_events.py:170: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+tests\test_bridges\test_x64dbg_events.py:187: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+tests\test_bridges\test_x64dbg_events.py:195: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
+
+
+7 findings in tests\test_hexcore_e2e\test_bridge_sandbox.py
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:81: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:93: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:103: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:138: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:149: error: Unexpected keyword argument "timeout" for "test_in_sandbox" of "HexEditorBridge"  [call-arg]
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:170: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_sandbox.py:171: error: Non-overlapping identity check (left operand type: "ToolRegistry | None", right operand type: "_MinimalRegistry")  [comparison-overlap]
+
+
+7 findings in tests\test_hexcore_e2e\test_bridge_patches.py
+
+tests\test_hexcore_e2e\test_bridge_patches.py:55: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_patches.py:71: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_patches.py:87: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_patches.py:107: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_patches.py:115: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_patches.py:136: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_patches.py:146: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+7 findings in tests\test_hexcore_e2e\test_bridge_disassembly.py
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:66: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:80: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:95: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:111: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:125: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:139: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_disassembly.py:149: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+7 findings in tests\test_hexcore_e2e\test_bridge_ai_context.py
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:57: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:67: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:83: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:94: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:108: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:120: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_ai_context.py:132: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+
+5 findings in tests\test_providers\test_model_discovery.py
+
+tests\test_providers\test_model_discovery.py:21: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+
+tests\test_providers\test_model_discovery.py:137: error: Argument 1 to "connect" of "OpenAIProvider" has incompatible type "ProviderCredentials | None"; expected "ProviderCredentials"  [arg-type]
+
+tests\test_providers\test_model_discovery.py:147: error: Argument 1 to "connect" of "GoogleProvider" has incompatible type "ProviderCredentials | None"; expected "ProviderCredentials"  [arg-type]
+
+tests\test_providers\test_model_discovery.py:157: error: Argument 1 to "connect" of "OpenRouterProvider" has incompatible type "ProviderCredentials | None"; expected "ProviderCredentials"  [arg-type]
+
+tests\test_providers\test_model_discovery.py:167: error: Argument 1 to "connect" of "AnthropicProvider" has incompatible type "ProviderCredentials | None"; expected "ProviderCredentials"  [arg-type]
+
+
+4 findings in tests\test_ui\test_graph_view.py
+
+tests\test_ui\test_graph_view.py:256: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+
+tests\test_ui\test_graph_view.py:270: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+
+tests\test_ui\test_graph_view.py:280: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+
+tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
 
 
 4 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py:46: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
-src\intellicrack\ui\panels\binary_panel.py:640: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\panels\binary_panel.py:646: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\panels\binary_panel.py:820: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\panels\binary_panel.py:828: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\panels\binary_panel.py:874: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\panels\binary_panel.py:882: error: Statement is unreachable  [unreachable]
+
+
+4 findings in tests\test_providers\test_local_transformers_provider.py
+
+tests\test_providers\test_local_transformers_provider.py:501: error: "LocalTransformersProvider" has no attribute "format_prompt"; maybe "_format_prompt"?  [attr-defined]
+
+tests\test_providers\test_local_transformers_provider.py:514: error: "LocalTransformersProvider" has no attribute "format_prompt"; maybe "_format_prompt"?  [attr-defined]
+
+tests\test_providers\test_local_transformers_provider.py:526: error: "LocalTransformersProvider" has no attribute "parse_tool_calls"; maybe "_parse_tool_calls"?  [attr-defined]
+
+tests\test_providers\test_local_transformers_provider.py:534: error: "LocalTransformersProvider" has no attribute "parse_tool_calls"; maybe "_parse_tool_calls"?  [attr-defined]
+
+
+4 findings in tests\test_hexcore_e2e\conftest.py
+
+tests\test_hexcore_e2e\conftest.py:78: error: Returning Any from function declared to return Module  [no-any-return]
+
+tests\test_hexcore_e2e\conftest.py:91: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
+
+tests\test_hexcore_e2e\conftest.py:118: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
+
+tests\test_hexcore_e2e\conftest.py:132: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
 
 
 4 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:71: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
+src\intellicrack\ui\app.py:69: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
 
-src\intellicrack\ui\app.py:72: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
+src\intellicrack\ui\app.py:70: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\app.py:361: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:359: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\app.py:808: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:820: error: Statement is unreachable  [unreachable]
 
 
 3 findings in src\intellicrack\core\hexpat\stdlib.py
 
-src\intellicrack\core\hexpat\stdlib.py:161: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
+src\intellicrack\core\hexpat\stdlib.py:158: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
 
-src\intellicrack\core\hexpat\stdlib.py:180: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
+src\intellicrack\core\hexpat\stdlib.py:174: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
 
-src\intellicrack\core\hexpat\stdlib.py:589: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
+src\intellicrack\core\hexpat\stdlib.py:592: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
+
+
+3 findings in tests\test_hexcore_e2e\test_bridge_state_integration.py
+
+tests\test_hexcore_e2e\test_bridge_state_integration.py:236: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_state_integration.py:263: error: Argument 1 to "remove_template" of "HexEditorBridge" has incompatible type "object"; expected "str"  [arg-type]
+
+tests\test_hexcore_e2e\test_bridge_state_integration.py:300: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+3 findings in tests\test_ui\test_tool_panel_detach.py
+
+tests\test_ui\test_tool_panel_detach.py:75: error: "ToolOutputPanel" has no attribute "reattach_panel"; maybe "_reattach_panel"?  [attr-defined]
+
+tests\test_ui\test_tool_panel_detach.py:143: error: "ToolOutputPanel" has no attribute "close_other_tabs"; maybe "_close_other_tabs"?  [attr-defined]
+
+tests\test_ui\test_tool_panel_detach.py:157: error: "ToolOutputPanel" has no attribute "close_all_tabs"; maybe "_close_all_tabs"?  [attr-defined]
+
+
+3 findings in tests\test_ui\test_search_async.py
+
+tests\test_ui\test_search_async.py:146: error: "SearchWorker" has no attribute "document"; maybe "_document"?  [attr-defined]
+
+tests\test_ui\test_search_async.py:147: error: "SearchWorker" has no attribute "mode"; maybe "_mode"?  [attr-defined]
+
+tests\test_ui\test_search_async.py:149: error: "SearchWorker" has no attribute "encoding"; maybe "_encoding"?  [attr-defined]
+
+
+3 findings in tests\core\test_process_cleanup.py
+
+tests\core\test_process_cleanup.py:227: error: Incompatible types in assignment (expression has type "_BlockingR2", variable has type "None")  [assignment]
+
+tests\core\test_process_cleanup.py:249: error: Incompatible types in assignment (expression has type "_FastR2", variable has type "None")  [assignment]
+
+tests\core\test_process_cleanup.py:259: error: Incompatible types in assignment (expression has type "_NoneR2", variable has type "None")  [assignment]
+
+
+2 findings in tests\test_hexcore_e2e\test_data_inspector.py
+
+tests\test_hexcore_e2e\test_data_inspector.py:173: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
+
+tests\test_hexcore_e2e\test_data_inspector.py:299: error: Redundant cast to "dict[str, str]"  [redundant-cast]
 
 
 2 findings in tests\test_ui\test_font_manager.py
 
-tests\test_ui\test_font_manager.py:141: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+tests\test_ui\test_font_manager.py:146: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
-tests\test_ui\test_font_manager.py:182: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+tests\test_ui\test_font_manager.py:187: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+
+
+2 findings in src\intellicrack\core\process_manager.py
+
+src\intellicrack\core\process_manager.py:154: error: Cannot determine type of "_initialized"  [has-type]
+
+src\intellicrack\core\process_manager.py:847: note: "run_tracked_async" of "ProcessManager" defined here
 
 
 2 findings in src\intellicrack\credentials\store.py
 
 src\intellicrack\credentials\store.py:36: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
-src\intellicrack\credentials\store.py:128: error: Statement is unreachable  [unreachable]
+src\intellicrack\credentials\store.py:122: error: Statement is unreachable  [unreachable]
 
 
 2 findings in src\intellicrack\providers\xpu_utils.py
 
-src\intellicrack\providers\xpu_utils.py:30: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\providers\xpu_utils.py:29: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
-src\intellicrack\providers\xpu_utils.py:76: error: Statement is unreachable  [unreachable]
+src\intellicrack\providers\xpu_utils.py:75: error: Statement is unreachable  [unreachable]
 
 
 2 findings in tests\test_bridges\test_x64dbg.py
 
-tests\test_bridges\test_x64dbg.py:165: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
+tests\test_bridges\test_x64dbg.py:174: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
 
-tests\test_bridges\test_x64dbg.py:175: error: Value of type "WatchpointInfo" is not indexable  [index]
-
-
-2 findings in tests\test_providers\test_local_transformers_provider.py
-
-tests\test_providers\test_local_transformers_provider.py:496: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
-
-tests\test_providers\test_local_transformers_provider.py:509: error: Argument 1 to "_format_prompt" of "LocalTransformersProvider" has incompatible type "list[dict[str, str]]"; expected "list[dict[str, object]]"  [arg-type]
+tests\test_bridges\test_x64dbg.py:184: error: Value of type "WatchpointInfo" is not indexable  [index]
 
 
-2 findings in tests\test_ui\test_app_embedded_tools.py
+2 findings in src\intellicrack\core\template_manager.py
 
-tests\test_ui\test_app_embedded_tools.py:148: error: "MainWindow" has no attribute "_hxd_btn"  [attr-defined]
+src\intellicrack\core\template_manager.py:329: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
 
-tests\test_ui\test_app_embedded_tools.py:220: error: "MainWindow" has no attribute "_on_open_hxd"  [attr-defined]
+src\intellicrack\core\template_manager.py:341: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
+
+
+2 findings in src\intellicrack\bridges\hex_editor.py
+
+src\intellicrack\bridges\hex_editor.py:1777: error: Name "data" already defined on line 1771  [no-redef]
+
+src\intellicrack\bridges\hex_editor.py:2100: note: "test_in_sandbox" of "HexEditorBridge" defined here
+
+
+1 findings in tests\test_core\test_config.py
+
+tests\test_core\test_config.py:166: error: "Config" has no attribute "to_dict"; maybe "_to_dict"?  [attr-defined]
+
+
+1 findings in src\intellicrack\core\hexpat\evaluator.py
+
+src\intellicrack\core\hexpat\evaluator.py:1512: error: Right operand of "or" is never evaluated  [unreachable]
+
+
+1 findings in src\intellicrack\ui\win32_embed.py
+
+src\intellicrack\ui\win32_embed.py:122: error: Argument 1 to "createWindowContainer" of "QWidget" has incompatible type "object"; expected "QWindow | None"  [arg-type]
 
 
 1 findings in src\intellicrack\credentials\env_loader.py
@@ -287,49 +1393,64 @@ tests\test_ui\test_app_embedded_tools.py:220: error: "MainWindow" has no attribu
 src\intellicrack\credentials\env_loader.py:409: error: Argument 2 to "get" of "Mapping" has incompatible type "str | None"; expected "str"  [arg-type]
 
 
-1 findings in src\intellicrack\sandbox\qemu.py
+1 findings in tests\test_core\test_main.py
 
-src\intellicrack\sandbox\qemu.py:210: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
-
-
-1 findings in tests\test_hexpat\test_interpreter.py
-
-tests\test_hexpat\test_interpreter.py:262: error: Argument 2 to "execute_bytes" of "HexPatInterpreter" has incompatible type "bytearray"; expected "bytes"  [arg-type]
+tests\test_core\test_main.py:63: error: "SessionStore" has no attribute "connection"; maybe "_connection"?  [attr-defined]
 
 
-1 findings in tests\test_ui\test_graph_view.py
+1 findings in tests\core\test_process_manager_leaks.py
 
-tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
+tests\core\test_process_manager_leaks.py:110: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
+
+
+1 findings in tests\test_ui\test_icon_manager.py
+
+tests\test_ui\test_icon_manager.py:264: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py
 
-tests\test_providers\test_openrouter_provider.py:217: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_openrouter_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
 1 findings in tests\test_providers\test_huggingface_provider.py
 
-tests\test_providers\test_huggingface_provider.py:202: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_huggingface_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
 1 findings in tests\test_providers\test_openai_provider.py
 
-tests\test_providers\test_openai_provider.py:196: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_openai_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
 1 findings in tests\test_providers\test_grok_provider.py
 
-tests\test_providers\test_grok_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_grok_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
 1 findings in tests\test_providers\test_anthropic_provider.py
 
-tests\test_providers\test_anthropic_provider.py:193: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+
+
+1 findings in tests\test_providers\test_google_provider.py
+
+tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+
+
+1 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:211: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
 1 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\providers\model_loader.py:29: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
+1 findings in tests\test_hexpat\test_interpreter.py
+
+tests\test_hexpat\test_interpreter.py:267: error: Argument 2 to "execute_bytes" of "HexPatInterpreter" has incompatible type "bytearray"; expected "bytes"  [arg-type]
 
 
 1 findings in src\intellicrack\providers\local_transformers.py
@@ -337,31 +1458,21 @@ src\intellicrack\providers\model_loader.py:29: error: Incompatible types in assi
 src\intellicrack\providers\local_transformers.py:65: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
-1 findings in tests\test_ui\test_sandbox_panel_fixes.py
+1 findings in tests\test_hexcore_e2e\test_bridge_error_handling.py
 
-tests\test_ui\test_sandbox_panel_fixes.py:75: error: Argument 1 to "set_sandbox_manager" of "SandboxPanel" has incompatible type "object"; expected "SandboxManager"  [arg-type]
-
-
-1 findings in src\intellicrack\bridges\hex_editor.py
-
-src\intellicrack\bridges\hex_editor.py:1763: error: Name "data" already defined on line 1757  [no-redef]
+tests\test_hexcore_e2e\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
 
 
-1 findings in src\intellicrack\providers\google.py
+1 findings in tests\test_ui\test_xpu_status.py
 
-src\intellicrack\providers\google.py:189: error: Missing positional argument "supports_tools" in call to "ModelInfo"  [call-arg]
-
-
-1 findings in tests\test_providers\test_model_discovery.py
-
-tests\test_providers\test_model_discovery.py:112: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_ui\test_xpu_status.py:193: error: "XPUStatusDialog" has no attribute "status_label"; maybe "_status_label"?  [attr-defined]
 
 
-1 findings in tests\test_providers\test_google_provider.py
+1 findings in tests\test_ui\test_panel_dock.py
 
-tests\test_providers\test_google_provider.py:194: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests\test_ui\test_panel_dock.py:91: error: "DetachedPanelWindow" has no attribute "on_redock"; maybe "_on_redock"?  [attr-defined]
 
 
-1 findings in tests\test_ui\test_vnc_widget.py
+1 findings in src\intellicrack\ui\panels\vnc_widget.py
 
-tests\test_ui\test_vnc_widget.py:98: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\panels\vnc_widget.py:83: note: "connect" of "RFBClient" defined here

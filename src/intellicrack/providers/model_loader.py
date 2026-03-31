@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Model loading utilities with quantization and caching for local transformers.
 
@@ -19,7 +18,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from ..core.logging import get_logger
+from intellicrack.core.logging import get_logger
 
 
 try:
@@ -41,7 +40,7 @@ except (ImportError, ValueError):
     get_logger("providers.model_loader").debug("bitsandbytes_config_unavailable")
     BitsAndBytesConfig = None
 
-from .xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
+from intellicrack.providers.xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
 
 
 if TYPE_CHECKING:
@@ -287,15 +286,16 @@ def _unload_model(loaded_model: LoadedModel) -> None:
         try:
             if _torch is not None and hasattr(_torch, "xpu") and _torch.xpu.is_available():
                 _torch.xpu.empty_cache()
-        except Exception as inner_exc:
+        except (RuntimeError, OSError) as inner_exc:
             _logger.debug("xpu_cache_clear_on_unload_failed", error=str(inner_exc))
-    except Exception as exc:
+    except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("model_unload_failed", error=str(exc))
 
 
 def estimate_model_memory(
     model_id: str,
     dtype: DtypeOption = "float16",
+    *,
     include_activations: bool = True,
 ) -> int:
     """
@@ -569,7 +569,7 @@ def load_model_for_xpu(
             load_time_seconds=load_time,
             memory_mb=memory_usage // (1024 * 1024),
         )
-    except Exception as exc:
+    except (RuntimeError, ImportError, ValueError, OSError) as exc:
         _logger.warning("xpu_model_load_failed", model_id=config.model_id, error=str(exc))
         clear_xpu_cache()
         raise RuntimeError(_ERR_LOAD_XPU_FAILED % (config.model_id, exc)) from exc
@@ -671,7 +671,7 @@ def load_model_for_cpu(
             load_time_seconds=load_time,
             memory_mb=memory_usage // (1024 * 1024),
         )
-    except Exception as exc:
+    except (RuntimeError, ImportError, ValueError, OSError) as exc:
         _logger.warning("cpu_model_load_failed", model_id=config.model_id, error=str(exc))
         gc.collect()
         raise RuntimeError(_ERR_LOAD_CPU_FAILED % (config.model_id, exc)) from exc

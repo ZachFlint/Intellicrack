@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Top-level orchestrator for the .hexpat pattern language interpreter.
 
@@ -30,6 +29,8 @@ from intellicrack.core.logging import get_logger
 if TYPE_CHECKING:
     from typing import Any
 
+    from intellicrack.core.types import HexDocumentLike
+
 
 _logger = get_logger("core.hexpat.interpreter")
 
@@ -48,8 +49,11 @@ class HexPatInterpreter:
     type registration -> evaluator. Outputs ParsedField-compatible dicts
     that plug directly into the existing hex editor UI.
 
-    Attributes:
-        include_paths: Directories searched for #include resolution.
+    Args:
+        include_paths: Additional directories for ``#include`` resolution.
+            The interpreter always searches the standard library directory
+            (containing std/ and type/ libraries) first.
+        std_lib_path: Override path for the standard library directory.
     """
 
     def __init__(
@@ -57,16 +61,6 @@ class HexPatInterpreter:
         include_paths: list[Path] | None = None,
         std_lib_path: Path | None = None,
     ) -> None:
-        """
-        Initialize the interpreter with include search paths.
-
-        Args:
-            include_paths: Additional directories for #include resolution.
-                The interpreter always searches vendor/ImHex-Patterns/includes/
-                (containing std/ and type/ libraries) first.
-            std_lib_path: Override path for the standard library. Defaults to
-                vendor/ImHex-Patterns/includes/.
-        """
         paths: list[Path] = []
 
         lib_path = std_lib_path if std_lib_path is not None else _STD_LIB_DIR
@@ -81,7 +75,7 @@ class HexPatInterpreter:
     def execute(
         self,
         source: str,
-        document: Any,
+        document: HexDocumentLike,
         offset: int = 0,
         file_path: Path | None = None,
     ) -> list[dict[str, Any]]:
@@ -97,12 +91,9 @@ class HexPatInterpreter:
                 and error messages.
 
         Returns:
-            A list of ParsedField-compatible dicts with keys: name, offset,
+            list[dict[str, Any]]: A list of ParsedField-compatible dicts with keys: name, offset,
             size, raw_bytes, display_value, children, color,
             validation_passed, description.
-
-        Raises:
-            HexPatError: On any preprocessing, parsing, or evaluation error.
         """
         preprocessor = HexPatPreprocessor(self._include_paths)
         file_str = str(file_path) if file_path else "<input>"
@@ -142,7 +133,7 @@ class HexPatInterpreter:
     def execute_file(
         self,
         pattern_path: Path,
-        document: Any,
+        document: HexDocumentLike,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
         """
@@ -154,11 +145,7 @@ class HexPatInterpreter:
             offset: Base offset in the binary data.
 
         Returns:
-            A list of ParsedField-compatible dicts.
-
-        Raises:
-            HexPatError: On any error during execution.
-            FileNotFoundError: If the pattern file does not exist.
+            list[dict[str, Any]]: A list of ParsedField-compatible dicts.
         """
         source = pattern_path.read_text(encoding="utf-8", errors="replace")
         return self.execute(source, document, offset, pattern_path)
@@ -182,10 +169,7 @@ class HexPatInterpreter:
             file_path: Optional source file path.
 
         Returns:
-            A list of ParsedField-compatible dicts.
-
-        Raises:
-            HexPatError: On any error during execution.
+            list[dict[str, Any]]: A list of ParsedField-compatible dicts.
         """
         preprocessor = HexPatPreprocessor(self._include_paths)
         file_str = str(file_path) if file_path else "<input>"
@@ -233,7 +217,7 @@ class HexPatInterpreter:
             source: The .hexpat source code to check.
 
         Returns:
-            True if the pattern can be compiled to JSON.
+            bool: True if the pattern can be compiled to JSON.
         """
         try:
             preprocessor = HexPatPreprocessor(self._include_paths)
@@ -259,7 +243,7 @@ class HexPatInterpreter:
             source: The .hexpat source code.
 
         Returns:
-            JSON string representing the template.
+            str: JSON string representing the template.
 
         Raises:
             HexPatError: If compilation fails.
@@ -268,7 +252,8 @@ class HexPatInterpreter:
             from intellicrack.core.hexpat_compiler import HexPatCompiler
 
             result = HexPatCompiler.compile(source)
-        except Exception as exc:
-            raise HexPatError(str(exc)) from exc
+        except (HexPatError, ImportError) as exc:
+            msg = str(exc)
+            raise HexPatError(msg) from exc
         else:
             return result

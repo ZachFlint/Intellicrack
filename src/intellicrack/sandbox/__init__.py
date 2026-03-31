@@ -10,7 +10,7 @@ This package provides sandbox environments for safe execution and behavioral ana
 
 from __future__ import annotations
 
-from .base import (
+from intellicrack.sandbox.base import (
     ExecutionReport,
     ExecutionResult,
     FileChange,
@@ -30,9 +30,9 @@ from .base import (
     validate_process_operation,
     validate_registry_operation,
 )
-from .manager import SandboxInstance, SandboxManager, SandboxType
-from .qemu import AcceleratorType, GuestOS, QEMUConfig, QEMUSandbox
-from .windows import WindowsSandbox
+from intellicrack.sandbox.manager import SandboxInstance, SandboxManager, SandboxType
+from intellicrack.sandbox.qemu import AcceleratorType, GuestOS, QEMUConfig, QEMUSandbox
+from intellicrack.sandbox.windows import WindowsSandbox
 
 
 __all__: list[str] = [

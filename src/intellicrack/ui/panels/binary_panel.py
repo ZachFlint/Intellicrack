@@ -141,6 +141,13 @@ _HEX_PATTERN = re.compile(r"^[0-9a-fA-F ]+$")
 
 _EDITED_HEX_BG = QColor(60, 60, 30)
 
+CHUNK_SIZE: int = _CHUNK_SIZE
+EDITED_HEX_BG: QColor = _EDITED_HEX_BG
+HEX_BYTES_PER_ROW: int = _HEX_BYTES_PER_ROW
+HEX_COL_ASCII: int = _HEX_COL_ASCII
+HEX_COL_HEX: int = _HEX_COL_HEX
+LARGE_FILE_THRESHOLD: int = _LARGE_FILE_THRESHOLD
+
 
 class BinaryPanel(QWidget):
     """
@@ -166,10 +173,10 @@ class BinaryPanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._file_path: Path | None = None
-        self._file_data: bytearray = bytearray()
+        self.file_path: Path | None = None
+        self.file_data: bytearray = bytearray()
         self._patches: list[tuple[int, bytes, bytes]] = []
-        self._current_offset: int = 0
+        self.current_offset: int = 0
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -179,7 +186,7 @@ class BinaryPanel(QWidget):
         layout.setSpacing(4)
 
         toolbar = QToolBar()
-        toolbar.setMovable(False)
+        toolbar.setMovable(movable=False)
         toolbar.setFixedHeight(32)
 
         self._open_btn = QPushButton("Open")
@@ -247,9 +254,9 @@ class BinaryPanel(QWidget):
         self._prev_page_btn.clicked.connect(self._on_prev_page)
         toolbar.addWidget(self._prev_page_btn)
 
-        self._page_label = QLabel("")
-        self._page_label.setObjectName("toolbar_label")
-        toolbar.addWidget(self._page_label)
+        self.page_label = QLabel("")
+        self.page_label.setObjectName("toolbar_label")
+        toolbar.addWidget(self.page_label)
 
         self._next_page_btn = QPushButton(">")
         self._next_page_btn.setObjectName("tool_button")
@@ -272,20 +279,20 @@ class BinaryPanel(QWidget):
         hex_layout = QVBoxLayout(hex_container)
         hex_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._hex_table = QTableWidget(0, 3)
-        self._hex_table.setHorizontalHeaderLabels(["Offset", "Hex", "ASCII"])
-        self._hex_table.setFont(FontManager.get_instance().get_code_font(9))
-        self._hex_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        v_header = self._hex_table.verticalHeader()
+        self.hex_table = QTableWidget(0, 3)
+        self.hex_table.setHorizontalHeaderLabels(["Offset", "Hex", "ASCII"])
+        self.hex_table.setFont(FontManager.get_instance().get_code_font(9))
+        self.hex_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        v_header = self.hex_table.verticalHeader()
         if v_header is not None:
-            v_header.setVisible(False)
-        hex_header = self._hex_table.horizontalHeader()
+            v_header.setVisible(v=False)
+        hex_header = self.hex_table.horizontalHeader()
         if hex_header is not None:
             hex_header.setSectionResizeMode(_HEX_COL_OFFSET, QHeaderView.ResizeMode.ResizeToContents)
             hex_header.setSectionResizeMode(_HEX_COL_HEX, QHeaderView.ResizeMode.Stretch)
             hex_header.setSectionResizeMode(_HEX_COL_ASCII, QHeaderView.ResizeMode.ResizeToContents)
-        connect_cell_changed(self._hex_table, self._on_hex_cell_changed)
-        hex_layout.addWidget(self._hex_table)
+        connect_cell_changed(self.hex_table, self._on_hex_cell_changed)
+        hex_layout.addWidget(self.hex_table)
         main_splitter.addWidget(hex_container)
 
         side_panel = QWidget()
@@ -294,10 +301,10 @@ class BinaryPanel(QWidget):
 
         self._side_tabs = QTabWidget()
 
-        self._sections_tree = QTreeWidget()
-        set_header_labels(self._sections_tree, ["Name", "VAddr", "Size", "Flags"])
-        self._sections_tree.itemDoubleClicked.connect(self._on_section_double_clicked)
-        self._side_tabs.addTab(self._sections_tree, "Sections")
+        self.sections_tree = QTreeWidget()
+        set_header_labels(self.sections_tree, ["Name", "VAddr", "Size", "Flags"])
+        self.sections_tree.itemDoubleClicked.connect(self._on_section_double_clicked)
+        self._side_tabs.addTab(self.sections_tree, "Sections")
 
         self._imports_tree = QTreeWidget()
         set_header_labels(self._imports_tree, ["Library", "Function", "Address"])
@@ -363,24 +370,24 @@ class BinaryPanel(QWidget):
             _logger.warning("binary_file_too_large", size=file_size)
 
         try:
-            with open(path, "rb") as f:
-                self._file_data = bytearray(f.read())
+            with path.open("rb") as f:
+                self.file_data = bytearray(f.read())
         except OSError as e:
             _logger.warning("binary_file_read_failed", error=str(e))
             return False
 
-        self._file_path = path
+        self.file_path = path
         self._patches.clear()
-        self._current_offset = 0
+        self.current_offset = 0
         self._revert_btn.setEnabled(False)
 
-        self._file_label.setText(f"{path.name} ({len(self._file_data):,} bytes)")
+        self._file_label.setText(f"{path.name} ({len(self.file_data):,} bytes)")
         self._populate_hex_view(0)
         self._parse_sections()
         self._extract_strings()
         self._update_patches_table()
 
-        _logger.info("binary_loaded", path=str(path), size=len(self._file_data))
+        _logger.info("binary_loaded", path=str(path), size=len(self.file_data))
         return True
 
     def _populate_hex_view(self, start_offset: int) -> None:
@@ -390,28 +397,28 @@ class BinaryPanel(QWidget):
         Args:
             start_offset: Byte offset to start display from.
         """
-        self._current_offset = start_offset
-        display_size = min(len(self._file_data) - start_offset, _CHUNK_SIZE)
+        self.current_offset = start_offset
+        display_size = min(len(self.file_data) - start_offset, _CHUNK_SIZE)
         row_count = (display_size + _HEX_BYTES_PER_ROW - 1) // _HEX_BYTES_PER_ROW
 
-        self._hex_table.blockSignals(True)
-        self._hex_table.setRowCount(0)
-        self._hex_table.setRowCount(row_count)
+        self.hex_table.blockSignals(b=True)
+        self.hex_table.setRowCount(0)
+        self.hex_table.setRowCount(row_count)
 
         patched_offsets = self._get_patched_byte_offsets()
 
         for row_idx in range(row_count):
             offset = start_offset + row_idx * _HEX_BYTES_PER_ROW
-            end = min(offset + _HEX_BYTES_PER_ROW, len(self._file_data))
-            chunk = self._file_data[offset:end]
+            end = min(offset + _HEX_BYTES_PER_ROW, len(self.file_data))
+            chunk = self.file_data[offset:end]
 
             offset_item = QTableWidgetItem(f"0x{offset:08X}")
             offset_item.setFlags(offset_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self._hex_table.setItem(row_idx, _HEX_COL_OFFSET, offset_item)
+            self.hex_table.setItem(row_idx, _HEX_COL_OFFSET, offset_item)
 
             hex_str = " ".join(f"{b:02X}" for b in chunk)
             hex_item = QTableWidgetItem(hex_str)
-            self._hex_table.setItem(row_idx, _HEX_COL_HEX, hex_item)
+            self.hex_table.setItem(row_idx, _HEX_COL_HEX, hex_item)
 
             has_patched = any(offset + j in patched_offsets for j in range(len(chunk)))
             if has_patched:
@@ -422,9 +429,9 @@ class BinaryPanel(QWidget):
             ascii_item.setFlags(ascii_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             if has_patched:
                 ascii_item.setBackground(_EDITED_HEX_BG)
-            self._hex_table.setItem(row_idx, _HEX_COL_ASCII, ascii_item)
+            self.hex_table.setItem(row_idx, _HEX_COL_ASCII, ascii_item)
 
-        self._hex_table.blockSignals(False)
+        self.hex_table.blockSignals(b=False)
         self._update_page_label()
         self.offset_changed.emit(start_offset)
 
@@ -437,33 +444,32 @@ class BinaryPanel(QWidget):
         """
         offsets: set[int] = set()
         for patch_offset, _, patched in self._patches:
-            for j in range(len(patched)):
-                offsets.add(patch_offset + j)
+            offsets.update(patch_offset + j for j in range(len(patched)))
         return offsets
 
     def _update_page_label(self) -> None:
         """Update the page indicator label."""
-        if not self._file_data:
-            self._page_label.setText("")
+        if not self.file_data:
+            self.page_label.setText("")
             return
-        total_pages = max(1, (len(self._file_data) + _CHUNK_SIZE - 1) // _CHUNK_SIZE)
-        current_page = self._current_offset // _CHUNK_SIZE + 1
-        self._page_label.setText(f" {current_page}/{total_pages} ")
+        total_pages = max(1, (len(self.file_data) + _CHUNK_SIZE - 1) // _CHUNK_SIZE)
+        current_page = self.current_offset // _CHUNK_SIZE + 1
+        self.page_label.setText(f" {current_page}/{total_pages} ")
 
     def _on_prev_page(self) -> None:
         """Navigate to the previous hex page."""
-        if not self._file_data:
+        if not self.file_data:
             return
-        new_offset = max(0, self._current_offset - _CHUNK_SIZE)
+        new_offset = max(0, self.current_offset - _CHUNK_SIZE)
         self._populate_hex_view(new_offset)
         self._offset_input.setText(f"0x{new_offset:08X}")
 
     def _on_next_page(self) -> None:
         """Navigate to the next hex page."""
-        if not self._file_data:
+        if not self.file_data:
             return
-        max_offset = max(0, len(self._file_data) - _CHUNK_SIZE)
-        new_offset = min(max_offset, self._current_offset + _CHUNK_SIZE)
+        max_offset = max(0, len(self.file_data) - _CHUNK_SIZE)
+        new_offset = min(max_offset, self.current_offset + _CHUNK_SIZE)
         self._populate_hex_view(new_offset)
         self._offset_input.setText(f"0x{new_offset:08X}")
 
@@ -475,7 +481,7 @@ class BinaryPanel(QWidget):
         Args:
             a0: The wheel event.
         """
-        if a0 is None or not self._file_data:
+        if a0 is None or not self.file_data:
             return
 
         delta: int = wheel_angle_delta_y(a0)
@@ -484,12 +490,12 @@ class BinaryPanel(QWidget):
 
         ticks: int = delta // 120
         byte_delta: int = ticks * _SCROLL_BYTES_PER_TICK
-        new_offset: int = self._current_offset - byte_delta
+        new_offset: int = self.current_offset - byte_delta
 
-        new_offset = max(0, min(new_offset, max(0, len(self._file_data) - _CHUNK_SIZE)))
+        new_offset = max(0, min(new_offset, max(0, len(self.file_data) - _CHUNK_SIZE)))
         new_offset = (new_offset // _HEX_BYTES_PER_ROW) * _HEX_BYTES_PER_ROW
 
-        if new_offset != self._current_offset:
+        if new_offset != self.current_offset:
             self._populate_hex_view(new_offset)
             self._offset_input.setText(f"0x{new_offset:08X}")
 
@@ -527,7 +533,7 @@ class BinaryPanel(QWidget):
         if column != _HEX_COL_HEX:
             return
 
-        hex_item = self._hex_table.item(row, _HEX_COL_HEX)
+        hex_item = self.hex_table.item(row, _HEX_COL_HEX)
         if hex_item is None:
             return
 
@@ -536,12 +542,12 @@ class BinaryPanel(QWidget):
             return
 
         if not _HEX_PATTERN.match(text):
-            self._hex_table.blockSignals(True)
-            offset = self._current_offset + row * _HEX_BYTES_PER_ROW
-            end = min(offset + _HEX_BYTES_PER_ROW, len(self._file_data))
-            original_hex = " ".join(f"{b:02X}" for b in self._file_data[offset:end])
+            self.hex_table.blockSignals(b=True)
+            offset = self.current_offset + row * _HEX_BYTES_PER_ROW
+            end = min(offset + _HEX_BYTES_PER_ROW, len(self.file_data))
+            original_hex = " ".join(f"{b:02X}" for b in self.file_data[offset:end])
             hex_item.setText(original_hex)
-            self._hex_table.blockSignals(False)
+            self.hex_table.blockSignals(b=False)
             return
 
         try:
@@ -551,11 +557,11 @@ class BinaryPanel(QWidget):
             return
 
         ascii_str = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in new_bytes)
-        ascii_item = self._hex_table.item(row, _HEX_COL_ASCII)
+        ascii_item = self.hex_table.item(row, _HEX_COL_ASCII)
         if ascii_item is not None:
-            self._hex_table.blockSignals(True)
+            self.hex_table.blockSignals(b=True)
             ascii_item.setText(ascii_str)
-            self._hex_table.blockSignals(False)
+            self.hex_table.blockSignals(b=False)
 
     def _parse_sections(self) -> None:
         """
@@ -563,14 +569,14 @@ class BinaryPanel(QWidget):
 
         Detects format via magic bytes and dispatches to the appropriate parser (PE, ELF, or Mach-O).
         """
-        self._sections_tree.clear()
+        self.sections_tree.clear()
         self._imports_tree.clear()
         self._exports_tree.clear()
 
-        if len(self._file_data) < _MIN_MAGIC_SIZE:
+        if len(self.file_data) < _MIN_MAGIC_SIZE:
             return
 
-        magic4 = bytes(self._file_data[:4])
+        magic4 = bytes(self.file_data[:4])
 
         if magic4[:2] == b"MZ":
             self._parse_pe_sections()
@@ -581,33 +587,33 @@ class BinaryPanel(QWidget):
 
     def _parse_pe_sections(self) -> None:
         """Parse PE sections from the loaded binary data."""
-        if len(self._file_data) < _MIN_PE_HEADER_SIZE:
+        if len(self.file_data) < _MIN_PE_HEADER_SIZE:
             return
 
         try:
-            pe_offset = struct.unpack_from("<I", self._file_data, 0x3C)[0]
-            if pe_offset + 24 > len(self._file_data):
+            pe_offset = struct.unpack_from("<I", self.file_data, 0x3C)[0]
+            if pe_offset + 24 > len(self.file_data):
                 return
 
-            if bytes(self._file_data[pe_offset : pe_offset + 4]) != b"PE\x00\x00":
+            if bytes(self.file_data[pe_offset : pe_offset + 4]) != b"PE\x00\x00":
                 return
 
-            num_sections = struct.unpack_from("<H", self._file_data, pe_offset + 6)[0]
-            opt_header_size = struct.unpack_from("<H", self._file_data, pe_offset + 20)[0]
+            num_sections = struct.unpack_from("<H", self.file_data, pe_offset + 6)[0]
+            opt_header_size = struct.unpack_from("<H", self.file_data, pe_offset + 20)[0]
             section_offset = pe_offset + 24 + opt_header_size
 
             for i in range(num_sections):
                 sec_off = section_offset + i * 40
-                if sec_off + 40 > len(self._file_data):
+                if sec_off + 40 > len(self.file_data):
                     break
 
-                name_bytes = self._file_data[sec_off : sec_off + 8]
+                name_bytes = self.file_data[sec_off : sec_off + 8]
                 name = name_bytes.rstrip(b"\x00").decode("ascii", errors="replace")
-                vaddr = struct.unpack_from("<I", self._file_data, sec_off + 12)[0]
-                vsize = struct.unpack_from("<I", self._file_data, sec_off + 8)[0]
-                raw_size = struct.unpack_from("<I", self._file_data, sec_off + 16)[0]
-                raw_offset = struct.unpack_from("<I", self._file_data, sec_off + 20)[0]
-                characteristics = struct.unpack_from("<I", self._file_data, sec_off + 36)[0]
+                vaddr = struct.unpack_from("<I", self.file_data, sec_off + 12)[0]
+                vsize = struct.unpack_from("<I", self.file_data, sec_off + 8)[0]
+                raw_size = struct.unpack_from("<I", self.file_data, sec_off + 16)[0]
+                raw_offset = struct.unpack_from("<I", self.file_data, sec_off + 20)[0]
+                characteristics = struct.unpack_from("<I", self.file_data, sec_off + 36)[0]
 
                 flags_parts: list[str] = []
                 if characteristics & 0x20000000:
@@ -625,7 +631,7 @@ class BinaryPanel(QWidget):
                     flags_str,
                 ])
                 tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, raw_offset)
-                self._sections_tree.addTopLevelItem(item)
+                self.sections_tree.addTopLevelItem(item)
 
         except (struct.error, IndexError) as e:
             _logger.debug("pe_section_parse_error", error=str(e))
@@ -641,7 +647,7 @@ class BinaryPanel(QWidget):
 
     def _parse_pe_imports_exports_lief(self) -> None:
         """Parse PE imports and exports via LIEF."""
-        pe: object = _lief_parse(lief, list(self._file_data))
+        pe: object = _lief_parse(lief, list(self.file_data))
         if pe is None:
             return
 
@@ -670,11 +676,11 @@ class BinaryPanel(QWidget):
     def _parse_pe_imports_exports_struct(self) -> None:
         """Parse PE imports via struct-based parsing of the Import Directory Table."""
         try:
-            pe_offset = struct.unpack_from("<I", self._file_data, 0x3C)[0]
-            magic = struct.unpack_from("<H", self._file_data, pe_offset + 24)[0]
+            pe_offset = struct.unpack_from("<I", self.file_data, 0x3C)[0]
+            magic = struct.unpack_from("<H", self.file_data, pe_offset + 24)[0]
             is_pe32_plus = magic == _PE32_PLUS_MAGIC
             dir_off = _PE32_PLUS_IMPORT_DIR_OFFSET if is_pe32_plus else _PE32_IMPORT_DIR_OFFSET
-            import_rva = struct.unpack_from("<I", self._file_data, pe_offset + 24 + dir_off)[0]
+            import_rva = struct.unpack_from("<I", self.file_data, pe_offset + 24 + dir_off)[0]
             if import_rva == 0:
                 return
 
@@ -683,10 +689,10 @@ class BinaryPanel(QWidget):
             if idt_offset is None:
                 return
 
-            self._walk_pe_idt(idt_offset, is_pe32_plus, sec_info)
+            self._walk_pe_idt(idt_offset, is_pe32_plus=is_pe32_plus, sec_info=sec_info)
 
         except (struct.error, IndexError, ValueError):
-            _logger.debug("pe_import_struct_parse_error", offset=self._current_offset)
+            _logger.debug("pe_import_struct_parse_error", offset=self.current_offset)
 
     def _build_pe_section_map(self, pe_offset: int) -> list[tuple[int, int, int]]:
         """
@@ -698,15 +704,15 @@ class BinaryPanel(QWidget):
         Returns:
             list[tuple[int, int, int]]: List of (vaddr, vsize, raw_offset) tuples per section.
         """
-        num_sections = struct.unpack_from("<H", self._file_data, pe_offset + 6)[0]
-        opt_size = struct.unpack_from("<H", self._file_data, pe_offset + 20)[0]
+        num_sections = struct.unpack_from("<H", self.file_data, pe_offset + 6)[0]
+        opt_size = struct.unpack_from("<H", self.file_data, pe_offset + 20)[0]
         sec_start = pe_offset + 24 + opt_size
         sections: list[tuple[int, int, int]] = []
         for i in range(num_sections):
             so = sec_start + i * 40
-            s_vaddr = struct.unpack_from("<I", self._file_data, so + 12)[0]
-            s_vsize = struct.unpack_from("<I", self._file_data, so + 8)[0]
-            s_raw = struct.unpack_from("<I", self._file_data, so + 20)[0]
+            s_vaddr = struct.unpack_from("<I", self.file_data, so + 12)[0]
+            s_vsize = struct.unpack_from("<I", self.file_data, so + 8)[0]
+            s_raw = struct.unpack_from("<I", self.file_data, so + 20)[0]
             sections.append((s_vaddr, s_vsize, s_raw))
         return sections
 
@@ -730,6 +736,7 @@ class BinaryPanel(QWidget):
     def _walk_pe_idt(
         self,
         idt_offset: int,
+        *,
         is_pe32_plus: bool,
         sec_info: list[tuple[int, int, int]],
     ) -> None:
@@ -744,9 +751,9 @@ class BinaryPanel(QWidget):
         idx = 0
         while True:
             entry_off = idt_offset + idx * 20
-            if entry_off + 20 > len(self._file_data):
+            if entry_off + 20 > len(self.file_data):
                 break
-            name_rva = struct.unpack_from("<I", self._file_data, entry_off + 12)[0]
+            name_rva = struct.unpack_from("<I", self.file_data, entry_off + 12)[0]
             if name_rva == 0:
                 break
 
@@ -755,17 +762,19 @@ class BinaryPanel(QWidget):
                 idx += 1
                 continue
 
-            search = self._file_data[name_off : name_off + 256]
+            search = self.file_data[name_off : name_off + 256]
             end = name_off + (search.index(0) if 0 in search else 256)
-            lib_name = bytes(self._file_data[name_off:end]).decode("ascii", errors="replace")
+            lib_name = bytes(self.file_data[name_off:end]).decode("ascii", errors="replace")
 
-            ilt_rva = struct.unpack_from("<I", self._file_data, entry_off)[0]
+            ilt_rva = struct.unpack_from("<I", self.file_data, entry_off)[0]
             if ilt_rva == 0:
-                ilt_rva = struct.unpack_from("<I", self._file_data, entry_off + 16)[0]
+                ilt_rva = struct.unpack_from("<I", self.file_data, entry_off + 16)[0]
 
             ilt_off = self._pe_rva_to_offset(ilt_rva, sec_info)
             if ilt_off is not None:
-                self._parse_pe_ilt_entries(lib_name, ilt_off, is_pe32_plus, lambda r: self._pe_rva_to_offset(r, sec_info))
+                self._parse_pe_ilt_entries(
+                    lib_name, ilt_off, is_pe32_plus=is_pe32_plus, rva_to_offset=lambda r: self._pe_rva_to_offset(r, sec_info)
+                )
 
             idx += 1
 
@@ -773,6 +782,7 @@ class BinaryPanel(QWidget):
         self,
         lib_name: str,
         ilt_off: int,
+        *,
         is_pe32_plus: bool,
         rva_to_offset: Callable[[int], int | None],
     ) -> None:
@@ -790,12 +800,10 @@ class BinaryPanel(QWidget):
         j = 0
         while True:
             e_off = ilt_off + j * entry_size
-            if e_off + entry_size > len(self._file_data):
+            if e_off + entry_size > len(self.file_data):
                 break
-            if is_pe32_plus:
-                val = struct.unpack_from("<Q", self._file_data, e_off)[0]
-            else:
-                val = struct.unpack_from("<I", self._file_data, e_off)[0]
+            fmt = "<Q" if is_pe32_plus else "<I"
+            val = struct.unpack_from(fmt, self.file_data, e_off)[0]
             if val == 0:
                 break
             if val & ordinal_flag:
@@ -803,11 +811,11 @@ class BinaryPanel(QWidget):
             else:
                 hint_rva = val & 0x7FFFFFFF
                 hint_off = rva_to_offset(hint_rva)
-                if hint_off is not None and hint_off + 3 < len(self._file_data):
+                if hint_off is not None and hint_off + 3 < len(self.file_data):
                     name_start = hint_off + 2
-                    name_end_search = self._file_data[name_start : name_start + 256]
+                    name_end_search = self.file_data[name_start : name_start + 256]
                     name_end = name_start + (name_end_search.index(0) if 0 in name_end_search else 256)
-                    func_name = bytes(self._file_data[name_start:name_end]).decode("ascii", errors="replace")
+                    func_name = bytes(self.file_data[name_start:name_end]).decode("ascii", errors="replace")
                 else:
                     func_name = f"RVA 0x{hint_rva:X}"
             item = QTreeWidgetItem([lib_name, func_name, ""])
@@ -818,11 +826,11 @@ class BinaryPanel(QWidget):
         """Parse ELF sections using LIEF."""
         if lief is None:
             _logger.debug("lief_not_available_for_elf_parsing", format_type="ELF")
-            self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(ELF detected, install lief for section parsing)", "", "", ""]))
+            self.sections_tree.addTopLevelItem(QTreeWidgetItem(["(ELF detected, install lief for section parsing)", "", "", ""]))
             return
 
         try:
-            elf: object = _lief_parse(lief.ELF, list(self._file_data))
+            elf: object = _lief_parse(lief.ELF, list(self.file_data))
             if elf is None:
                 return
 
@@ -852,7 +860,7 @@ class BinaryPanel(QWidget):
                     flags_str,
                 ])
                 tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, offset)
-                self._sections_tree.addTopLevelItem(item)
+                self.sections_tree.addTopLevelItem(item)
 
             for func in _lief_attr_list(elf, "imported_functions"):
                 func_name = str(getattr(func, "name", ""))
@@ -872,11 +880,11 @@ class BinaryPanel(QWidget):
         """Parse Mach-O sections using LIEF."""
         if lief is None:
             _logger.debug("lief_not_available_for_macho_parsing", format_type="Mach-O")
-            self._sections_tree.addTopLevelItem(QTreeWidgetItem(["(Mach-O detected, install lief for section parsing)", "", "", ""]))
+            self.sections_tree.addTopLevelItem(QTreeWidgetItem(["(Mach-O detected, install lief for section parsing)", "", "", ""]))
             return
 
         try:
-            fat: object = _lief_parse(lief.MachO, list(self._file_data))
+            fat: object = _lief_parse(lief.MachO, list(self.file_data))
             if fat is None:
                 return
 
@@ -886,7 +894,7 @@ class BinaryPanel(QWidget):
 
             for segment in _lief_attr_list(macho, "segments"):
                 seg_item = self._build_macho_segment_item(segment)
-                self._sections_tree.addTopLevelItem(seg_item)
+                self.sections_tree.addTopLevelItem(seg_item)
 
                 for section in _lief_attr_list(segment, "sections"):
                     sec_item = self._build_macho_section_item(section)
@@ -982,7 +990,7 @@ class BinaryPanel(QWidget):
         max_strings = 5000
 
         found = 0
-        for i, byte_val in enumerate(self._file_data):
+        for i, byte_val in enumerate(self.file_data):
             if _ASCII_PRINTABLE_MIN <= byte_val < _ASCII_PRINTABLE_MAX:
                 if not current_string:
                     string_start = i
@@ -1035,7 +1043,7 @@ class BinaryPanel(QWidget):
             _logger.debug("hex_goto_invalid_offset", input=text)
             return
 
-        offset = max(0, min(offset, len(self._file_data) - 1))
+        offset = max(0, min(offset, len(self.file_data) - 1))
         _logger.debug("hex_goto_offset", offset=f"0x{offset:08X}")
         self._populate_hex_view(offset)
 
@@ -1051,10 +1059,10 @@ class BinaryPanel(QWidget):
             _logger.debug("invalid_hex_search_pattern", input=text)
             return
 
-        start = self._current_offset + 1
-        idx = self._file_data.find(hex_bytes, start)
+        start = self.current_offset + 1
+        idx = self.file_data.find(hex_bytes, start)
         if idx == -1:
-            idx = self._file_data.find(hex_bytes, 0)
+            idx = self.file_data.find(hex_bytes, 0)
 
         if idx >= 0:
             _logger.debug("hex_search_found", offset=f"0x{idx:08X}", pattern_size=len(hex_bytes))
@@ -1063,11 +1071,11 @@ class BinaryPanel(QWidget):
 
     def _on_apply_patch(self) -> None:
         """Apply a patch at the current hex table selection."""
-        selected_row = self._hex_table.currentRow()
+        selected_row = self.hex_table.currentRow()
         if selected_row < 0:
             return
 
-        hex_item = self._hex_table.item(selected_row, _HEX_COL_HEX)
+        hex_item = self.hex_table.item(selected_row, _HEX_COL_HEX)
         if hex_item is None:
             return
 
@@ -1081,20 +1089,20 @@ class BinaryPanel(QWidget):
             _logger.debug("patch_invalid_hex")
             return
 
-        offset = self._current_offset + selected_row * _HEX_BYTES_PER_ROW
+        offset = self.current_offset + selected_row * _HEX_BYTES_PER_ROW
         end = offset + len(new_bytes)
-        if end > len(self._file_data):
+        if end > len(self.file_data):
             return
 
-        original = bytes(self._file_data[offset:end])
+        original = bytes(self.file_data[offset:end])
         if original == new_bytes:
             return
 
         self._patches.append((offset, original, new_bytes))
-        self._file_data[offset:end] = new_bytes
+        self.file_data[offset:end] = new_bytes
         self._revert_btn.setEnabled(True)
 
-        self._populate_hex_view(self._current_offset)
+        self._populate_hex_view(self.current_offset)
         self._update_patches_table()
         self.patch_applied.emit(offset, new_bytes)
 
@@ -1106,30 +1114,29 @@ class BinaryPanel(QWidget):
             return
 
         offset, original, _ = self._patches.pop()
-        self._file_data[offset : offset + len(original)] = original
+        self.file_data[offset : offset + len(original)] = original
         self._revert_btn.setEnabled(bool(self._patches))
 
-        self._populate_hex_view(self._current_offset)
+        self._populate_hex_view(self.current_offset)
         self._update_patches_table()
         _logger.info("patch_reverted", offset=f"0x{offset:08X}")
 
     def _on_save(self) -> None:
         """Save the modified binary to disk."""
-        if self._file_path is None:
+        if self.file_path is None:
             return
 
         path_str, _ = QFileDialog.getSaveFileName(
             self,
             "Save Binary",
-            str(self._file_path),
+            str(self.file_path),
             "All Files (*)",
         )
         if not path_str:
             return
 
         try:
-            with open(path_str, "wb") as f:
-                f.write(self._file_data)
+            Path(path_str).write_bytes(self.file_data)
             _logger.info("binary_saved", path=path_str)
             QMessageBox.information(self, "Saved", f"Binary saved to {path_str}")
         except OSError as e:
@@ -1181,7 +1188,7 @@ class BinaryPanel(QWidget):
         Returns:
             bytearray: The binary data as a bytearray.
         """
-        return self._file_data
+        return self.file_data
 
     def get_patches(self) -> list[tuple[int, bytes, bytes]]:
         """

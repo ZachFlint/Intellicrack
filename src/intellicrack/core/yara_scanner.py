@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 YARA rule scanning module for Intellicrack.
 
@@ -14,9 +13,13 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.core.logging import get_logger
+
+
+if TYPE_CHECKING:
+    from intellicrack.core.types import CompiledYaraRules
 
 
 _logger = get_logger("core.yara_scanner")
@@ -78,16 +81,13 @@ class YaraScanner:
     Compilation is not thread-safe; scanning compiled rules objects is.
     Use separate ``YaraScanner`` instances or external locking when compiling
     concurrently.
+
+    Args:
+        timeout: Maximum seconds allowed per match operation before
+            a ``TimeoutError`` is raised by the YARA engine.
     """
 
     def __init__(self, timeout: int = 60) -> None:
-        """
-        Initialise the scanner with an optional match timeout.
-
-        Args:
-            timeout: Maximum seconds allowed per match operation before a
-                ``TimeoutError`` is raised by the YARA engine.
-        """
         self._timeout = timeout
         if not _yara_available:
             _logger.warning("yara-python is not installed; YARA scanning unavailable")
@@ -98,13 +98,13 @@ class YaraScanner:
         Whether the yara-python library is importable.
 
         Returns:
-            ``True`` when yara-python was successfully imported, ``False``
+            bool: ``True`` when yara-python was successfully imported, ``False``
             otherwise.
         """
         return _yara_available
 
     @staticmethod
-    def compile_rules(paths: list[str | Path]) -> Any:
+    def compile_rules(paths: list[str | Path]) -> CompiledYaraRules:
         """
         Compile YARA rules from one or more rule files.
 
@@ -115,8 +115,8 @@ class YaraScanner:
             paths: Filesystem paths to ``.yar`` / ``.yara`` rule files.
 
         Returns:
-            A compiled YARA rules object whose ``match`` method can be used
-            for scanning.
+            CompiledYaraRules: A compiled YARA rules object whose ``match``
+                method can be used for scanning.
 
         Raises:
             RuntimeError: When yara-python is not installed.
@@ -132,15 +132,15 @@ class YaraScanner:
             filepaths[namespace] = str(resolved)
         _logger.debug("compiling YARA rules", file_count=len(filepaths))
         try:
-            compiled = _yara_mod.compile(filepaths=filepaths)
-        except Exception as exc:
+            compiled: CompiledYaraRules = _yara_mod.compile(filepaths=filepaths)
+        except (ValueError, OSError, RuntimeError) as exc:
             msg = f"YARA compilation failed: {exc}"
             raise ValueError(msg) from exc
         else:
             return compiled
 
     @staticmethod
-    def compile_source(source: str, namespace: str = "default") -> Any:
+    def compile_source(source: str, namespace: str = "default") -> CompiledYaraRules:
         """
         Compile YARA rules from a source string.
 
@@ -149,7 +149,7 @@ class YaraScanner:
             namespace: Namespace to assign to the compiled rules.
 
         Returns:
-            A compiled YARA rules object.
+            CompiledYaraRules: A compiled YARA rules object.
 
         Raises:
             RuntimeError: When yara-python is not installed.
@@ -160,14 +160,14 @@ class YaraScanner:
         _logger.debug("compiling YARA rules from source", namespace=namespace)
         sources: dict[str, str] = {namespace: source}
         try:
-            compiled = _yara_mod.compile(sources=sources)
-        except Exception as exc:
+            compiled: CompiledYaraRules = _yara_mod.compile(sources=sources)
+        except (ValueError, OSError, RuntimeError) as exc:
             msg = f"YARA compilation failed: {exc}"
             raise ValueError(msg) from exc
         else:
             return compiled
 
-    def scan_data(self, data: bytes, rules: Any) -> list[YaraMatch]:
+    def scan_data(self, data: bytes, rules: CompiledYaraRules) -> list[YaraMatch]:
         """
         Scan bytes in memory against compiled YARA rules.
 
@@ -177,8 +177,8 @@ class YaraScanner:
                 :meth:`compile_rules` or :meth:`compile_source`.
 
         Returns:
-            A list of :class:`YaraMatch` instances, one per matching rule.
-            Returns an empty list when no rules match.
+            list[YaraMatch]: A list of :class:`YaraMatch` instances, one per
+                matching rule. Returns an empty list when no rules match.
 
         Raises:
             RuntimeError: When yara-python is not installed.
@@ -186,10 +186,10 @@ class YaraScanner:
         if not _yara_available:
             raise RuntimeError(_ERR_SCAN_NA)
         _logger.debug("scanning data buffer", buffer_size=len(data))
-        raw_matches: list[Any] = rules.match(data=data, timeout=self._timeout)
+        raw_matches: list[object] = rules.match(data=data, timeout=self._timeout)
         return self._convert_matches(raw_matches)
 
-    def scan_file(self, path: str | Path, rules: Any) -> list[YaraMatch]:
+    def scan_file(self, path: str | Path, rules: CompiledYaraRules) -> list[YaraMatch]:
         """
         Scan a file on disk against compiled YARA rules.
 
@@ -199,8 +199,8 @@ class YaraScanner:
                 :meth:`compile_rules` or :meth:`compile_source`.
 
         Returns:
-            A list of :class:`YaraMatch` instances, one per matching rule.
-            Returns an empty list when no rules match.
+            list[YaraMatch]: A list of :class:`YaraMatch` instances, one per
+                matching rule. Returns an empty list when no rules match.
 
         Raises:
             RuntimeError: When yara-python is not installed.
@@ -209,10 +209,10 @@ class YaraScanner:
             raise RuntimeError(_ERR_SCAN_NA)
         resolved = str(Path(path).resolve())
         _logger.debug("scanning file", path=resolved)
-        raw_matches: list[Any] = rules.match(filepath=resolved, timeout=self._timeout)
+        raw_matches: list[object] = rules.match(filepath=resolved, timeout=self._timeout)
         return self._convert_matches(raw_matches)
 
-    async def scan_data_async(self, data: bytes, rules: Any) -> list[YaraMatch]:
+    async def scan_data_async(self, data: bytes, rules: CompiledYaraRules) -> list[YaraMatch]:
         """
         Asynchronously scan bytes in memory against compiled YARA rules.
 
@@ -224,11 +224,11 @@ class YaraScanner:
             rules: A compiled YARA rules object.
 
         Returns:
-            A list of :class:`YaraMatch` instances, one per matching rule.
+            list[YaraMatch]:class:`YaraMatch` instances, one per matching rule.
         """
         return await asyncio.to_thread(self.scan_data, data, rules)
 
-    async def scan_file_async(self, path: str | Path, rules: Any) -> list[YaraMatch]:
+    async def scan_file_async(self, path: str | Path, rules: CompiledYaraRules) -> list[YaraMatch]:
         """
         Asynchronously scan a file on disk against compiled YARA rules.
 
@@ -240,7 +240,7 @@ class YaraScanner:
             rules: A compiled YARA rules object.
 
         Returns:
-            A list of :class:`YaraMatch` instances, one per matching rule.
+            list[YaraMatch]:class:`YaraMatch` instances, one per matching rule.
         """
         return await asyncio.to_thread(self.scan_file, path, rules)
 
@@ -258,7 +258,7 @@ class YaraScanner:
                 ``rules.match()``.
 
         Returns:
-            A list of :class:`YaraMatch` dataclass instances.
+            list[YaraMatch]:class:`YaraMatch` dataclass instances.
         """
         results: list[YaraMatch] = []
         for raw in raw_matches:
@@ -280,7 +280,7 @@ class YaraScanner:
                             offset=raw_offset,
                             identifier=raw_ident,
                             data=raw_data,
-                        )
+                        ),
                     )
                 else:
                     identifier_val = str(getattr(string_entry, "identifier", ""))
@@ -293,7 +293,7 @@ class YaraScanner:
                                 offset=offset_val,
                                 identifier=identifier_val,
                                 data=data_val,
-                            )
+                            ),
                         )
 
             results.append(
@@ -303,6 +303,6 @@ class YaraScanner:
                     meta=meta,
                     strings=strings,
                     namespace=namespace,
-                )
+                ),
             )
         return results

@@ -14,13 +14,21 @@ from intellicrack.core.hexpat.interpreter import HexPatInterpreter
 
 @pytest.fixture
 def interp() -> HexPatInterpreter:
-    """Provide a fresh HexPatInterpreter instance."""
+    """Provide a fresh HexPatInterpreter instance.
+
+    Returns:
+        HexPatInterpreter: A new interpreter instance.
+    """
     return HexPatInterpreter()
 
 
 @pytest.fixture
 def pe_header_bytes() -> bytes:
-    """Build a minimal PE file header (128 bytes) with valid DOS + PE structures."""
+    """Build a minimal PE file header (128 bytes) with valid DOS + PE structures.
+
+    Returns:
+        bytes: A 128-byte PE header.
+    """
     data = bytearray(128)
     data[:2] = b"MZ"
     struct.pack_into("<H", data, 2, 0x0090)
@@ -34,7 +42,11 @@ def pe_header_bytes() -> bytes:
 
 @pytest.fixture
 def elf_header_bytes() -> bytes:
-    """Build a minimal 64-bit ELF header (64 bytes)."""
+    """Build a minimal 64-bit ELF header (64 bytes).
+
+    Returns:
+        bytes: A 64-byte ELF header.
+    """
     data = bytearray(64)
     data[:4] = b"\x7fELF"
     data[4] = 2
@@ -50,7 +62,11 @@ def elf_header_bytes() -> bytes:
 
 @pytest.fixture
 def bmp_header_bytes() -> bytes:
-    """Build a minimal 24-bit BMP file (1x1 pixel, 58 bytes)."""
+    """Build a minimal 24-bit BMP file (1x1 pixel, 58 bytes).
+
+    Returns:
+        bytes: A 58-byte BMP file.
+    """
     data = bytearray(58)
     data[:2] = b"BM"
     struct.pack_into("<I", data, 2, 58)
@@ -67,7 +83,11 @@ def bmp_header_bytes() -> bytes:
 
 @pytest.fixture
 def zip_local_header_bytes() -> bytes:
-    """Build a minimal ZIP local file header."""
+    """Build a minimal ZIP local file header.
+
+    Returns:
+        bytes: A 64-byte ZIP local file header.
+    """
     data = bytearray(64)
     data[:4] = b"PK\x03\x04"
     struct.pack_into("<H", data, 4, 20)

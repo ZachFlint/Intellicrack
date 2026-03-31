@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Patches mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -26,6 +25,7 @@ class PatchesMixin:
     """Mixin providing patch tracking and IPS import/export for the hex editor panel."""
 
     _document: Any | None
+    document: Any | None
     _hex_widget: Any | None
     _patches_tree: QTreeWidget | None
     _original_data_cache: dict[int, int]
@@ -34,7 +34,7 @@ class PatchesMixin:
 
     def _update_patches(self) -> None:
         """Update the patches tree by comparing modified offsets to originals."""
-        if self._patches_tree is None or self._document is None or self._hex_widget is None:
+        if self._patches_tree is None or self.document is None or self._hex_widget is None:
             return
 
         modified_offsets: set[int] = getattr(self._hex_widget, "_modified_offsets", set())
@@ -48,7 +48,7 @@ class PatchesMixin:
             original_byte = self._original_data_cache[off]
             current_byte: int = -1
             try:
-                raw_patch: object = self._document.read(off, 1)
+                raw_patch: object = self.document.read(off, 1)
                 if (isinstance(raw_patch, bytes) and len(raw_patch) > 0) or (isinstance(raw_patch, bytearray) and len(raw_patch) > 0):
                     current_byte = raw_patch[0]
                 elif isinstance(raw_patch, list) and (patch_list := cast("list[int]", raw_patch)):
@@ -83,10 +83,10 @@ class PatchesMixin:
         Args:
             offset: Byte offset to cache.
         """
-        if offset in self._original_data_cache or self._document is None:
+        if offset in self._original_data_cache or self.document is None:
             return
         try:
-            raw = self._document.read(offset, 1)
+            raw = self.document.read(offset, 1)
         except (AttributeError, ValueError):
             logger.debug("cache_original_byte_failed", offset=offset)
         else:
@@ -95,7 +95,7 @@ class PatchesMixin:
 
     def _on_export_patches(self) -> None:
         """Export current patches to an IPS or IPS32 patch file."""
-        if self._patches_tree is None or self._document is None:
+        if self._patches_tree is None or self.document is None:
             return
         patch_count = self._patches_tree.topLevelItemCount()
         if patch_count == 0:
@@ -141,7 +141,7 @@ class PatchesMixin:
 
     def _on_import_patches(self) -> None:
         """Import patches from an IPS or IPS32 file and apply them to the document."""
-        if self._document is None:
+        if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
         result = QFileDialog.getOpenFileName(
@@ -192,7 +192,7 @@ class PatchesMixin:
                         break
                     data_to_write = patch_bytes[pos : pos + length]
                     pos += length
-                self._document.write_bytes(patch_offset, bytes(data_to_write))
+                self.document.write_bytes(patch_offset, bytes(data_to_write))
                 applied += 1
         except (struct.error, AttributeError, ValueError, IndexError) as exc:
             logger.debug("patches_import_failed", error=str(exc))

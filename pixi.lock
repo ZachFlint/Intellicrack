@@ -30,6 +30,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/python-3.13.12-h09917c8_100_cp313.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.13-8_cp313.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/rust-1.94.0-hf8d6059_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/rust-src-1.94.0-win_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-x86_64-pc-windows-msvc-1.94.0-h17fc481_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/setuptools-82.0.1-pyh332efcf_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/shellcheck-0.11.0-h57928b3_1.conda
@@ -1840,7 +1841,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 0.1.0a1
-  sha256: 8212ba6f09eb74c78df5764f3951f0d4bff74db86602c380da2fc06a77b8252e
+  sha256: 7e85e7de840425741bbb1af2d4db34d7b7682090eb6ed20c63d9262e4e59b0fc
   requires_dist:
   - accelerate
   - astor
@@ -4301,6 +4302,18 @@ packages:
   purls: []
   size: 196531421
   timestamp: 1773068659416
+- conda: https://conda.anaconda.org/conda-forge/noarch/rust-src-1.94.0-win_0.conda
+  sha256: d2c9917583b088fc115e810413c63e91255b84f1543892a3b7ac46f8741655da
+  md5: e726d8dbf9c4a1345bc1d87c04d2315f
+  depends:
+  - __win
+  constrains:
+  - rust >=1.94.0,<1.94.1.0a0
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 4412322
+  timestamp: 1773067455907
 - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-x86_64-pc-windows-msvc-1.94.0-h17fc481_0.conda
   sha256: 3d84e1778e68709a377127af453f8564d038053c61ca063f448ee6c03dc8b20a
   md5: a80810ebd9d697f369a94af8b8afe45e

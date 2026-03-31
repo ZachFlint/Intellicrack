@@ -15,9 +15,9 @@ from typing import ClassVar, Final
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 
-from ...core.logging import get_logger
-from .resource_helper import get_assets_path, get_icon_path
-from .theme_manager import ThemeManager
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.resource_helper import get_assets_path, get_icon_path
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger("ui.resources.icons")
@@ -201,9 +201,9 @@ class IconManager:
     _instance: ClassVar[IconManager | None] = None
 
     def __init__(self) -> None:
-        self._icon_cache: dict[str, QIcon] = {}
-        self._pixmap_cache: dict[tuple[str, int], QPixmap] = {}
-        self._icons_available: bool = self._check_icons_available()
+        self.icon_cache: dict[str, QIcon] = {}
+        self.pixmap_cache: dict[tuple[str, int], QPixmap] = {}
+        self.icons_available: bool = self._check_icons_available()
 
     @classmethod
     def get_instance(cls) -> IconManager:
@@ -252,13 +252,13 @@ class IconManager:
             QIcon: QIcon instance (may be empty if icon not found and no fallback).
         """
         cache_key = f"{name}_{size}"
-        if cache_key in self._icon_cache:
+        if cache_key in self.icon_cache:
             _logger.debug("icon_cache_hit", icon_name=name, size=size)
-            return self._icon_cache[cache_key]
+            return self.icon_cache[cache_key]
 
         _logger.debug("icon_cache_miss", icon_name=name, size=size)
         icon = self._load_icon(name, size)
-        self._icon_cache[cache_key] = icon
+        self.icon_cache[cache_key] = icon
         return icon
 
     def _load_icon(self, name: str, size: int) -> QIcon:
@@ -272,7 +272,7 @@ class IconManager:
         Returns:
             QIcon: QIcon instance.
         """
-        if self._icons_available:
+        if self.icons_available:
             filename = ICON_MAP.get(name, f"{name}.svg")
             icon_path = get_icon_path(filename)
 
@@ -359,14 +359,14 @@ class IconManager:
             QPixmap: QPixmap of the requested size.
         """
         cache_key = (name, size)
-        if cache_key in self._pixmap_cache:
+        if cache_key in self.pixmap_cache:
             _logger.debug("pixmap_cache_hit", icon_name=name, size=size)
-            return self._pixmap_cache[cache_key]
+            return self.pixmap_cache[cache_key]
 
         _logger.debug("pixmap_cache_miss", icon_name=name, size=size)
         icon = self.get_icon(name, size)
         pixmap = icon.pixmap(QSize(size, size))
-        self._pixmap_cache[cache_key] = pixmap
+        self.pixmap_cache[cache_key] = pixmap
         return pixmap
 
     def get_app_icon(self) -> QIcon:
@@ -376,8 +376,8 @@ class IconManager:
         Returns:
             QIcon: QIcon for the application window and taskbar.
         """
-        if "app_icon" in self._icon_cache:
-            return self._icon_cache["app_icon"]
+        if "app_icon" in self.icon_cache:
+            return self.icon_cache["app_icon"]
 
         try:
             icon_path = get_assets_path() / "icon.ico"
@@ -385,7 +385,7 @@ class IconManager:
                 icon = QIcon(str(icon_path))
                 if not icon.isNull():
                     _logger.debug("app_icon_loaded", path=str(icon_path))
-                    self._icon_cache["app_icon"] = icon
+                    self.icon_cache["app_icon"] = icon
                     return icon
                 _logger.warning("app_icon_load_failed", path=str(icon_path))
         except FileNotFoundError:
@@ -394,10 +394,10 @@ class IconManager:
         _logger.debug("app_icon_using_fallback")
         accent = QColor("#007acc") if ThemeManager.get_instance().is_dark_theme() else QColor("#0078d4")
         fallback = IconManager._render_text_icon("IC", 256, accent)
-        self._icon_cache["app_icon"] = fallback
+        self.icon_cache["app_icon"] = fallback
         return fallback
 
-    def get_status_icon(self, success: bool) -> QIcon:
+    def get_status_icon(self, *, success: bool) -> QIcon:
         """
         Get a status icon indicating success or failure.
 
@@ -410,7 +410,7 @@ class IconManager:
         name = "status_success" if success else "status_error"
         return self.get_icon(name)
 
-    def get_status_pixmap(self, success: bool, size: int = 16) -> QPixmap:
+    def get_status_pixmap(self, *, success: bool, size: int = 16) -> QPixmap:
         """
         Get a status pixmap indicating success or failure.
 
@@ -426,10 +426,10 @@ class IconManager:
 
     def clear_cache(self) -> None:
         """Clear all cached icons and pixmaps."""
-        icon_count = len(self._icon_cache)
-        pixmap_count = len(self._pixmap_cache)
-        self._icon_cache.clear()
-        self._pixmap_cache.clear()
+        icon_count = len(self.icon_cache)
+        pixmap_count = len(self.pixmap_cache)
+        self.icon_cache.clear()
+        self.pixmap_cache.clear()
         _logger.debug(
             "icon_cache_cleared",
             icons_cleared=icon_count,
@@ -479,7 +479,7 @@ class IconManager:
         Returns:
             bool: True if the icon file exists.
         """
-        if not self._icons_available:
+        if not self.icons_available:
             return False
 
         filename = ICON_MAP.get(name, f"{name}.svg")

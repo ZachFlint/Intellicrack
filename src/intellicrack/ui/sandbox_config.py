@@ -16,7 +16,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -82,6 +82,7 @@ class SandboxTestWorker(QThread):
 
     def __init__(
         self,
+        *,
         network_enabled: bool = False,
         memory_limit_mb: int = 2048,
         shared_folder: str | None = None,
@@ -99,7 +100,8 @@ class SandboxTestWorker(QThread):
     def run(self) -> None:
         """Execute the sandbox test."""
         if not _IS_WIN32:
-            self.finished.emit(False, "Windows Sandbox is only available on Windows")
+            success = False
+            self.finished.emit(success, "Windows Sandbox is only available on Windows")
             return
 
         try:
@@ -140,27 +142,31 @@ class SandboxTestWorker(QThread):
                 self._process.wait(timeout=10)
                 if self._process.returncode != 0:
                     stderr_output = self._process.stderr.read().decode("utf-8", errors="replace") if self._process.stderr else ""
-                    self.finished.emit(False, f"Sandbox exited with error: {stderr_output}")
+                    success = False
+                    self.finished.emit(success, f"Sandbox exited with error: {stderr_output}")
                     return
             except TimeoutExpired:
                 _logger.warning("sandbox_test_wait_timeout")
                 self.output.emit("Sandbox is running normally")
 
-            self.finished.emit(True, "Windows Sandbox test completed successfully")
+            success = True
+            self.finished.emit(success, "Windows Sandbox test completed successfully")
 
         except SubprocessError as e:
             _logger.exception(
                 "sandbox_test_error",
                 error=str(e),
             )
-            self.finished.emit(False, f"Sandbox process error: {e}")
+            success = False
+            self.finished.emit(success, f"Sandbox process error: {e}")
         except FileNotFoundError:
             _logger.exception(
                 "sandbox_test_error",
                 error="WindowsSandbox.exe not found",
             )
+            success = False
             self.finished.emit(
-                False,
+                success,
                 "WindowsSandbox.exe not found. Windows Sandbox may not be installed.",
             )
         except PermissionError:
@@ -168,8 +174,9 @@ class SandboxTestWorker(QThread):
                 "sandbox_test_error",
                 error="permission_denied",
             )
+            success = False
             self.finished.emit(
-                False,
+                success,
                 "Permission denied. Administrator rights may be required.",
             )
         except OSError as e:
@@ -177,13 +184,14 @@ class SandboxTestWorker(QThread):
                 "sandbox_test_error",
                 error=str(e),
             )
-            self.finished.emit(False, f"Failed to launch sandbox: {e}")
+            success = False
+            self.finished.emit(success, f"Failed to launch sandbox: {e}")
         finally:
             if self._process is not None and self._process.poll() is None:
                 pid = self._process.pid
                 try:
                     ProcessManager.terminate_tree(pid, graceful_timeout=5.0, force_timeout=3.0)
-                except Exception:
+                except (OSError, TimeoutExpired):
                     _logger.debug(
                         "sandbox_test_terminate_failed",
                         pid=pid,
@@ -386,7 +394,7 @@ class SandboxConfigDialog(QDialog):
         button_layout.addStretch()
 
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply,
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
@@ -476,7 +484,7 @@ class SandboxConfigDialog(QDialog):
         if frame_style is not None:
             frame_style.unpolish(self._status_frame)
             frame_style.polish(self._status_frame)
-        self._set_controls_enabled(True)
+        self._set_controls_enabled(enabled=True)
 
     def _set_unavailable(self, reason: str) -> None:
         """
@@ -499,9 +507,9 @@ class SandboxConfigDialog(QDialog):
         if frame_style is not None:
             frame_style.unpolish(self._status_frame)
             frame_style.polish(self._status_frame)
-        self._set_controls_enabled(False)
+        self._set_controls_enabled(enabled=False)
 
-    def _set_controls_enabled(self, enabled: bool) -> None:
+    def _set_controls_enabled(self, *, enabled: bool) -> None:
         """
         Enable or disable all configuration controls.
 
@@ -524,7 +532,7 @@ class SandboxConfigDialog(QDialog):
 
         if self.CONFIG_FILE.exists():
             try:
-                with open(self.CONFIG_FILE, encoding="utf-8") as f:
+                with self.CONFIG_FILE.open(encoding="utf-8") as f:
                     settings = json.load(f)
 
                 self._enabled_checkbox.setChecked(settings.get("enabled", True))
@@ -603,7 +611,11 @@ class SandboxConfigDialog(QDialog):
             shared_folder=self._shared_folder_input.text(),
             read_only=self._read_only_checkbox.isChecked(),
         )
-        self._test_worker.finished.connect(self._on_test_finished)
+
+        def _test_finished_slot(s: int, m: str) -> None:
+            self._on_test_finished(success=bool(s), message=m)
+
+        self._test_worker.finished.connect(_test_finished_slot)
         self._test_worker.output.connect(self._on_test_output)
         self._test_worker.start()
 
@@ -625,7 +637,7 @@ class SandboxConfigDialog(QDialog):
         if self._progress_dialog:
             self._progress_dialog.setLabelText(message)
 
-    def _on_test_finished(self, success: bool, message: str) -> None:
+    def _on_test_finished(self, *, success: bool, message: str) -> None:
         """
         Handle test completion.
 
@@ -669,10 +681,10 @@ class SandboxConfigDialog(QDialog):
         settings = self.get_settings()
 
         try:
-            with open(self.CONFIG_FILE, "w", encoding="utf-8") as f:
+            with self.CONFIG_FILE.open("w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=2)
 
-            shared_folder = Path(settings["shared_folder"])
+            shared_folder = Path(str(settings["shared_folder"]))
             if not shared_folder.exists():
                 try:
                     shared_folder.mkdir(parents=True, exist_ok=True)
@@ -700,12 +712,12 @@ class SandboxConfigDialog(QDialog):
                 f"Failed to save sandbox settings:\n{e}",
             )
 
-    def get_settings(self) -> dict[str, Any]:
+    def get_settings(self) -> dict[str, object]:
         """
         Get current settings as a dictionary.
 
         Returns:
-            dict[str, Any]: Dictionary of current settings.
+            dict[str, object]: Dictionary of current settings.
         """
         return {
             "enabled": self._enabled_checkbox.isChecked(),
@@ -768,10 +780,10 @@ class SandboxMonitorWidget(QFrame):
         header_layout.addStretch()
 
         icon_manager = IconManager.get_instance()
-        self._status_indicator = QLabel()
-        self._status_indicator.setPixmap(icon_manager.get_pixmap("status_idle", 16))
-        self._status_indicator.setFixedSize(20, 20)
-        header_layout.addWidget(self._status_indicator)
+        self.status_indicator = QLabel()
+        self.status_indicator.setPixmap(icon_manager.get_pixmap("status_idle", 16))
+        self.status_indicator.setFixedSize(20, 20)
+        header_layout.addWidget(self.status_indicator)
 
         self._status_text = QLabel("No active sandbox")
         self._status_text.setObjectName("status_text")
@@ -800,7 +812,7 @@ class SandboxMonitorWidget(QFrame):
 
         layout.addLayout(control_layout)
 
-    def set_running(self, is_running: bool, binary_name: str = "", pid: int | None = None) -> None:
+    def set_running(self, *, is_running: bool, binary_name: str = "", pid: int | None = None) -> None:
         """
         Update the running state display.
 
@@ -813,11 +825,11 @@ class SandboxMonitorWidget(QFrame):
         icon_manager = IconManager.get_instance()
 
         if is_running:
-            self._status_indicator.setPixmap(icon_manager.get_pixmap("status_success", 16))
+            self.status_indicator.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._status_text.setText(f"Running: {binary_name}")
             self._stop_btn.setEnabled(True)
         else:
-            self._status_indicator.setPixmap(icon_manager.get_pixmap("status_idle", 16))
+            self.status_indicator.setPixmap(icon_manager.get_pixmap("status_idle", 16))
             self._status_text.setText("No active sandbox")
             self._stop_btn.setEnabled(False)
 
@@ -836,7 +848,7 @@ class SandboxMonitorWidget(QFrame):
             try:
                 asyncio.run(self._manager.destroy_all())
                 self.append_output("[Sandbox stopped via manager]")
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 _logger.exception(
                     "sandbox_stop_error",
                     method="manager",
@@ -870,7 +882,7 @@ class SandboxMonitorWidget(QFrame):
         else:
             self._terminate_sandbox_by_name()
 
-        self.set_running(False)
+        self.set_running(is_running=False)
         self.sandbox_stopped.emit()
 
     def _terminate_sandbox_by_name(self) -> None:

@@ -15,11 +15,11 @@ import asyncio
 import json
 import random
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
-from ..core.logging import get_logger, log_provider_response
-from ..core.types import (
+from intellicrack.core.logging import get_logger, log_provider_response
+from intellicrack.core.types import (
     AuthenticationError,
     Message,
     ModelInfo,
@@ -37,7 +37,7 @@ from ..core.types import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
 
-    from ..core.types import ProviderName
+    from intellicrack.core.types import ProviderName
 
 _T = TypeVar("_T")
 
@@ -93,6 +93,20 @@ class GoogleFunctionDeclaration(TypedDict):
     parameters: JSONSchemaParameters
 
 
+def serialize_tool_result(result: object) -> str:
+    """
+    Serialize a tool result to a string for API consumption.
+
+    Args:
+        result: The tool result value, either a string or a
+            JSON-serializable object.
+
+    Returns:
+        str: The result as a string, JSON-encoded if not already a string.
+    """
+    return result if isinstance(result, str) else json.dumps(result)
+
+
 def parse_tool_call(
     *,
     call_id: str,
@@ -142,7 +156,7 @@ class LLMProviderBase(ABC):
 
     def __init__(self) -> None:
         self._credentials: ProviderCredentials | None = None
-        self._connected: bool = False
+        self.connected: bool = False
         self._cancel_requested: bool = False
         self._pending_tool_calls: list[ToolCall] = []
         self._logger = get_logger("providers.base")
@@ -165,7 +179,7 @@ class LLMProviderBase(ABC):
         Returns:
             bool: True if the provider is ready to accept requests.
         """
-        return self._connected
+        return self.connected
 
     @abstractmethod
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -186,7 +200,7 @@ class LLMProviderBase(ABC):
 
         Cleans up any resources and invalidates the connection.
         """
-        self._connected = False
+        self.connected = False
         self._credentials = None
         self._cancel_requested = False
         self._pending_tool_calls.clear()
@@ -214,6 +228,7 @@ class LLMProviderBase(ABC):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -248,6 +263,7 @@ class LLMProviderBase(ABC):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -327,11 +343,8 @@ class LLMProviderBase(ABC):
             _T: The result of the awaitable produced by *coro_factory*.
 
         Raises:
-            AuthenticationError: Always re-raised immediately.
-            retryable_exceptions: Re-raised after all retry attempts are
-                exhausted.
-            ProviderError: If the retry loop exits without capturing an
-                exception.
+            AuthenticationError: If the operation fails with bad credentials.
+            ProviderError: If all retry attempts are exhausted.
         """
         for attempt in range(max_retries + 1):
             try:
@@ -384,6 +397,36 @@ class LLMProviderBase(ABC):
             list[dict[str, object]]: List of messages in provider's format.
         """
 
+    def convert_tools_to_provider_format(
+        self,
+        tools: list[ToolDefinition],
+    ) -> list[dict[str, object]]:
+        """
+        Convert internal tool format to provider-specific format.
+
+        Args:
+            tools: List of ToolDefinition objects.
+
+        Returns:
+            list[dict[str, object]]: List of tool definitions in provider's format.
+        """
+        return self._convert_tools_to_provider_format(tools)
+
+    def convert_messages_to_provider_format(
+        self,
+        messages: list[Message],
+    ) -> list[dict[str, object]]:
+        """
+        Convert internal message format to provider-specific format.
+
+        Args:
+            messages: List of Message objects.
+
+        Returns:
+            list[dict[str, object]]: List of messages in provider's format.
+        """
+        return self._convert_messages_to_provider_format(messages)
+
     @staticmethod
     def _build_chat_response(
         *,
@@ -410,7 +453,7 @@ class LLMProviderBase(ABC):
             role="assistant",
             content=content,
             tool_calls=tool_calls or None,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
         log_provider_response(
             provider=provider,
@@ -459,7 +502,7 @@ class LLMProviderBase(ABC):
         Returns:
             str: The result as a string, JSON-encoded if not already a string.
         """
-        return result if isinstance(result, str) else json.dumps(result)
+        return serialize_tool_result(result)
 
     @staticmethod
     def _convert_tool_choice_to_openai_format(
@@ -545,7 +588,7 @@ class LLMProviderBase(ABC):
                     {
                         "role": "tool",
                         "tool_call_id": tr.call_id,
-                        "content": LLMProviderBase._serialize_tool_result(tr.result),
+                        "content": serialize_tool_result(tr.result),
                     }
                     for tr in msg.tool_results
                 )

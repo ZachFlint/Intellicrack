@@ -32,9 +32,6 @@ def _field(results: list[dict[str, Any]], name: str) -> dict[str, Any]:
 
     Returns:
         dict[str, Any]: The matching field dict.
-
-    Raises:
-        AssertionError: If no field with the given name is found.
     """
     found = next((r for r in results if r["name"] == name), None)
     assert found is not None, f"Field '{name}' not found in results: {[r['name'] for r in results]}"

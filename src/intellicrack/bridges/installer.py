@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Tool installer and detector for Intellicrack.
 
@@ -29,10 +28,9 @@ from intellicrack.core._subprocess import (
     TimeoutExpired,
     run as _subprocess_run,
 )
-
-from ..core.logging import get_logger
-from ..core.process_manager import ProcessManager
-from ..core.types import ToolError, ToolName
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager
+from intellicrack.core.types import ToolError, ToolName
 
 
 _logger = get_logger("bridges.installer")
@@ -140,7 +138,7 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
             Path("C:/Tools/ghidra"),
             Path("C:/ghidra"),
             Path("D:/Tools/ghidra"),
-            Path(os.path.expanduser("~/ghidra")),
+            Path("~").expanduser() / "ghidra",
         ],
         executables=["support/analyzeHeadless.bat", "support/analyzeHeadless"],
         download_url="https://github.com/NationalSecurityAgency/ghidra/releases/latest",
@@ -263,33 +261,33 @@ class ToolInstaller:
             return Path("builtin")
 
         for common_path in tool_info.common_paths:
-            if common_path.exists():
+            if await asyncio.to_thread(common_path.exists):
                 for exe in tool_info.executables:
                     exe_path = common_path / exe
-                    if exe_path.exists():
+                    if await asyncio.to_thread(exe_path.exists):
                         _logger.info("tool_found", tool=tool_info.display_name, path=str(exe_path))
                         return common_path
 
         for exe in tool_info.executables:
-            found = shutil.which(exe)
+            found = await asyncio.to_thread(shutil.which, exe)
             if found is not None:
                 found_path = Path(found).parent
                 _logger.info("tool_found_in_path", tool=tool_info.display_name, path=str(found_path))
                 return found_path
 
         tool_dir: Path = self.tools_directory / str(tool.value)
-        if tool_dir.exists():
+        if await asyncio.to_thread(tool_dir.exists):
             for exe in tool_info.executables:
                 exe_path = tool_dir / exe
-                if exe_path.exists():
+                if await asyncio.to_thread(exe_path.exists):
                     _logger.info("tool_found_in_tools_dir", tool=tool_info.display_name, path=str(tool_dir))
                     return tool_dir
 
                 subdir: Path
-                for subdir in tool_dir.iterdir():
-                    if subdir.is_dir():
+                for subdir in await asyncio.to_thread(lambda: list(tool_dir.iterdir())):
+                    if await asyncio.to_thread(subdir.is_dir):
                         exe_path = subdir / exe
-                        if exe_path.exists():
+                        if await asyncio.to_thread(exe_path.exists):
                             _logger.info("tool_found", tool=tool_info.display_name, path=str(subdir))
                             return subdir
 
@@ -309,7 +307,7 @@ class ToolInstaller:
             result = await process_manager.run_tracked_async(
                 ["python", "-c", "import frida; print(frida.__version__)"],
                 name="frida-version-check",
-                timeout=10,
+                process_timeout=10,
             )
             if result.returncode == 0:
                 _logger.info("frida_installed", version=result.stdout.strip())
@@ -344,19 +342,20 @@ class ToolInstaller:
                 result = await process_manager.run_tracked_async(
                     cmd,
                     name=f"{tool.value}-version",
-                    timeout=10,
+                    process_timeout=10,
                 )
             else:
                 if path != Path("builtin"):
                     exe = path / cmd[0]
-                    if exe.exists():
+                    if await asyncio.to_thread(exe.exists):
                         cmd[0] = str(exe)
 
+                is_dir = await asyncio.to_thread(path.is_dir)
                 result = await process_manager.run_tracked_async(
                     cmd,
                     name=f"{tool.value}-version",
-                    timeout=30,
-                    cwd=str(path) if path.is_dir() else None,
+                    process_timeout=30,
+                    cwd=str(path) if is_dir else None,
                 )
 
             if result.returncode == 0:
@@ -468,7 +467,7 @@ class ToolInstaller:
 
         for exe in tool_info.executables:
             exe_path = path / exe
-            if exe_path.exists():
+            if await asyncio.to_thread(exe_path.exists):
                 version = await self.get_version(tool, path)
                 if version is not None and tool_info.min_version:
                     min_ver = self._parse_version(tool_info.min_version)
@@ -530,7 +529,7 @@ class ToolInstaller:
 
             install_path = await self._extract_archive(download_path, tool)
 
-            download_path.unlink(missing_ok=True)
+            await asyncio.to_thread(download_path.unlink, missing_ok=True)
 
             version = await self.get_version(tool, install_path)
             _logger.info("tool_installed", tool=tool_info.display_name, version=str(version), path=str(install_path))
@@ -541,7 +540,7 @@ class ToolInstaller:
                 version=version,
             )
 
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError, zipfile.BadZipFile, httpx.HTTPError) as e:
             _logger.exception("tool_install_failed", tool=tool_info.display_name)
             return InstallResult(success=False, error=str(e))
 
@@ -559,14 +558,14 @@ class ToolInstaller:
             result = await process_manager.run_tracked_async(
                 ["pip", "install", "--upgrade", "frida", "frida-tools"],
                 name="pip-install-frida",
-                timeout=300,
+                process_timeout=300,
             )
 
             if result.returncode == 0:
                 version_result = await process_manager.run_tracked_async(
                     ["python", "-c", "import frida; print(frida.__version__)"],
                     name="frida-version-verify",
-                    timeout=10,
+                    process_timeout=10,
                 )
                 version = self._parse_version(version_result.stdout.strip())
                 _logger.info("frida_installed", version=str(version))
@@ -581,7 +580,7 @@ class ToolInstaller:
                 error=f"pip install failed: {result.stderr}",
             )
 
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError, CalledProcessError) as e:
             _logger.exception("pip_install_unexpected_error")
             return InstallResult(success=False, error=str(e))
 
@@ -629,7 +628,7 @@ class ToolInstaller:
                 elif tool == ToolName.CUTTER and "windows" in name and name.endswith(".zip"):
                     return download_url
 
-        except Exception:
+        except (httpx.HTTPError, OSError, KeyError, ValueError):
             _logger.exception("release_info_fetch_failed", tool=tool.value)
 
         return None
@@ -657,18 +656,20 @@ class ToolInstaller:
                 total = int(response.headers.get("content-length", 0))
                 downloaded = 0
 
-                with open(temp_path, "wb") as f:
-                    async for chunk in response.aiter_bytes(chunk_size=8192):
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if total > 0:
-                            percent = (downloaded / total) * 100
-                            if downloaded % _ONE_MB < _PROGRESS_CHUNK:
-                                _logger.debug("download_progress", percent=round(percent, 1))
+                chunks: list[bytes] = []
+                async for chunk in response.aiter_bytes(chunk_size=8192):
+                    chunks.append(chunk)
+                    downloaded += len(chunk)
+                    if total > 0:
+                        percent = (downloaded / total) * 100
+                        if downloaded % _ONE_MB < _PROGRESS_CHUNK:
+                            _logger.debug("download_progress", percent=round(percent, 1))
+
+                await asyncio.to_thread(temp_path.write_bytes, b"".join(chunks))
 
             _logger.info("download_completed", file_name=filename, bytes=downloaded)
 
-        except Exception:
+        except (httpx.HTTPError, OSError, ValueError):
             _logger.exception("download_failed", url=url)
             return None
         else:
@@ -692,7 +693,7 @@ class ToolInstaller:
             raise ToolError(_ERR_UNSUPPORTED_ARCHIVE)
 
         tool_dir = self.tools_directory / tool.value
-        tool_dir.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(tool_dir.mkdir, parents=True, exist_ok=True)
 
         _logger.info("extraction_starting", path=str(tool_dir))
 
@@ -702,8 +703,8 @@ class ToolInstaller:
                 archive_path,
                 tool_dir,
             )
-            subdirs = [d for d in tool_dir.iterdir() if d.is_dir()]
-        except Exception as e:
+            subdirs = await asyncio.to_thread(lambda: [d for d in tool_dir.iterdir() if d.is_dir()])
+        except (OSError, zipfile.BadZipFile, ValueError) as e:
             _logger.warning("extraction_failed", archive=str(archive_path), tool=tool.value, error=str(e))
             raise ToolError(_ERR_EXTRACT_FAILED_FMT) from e
         else:

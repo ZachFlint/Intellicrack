@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Frida instrumentation panel for Intellicrack.
 
@@ -128,7 +127,7 @@ class FridaPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
+        self.run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
         self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
         self._clear_btn = self._add_secondary_button(toolbar, "Clear Console", self._on_clear_console)
 
@@ -164,7 +163,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._console = QPlainTextEdit()
         self._console.setFont(FontManager.get_instance().get_code_font(9))
-        self._console.setReadOnly(True)
+        self._console.setReadOnly(ro=True)
         set_max_block_count(self._console, 10000)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
@@ -572,7 +571,7 @@ class FridaPanel(AnalysisPanelBase):
             return
 
         _logger.debug("frida_script_execution_started", script_size=len(source))
-        self._run_btn.setEnabled(False)
+        self.run_btn.setEnabled(False)
 
         self._run_async(
             self._bridge.execute_persistent_script(source),
@@ -590,7 +589,7 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._active_script_id = str(result) if result else None
         self._console.appendPlainText("[+] Script loaded (persistent)")
-        self._run_btn.setEnabled(False)
+        self.run_btn.setEnabled(False)
         self._stop_btn.setEnabled(True)
         self.script_executed.emit()
         _logger.info("frida_script_executed", script_size=script_size)
@@ -604,7 +603,7 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._console.appendPlainText(f"[-] Script execution failed: {exc}")
         _logger.warning("frida_script_execution_failed", error=str(exc))
-        self._run_btn.setEnabled(True)
+        self.run_btn.setEnabled(True)
 
     def _on_stop_script(self) -> None:
         """Stop the currently running script."""
@@ -628,7 +627,7 @@ class FridaPanel(AnalysisPanelBase):
     def _on_stop_script_success(self) -> None:
         """Handle successful script stop."""
         self._active_script_id = None
-        self._run_btn.setEnabled(True)
+        self.run_btn.setEnabled(True)
         self._console.appendPlainText("[+] Script stopped")
 
     def _on_stop_script_error(self, exc: object) -> None:
@@ -1077,7 +1076,7 @@ class FridaPanel(AnalysisPanelBase):
         Args:
             result: List of FridaDeviceInfo from the bridge.
         """
-        self._device_combo.blockSignals(True)
+        self._device_combo.blockSignals(b=True)
         current = self._device_combo.currentText()
         self._device_combo.clear()
         if isinstance(result, list):
@@ -1091,4 +1090,4 @@ class FridaPanel(AnalysisPanelBase):
         idx = self._device_combo.findText(current)
         if idx >= 0:
             self._device_combo.setCurrentIndex(idx)
-        self._device_combo.blockSignals(False)
+        self._device_combo.blockSignals(b=False)

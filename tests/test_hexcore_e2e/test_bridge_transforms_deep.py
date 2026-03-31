@@ -16,24 +16,29 @@ import base64
 import binascii
 import json
 from importlib.util import find_spec
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
 
 
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+    from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 pytest.importorskip("intellicrack_hexcore")
 
 _pipeline_available: bool = find_spec("intellicrack.core.transform_pipeline") is not None
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -46,7 +51,7 @@ def _run(coro: Any) -> Any:
     return loop.run_until_complete(coro)
 
 
-def _open_with_payload(bridge: Any, path: Any, data: bytes) -> None:
+def _open_with_payload(bridge: HexEditorBridge, path: str, data: bytes) -> None:
     """Write data to a temporary file and open it in the bridge.
 
     Args:
@@ -58,7 +63,7 @@ def _open_with_payload(bridge: Any, path: Any, data: bytes) -> None:
     _run(bridge.open_file(str(path)))
 
 
-def _require_transform(bridge: Any, name: str) -> None:
+def _require_transform(bridge: HexEditorBridge, name: str) -> None:
     """Skip the test if the named transform is not available.
 
     Args:
@@ -74,7 +79,7 @@ def _require_transform(bridge: Any, name: str) -> None:
 class TestApplyPipelineSingleStep:
     """Tests for apply_pipeline with exactly one transform step."""
 
-    def test_single_xor_step_returns_hex_string(self, bridge: Any, tmp_path: Any) -> None:
+    def test_single_xor_step_returns_hex_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A single-step XOR pipeline must return a valid hex string of the correct length.
 
         Args:
@@ -94,7 +99,7 @@ class TestApplyPipelineSingleStep:
         assert isinstance(result, str)
         assert len(result) == 8
 
-    def test_single_xor_step_known_output(self, bridge: Any, tmp_path: Any) -> None:
+    def test_single_xor_step_known_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """XOR-ing 0xFF bytes with 0xFF must yield all-zero output.
 
         Args:
@@ -113,7 +118,7 @@ class TestApplyPipelineSingleStep:
 
         assert result == "00000000"
 
-    def test_empty_pipeline_returns_original_bytes(self, bridge: Any, tmp_path: Any) -> None:
+    def test_empty_pipeline_returns_original_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """An empty pipeline must return the original bytes unchanged.
 
         Args:
@@ -135,7 +140,7 @@ class TestApplyPipelineSingleStep:
 class TestApplyPipelineMultiStep:
     """Tests for apply_pipeline with two or more transform steps."""
 
-    def test_two_step_pipeline_xor_then_xor_identity(self, bridge: Any, tmp_path: Any) -> None:
+    def test_two_step_pipeline_xor_then_xor_identity(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """XOR-ing the same key twice must restore the original bytes (identity).
 
         Args:
@@ -157,7 +162,7 @@ class TestApplyPipelineMultiStep:
 
         assert result == binascii.hexlify(payload).decode("ascii")
 
-    def test_pipeline_ordering_matters(self, bridge: Any, tmp_path: Any) -> None:
+    def test_pipeline_ordering_matters(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Reversing step order in a non-symmetric pipeline must produce different output.
 
         Args:
@@ -190,7 +195,7 @@ class TestApplyPipelineMultiStep:
 
         assert result_ab != result_ba
 
-    def test_three_step_pipeline_produces_output(self, bridge: Any, tmp_path: Any) -> None:
+    def test_three_step_pipeline_produces_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A three-step pipeline must return a non-empty hex string of the correct length.
 
         Args:
@@ -214,7 +219,7 @@ class TestApplyPipelineMultiStep:
         assert isinstance(result, str)
         assert len(result) == 8
 
-    def test_pipeline_result_length_matches_input_length(self, bridge: Any, tmp_path: Any) -> None:
+    def test_pipeline_result_length_matches_input_length(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Pipeline output length in hex characters must equal 2 * input byte count.
 
         Args:
@@ -234,7 +239,7 @@ class TestApplyPipelineMultiStep:
 
         assert len(result) == byte_count * 2
 
-    def test_pipeline_on_subrange(self, bridge: Any, tmp_path: Any) -> None:
+    def test_pipeline_on_subrange(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Pipeline applied to a subrange must only transform the specified bytes.
 
         Args:
@@ -258,7 +263,7 @@ class TestApplyPipelineMultiStep:
 class TestApplyPipelineInvalidStep:
     """Tests for apply_pipeline graceful handling of unknown step names."""
 
-    def test_pipeline_with_invalid_step_name_completes(self, bridge: Any, tmp_path: Any) -> None:
+    def test_pipeline_with_invalid_step_name_completes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A pipeline containing an unknown step name must not crash the bridge.
 
         Unknown steps are silently skipped; the result is the remaining output.
@@ -291,7 +296,7 @@ class TestApplyPipelineInvalidStep:
 class TestApplyTransformDeep:
     """Deeper tests for bridge.apply_transform across different transforms and ranges."""
 
-    def test_apply_transform_xor_with_key_parameter(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_transform_xor_with_key_parameter(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """apply_transform with xor_single and a known key must produce the correct output.
 
         Args:
@@ -307,7 +312,7 @@ class TestApplyTransformDeep:
 
         assert result == "00000000"
 
-    def test_apply_transform_on_second_subrange(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_transform_on_second_subrange(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """apply_transform on a non-zero offset must only transform bytes in that range.
 
         Args:
@@ -324,7 +329,7 @@ class TestApplyTransformDeep:
         transformed = bytes.fromhex(result)
         assert all(b == 0x00 for b in transformed)
 
-    def test_apply_transform_rot13_on_text_bytes(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_transform_rot13_on_text_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """apply_transform with rot13 must rotate alphabetic ASCII bytes by 13 positions.
 
         Args:
@@ -345,7 +350,7 @@ class TestApplyTransformDeep:
         transformed = bytes.fromhex(result).decode("ascii")
         assert transformed == "URYYB"
 
-    def test_apply_transform_base64_encode_produces_valid_base64(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_transform_base64_encode_produces_valid_base64(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """apply_transform with base64_encode must produce a validly decodable hex output.
 
         The transform returns bytes of the base64 ASCII string; verifying by
@@ -369,7 +374,7 @@ class TestApplyTransformDeep:
         decoded = base64.b64decode(b64_bytes)
         assert decoded == b"TestData"
 
-    def test_apply_transform_xor_identity_key_zero(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_transform_xor_identity_key_zero(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """XOR-ing with key 0x00 must leave bytes unchanged (identity operation).
 
         Args:
@@ -385,7 +390,7 @@ class TestApplyTransformDeep:
 
         assert result == binascii.hexlify(payload).decode("ascii")
 
-    def test_apply_transform_different_byte_ranges_give_different_output(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_transform_different_byte_ranges_give_different_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """apply_transform on two non-overlapping ranges of distinct bytes gives distinct output.
 
         Args:
@@ -402,7 +407,7 @@ class TestApplyTransformDeep:
 
         assert result_first != result_second
 
-    def test_apply_pipeline_vs_apply_transform_single_step_match(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_pipeline_vs_apply_transform_single_step_match(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A single-step pipeline and direct apply_transform with the same params produce equal output.
 
         Args:
@@ -422,7 +427,7 @@ class TestApplyTransformDeep:
 
         assert direct == via_pipeline
 
-    def test_apply_transform_on_pe_binary(self, loaded_bridge: Any) -> None:
+    def test_apply_transform_on_pe_binary(self, loaded_bridge: HexEditorBridge) -> None:
         """apply_transform must successfully process bytes from a real PE binary document.
 
         Args:
@@ -434,7 +439,7 @@ class TestApplyTransformDeep:
 
         assert result == "4d5a"
 
-    def test_apply_pipeline_three_steps_with_known_verification(self, bridge: Any, tmp_path: Any) -> None:
+    def test_apply_pipeline_three_steps_with_known_verification(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A three-step pipeline with XOR steps must produce the mathematically expected result.
 
         XOR(k1) then XOR(k2) then XOR(k3) equals XOR(k1 ^ k2 ^ k3).

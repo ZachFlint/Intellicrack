@@ -204,8 +204,7 @@ def analyze_binary(file_path: str) -> dict[str, list[str]]:
         "validation_patterns": [],
     }
 
-    with open(file_path, "rb") as f:
-        data = f.read()
+    data = Path(file_path).read_bytes()
 
     # Search for common license strings
     patterns = [b"license", b"serial", b"registration", b"activate"]
@@ -517,7 +516,7 @@ class ScriptManagerPanel(QWidget):
 
         self._name_edit = QLineEdit()
         self._name_edit.setToolTip("Enter script name")
-        self._name_edit.setClearButtonEnabled(True)
+        self._name_edit.setClearButtonEnabled(enable=True)
         header_layout.addWidget(self._name_edit, 1)
 
         self._type_combo = QComboBox()

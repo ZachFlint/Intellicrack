@@ -69,11 +69,11 @@ def get_screen_geometry(app: QApplication) -> tuple[int, int, int, int] | None:
     Returns:
         tuple[int, int, int, int] | None: Tuple of (x, y, width, height) or None if no screen detected.
     """
-    screen: object = _resolve(app, _PRIMARY_SCREEN)()
+    screen: Any = _resolve(app, _PRIMARY_SCREEN)()
     if screen is None:
         _logger.debug("no_primary_screen_detected", app_type=type(app).__name__)
         return None
-    rect: object = _resolve(screen, _AVAILABLE_GEOMETRY)()
+    rect: Any = _resolve(screen, _AVAILABLE_GEOMETRY)()
     x: int = _resolve(rect, "x")()
     y: int = _resolve(rect, "y")()
     w: int = _resolve(rect, "width")()

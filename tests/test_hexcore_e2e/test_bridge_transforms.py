@@ -7,23 +7,26 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
 
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
-def _run(coro: Any) -> Any:
+
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -48,7 +51,7 @@ except (ImportError, ValueError):
 class TestBridgeListTransforms:
     """Tests covering the list_transforms operation."""
 
-    def test_list_transforms_returns_list(self, bridge: Any) -> None:
+    def test_list_transforms_returns_list(self, bridge: HexEditorBridge) -> None:
         """Verify that list_transforms returns a list object.
 
         Args:
@@ -57,7 +60,7 @@ class TestBridgeListTransforms:
         result: list[dict[str, str]] = _run(bridge.list_transforms())
         assert isinstance(result, list)
 
-    def test_list_transforms_items_have_required_keys(self, bridge: Any) -> None:
+    def test_list_transforms_items_have_required_keys(self, bridge: HexEditorBridge) -> None:
         """Verify that each transform dict has name, category, and description.
 
         Args:
@@ -69,7 +72,7 @@ class TestBridgeListTransforms:
                 assert "category" in item
                 assert "description" in item
 
-    def test_list_transforms_name_values_are_strings(self, bridge: Any) -> None:
+    def test_list_transforms_name_values_are_strings(self, bridge: HexEditorBridge) -> None:
         """Verify that transform name values are non-empty strings.
 
         Args:
@@ -84,7 +87,7 @@ class TestBridgeListTransforms:
 class TestBridgeApplyTransform:
     """Tests covering individual transform application to byte ranges."""
 
-    def test_apply_transform_xor_single_returns_hex_string(self, bridge: Any, tmp_path: Path) -> None:
+    def test_apply_transform_xor_single_returns_hex_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that apply_transform with xor_single returns a hex string.
 
         Args:
@@ -104,7 +107,7 @@ class TestBridgeApplyTransform:
         assert isinstance(result, str)
         assert len(result) == 8
 
-    def test_apply_transform_xor_single_known_output(self, bridge: Any, tmp_path: Path) -> None:
+    def test_apply_transform_xor_single_known_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that XOR-ing 0xFF bytes with 0xFF produces 0x00 bytes.
 
         Args:
@@ -123,7 +126,7 @@ class TestBridgeApplyTransform:
         result: str = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "FF"})))
         assert result == "00000000"
 
-    def test_apply_transform_returns_length_matching_input(self, bridge: Any, tmp_path: Path) -> None:
+    def test_apply_transform_returns_length_matching_input(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that apply_transform output length in bytes equals the input length.
 
         Args:
@@ -146,7 +149,7 @@ class TestBridgeApplyTransform:
 class TestBridgeApplyPipeline:
     """Tests covering pipeline application when the transform_pipeline module is available."""
 
-    def test_apply_pipeline_with_single_xor_step(self, bridge: Any, tmp_path: Path) -> None:
+    def test_apply_pipeline_with_single_xor_step(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that a single-step pipeline produces the same result as apply_transform.
 
         Args:

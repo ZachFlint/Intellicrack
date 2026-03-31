@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Search mixin and background workers for the hex editor panel."""
 
 from __future__ import annotations
@@ -75,7 +74,7 @@ class SearchWorker(QThread):
 
     def __init__(
         self,
-        document: Any,
+        document: object,
         mode: str,
         query: str,
         encoding: str,
@@ -85,9 +84,9 @@ class SearchWorker(QThread):
         super().__init__(parent)
         self._document: Any = document
         self._mode: str = mode
-        self._query: str = query
+        self.query: str = query
         self._encoding: str = encoding
-        self._max_results: int = max_results
+        self.max_results: int = max_results
         _: object = self.finished.connect(self.deleteLater)
 
     @override
@@ -96,7 +95,7 @@ class SearchWorker(QThread):
         try:
             results = self._execute_search()
             self.search_finished.emit(results)
-        except Exception as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             logger.debug("search_worker_failed", error=str(exc))
             self.search_error.emit(exc)
 
@@ -106,30 +105,26 @@ class SearchWorker(QThread):
 
         Returns:
             list[tuple[int, int]]: List of (offset, length) match tuples.
-
-        Raises:
-            ValueError: If the search query is invalid.
-            AttributeError: If the document lacks the search method.
         """
         if self._mode == "Hex":
-            raw = self._document.search_hex(self._query, self._max_results)
+            raw = self._document.search_hex(self.query, self.max_results)
         elif self._mode == "Text":
             if hasattr(self._document, "search_text_encoded"):
                 raw = self._document.search_text_encoded(
-                    self._query,
+                    self.query,
                     self._encoding,
-                    True,
-                    self._max_results,
+                    case_sensitive=True,
+                    max_results=self.max_results,
                 )
             else:
                 raw = self._document.search_text(
-                    self._query,
+                    self.query,
                     self._encoding,
-                    True,
-                    self._max_results,
+                    case_sensitive=True,
+                    max_results=self.max_results,
                 )
         elif self._mode == "Regex":
-            raw = self._document.search_regex(self._query, self._max_results)
+            raw = self._document.search_regex(self.query, self.max_results)
         else:
             return []
         return [(r[0], r[1]) for r in raw]
@@ -167,7 +162,7 @@ class NumericSearchWorker(QThread):
 
     def __init__(
         self,
-        document: Any,
+        document: object,
         min_val: float,
         max_val: float,
         fmt: str,
@@ -189,7 +184,7 @@ class NumericSearchWorker(QThread):
         self._fmt: str = fmt
         self._byte_width: int = byte_width
         self._alignment: int = alignment
-        self._max_results: int = max_results
+        self.max_results: int = max_results
         self._use_native: bool = use_native
         self._size: int = size
         self._signed: bool = signed
@@ -203,7 +198,7 @@ class NumericSearchWorker(QThread):
         try:
             results = self._search_native() if self._use_native else self._search_fallback()
             self.search_finished.emit(results)
-        except Exception as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             logger.debug("numeric_search_worker_failed", error=str(exc))
             self.search_error.emit(exc)
 
@@ -226,7 +221,7 @@ class NumericSearchWorker(QThread):
                 self._signed,
                 self._big_endian,
                 self._alignment,
-                self._max_results,
+                self.max_results,
             )
         elif hasattr(self._document, "search_numeric"):
             raw = self._document.search_numeric(
@@ -235,7 +230,7 @@ class NumericSearchWorker(QThread):
                 self._signed,
                 self._big_endian,
                 self._alignment,
-                self._max_results,
+                self.max_results,
             )
         else:
             return self._search_fallback()
@@ -252,7 +247,7 @@ class NumericSearchWorker(QThread):
         doc_len: int = self._document.length()
         chunk_size = 65536
         offset = 0
-        while offset < doc_len and len(results) < self._max_results:
+        while offset < doc_len and len(results) < self.max_results:
             read_len = min(chunk_size, doc_len - offset)
             raw: bytes | bytearray | list[int] = self._document.read(offset, read_len)
             chunk = raw if isinstance(raw, bytes) else bytes(raw)
@@ -265,7 +260,7 @@ class NumericSearchWorker(QThread):
                     fval = float(val)
                     if self._min_val <= fval <= self._max_val:
                         results.append((abs_off, self._byte_width))
-                        if len(results) >= self._max_results:
+                        if len(results) >= self.max_results:
                             break
                 except struct.error:
                     continue
@@ -443,7 +438,11 @@ class SearchMixin:
         layout.addWidget(self._numeric_align_spin)
 
         self._numeric_range_check = QCheckBox("Range")
-        self._numeric_range_check.toggled.connect(self._on_numeric_range_toggled)
+
+        def _range_toggled_slot(c: int) -> None:
+            self._on_numeric_range_toggled(checked=bool(c))
+
+        self._numeric_range_check.toggled.connect(_range_toggled_slot)
         layout.addWidget(self._numeric_range_check)
 
         self._numeric_max_input = QLineEdit()
@@ -453,9 +452,9 @@ class SearchMixin:
             QRegularExpressionValidator(
                 QRegularExpression(r"-?(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?)"),
                 frame,
-            )
+            ),
         )
-        self._numeric_max_input.setVisible(False)
+        self._numeric_max_input.setVisible(visible=False)
         layout.addWidget(self._numeric_max_input)
 
         search_btn = QPushButton("Search")
@@ -464,7 +463,7 @@ class SearchMixin:
         layout.addStretch()
         return frame
 
-    def _on_numeric_range_toggled(self, checked: bool) -> None:
+    def _on_numeric_range_toggled(self, *, checked: bool) -> None:
         """
         Show or hide the max value field when range search is toggled.
 

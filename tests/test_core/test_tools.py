@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for core.tools module - tool registry and bridge management.
 
 Tests validate:
@@ -32,7 +37,7 @@ def registry(tmp_path: Path) -> ToolRegistry:
         tmp_path: Pytest temporary directory.
 
     Returns:
-        ToolRegistry instance.
+        ToolRegistry: ToolRegistry instance.
     """
     tools_dir = tmp_path / "tools"
     tools_dir.mkdir()

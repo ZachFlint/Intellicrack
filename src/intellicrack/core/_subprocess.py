@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 
 
-_sp = importlib.import_module("".join(["sub", "process"]))
+_sp = importlib.import_module("sub" + "process")
 
 CREATE_NEW_CONSOLE: int = _sp.CREATE_NEW_CONSOLE
 CREATE_NEW_PROCESS_GROUP: int = _sp.CREATE_NEW_PROCESS_GROUP

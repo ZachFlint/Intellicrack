@@ -100,7 +100,7 @@ class EntropyGraphWidget(QWidget):
         self._entropy_values: list[float] = []
         self._block_size: int = 4096
         self.setMinimumHeight(120)
-        self.setMouseTracking(True)
+        self.setMouseTracking(enable=True)
 
     def set_data(self, entropy_values: list[float], block_size: int) -> None:
         """
@@ -210,7 +210,7 @@ class ByteDistributionWidget(QWidget):
         self._log_scale: bool = False
         self._hovered_bar: int = -1
         self.setMinimumHeight(100)
-        self.setMouseTracking(True)
+        self.setMouseTracking(enable=True)
 
     def set_data(self, counts: list[int]) -> None:
         """
@@ -361,7 +361,15 @@ class CustomCrcDialog(QDialog):
             ref_in = self._ref_in_check.isChecked()
             ref_out = self._ref_out_check.isChecked()
             xor_out = int(self._xor_out_edit.text().strip(), 16)
-            result = compute_custom_crc(self._data, width, poly, init, ref_in, ref_out, xor_out)
+            result = compute_custom_crc(
+                self._data,
+                width,
+                poly,
+                init,
+                ref_in=ref_in,
+                ref_out=ref_out,
+                xor_out=xor_out,
+            )
         except ValueError as exc:
             self._result_label.setText(f"Error: {exc}")
         else:

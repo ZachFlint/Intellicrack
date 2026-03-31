@@ -7,15 +7,21 @@ from __future__ import annotations
 
 import base64
 import struct
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
+
+
+if TYPE_CHECKING:
+    import types
+
+    from intellicrack_hexcore import HexDocument
 
 
 class TestListTransforms:
     """Tests covering the list_transforms() enumeration API."""
 
-    def test_list_transforms_returns_nonempty_list(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_returns_nonempty_list(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that list_transforms() returns at least one entry.
 
         Args:
@@ -25,7 +31,7 @@ class TestListTransforms:
         assert isinstance(transforms, list)
         assert transforms
 
-    def test_list_transforms_each_entry_is_three_tuple(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_each_entry_is_three_tuple(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that every entry returned by list_transforms() is a 3-tuple of strings.
 
         Args:
@@ -43,7 +49,7 @@ class TestListTransforms:
             assert isinstance(t_category, str)
             assert isinstance(t_description, str)
 
-    def test_list_transforms_names_are_nonempty_strings(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_names_are_nonempty_strings(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that all transform names in the list are non-empty strings.
 
         Args:
@@ -53,7 +59,7 @@ class TestListTransforms:
         names = [entry[0] for entry in transforms]
         assert all(isinstance(n, str) and len(n) > 0 for n in names)
 
-    def test_list_transforms_contains_base64_encode(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_contains_base64_encode(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the base64_encode transform is present in the list.
 
         Args:
@@ -63,7 +69,7 @@ class TestListTransforms:
         names = [entry[0] for entry in transforms]
         assert "base64_encode" in names
 
-    def test_list_transforms_contains_base64_decode(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_contains_base64_decode(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the base64_decode transform is present in the list.
 
         Args:
@@ -73,7 +79,7 @@ class TestListTransforms:
         names = [entry[0] for entry in transforms]
         assert "base64_decode" in names
 
-    def test_list_transforms_contains_xor(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_contains_xor(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that an XOR transform is present in the list.
 
         Args:
@@ -83,7 +89,7 @@ class TestListTransforms:
         names = [entry[0] for entry in transforms]
         assert any("xor" in n.lower() for n in names)
 
-    def test_list_transforms_result_is_consistent_across_calls(self, sample_doc_from_bytes: Any) -> None:
+    def test_list_transforms_result_is_consistent_across_calls(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that repeated calls to list_transforms() return the same list.
 
         Args:
@@ -97,7 +103,7 @@ class TestListTransforms:
 class TestBase64Transform:
     """Tests covering base64_encode and base64_decode transforms."""
 
-    def test_base64_encode_returns_valid_base64(self, hexcore: Any, sample_bytes: bytes) -> None:
+    def test_base64_encode_returns_valid_base64(self, hexcore: types.ModuleType, sample_bytes: bytes) -> None:
         """Verify that base64_encode produces valid base64 output.
 
         Args:
@@ -110,7 +116,7 @@ class TestBase64Transform:
         decoded = base64.b64decode(result)
         assert decoded == sample_bytes[:16]
 
-    def test_base64_encode_matches_stdlib_output(self, hexcore: Any, sample_bytes: bytes) -> None:
+    def test_base64_encode_matches_stdlib_output(self, hexcore: types.ModuleType, sample_bytes: bytes) -> None:
         """Verify that base64_encode output matches Python's standard library result.
 
         Args:
@@ -122,7 +128,7 @@ class TestBase64Transform:
         expected = base64.b64encode(sample_bytes[:32])
         assert result == expected
 
-    def test_base64_roundtrip(self, hexcore: Any, sample_bytes: bytes) -> None:
+    def test_base64_roundtrip(self, hexcore: types.ModuleType, sample_bytes: bytes) -> None:
         """Verify that base64_encode followed by base64_decode reproduces the original data.
 
         Args:
@@ -137,7 +143,7 @@ class TestBase64Transform:
         decoded = doc_enc.transform_data("base64_decode", 0, len(encoded), {})
         assert decoded == original
 
-    def test_base64_encode_at_nonzero_offset(self, hexcore: Any, sample_bytes: bytes) -> None:
+    def test_base64_encode_at_nonzero_offset(self, hexcore: types.ModuleType, sample_bytes: bytes) -> None:
         """Verify that base64_encode correctly encodes a slice starting at a non-zero offset.
 
         Args:
@@ -155,7 +161,7 @@ class TestBase64Transform:
 class TestBitwiseTransforms:
     """Tests covering bit_invert and byte_reverse transforms."""
 
-    def test_bit_invert_produces_xor_ff(self, hexcore: Any) -> None:
+    def test_bit_invert_produces_xor_ff(self, hexcore: types.ModuleType) -> None:
         """Verify that bit_invert XORs every byte with 0xFF.
 
         Args:
@@ -167,7 +173,7 @@ class TestBitwiseTransforms:
         expected = bytes(b ^ 0xFF for b in input_data)
         assert result == expected
 
-    def test_bit_invert_double_application_is_identity(self, hexcore: Any) -> None:
+    def test_bit_invert_double_application_is_identity(self, hexcore: types.ModuleType) -> None:
         """Verify that applying bit_invert twice returns the original bytes.
 
         Args:
@@ -180,7 +186,7 @@ class TestBitwiseTransforms:
         twice = doc_inv.transform_data("bit_invert", 0, len(once), {})
         assert twice == input_data
 
-    def test_byte_reverse_reverses_bytes(self, hexcore: Any) -> None:
+    def test_byte_reverse_reverses_bytes(self, hexcore: types.ModuleType) -> None:
         """Verify that byte_reverse produces the mirror of the input.
 
         Args:
@@ -191,7 +197,7 @@ class TestBitwiseTransforms:
         result = doc.transform_data("byte_reverse", 0, len(input_data), {})
         assert result == input_data[::-1]
 
-    def test_byte_reverse_double_application_is_identity(self, hexcore: Any) -> None:
+    def test_byte_reverse_double_application_is_identity(self, hexcore: types.ModuleType) -> None:
         """Verify that applying byte_reverse twice returns the original bytes.
 
         Args:
@@ -208,7 +214,7 @@ class TestBitwiseTransforms:
 class TestXorTransform:
     """Tests covering xor_key single-byte and multi-byte key transforms."""
 
-    def test_xor_single_byte_key_matches_manual(self, hexcore: Any) -> None:
+    def test_xor_single_byte_key_matches_manual(self, hexcore: types.ModuleType) -> None:
         """Verify that xor_key with a single-byte key matches a manual XOR.
 
         Args:
@@ -221,7 +227,7 @@ class TestXorTransform:
         expected = bytes(b ^ key_byte for b in input_data)
         assert result == expected
 
-    def test_xor_with_zero_key_is_identity(self, hexcore: Any) -> None:
+    def test_xor_with_zero_key_is_identity(self, hexcore: types.ModuleType) -> None:
         """Verify that XOR with a zero key leaves the data unchanged.
 
         Args:
@@ -232,7 +238,7 @@ class TestXorTransform:
         result = doc.transform_data("xor_key", 0, len(input_data), {"key": b"\x00"})
         assert result == input_data
 
-    def test_xor_is_its_own_inverse(self, hexcore: Any) -> None:
+    def test_xor_is_its_own_inverse(self, hexcore: types.ModuleType) -> None:
         """Verify that XORing twice with the same key restores the original data.
 
         Args:
@@ -246,7 +252,7 @@ class TestXorTransform:
         twice = doc_xored.transform_data("xor_key", 0, len(once), {"key": bytes([key_byte])})
         assert twice == input_data
 
-    def test_xor_at_nonzero_offset(self, hexcore: Any) -> None:
+    def test_xor_at_nonzero_offset(self, hexcore: types.ModuleType) -> None:
         """Verify that xor_key only processes the specified offset range.
 
         Args:
@@ -263,7 +269,7 @@ class TestXorTransform:
 class TestByteSwapTransforms:
     """Tests covering byte_swap_16 and byte_swap_32 transforms."""
 
-    def test_byte_swap_16_swaps_pairs(self, hexcore: Any) -> None:
+    def test_byte_swap_16_swaps_pairs(self, hexcore: types.ModuleType) -> None:
         """Verify that byte_swap_16 reverses each consecutive pair of bytes.
 
         Args:
@@ -275,7 +281,7 @@ class TestByteSwapTransforms:
         expected = struct.pack(">HH", 0x1234, 0x5678)
         assert result == expected
 
-    def test_byte_swap_32_swaps_quads(self, hexcore: Any) -> None:
+    def test_byte_swap_32_swaps_quads(self, hexcore: types.ModuleType) -> None:
         """Verify that byte_swap_32 reverses each consecutive group of four bytes.
 
         Args:
@@ -291,7 +297,7 @@ class TestByteSwapTransforms:
 class TestTransformEdgeCases:
     """Tests covering edge-case inputs and invalid transform names."""
 
-    def test_invalid_transform_name_raises(self, sample_doc_from_bytes: Any) -> None:
+    def test_invalid_transform_name_raises(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that an unrecognized transform name raises an exception.
 
         Args:
@@ -300,7 +306,7 @@ class TestTransformEdgeCases:
         with pytest.raises((OSError, RuntimeError, KeyError, ValueError)):
             sample_doc_from_bytes.transform_data("no_such_transform_xyz_9999", 0, 4, {})
 
-    def test_transform_on_empty_range_returns_empty_bytes(self, sample_doc_from_bytes: Any) -> None:
+    def test_transform_on_empty_range_returns_empty_bytes(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that a transform applied to length 0 returns empty bytes.
 
         Args:

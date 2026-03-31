@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for embedded tools UI integration in MainWindow.
 
 Tests the menu actions, toolbar buttons, and handlers for x64dbg,
@@ -42,7 +47,7 @@ def patched_window(
         monkeypatch: Pytest monkeypatch fixture.
 
     Yields:
-        MainWindow instance.
+        Generator[MainWindow]:: MainWindow instance.
     """
     _ = qapp
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
@@ -124,9 +129,9 @@ class TestToolbarButtonsIntegration:
         assert hasattr(window, "_cutter_btn"), "Cutter button not found"
         assert hasattr(window, "_hxd_btn"), "HxD button not found"
 
-        x64dbg_btn: object = window._x64dbg_btn
-        cutter_btn: object = window._cutter_btn
-        hxd_btn: object = window._hxd_btn
+        x64dbg_btn: object = window.x64dbg_btn
+        cutter_btn: object = window.cutter_btn
+        hxd_btn: object = window.hxd_btn
 
         assert isinstance(x64dbg_btn, QPushButton)
         assert isinstance(cutter_btn, QPushButton)
@@ -143,9 +148,9 @@ class TestToolbarButtonsIntegration:
         """Verify toolbar buttons have correct tooltips."""
         window = patched_window
 
-        x64dbg_btn: object = window._x64dbg_btn
-        cutter_btn: object = window._cutter_btn
-        hxd_btn: object = window._hxd_btn
+        x64dbg_btn: object = window.x64dbg_btn
+        cutter_btn: object = window.cutter_btn
+        hxd_btn: object = window.hxd_btn
 
         assert isinstance(x64dbg_btn, QPushButton)
         assert isinstance(cutter_btn, QPushButton)
@@ -167,10 +172,10 @@ class TestEmbeddedToolHandlers:
         """Verify _on_open_x64dbg calls add_x64dbg_tab."""
         window = patched_window
         recorder = CallRecorder(result=None)
-        monkeypatch.setattr(window._tool_panel, "add_x64dbg_tab", recorder)
+        monkeypatch.setattr(window.tool_panel, "add_x64dbg_tab", recorder)
         monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-        window._on_open_x64dbg()
+        window.on_open_x64dbg()
 
         assert recorder.times_called >= 1
 
@@ -183,10 +188,10 @@ class TestEmbeddedToolHandlers:
         window = patched_window
         tab_recorder = CallRecorder(result=None)
         error_recorder = CallRecorder()
-        monkeypatch.setattr(window._tool_panel, "add_x64dbg_tab", tab_recorder)
+        monkeypatch.setattr(window.tool_panel, "add_x64dbg_tab", tab_recorder)
         monkeypatch.setattr(window, "_show_tool_error", error_recorder)
 
-        window._on_open_x64dbg()
+        window.on_open_x64dbg()
 
         assert error_recorder.times_called >= 1
         assert "x64dbg" in str(error_recorder.calls[0])
@@ -199,10 +204,10 @@ class TestEmbeddedToolHandlers:
         """Verify _on_open_cutter calls add_cutter_tab."""
         window = patched_window
         recorder = CallRecorder(result=None)
-        monkeypatch.setattr(window._tool_panel, "add_cutter_tab", recorder)
+        monkeypatch.setattr(window.tool_panel, "add_cutter_tab", recorder)
         monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-        window._on_open_cutter()
+        window.on_open_cutter()
 
         assert recorder.times_called >= 1
 
@@ -214,10 +219,10 @@ class TestEmbeddedToolHandlers:
         """Verify _on_open_hxd calls add_hxd_tab."""
         window = patched_window
         recorder = CallRecorder(result=None)
-        monkeypatch.setattr(window._tool_panel, "add_hxd_tab", recorder)
+        monkeypatch.setattr(window.tool_panel, "add_hxd_tab", recorder)
         monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-        window._on_open_hxd()
+        window.on_open_hxd()
 
         assert recorder.times_called >= 1
 
@@ -232,11 +237,11 @@ class TestCurrentBinaryHandlers:
     ) -> None:
         """Verify warning shown when no binary is loaded for debug."""
         window = patched_window
-        window._current_binary = None
+        window.current_binary = None
         recorder = CallRecorder()
         monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-        window._on_debug_current_binary()
+        window.on_debug_current_binary()
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == ("debug",)
 
@@ -247,11 +252,11 @@ class TestCurrentBinaryHandlers:
     ) -> None:
         """Verify warning shown when no binary is loaded for analysis."""
         window = patched_window
-        window._current_binary = None
+        window.current_binary = None
         recorder = CallRecorder()
         monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-        window._on_analyze_current_binary()
+        window.on_analyze_current_binary()
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == ("analyze",)
 
@@ -262,11 +267,11 @@ class TestCurrentBinaryHandlers:
     ) -> None:
         """Verify warning shown when no binary is loaded for hex edit."""
         window = patched_window
-        window._current_binary = None
+        window.current_binary = None
         recorder = CallRecorder()
         monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-        window._on_hex_edit_current_binary()
+        window.on_hex_edit_current_binary()
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == ("hex edit",)
 
@@ -278,11 +283,11 @@ class TestCurrentBinaryHandlers:
         """Verify binary is passed to x64dbg when loaded."""
         window = patched_window
         test_path = Path("/test/binary.exe")
-        window._current_binary = test_path
+        window.current_binary = test_path
         recorder = CallRecorder(result=True)
-        monkeypatch.setattr(window._tool_panel, "open_in_x64dbg", recorder)
+        monkeypatch.setattr(window.tool_panel, "open_in_x64dbg", recorder)
 
-        window._on_debug_current_binary()
+        window.on_debug_current_binary()
 
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == (test_path,)
@@ -295,11 +300,11 @@ class TestCurrentBinaryHandlers:
         """Verify binary is passed to Cutter when loaded."""
         window = patched_window
         test_path = Path("/test/binary.exe")
-        window._current_binary = test_path
+        window.current_binary = test_path
         recorder = CallRecorder(result=True)
-        monkeypatch.setattr(window._tool_panel, "open_in_cutter", recorder)
+        monkeypatch.setattr(window.tool_panel, "open_in_cutter", recorder)
 
-        window._on_analyze_current_binary()
+        window.on_analyze_current_binary()
 
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == (test_path,)
@@ -312,11 +317,11 @@ class TestCurrentBinaryHandlers:
         """Verify binary is passed to HxD when loaded."""
         window = patched_window
         test_path = Path("/test/binary.exe")
-        window._current_binary = test_path
+        window.current_binary = test_path
         recorder = CallRecorder(result=True)
-        monkeypatch.setattr(window._tool_panel, "open_in_hxd", recorder)
+        monkeypatch.setattr(window.tool_panel, "open_in_hxd", recorder)
 
-        window._on_hex_edit_current_binary()
+        window.on_hex_edit_current_binary()
 
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == (test_path,)
@@ -330,7 +335,7 @@ class TestCurrentBinaryTracking:
         patched_window: MainWindow,
     ) -> None:
         """Verify _current_binary starts as None."""
-        current_binary: object = patched_window._current_binary
+        current_binary: object = patched_window.current_binary
         assert current_binary is None
 
     @staticmethod
@@ -344,9 +349,9 @@ class TestCurrentBinaryTracking:
         run_async_recorder = CallRecorder()
         monkeypatch.setattr(window, "_run_async", run_async_recorder)
 
-        window._load_binary(test_path)
+        window.load_binary(test_path)
 
-        current_binary: object = window._current_binary
+        current_binary: object = window.current_binary
         assert current_binary == test_path
 
 
@@ -363,7 +368,7 @@ class TestErrorDialogs:
         monkeypatch.setattr(QMessageBox, "warning", staticmethod(recorder))
 
         window = patched_window
-        window._show_tool_error("TestTool", "Test error message")
+        window.show_tool_error("TestTool", "Test error message")
 
         assert len(recorder.calls) >= 1
         assert "TestTool" in str(recorder.calls[0])
@@ -379,7 +384,7 @@ class TestErrorDialogs:
         monkeypatch.setattr(QMessageBox, "information", staticmethod(recorder))
 
         window = patched_window
-        window._show_no_binary_warning("test action")
+        window.show_no_binary_warning("test action")
 
         assert len(recorder.calls) >= 1
         assert "test action" in str(recorder.calls[0])

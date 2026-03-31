@@ -13,11 +13,12 @@ tool connection.
 from __future__ import annotations
 
 import ast
+import importlib
 import operator
 import re
 import struct
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
 
 if TYPE_CHECKING:
@@ -54,7 +55,8 @@ _logger = get_logger("ui.panels.hex_tools_panel")
 
 _cxxfilt_demangle: Callable[[str], str] | None = None
 try:
-    from cxxfilt import demangle as _cxxfilt_demangle
+    _cxxfilt_mod = importlib.import_module("cxxfilt")
+    _cxxfilt_demangle = cast("Callable[[str], str]", _cxxfilt_mod.demangle)
 except ImportError:
     _logger.debug("cxxfilt_unavailable")
 
@@ -176,7 +178,7 @@ class _AstCallTypeError(TypeError):
         super().__init__(detail)
 
 
-def _ast_eval_node(node: ast.expr) -> Any:
+def _ast_eval_node(node: ast.expr) -> object:
     """Evaluate a single AST expression node without using ``eval()``.
 
     Supports numeric literals, unary operators, binary operators, and
@@ -186,7 +188,7 @@ def _ast_eval_node(node: ast.expr) -> Any:
         node: The AST expression node to evaluate.
 
     Returns:
-        Any: The computed result.
+        object: The computed result.
 
     Raises:
         _AstEvalError: When the node type is not permitted.
@@ -220,7 +222,7 @@ def _ast_eval_node(node: ast.expr) -> Any:
     raise _AstEvalError(type(node).__name__)
 
 
-def _safe_eval_expr(source: str) -> Any:
+def _safe_eval_expr(source: str) -> object:
     """Parse and evaluate an arithmetic/bitwise expression safely.
 
     Uses the ``ast`` module to parse the source and a whitelist-based
@@ -230,11 +232,7 @@ def _safe_eval_expr(source: str) -> Any:
         source: Single-line expression string.
 
     Returns:
-        Any: The evaluated result.
-
-    Raises:
-        SyntaxError: When the source cannot be parsed.
-        ValueError: When the expression contains disallowed constructs.
+        object: The evaluated result.
     """
     tree = ast.parse(source, mode="eval")
     return _ast_eval_node(tree.body)
@@ -320,7 +318,7 @@ class _IEEE754BitWidget(QWidget):
         self._is_double: bool = False
         self.setMinimumHeight(_MIN_VIS_HEIGHT)
 
-    def set_bits(self, bits: int, is_double: bool) -> None:
+    def set_bits(self, bits: int, *, is_double: bool) -> None:
         """Update the bit pattern and trigger a repaint.
 
         Args:
@@ -342,13 +340,13 @@ class _IEEE754BitWidget(QWidget):
         return QSize(bit_count * _BIT_BOX_WIDTH + 4, _BIT_BOX_HEIGHT + 8)
 
     @override
-    def paintEvent(self, event: QPaintEvent) -> None:
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Paint the bit boxes using the current bit pattern.
 
         Args:
-            event: The paint event.
+            a0: The paint event.
         """
-        del event
+        del a0
         is_double = self._is_double
         bit_count = 64 if is_double else 32
         man_bits = _F64_MAN_BITS if is_double else _F32_MAN_BITS
@@ -360,7 +358,7 @@ class _IEEE754BitWidget(QWidget):
         text_color = colors["text"]
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, on=False)
         painter.setFont(FontManager.get_instance().get_code_font(7))
 
         x_offset = 2
@@ -556,7 +554,9 @@ class HexToolsPanel(QWidget):
         self._ascii_table.setHorizontalHeaderLabels(["Dec", "Hex", "Oct", "Char", "Description"])
         self._ascii_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._ascii_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._ascii_table.horizontalHeader().setStretchLastSection(True)
+        ascii_h_header = self._ascii_table.horizontalHeader()
+        if ascii_h_header is not None:
+            ascii_h_header.setStretchLastSection(stretch=True)
         self._populate_ascii_table(self._ascii_table)
         self._ascii_table.resizeColumnsToContents()
 
@@ -641,7 +641,7 @@ class HexToolsPanel(QWidget):
         self._base_bin_label = QLabel("\u2014")
         self._base_bin_label.setFont(mono_font)
         self._base_bin_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self._base_bin_label.setWordWrap(True)
+        self._base_bin_label.setWordWrap(on=True)
 
         self._base_bits_label = QLabel("\u2014")
         self._base_bits_label.setFont(mono_font)
@@ -974,8 +974,7 @@ class HexToolsPanel(QWidget):
         """
         if mangled.startswith("_ZN"):
             inner = mangled[3:]
-            if inner.endswith("E"):
-                inner = inner[:-1]
+            inner = inner.removesuffix("E")
             segments: list[str] = []
             while inner:
                 length_match = re.match(r"^(\d+)", inner)
@@ -1135,7 +1134,7 @@ class HexToolsPanel(QWidget):
             self._ieee754_exp_label.setText(dash)
             self._ieee754_man_label.setText(dash)
             self._ieee754_hex_label.setText(dash)
-            self._ieee754_bit_widget.set_bits(0, is_double)
+            self._ieee754_bit_widget.set_bits(0, is_double=is_double)
             return
 
         try:
@@ -1161,9 +1160,9 @@ class HexToolsPanel(QWidget):
                 label.setText("Invalid")
             return
 
-        self._update_ieee754_display(raw_bits, float_val, is_double)
+        self._update_ieee754_display(raw_bits, float_val, is_double=is_double)
 
-    def _update_ieee754_display(self, raw_bits: int, float_val: float, is_double: bool) -> None:
+    def _update_ieee754_display(self, raw_bits: int, float_val: float, *, is_double: bool) -> None:
         """Populate all IEEE 754 inspector display fields.
 
         Args:
@@ -1201,7 +1200,7 @@ class HexToolsPanel(QWidget):
         self._ieee754_exp_label.setText(exp_text)
         self._ieee754_man_label.setText(man_text)
         self._ieee754_hex_label.setText(hex_text)
-        self._ieee754_bit_widget.set_bits(raw_bits, is_double)
+        self._ieee754_bit_widget.set_bits(raw_bits, is_double=is_double)
 
     def _on_swap_input_changed(self, text: str) -> None:
         """Handle changes to the byte swapper input field.

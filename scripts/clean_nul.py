@@ -1,6 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Script to clean Windows reserved 'nul' files from the project directory."""
 
-import os
 import sys
 from pathlib import Path
 
@@ -88,21 +92,18 @@ def clean_nul_files() -> None:
     }
 
     try:
-        for dirpath, _, filenames in os.walk(root_dir):
-            # Check for any reserved names in the filenames
-            for filename in filenames:
-                if filename in reserved_names:
-                    nul_path = os.path.join(dirpath, filename)
-                    # On Windows, prepend \\?\ to the path to handle reserved names.
-                    prefixed_path = "\\\\?\\" + nul_path
+        for entry in Path(root_dir).rglob("*"):
+            if entry.is_file() and entry.name in reserved_names:
+                nul_path = str(entry)
+                prefixed_path = "\\\\?\\" + nul_path
 
-                    try:
-                        os.remove(prefixed_path)
-                        print(f"  [OK] Deleted: {nul_path}")
-                        files_deleted += 1
-                    except OSError as e:
-                        print(f"  [!!!] FAILED to delete: {nul_path}. Reason: {e}")
-    except Exception as e:
+                try:
+                    Path(prefixed_path).unlink()
+                    print(f"  [OK] Deleted: {nul_path}")
+                    files_deleted += 1
+                except OSError as e:
+                    print(f"  [!!!] FAILED to delete: {nul_path}. Reason: {e}")
+    except OSError as e:
         print(f"[!!!] The script failed with an unexpected error: {e}")
         sys.exit(1)
 

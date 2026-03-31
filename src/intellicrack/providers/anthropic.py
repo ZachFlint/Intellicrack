@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Anthropic Claude API provider implementation.
 
@@ -24,8 +23,8 @@ from anthropic.types import (
     ToolUseBlock,
 )
 
-from ..core.logging import get_logger, log_provider_request, log_provider_response
-from ..core.types import (
+from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
+from intellicrack.core.types import (
     AuthenticationError,
     Message,
     ModelInfo,
@@ -39,7 +38,7 @@ from ..core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
-from .base import LLMProviderBase, create_anthropic_tool_schema
+from intellicrack.providers.base import LLMProviderBase, create_anthropic_tool_schema, serialize_tool_result
 
 
 if TYPE_CHECKING:
@@ -103,7 +102,7 @@ class AnthropicProvider(LLMProviderBase):
         except anthropic.AuthenticationError as e:
             self._logger.warning("anthropic_auth_failed", error=str(e))
             raise AuthenticationError(_MSG_INVALID_API_KEY) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
             self._logger.warning("anthropic_connect_failed", error=str(e))
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         else:
@@ -121,7 +120,7 @@ class AnthropicProvider(LLMProviderBase):
             self._client = None
             self._current_task = None
             self._logger.info("anthropic_disconnected")
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self._connected = False
 
@@ -143,7 +142,7 @@ class AnthropicProvider(LLMProviderBase):
 
         try:
             models = await self._fetch_all_models()
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, anthropic.APIError) as e:
             self._logger.warning(
                 "anthropic_list_models_api_failed",
                 error=str(e),
@@ -271,7 +270,7 @@ class AnthropicProvider(LLMProviderBase):
                     "type": "text",
                     "text": system_prompt,
                     "cache_control": {"type": "ephemeral"},
-                }
+                },
             ]
         return kwargs
 
@@ -343,6 +342,7 @@ class AnthropicProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -371,11 +371,11 @@ class AnthropicProvider(LLMProviderBase):
         self._cancel_requested = False
 
         system_prompt = self.get_system_prompt(messages)
-        anthropic_messages = self._convert_messages_to_provider_format(messages)
+        anthropic_messages = self.convert_messages_to_provider_format(messages)
         typed_messages = cast("list[MessageParam]", anthropic_messages)
         anthropic_tools: list[dict[str, object]] | None = None
         if tools:
-            anthropic_tools = self._convert_tools_to_provider_format(tools)
+            anthropic_tools = self.convert_tools_to_provider_format(tools)
 
         log_provider_request(
             provider="anthropic",
@@ -424,7 +424,7 @@ class AnthropicProvider(LLMProviderBase):
             )
         except RateLimitError:
             raise
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
             self._logger.warning("anthropic_request_failed", error=str(e))
             raise ProviderError(_MSG_REQUEST_FAILED) from e
 
@@ -437,6 +437,7 @@ class AnthropicProvider(LLMProviderBase):
         max_tokens: int = 4096,
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """
@@ -466,11 +467,11 @@ class AnthropicProvider(LLMProviderBase):
 
         log_provider_request("anthropic", model, len(messages), len(tools or []))
         system_prompt = self.get_system_prompt(messages)
-        anthropic_messages = self._convert_messages_to_provider_format(messages)
+        anthropic_messages = self.convert_messages_to_provider_format(messages)
         typed_messages = cast("list[MessageParam]", anthropic_messages)
         anthropic_tools: list[dict[str, object]] | None = None
         if tools:
-            anthropic_tools = self._convert_tools_to_provider_format(tools)
+            anthropic_tools = self.convert_tools_to_provider_format(tools)
 
         api_kwargs = self._build_api_kwargs(
             model=model,
@@ -504,7 +505,7 @@ class AnthropicProvider(LLMProviderBase):
                                     tool_name=block.name.split(".")[0] if "." in block.name else block.name,
                                     function_name=block.name,
                                     arguments=args,
-                                )
+                                ),
                             )
                         elif block.type == "thinking" and hasattr(block, "thinking"):
                             self._logger.debug(
@@ -516,7 +517,7 @@ class AnthropicProvider(LLMProviderBase):
         except anthropic.RateLimitError as e:
             self._logger.warning("anthropic_stream_rate_limited", error=str(e))
             raise RateLimitError(_MSG_RATE_LIMITED) from e
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
             if not self._cancel_requested:
                 self._logger.warning("anthropic_stream_failed", error=str(e))
                 raise ProviderError(_MSG_STREAM_FAILED) from e
@@ -626,7 +627,7 @@ class AnthropicProvider(LLMProviderBase):
             {
                 "type": "tool_result",
                 "tool_use_id": tr.call_id,
-                "content": LLMProviderBase._serialize_tool_result(tr.result),
+                "content": serialize_tool_result(tr.result),
                 "is_error": not tr.success,
             }
             for tr in msg.tool_results

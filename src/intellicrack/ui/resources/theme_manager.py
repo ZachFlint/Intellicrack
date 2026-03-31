@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Theme management for Intellicrack UI.
 
@@ -16,8 +15,8 @@ from typing import ClassVar, Final
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from ...core.logging import get_logger
-from .resource_helper import get_assets_path, get_style_path
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.resource_helper import get_assets_path, get_style_path
 
 
 _logger = get_logger("ui.resources.themes")
@@ -1127,8 +1126,8 @@ class ThemeManager:
 
     def __init__(self) -> None:
         self._current_theme: str = DEFAULT_THEME
-        self._theme_cache: dict[str, str] = {}
-        self._styles_available: bool = self._check_styles_available()
+        self.theme_cache: dict[str, str] = {}
+        self.styles_available: bool = self._check_styles_available()
 
     @classmethod
     def get_instance(cls) -> ThemeManager:
@@ -1201,13 +1200,13 @@ class ThemeManager:
         Returns:
             str: CSS stylesheet string.
         """
-        if theme in self._theme_cache:
+        if theme in self.theme_cache:
             _logger.debug("theme_cache_hit", theme=theme)
-            return self._theme_cache[theme]
+            return self.theme_cache[theme]
 
         _logger.debug("theme_cache_miss", theme=theme)
         stylesheet = self._load_stylesheet(theme)
-        self._theme_cache[theme] = stylesheet
+        self.theme_cache[theme] = stylesheet
         return stylesheet
 
     def _load_stylesheet(self, theme: str) -> str:
@@ -1220,12 +1219,12 @@ class ThemeManager:
         Returns:
             str: CSS stylesheet string.
         """
-        if self._styles_available:
+        if self.styles_available:
             filename = f"{theme}_theme.qss"
             try:
                 style_path = get_style_path(filename)
                 if style_path.exists():
-                    with open(style_path, encoding="utf-8") as f:
+                    with style_path.open(encoding="utf-8") as f:
                         content = f.read()
                         if content.strip():
                             _logger.debug("stylesheet_loaded", path=str(style_path))
@@ -1351,8 +1350,8 @@ class ThemeManager:
 
     def clear_cache(self) -> None:
         """Clear the stylesheet cache."""
-        cache_count = len(self._theme_cache)
-        self._theme_cache.clear()
+        cache_count = len(self.theme_cache)
+        self.theme_cache.clear()
         _logger.debug("theme_cache_cleared", entries_cleared=cache_count)
 
     @staticmethod

@@ -10,7 +10,7 @@ This package provides dialog widgets including the splash screen and other modal
 
 from __future__ import annotations
 
-from .splash_screen import SplashScreen
+from intellicrack.ui.dialogs.splash_screen import SplashScreen
 
 
 __all__: list[str] = [

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for IconManager module.
 
 Validates icon loading, caching, and fallback functionality
@@ -25,7 +30,11 @@ _MAX_PREVIEW_ICONS: int = 20
 
 @pytest.fixture
 def icon_manager() -> IconManager:
-    """Provide a fresh IconManager instance for each test."""
+    """Provide a fresh IconManager instance for each test.
+
+    Returns:
+        IconManager: A fresh singleton instance.
+    """
     IconManager.reset_instance()
     return IconManager.get_instance()
 
@@ -118,8 +127,8 @@ class TestIconCaching:
         icon_manager.get_icon("status_error")
         icon_manager.clear_cache()
 
-        assert len(icon_manager._icon_cache) == 0
-        assert len(icon_manager._pixmap_cache) == 0
+        assert len(icon_manager.icon_cache) == 0
+        assert len(icon_manager.pixmap_cache) == 0
 
 
 class TestPixmapLoading:
@@ -250,9 +259,9 @@ class TestFallbackIcons:
         """Known fallback icons generate non-null icons even if file missing."""
         IconManager.reset_instance()
         manager = IconManager()
-        manager._icons_available = False
+        manager.icons_available = False
 
-        icon = manager._load_icon("status_success", _ICON_SIZE_24)
+        icon = manager.load_icon("status_success", _ICON_SIZE_24)
         assert isinstance(icon, QIcon)
 
 
@@ -308,7 +317,7 @@ class TestPreloadIcons:
         icon_manager.clear_cache()
         icon_manager.preload_icons()
 
-        assert len(icon_manager._icon_cache) > 0
+        assert len(icon_manager.icon_cache) > 0
 
     @staticmethod
     def test_preload_specific_icons(icon_manager: IconManager) -> None:
@@ -317,7 +326,7 @@ class TestPreloadIcons:
         icons_to_load = ["status_success", "status_error"]
         icon_manager.preload_icons(icons_to_load)
 
-        assert len(icon_manager._icon_cache) == len(icons_to_load)
+        assert len(icon_manager.icon_cache) == len(icons_to_load)
 
 
 class TestIconIntegrity:
@@ -336,10 +345,10 @@ class TestIconIntegrity:
             try:
                 icon = icon_manager.get_icon(name)
                 assert isinstance(icon, QIcon)
-            except Exception as e:
+            except (RuntimeError, OSError, ValueError) as e:
                 pytest.fail(f"Icon {name} raised exception: {e}")
 
     @staticmethod
     def test_icon_manager_available_flag(icon_manager: IconManager) -> None:
         """IconManager correctly detects icons availability."""
-        assert icon_manager._icons_available, "Icons should be available"
+        assert icon_manager.icons_available, "Icons should be available"

@@ -31,17 +31,17 @@ install-radare2:
 [doc('Build the Rust hex editor core (intellicrack-hexcore)')]
 [group('build')]
 build-hexcore:
-    cd src/intellicrack-hexcore && maturin develop --release
+    cd src/intellicrack-hexcore && {{ pixi }} maturin develop --release
 
 [doc('Run Rust hex editor core tests')]
 [group('test')]
 test-hexcore:
-    cd src/intellicrack-hexcore && cargo test
+    cd src/intellicrack-hexcore && {{ pixi }} cargo test
 
 [doc('Clean Rust hex editor core build artifacts')]
 [group('build')]
 clean-hexcore:
-    cd src/intellicrack-hexcore && cargo clean
+    cd src/intellicrack-hexcore && {{ pixi }} cargo clean
 
 [doc('Download and install the latest QEMU emulator')]
 [group('install')]
@@ -496,7 +496,7 @@ open-map:
 [doc('Run all development tools sequentially with progress tracking')]
 [group('reports')]
 run-all-tools *FLAGS:
-    @$ErrorActionPreference = 'SilentlyContinue'; $flags = "{{ FLAGS }}"; $skipList = @(); if ($flags -match '--skip\s+(\S+)') { $skipList = $matches[1] -split ',' }; $h = [char]0x2500; $tl = [char]0x256D; $tr = [char]0x256E; $bl = [char]0x2570; $br = [char]0x256F; $v = [char]0x2502; $line = "$h" * 31; Write-Host "`n$([char]27)[38;2;228;0;43m$tl$line$tr$([char]27)[0m"; Write-Host "$([char]27)[38;2;228;0;43m$v$([char]27)[0m     $([char]27)[1;95mRunning All Dev Tools$([char]27)[0m     $([char]27)[38;2;228;0;43m$v$([char]27)[0m"; Write-Host "$([char]27)[38;2;228;0;43m$bl$line$br$([char]27)[0m`n"; $tools = @(@{N='Ruff Fmt';R='ruff-fmt';F=$true}, @{N='Docformatter';R='docformatter';F=$true}, @{N='TOMLfmt';R='tomlfmt';F=$true}, @{N='JSONfmt';R='jsonfmt';F=$true}, @{N='YAMLfmt';R='yamlfmt';F=$true}, @{N='MDfmt';R='mdfmt';F=$true}, @{N='Ruff';R='ruff';F=$false}, @{N='Flake8';R='flake8';F=$false}, @{N='Wemake';R='wemake';F=$false}, @{N='BasedPyright';R='basedpyright';F=$false}, @{N='Mypy';R='mypy';F=$false}, @{N='Ty';R='ty';F=$false}, @{N='Pydocstyle';R='pydocstyle';F=$false}, @{N='Darglint';R='darglint';F=$false}, @{N='Pydoclint';R='pydoclint';F=$false}, @{N='Interrogate';R='interrogate';F=$false}, @{N='McCabe';R='mccabe';F=$false}, @{N='Radon';R='radon';F=$false}, @{N='Xenon';R='xenon';F=$false}, @{N='Complexipy';R='complexipy';F=$false}, @{N='Vulture';R='vulture';F=$false}, @{N='Dead';R='dead';F=$false}, @{N='Deadcode';R='deadcode';F=$false}, @{N='Uncalled';R='uncalled';F=$false}, @{N='Bandit';R='bandit';F=$false}, @{N='Semgrep';R='semgrep';F=$false}, @{N='Deptry';R='deptry';F=$false}, @{N='Vermin';R='vermin';F=$false}, @{N='JSONLint';R='jsonlint';F=$false}, @{N='Taplo';R='taplo';F=$false}, @{N='Markdown';R='mdlint';F=$false}, @{N='YAML';R='yamllint';F=$false}, @{N='ShellCheck';R='shellcheck';F=$false}, @{N='Blinter';R='blinter';F=$false}, @{N='PSScript';R='psscriptanalyzer';F=$false}, @{N='Codespell';R='codespell';F=$false}, @{N='PreCommitHooks';R='precommit-hooks';F=$false}); if ($skipList.Count -gt 0) { $validNames = $tools | ForEach-Object { $_.R }; $invalid = $skipList | Where-Object { $validNames -notcontains $_ }; if ($invalid) { Write-Host "  Unknown tool(s): $($invalid -join ', ')" -ForegroundColor Red; Write-Host "  Valid names: $($validNames -join ', ')" -ForegroundColor DarkGray; Write-Host ""; exit 1 }; $tools = $tools | Where-Object { $skipList -notcontains $_.R }; Write-Host "  Skipping: $($skipList -join ', ')" -ForegroundColor DarkGray; Write-Host "" }; $results = @{}; $globalStart = Get-Date; foreach ($tool in $tools) { try { $toolStart = Get-Date; $output = & { just $tool.R 2>&1 }; $duration = [Math]::Round(((Get-Date) - $toolStart).TotalSeconds, 1); $findings = 0; $outputStr = $output -join "`n"; if (-not $tool.F -and $outputStr -match '(\d+)\s+findings') { $findings = [int]$matches[1] }; $results[$tool.R] = @{ Name = $tool.N; Findings = $findings; Duration = $duration; Success = $true; IsFormatter = $tool.F }; if ($tool.F) { Write-Host "  $([char]0x2714) $($tool.N): Done in ${duration}s" -ForegroundColor Green } else { Write-Host "  $([char]0x2714) $($tool.N): Completed in ${duration}s with $($findings) findings" -ForegroundColor Green } } catch { $duration = [Math]::Round(((Get-Date) - $toolStart).TotalSeconds, 1); $results[$tool.R] = @{ Name = $tool.N; Findings = 0; Duration = $duration; Success = $false; IsFormatter = $tool.F }; Write-Host "  $([char]0x2718) $($tool.N): Failed after ${duration}s - $_" -ForegroundColor Red } }; Write-Host "`n$([char]27)[90m$('-' * 60)$([char]27)[0m"; $totalTime = [Math]::Round(((Get-Date) - $globalStart).TotalSeconds, 1); $totalFindings = ($results.Values | ForEach-Object { $_.Findings } | Measure-Object -Sum).Sum; $passedCount = ($results.Values | Where-Object { $_.Success -and $_.Findings -eq 0 }).Count; Write-Host "Time: $([char]27)[36m${totalTime}s$([char]27)[0m | Findings: $([char]27)[33m$totalFindings$([char]27)[0m | Passed: $([char]27)[32m$passedCount/$($tools.Count)$([char]27)[0m"; exit 0
+    @$ErrorActionPreference = 'SilentlyContinue'; $flags = "{{ FLAGS }}"; $skipList = @(); if ($flags -match '--skip\s+(\S+)') { $skipList = $matches[1] -split ',' }; $h = [char]0x2500; $tl = [char]0x256D; $tr = [char]0x256E; $bl = [char]0x2570; $br = [char]0x256F; $v = [char]0x2502; $line = "$h" * 31; Write-Host "`n$([char]27)[38;2;228;0;43m$tl$line$tr$([char]27)[0m"; Write-Host "$([char]27)[38;2;228;0;43m$v$([char]27)[0m     $([char]27)[1;95mRunning All Dev Tools$([char]27)[0m     $([char]27)[38;2;228;0;43m$v$([char]27)[0m"; Write-Host "$([char]27)[38;2;228;0;43m$bl$line$br$([char]27)[0m`n"; $tools = @(@{N='Ruff Fmt';R='ruff-fmt';F=$true;G='py'}, @{N='Docformatter';R='docformatter';F=$true;G='py'}, @{N='TOMLfmt';R='tomlfmt';F=$true;G='py'}, @{N='JSONfmt';R='jsonfmt';F=$true;G='py'}, @{N='YAMLfmt';R='yamlfmt';F=$true;G='py'}, @{N='MDfmt';R='mdfmt';F=$true;G='py'}, @{N='Ruff';R='ruff';F=$false;G='py'}, @{N='Flake8';R='flake8';F=$false;G='py'}, @{N='Wemake';R='wemake';F=$false;G='py'}, @{N='BasedPyright';R='basedpyright';F=$false;G='py'}, @{N='Mypy';R='mypy';F=$false;G='py'}, @{N='Ty';R='ty';F=$false;G='py'}, @{N='Pydocstyle';R='pydocstyle';F=$false;G='py'}, @{N='Darglint';R='darglint';F=$false;G='py'}, @{N='Pydoclint';R='pydoclint';F=$false;G='py'}, @{N='Interrogate';R='interrogate';F=$false;G='py'}, @{N='McCabe';R='mccabe';F=$false;G='py'}, @{N='Radon';R='radon';F=$false;G='py'}, @{N='Xenon';R='xenon';F=$false;G='py'}, @{N='Complexipy';R='complexipy';F=$false;G='py'}, @{N='Vulture';R='vulture';F=$false;G='py'}, @{N='Dead';R='dead';F=$false;G='py'}, @{N='Deadcode';R='deadcode';F=$false;G='py'}, @{N='Uncalled';R='uncalled';F=$false;G='py'}, @{N='Bandit';R='bandit';F=$false;G='py'}, @{N='Semgrep';R='semgrep';F=$false;G='py'}, @{N='Deptry';R='deptry';F=$false;G='py'}, @{N='Vermin';R='vermin';F=$false;G='py'}, @{N='JSONLint';R='jsonlint';F=$false;G='py'}, @{N='Taplo';R='taplo';F=$false;G='py'}, @{N='Markdown';R='mdlint';F=$false;G='py'}, @{N='YAML';R='yamllint';F=$false;G='py'}, @{N='ShellCheck';R='shellcheck';F=$false;G='py'}, @{N='Blinter';R='blinter';F=$false;G='py'}, @{N='PSScript';R='psscriptanalyzer';F=$false;G='py'}, @{N='Codespell';R='codespell';F=$false;G='py'}, @{N='PreCommitHooks';R='precommit-hooks';F=$false;G='py'}, @{N='Clippy';R='clippy';F=$false;G='rs'}, @{N='RustFmt';R='rustfmt';F=$true;G='rs'}, @{N='CargoDeny';R='cargo-deny';F=$false;G='rs'}, @{N='Nextest';R='nextest';F=$false;G='rs'}, @{N='LlvmCov';R='llvm-cov';F=$false;G='rs'}, @{N='Machete';R='machete';F=$false;G='rs'}, @{N='RustAnalysis';R='rust-code-analysis';F=$false;G='rs'}, @{N='Typos';R='typos';F=$false;G='rs'}, @{N='Dashboard';R='lint-dashboard';F=$true;G='dash'}); $gNames = @{ py='Python'; rs='Rust'; dash='Dashboard' }; if ($skipList.Count -gt 0) { $validNames = $tools | ForEach-Object { $_.R }; $invalid = $skipList | Where-Object { $validNames -notcontains $_ }; if ($invalid) { Write-Host "  Unknown tool(s): $($invalid -join ', ')" -ForegroundColor Red; Write-Host "  Valid names: $($validNames -join ', ')" -ForegroundColor DarkGray; Write-Host ""; exit 1 }; $tools = $tools | Where-Object { $skipList -notcontains $_.R }; Write-Host "  Skipping: $($skipList -join ', ')" -ForegroundColor DarkGray; Write-Host "" }; $results = @{}; $globalStart = Get-Date; $lastGroup = ''; foreach ($tool in $tools) { switch ($tool.G) { 'py' { $gc = "$([char]27)[36m" } 'rs' { $gc = "$([char]27)[38;2;222;120;40m" } 'dash' { $gc = "$([char]27)[95m" } }; if ($tool.G -ne $lastGroup) { $lastGroup = $tool.G; Write-Host "`n  $gc-- $($gNames[$tool.G]) --$([char]27)[0m`n" }; try { $toolStart = Get-Date; $output = & { just $tool.R 2>&1 }; $duration = [Math]::Round(((Get-Date) - $toolStart).TotalSeconds, 1); $findings = 0; $outputStr = $output -join "`n"; if (-not $tool.F -and $outputStr -match '(\d+)\s+findings') { $findings = [int]$matches[1] }; $results[$tool.R] = @{ Name = $tool.N; Findings = $findings; Duration = $duration; Success = $true; IsFormatter = $tool.F }; if ($tool.F) { Write-Host "  $gc$([char]0x2714) $($tool.N): Done in ${duration}s$([char]27)[0m" } else { Write-Host "  $gc$([char]0x2714) $($tool.N): Completed in ${duration}s with $($findings) findings$([char]27)[0m" } } catch { $duration = [Math]::Round(((Get-Date) - $toolStart).TotalSeconds, 1); $results[$tool.R] = @{ Name = $tool.N; Findings = 0; Duration = $duration; Success = $false; IsFormatter = $tool.F }; Write-Host "  $([char]27)[31m$([char]0x2718) $($tool.N): Failed after ${duration}s - $_$([char]27)[0m" } }; Write-Host "`n$([char]27)[90m$('-' * 60)$([char]27)[0m"; $totalTime = [Math]::Round(((Get-Date) - $globalStart).TotalSeconds, 1); $totalFindings = ($results.Values | ForEach-Object { $_.Findings } | Measure-Object -Sum).Sum; $passedCount = ($results.Values | Where-Object { $_.Success -and $_.Findings -eq 0 }).Count; Write-Host "Time: $([char]27)[36m${totalTime}s$([char]27)[0m | Findings: $([char]27)[33m$totalFindings$([char]27)[0m | Passed: $([char]27)[32m$passedCount/$($tools.Count)$([char]27)[0m"; exit 0
 
 # Kill all development processes with automatic elevation
 [group('system')]
@@ -507,3 +507,68 @@ kill:
 [group('build')]
 build-cli-launcher:
     @Push-Location 'CLI Coding/launcher'; cargo build --release; if ($LASTEXITCODE -eq 0) { Copy-Item -Force 'target/release/cli-launcher.exe' '../CLI Launcher.exe'; Write-Host 'Deployed to: CLI Coding/CLI Launcher.exe' -ForegroundColor Green } else { Write-Host 'Build failed.' -ForegroundColor Red; exit 1 }; Pop-Location
+
+[doc('Install Rust development tools via cargo install')]
+[group('install')]
+install-rust-tools:
+    @$ErrorActionPreference = 'Stop'; $e = [char]27; $tools = @('cargo-deny', 'cargo-nextest', 'cargo-llvm-cov', 'cargo-machete', 'cargo-mutants', 'rust-code-analysis-cli', 'typos-cli'); $totalSteps = $tools.Count; $currentStep = 0; function Write-Step { param($msg) $script:currentStep++; Write-Host "$e[36m[$script:currentStep/$totalSteps]$e[0m $msg" }; function Write-Success { param($msg) Write-Host "  $e[32m[OK]$e[0m $msg" }; function Write-Fail { param($msg) Write-Host "  $e[31m[FAIL]$e[0m $msg" -ForegroundColor Red }; Write-Host "`n$e[1;36m=== Installing Rust Dev Tools ===$e[0m`n"; $startTime = Get-Date; foreach ($tool in $tools) { Write-Step "Installing $tool..."; try { {{ pixi }} cargo install $tool 2>&1 | Out-Null; Write-Success "$tool installed" } catch { Write-Fail "$tool installation failed: $_" } }; $elapsed = ((Get-Date) - $startTime).TotalSeconds; Write-Host "`n$e[1;32m=== Rust Tools Install Complete ===$e[0m"; Write-Host "$e[90mTotal time: $("{0:N1}" -f $elapsed) seconds$e[0m`n"
+
+[doc('Run Clippy linter on Rust hexcore crate')]
+[group('lint')]
+clippy:
+    @echo "[Clippy] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo clippy --all-targets -- -W clippy::all -W clippy::pedantic 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py clippy --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Check Rust formatting with rustfmt')]
+[group('lint')]
+rustfmt:
+    @echo "[RustFmt] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo fmt -- --check 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py rustfmt --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Run cargo-deny license and advisory checks on Rust hexcore crate')]
+[group('lint')]
+cargo-deny:
+    @echo "[CargoDeny] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo deny check 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py cargo-deny --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Run Rust tests with cargo-nextest')]
+[group('lint')]
+nextest:
+    @echo "[Nextest] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo nextest run --no-fail-fast 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py nextest --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Run code coverage with cargo-llvm-cov on Rust hexcore crate')]
+[group('lint')]
+llvm-cov:
+    @echo "[LlvmCov] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo llvm-cov nextest run --no-fail-fast 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py llvm-cov --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Detect unused Rust dependencies with cargo-machete')]
+[group('lint')]
+machete:
+    @echo "[Machete] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo machete 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py machete --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Run mutation testing with cargo-mutants on Rust hexcore crate (standalone, slow)')]
+[group('lint')]
+mutants:
+    @echo "[Mutants] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} cargo mutants --no-shuffle --timeout 60 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py mutants --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Run rust-code-analysis complexity metrics on Rust hexcore crate')]
+[group('lint')]
+rust-code-analysis:
+    @echo "[RustAnalysis] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} rust-code-analysis-cli -m -p src/ 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py rust-code-analysis --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Run typos spell checker on Rust hexcore crate')]
+[group('lint')]
+typos:
+    @echo "[Typos] Running..."
+    @('txt','json','xml','csv','sarif','sql') | ForEach-Object { if (!(Test-Path "reports/$_")) { New-Item -ItemType Directory -Path "reports/$_" -Force | Out-Null } }; $tmpFile = [System.IO.Path]::GetTempFileName(); try { Push-Location src/intellicrack-hexcore; {{ pixi }} typos . 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8; Pop-Location; {{ pixi }} python scripts/lint_report.py typos --text $tmpFile } finally { Pop-Location -ErrorAction SilentlyContinue; Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue }
+
+[doc('Generate unified HTML lint dashboard from all tool findings')]
+[group('reports')]
+lint-dashboard:
+    @echo "[Dashboard] Generating..."
+    @{{ pixi }} python scripts/lint_report.py report --input-dir reports/json --output reports/lint_dashboard.html --title "Intellicrack Lint Dashboard"

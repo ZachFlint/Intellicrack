@@ -11,13 +11,15 @@ API.
 
 from __future__ import annotations
 
+import asyncio
 import ctypes
 from ctypes import wintypes
 from pathlib import Path
 from typing import Literal, cast, override
 
-from ..core.logging import get_logger
-from ..core.types import (
+from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import (
     MemoryRegion,
     ModuleInfo,
     ProcessInfo,
@@ -28,7 +30,6 @@ from ..core.types import (
     ToolName,
     ToolParameter,
 )
-from .base import BridgeCapabilities, BridgeState, ToolBridgeBase
 
 
 _logger = get_logger("bridges.process")
@@ -476,7 +477,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             self._kernel32 = ctypes.windll.kernel32
             self._psapi = ctypes.windll.psapi
-            self._state = BridgeState(
+            self.state = BridgeState(
                 connected=True,
                 tool_running=True,
                 binary_loaded=False,
@@ -486,9 +487,9 @@ class ProcessBridge(ToolBridgeBase):
                 last_error=None,
             )
             _logger.info("process_bridge_initialized", bridge="process")
-        except Exception as e:
+        except (AttributeError, OSError, RuntimeError) as e:
             _logger.exception("process_bridge_init_failed", bridge="process")
-            self._state = BridgeState(
+            self.state = BridgeState(
                 connected=False,
                 tool_running=False,
                 binary_loaded=False,
@@ -569,7 +570,7 @@ class ProcessBridge(ToolBridgeBase):
                                 parent_pid=entry.th32ParentProcessID,
                                 threads=[],
                                 modules=[],
-                            )
+                            ),
                         )
 
                     if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
@@ -614,7 +615,8 @@ class ProcessBridge(ToolBridgeBase):
 
         access_rights = access_map.get(access, self.PROCESS_ALL_ACCESS)
 
-        handle = self._kernel32.OpenProcess(access_rights, False, pid)
+        inherit_handle = False
+        handle = self._kernel32.OpenProcess(access_rights, inherit_handle, pid)
 
         if not handle:
             raise ToolError(_ERR_OPEN_FAILED)
@@ -622,10 +624,10 @@ class ProcessBridge(ToolBridgeBase):
         self._attached_pid = pid
         self._process_handle = handle
 
-        self._state.connected = True
-        self._state.tool_running = True
-        self._state.process_attached = True
-        self._state.target_pid = pid
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = True
+        self.state.target_pid = pid
 
         _logger.info("process_opened", pid=pid, access=access)
         return True
@@ -643,10 +645,10 @@ class ProcessBridge(ToolBridgeBase):
             self._attached_pid = None
             _logger.info("process_handle_closed", bridge="process")
 
-        self._state.connected = True
-        self._state.tool_running = True
-        self._state.process_attached = False
-        self._state.target_pid = None
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = False
+        self.state.target_pid = None
 
         return True
 
@@ -667,7 +669,8 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         if pid is not None:
-            handle = self._kernel32.OpenProcess(self.PROCESS_TERMINATE, False, pid)
+            inherit_handle = False
+            handle = self._kernel32.OpenProcess(self.PROCESS_TERMINATE, inherit_handle, pid)
             if not handle:
                 raise ToolError(_ERR_OPEN_FAILED)
             close_handle = True
@@ -714,7 +717,8 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         for thread in threads:
-            if handle := self._kernel32.OpenThread(0x0002, False, thread.tid):
+            inherit_handle = False
+            if handle := self._kernel32.OpenThread(0x0002, inherit_handle, thread.tid):
                 self._kernel32.SuspendThread(handle)
                 self._kernel32.CloseHandle(handle)
 
@@ -744,7 +748,8 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         for thread in threads:
-            if handle := self._kernel32.OpenThread(0x0002, False, thread.tid):
+            inherit_handle = False
+            if handle := self._kernel32.OpenThread(0x0002, inherit_handle, thread.tid):
                 self._kernel32.ResumeThread(handle)
                 self._kernel32.CloseHandle(handle)
 
@@ -1010,7 +1015,7 @@ class ProcessBridge(ToolBridgeBase):
                             base_address=base_addr,
                             size=entry.modBaseSize,
                             entry_point=0,
-                        )
+                        ),
                     )
 
                     if not self._kernel32.Module32Next(snapshot, ctypes.byref(entry)):
@@ -1065,7 +1070,7 @@ class ProcessBridge(ToolBridgeBase):
                                 start_address=0,
                                 state="unknown",
                                 priority=entry.tpBasePri,
-                            )
+                            ),
                         )
 
                     if not self._kernel32.Thread32Next(snapshot, ctypes.byref(entry)):
@@ -1138,7 +1143,7 @@ class ProcessBridge(ToolBridgeBase):
                         state=state_map.get(mbi.State, "unknown"),
                         type=type_map.get(mbi.Type, "unknown"),
                         module_name=None,
-                    )
+                    ),
                 )
 
             address = (mbi.BaseAddress or 0) + mbi.RegionSize
@@ -1221,8 +1226,8 @@ class ProcessBridge(ToolBridgeBase):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
-        dll_path_resolved = Path(dll_path).resolve()
-        if not dll_path_resolved.exists():
+        dll_path_resolved = await asyncio.to_thread(Path(dll_path).resolve)
+        if not await asyncio.to_thread(dll_path_resolved.exists):
             raise ToolError(_ERR_DLL_NOT_FOUND)
 
         dll_path_bytes = str(dll_path_resolved).encode("utf-8") + b"\x00"

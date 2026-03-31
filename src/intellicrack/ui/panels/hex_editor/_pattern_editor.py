@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Pattern editor mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -47,6 +46,8 @@ if TYPE_CHECKING:
 class PatternEditorMixin:
     """Mixin providing the HexPat DSL pattern editor for the hex editor panel."""
 
+    document: Any | None
+    state_holder: Any | None
     _document: Any | None
     _hex_widget: Any | None
     _file_path: Path | None
@@ -104,7 +105,7 @@ class PatternEditorMixin:
         editor_tabs.addTab(self._pattern_dsl_editor, "DSL")
 
         self._pattern_json_preview = QPlainTextEdit()
-        self._pattern_json_preview.setReadOnly(True)
+        self._pattern_json_preview.setReadOnly(ro=True)
         self._pattern_json_preview.setFont(font)
         editor_tabs.addTab(self._pattern_json_preview, "JSON")
 
@@ -138,7 +139,7 @@ class PatternEditorMixin:
         right_layout.addLayout(action_bar)
 
         self._pattern_error_display = QPlainTextEdit()
-        self._pattern_error_display.setReadOnly(True)
+        self._pattern_error_display.setReadOnly(ro=True)
         self._pattern_error_display.setMaximumHeight(60)
         right_layout.addWidget(self._pattern_error_display)
 
@@ -225,7 +226,7 @@ class PatternEditorMixin:
 
         Tries the HexPat interpreter first for direct execution, then falls back to compile-register-apply via the Rust backend.
         """
-        if self._document is None:
+        if self.document is None:
             return
 
         cursor_offset = 0
@@ -246,8 +247,8 @@ class PatternEditorMixin:
             return
 
         try:
-            name: str = self._document.register_json_template(self._compiled_json)
-            result = self._document.apply_template(name, cursor_offset)
+            name: str = self.document.register_json_template(self._compiled_json)
+            result = self.document.apply_template(name, cursor_offset)
         except (AttributeError, ValueError, TypeError) as exc:
             if self._pattern_error_display is not None:
                 self._pattern_error_display.setPlainText(f"Apply failed: {exc}")
@@ -267,8 +268,8 @@ class PatternEditorMixin:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText(f"Applied '{name}' at offset {cursor_offset}")
 
-            if self._state_holder is not None:
-                self._state_holder.notify_template_registered(name, source="panel")
+            if self.state_holder is not None:
+                self.state_holder.notify_template_registered(name, source="panel")
 
             logger.info("pattern_applied", template_name=name, offset=cursor_offset)
 
@@ -280,7 +281,7 @@ class PatternEditorMixin:
             source: HexPat DSL source code.
             offset: Byte offset to apply at.
         """
-        if self._document is None or HexPatInterpreter_cls is None:
+        if self.document is None or HexPatInterpreter_cls is None:
             return
 
         if self._interpreter is None:
@@ -290,7 +291,7 @@ class PatternEditorMixin:
             return
 
         try:
-            fields: list[dict[str, Any]] = interpreter.execute(source, self._document, offset)
+            fields: list[dict[str, Any]] = interpreter.execute(source, self.document, offset)
         except (ValueError, TypeError, AttributeError) as exc:
             if self._pattern_error_display is not None:
                 err_msg = str(exc)
@@ -411,7 +412,7 @@ class PatternEditorMixin:
             column: The clicked column index.
         """
         _ = column
-        if self._document is None:
+        if self.document is None:
             return
 
         parent_item = item.parent()
@@ -425,7 +426,7 @@ class PatternEditorMixin:
 
         template_name = item.text(0)
         try:
-            json_str_val: str = self._document.export_template_json(template_name)
+            json_str_val: str = self.document.export_template_json(template_name)
         except (AttributeError, ValueError) as exc:
             logger.debug("pattern_library_load_failed", error=str(exc))
         else:
@@ -465,13 +466,13 @@ class PatternEditorMixin:
 
     def _populate_pattern_library(self) -> None:
         """Populate the pattern library tree with available templates."""
-        if self._pattern_library_tree is None or self._document is None:
+        if self._pattern_library_tree is None or self.document is None:
             return
 
         self._pattern_library_tree.clear()
 
         try:
-            templates = self._document.list_templates()
+            templates = self.document.list_templates()
         except (AttributeError, ValueError) as exc:
             logger.debug("pattern_library_populate_failed", error=str(exc))
             return
@@ -496,7 +497,7 @@ class PatternEditorMixin:
                 category = "ZIP"
             elif name_upper in {"GUID", "FILETIME"}:
                 category = "Common"
-            elif name_upper.startswith("IMAGE") or name_upper.startswith("PE") or name_upper.startswith("DOS"):
+            elif name_upper.startswith(("IMAGE", "PE", "DOS")):
                 category = "PE"
             else:
                 category = "Other"
@@ -510,7 +511,7 @@ class PatternEditorMixin:
             template_item.setToolTip(0, desc_val)
             categories[category].addChild(template_item)
 
-        builtin_root.setExpanded(True)
+        builtin_root.setExpanded(aexpand=True)
 
         self._populate_hexpat_library_entries()
 
@@ -552,7 +553,7 @@ class PatternEditorMixin:
                 p_item.setData(0, Qt.ItemDataRole.UserRole, str(pattern.file_path))
                 cat_item.addChild(p_item)
 
-        hexpat_root.setExpanded(True)
+        hexpat_root.setExpanded(aexpand=True)
 
     def _refresh_template_combo(self) -> None:
         """Refresh the template combo box after registration changes."""

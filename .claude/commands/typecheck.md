@@ -1,18 +1,40 @@
-Run basedpyright across the entire Intellicrack project and fix every single finding.
+---
+description: Run basedpyright type checker via justfile and fix all findings in Intellicrack Python code. Invoke manually with /typecheck.
+argument-hint: [path... --flag...]
+allowed-tools: Read, Edit, Glob, Grep, Bash
+---
+
+You are fixing basedpyright type checking findings for Intellicrack, a binary analysis platform that bridges external tools and AI providers. Every type annotation must be precise and meaningful — it must accurately describe the actual data flowing through the code. Vague types that exist only to silence the checker are forbidden. Your default stance is to **investigate code paths until you can determine the exact type**, not to reach for `Any` or `object`.
 
 ## Execution
 
-1. Run `pixi run basedpyright` to get the full list of type checking findings.
-2. Fix **every single finding** with the most correct, production-appropriate fix. This means actually correcting the underlying type issue — adding precise annotations, restructuring code, using proper generics, narrowing types, adding overloads, etc.
-3. After fixing a batch of findings, re-run `pixi run basedpyright` to confirm they are resolved and to catch any new findings introduced by your fixes.
-4. Repeat until basedpyright returns **zero findings**.
+1. Review all findings in the **Findings** section below. Group them by file, then by severity (errors before warnings).
+2. Work **one file at a time**. Read the file, understand its purpose, its imports, and how its types flow before making changes.
+3. Fix **every single finding** in the current file before moving to the next.
+4. After completing each file, re-run `pixi run basedpyright --outputjson 2>&1 | grep <filename>` or re-run `pixi run basedpyright` to confirm zero findings remain in it and no new findings were introduced.
+5. After completing all files, run `pixi run basedpyright` for a full sweep.
+6. If the full sweep reveals new findings (from cross-file type propagation effects), fix those too.
+7. Repeat until `pixi run basedpyright` returns **zero findings**.
 
 ## Rules — Non-Negotiable
 
 - **NO type suppression comments of any kind.** Do not add any type-ignore directives, pyright-ignore directives, or any inline mechanism to suppress type checking findings on any line, under any circumstance.
 - **NO basedpyright configuration changes.** Do not modify the `[tool.basedpyright]` section in `pyproject.toml` in any way. Do not weaken strictness, add exclusions, change diagnostic severity levels, or alter any setting. The basedpyright configuration is locked and immutable.
 - **NO suppression of any kind.** The only acceptable resolution for a finding is fixing the actual code.
-- **NO broad, basic, or generic types that exist only to satisfy the type checker.** Every type annotation must be precise and meaningful. Using `Any`, `object`, bare `dict`, bare `list`, `Union[...]` with excessive members, or any other vague type just to make a finding go away is **absolutely forbidden**. Type annotations must accurately describe the actual data flowing through the code. If you cannot determine the precise type, investigate the code paths until you can. A type annotation that does not convey real, specific information about the value is worse than useless — it hides bugs and defeats the purpose of strict type checking.
+- **NO broad, basic, or generic types.** Using `Any`, `object`, bare `dict`, bare `list`, `Union[...]` with excessive members, or any other vague type just to make a finding go away is **absolutely forbidden**. If you cannot determine the precise type, investigate the code paths until you can.
+- **NO skipping findings.** Every finding in the list must be addressed. Do not silently skip a finding because it looks difficult or involves complex generics.
+- **NO moving on without verification.** After fixing a file, you must re-run basedpyright to confirm the findings are resolved before proceeding to the next file. Do not assume your fix worked.
+- **NO introducing regressions.** Your type fixes must not break ruff lint compliance or pydoclint docstring compliance. If you change a function signature's types, update the docstring to match. If you add imports for type annotations, ensure they pass ruff import ordering.
+- **IMPLEMENT over remove.** When basedpyright flags an unused import or variable, your first priority is to find a genuine use that improves Intellicrack's functionality. Only remove if there is truly no implementable use in that module's context.
+
+## Agent and Subagent Oversight
+
+If you delegate any fixes to agents or subagents:
+- **You must read the actual edits** they made. Do not accept their claim that findings are fixed without reviewing the code changes yourself.
+- **You must re-run basedpyright** on every file they touched and verify zero findings.
+- **You must verify cross-tool compliance** — run `pixi run ruff check <file>` on files they changed to confirm no lint regressions. Spot-check docstrings if signatures changed.
+- **You are accountable for their work.** If an agent introduces `Any` types, suppression comments, or overly broad unions to silence findings, you must catch it and replace them with precise types.
+- **Watch for lazy type fixes.** Common agent shortcuts to reject: `cast(Any, ...)`, `object` as a catch-all, `dict[str, Any]` when the value type is knowable, `list[Any]` when element types are deterministic.
 
 ## Current basedpyright Configuration (Read-Only Reference)
 
@@ -58,9 +80,12 @@ The project uses `typeCheckingMode = "strict"` targeting Python 3.13 on Windows.
 - The project targets Windows (`pythonPlatform = "Windows"`). Ensure all platform-specific code uses proper `sys.platform` checks and conditional imports.
 - Use `TYPE_CHECKING` blocks for imports only needed by the type checker, with runtime fallbacks where necessary.
 
-## Unused Imports and Variables — IMPLEMENT, Don't Remove
+## Cross-Tool Compliance
 
-When basedpyright flags an unused import or variable, apply the same principle as ruff linting: **first priority is to find a genuine use** that improves Intellicrack's functionality. Only remove if there is truly no implementable use in that module's context.
+Every fix you make must maintain compliance with the full toolchain:
+- **ruff**: Do not introduce lint violations. If you add imports, ensure correct ordering. If you restructure code, ensure it passes style checks. Run `pixi run ruff check <file>` after significant changes.
+- **pydoclint**: Do not break docstring compliance. If you change a function signature (add/remove/rename parameters, change return type), update the docstring to match. Run `pixi run pydoclint --quiet <file>` if you changed signatures.
+- **ruff format**: Your code must remain properly formatted.
 
 ## False Positives
 
@@ -70,10 +95,20 @@ If you encounter a finding that you have thoroughly verified is a genuine false 
 
 - **Do not break existing functionality.** Every fix must preserve the original behavior of the code.
 - **Do not delete method bindings or functional code** to resolve a finding. Create or restructure code instead.
+- **Do not batch too many files at once.** Work one file at a time and verify before moving on. Type changes propagate across files — fixing one file can create or resolve findings in another.
 - **All fixes must also pass ruff.** Do not introduce ruff violations while fixing type issues.
-- **Re-run basedpyright after every batch of fixes** to verify convergence toward zero findings.
-- **Implement functional code over removal.** Improving Intellicrack's capabilities and usability is always the priority.
 
 ## Completion Criteria
 
-The task is complete when `pixi run basedpyright` returns **zero findings** (errors and warnings) with **zero suppression comments or configuration changes** anywhere in the codebase.
+The task is complete when:
+1. `pixi run basedpyright` returns **zero findings** (errors and warnings)
+2. **Zero suppression comments or configuration changes** exist anywhere in the codebase
+3. No ruff or pydoclint regressions were introduced (spot-check if you made significant changes)
+
+---
+
+## Findings
+
+The following findings were produced by `just basedpyright $ARGUMENTS`:
+
+!`just basedpyright $ARGUMENTS >/dev/null 2>&1 || true; cat reports/txt/basedpyright_findings.txt 2>/dev/null || echo "ERROR: No findings report at reports/txt/basedpyright_findings.txt. Run 'just basedpyright' manually to diagnose."`

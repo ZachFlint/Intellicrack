@@ -6,7 +6,13 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    import types
+
+    from intellicrack_hexcore import HexDocument
 
 
 class TestEntropy:
@@ -17,7 +23,7 @@ class TestEntropy:
     valid range [0.0, 8.0].
     """
 
-    def test_entropy_all_zeros_is_zero(self, hexcore: Any) -> None:
+    def test_entropy_all_zeros_is_zero(self, hexcore: types.ModuleType) -> None:
         """Verify that entropy() returns 0.0 for a document with all identical bytes.
 
         Args:
@@ -27,7 +33,7 @@ class TestEntropy:
         result: float = doc.entropy()
         assert abs(result) < 1e-6
 
-    def test_entropy_sample_bytes_near_max(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_sample_bytes_near_max(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that entropy() exceeds 7.9 for a uniform byte distribution.
 
         Args:
@@ -36,7 +42,7 @@ class TestEntropy:
         result = sample_doc_from_bytes.entropy()
         assert result > 7.9
 
-    def test_entropy_sample_bytes_at_most_eight(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_sample_bytes_at_most_eight(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that entropy() never exceeds 8.0 for any document.
 
         Args:
@@ -45,7 +51,7 @@ class TestEntropy:
         result = sample_doc_from_bytes.entropy()
         assert result <= 8.0
 
-    def test_entropy_is_float(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_is_float(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that entropy() returns a float value.
 
         Args:
@@ -54,7 +60,7 @@ class TestEntropy:
         result = sample_doc_from_bytes.entropy()
         assert isinstance(result, float)
 
-    def test_entropy_lower_bound(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_lower_bound(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that entropy() is non-negative for any document.
 
         Args:
@@ -63,7 +69,7 @@ class TestEntropy:
         result = sample_doc_from_bytes.entropy()
         assert result >= 0.0
 
-    def test_entropy_repeating_byte_is_zero(self, hexcore: Any) -> None:
+    def test_entropy_repeating_byte_is_zero(self, hexcore: types.ModuleType) -> None:
         """Verify that entropy() returns 0.0 for a document with one distinct byte value.
 
         Args:
@@ -81,7 +87,7 @@ class TestEntropyMap:
     all block values are in [0.0, 8.0], and smaller block sizes yield more blocks.
     """
 
-    def test_entropy_map_returns_list_of_floats(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_map_returns_list_of_floats(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that entropy_map() returns a list of float values.
 
         Args:
@@ -91,7 +97,7 @@ class TestEntropyMap:
         assert isinstance(result, list)
         assert all(isinstance(v, (int, float)) for v in result)
 
-    def test_entropy_map_block_values_in_range(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_map_block_values_in_range(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that every block entropy value is between 0.0 and 8.0 inclusive.
 
         Args:
@@ -101,7 +107,7 @@ class TestEntropyMap:
         for v in result:
             assert 0.0 <= v <= 8.0
 
-    def test_entropy_map_block_count_matches_doc_length(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_map_block_count_matches_doc_length(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the number of blocks equals ceil(doc_length / block_size).
 
         Args:
@@ -113,7 +119,7 @@ class TestEntropyMap:
         result = sample_doc_from_bytes.entropy_map(block_size)
         assert len(result) == expected_blocks
 
-    def test_entropy_map_smaller_block_size_gives_more_blocks(self, sample_doc_from_bytes: Any) -> None:
+    def test_entropy_map_smaller_block_size_gives_more_blocks(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that a smaller block_size produces more entropy map blocks.
 
         Args:
@@ -123,7 +129,7 @@ class TestEntropyMap:
         small_block = sample_doc_from_bytes.entropy_map(16)
         assert len(small_block) > len(large_block)
 
-    def test_entropy_map_block_size_one_byte(self, hexcore: Any) -> None:
+    def test_entropy_map_block_size_one_byte(self, hexcore: types.ModuleType) -> None:
         """Verify that entropy_map() with block_size=1 returns one value per byte.
 
         Args:
@@ -143,7 +149,7 @@ class TestByteDistribution:
     for every byte value.
     """
 
-    def test_byte_distribution_full_has_256_elements(self, sample_doc_from_bytes: Any) -> None:
+    def test_byte_distribution_full_has_256_elements(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that byte_distribution_full() returns exactly 256 integer counts.
 
         Args:
@@ -152,7 +158,7 @@ class TestByteDistribution:
         result = sample_doc_from_bytes.byte_distribution_full()
         assert len(result) == 256
 
-    def test_byte_distribution_sum_equals_document_length(self, sample_doc_from_bytes: Any) -> None:
+    def test_byte_distribution_sum_equals_document_length(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the sum of all distribution counts equals the document length.
 
         Args:
@@ -162,7 +168,7 @@ class TestByteDistribution:
         doc_length = sample_doc_from_bytes.length()
         assert sum(result) == doc_length
 
-    def test_byte_distribution_uniform_all_ones(self, sample_doc_from_bytes: Any) -> None:
+    def test_byte_distribution_uniform_all_ones(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that for bytes(range(256)), every byte value has a count of exactly 1.
 
         Args:
@@ -171,7 +177,7 @@ class TestByteDistribution:
         result = sample_doc_from_bytes.byte_distribution_full()
         assert all(count == 1 for count in result)
 
-    def test_byte_distribution_zeros_only(self, hexcore: Any) -> None:
+    def test_byte_distribution_zeros_only(self, hexcore: types.ModuleType) -> None:
         """Verify that for all-zero data, only index 0 has a non-zero count.
 
         Args:
@@ -182,7 +188,7 @@ class TestByteDistribution:
         assert result[0] == 100
         assert all(count == 0 for count in result[1:])
 
-    def test_byte_distribution_returns_ints(self, sample_doc_from_bytes: Any) -> None:
+    def test_byte_distribution_returns_ints(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that byte_distribution_full() returns a list of int values.
 
         Args:
@@ -199,7 +205,7 @@ class TestByteTypeDistribution:
     specific controlled data (null/printable/control/high-byte categories).
     """
 
-    def test_byte_type_distribution_returns_four_values(self, sample_doc_from_bytes: Any) -> None:
+    def test_byte_type_distribution_returns_four_values(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that byte_type_distribution() returns a tuple of exactly 4 elements.
 
         Args:
@@ -208,7 +214,7 @@ class TestByteTypeDistribution:
         result = sample_doc_from_bytes.byte_type_distribution()
         assert len(result) == 4
 
-    def test_byte_type_distribution_sum_equals_document_length(self, sample_doc_from_bytes: Any) -> None:
+    def test_byte_type_distribution_sum_equals_document_length(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the sum of all byte type counts equals the document length.
 
         Args:
@@ -218,7 +224,7 @@ class TestByteTypeDistribution:
         doc_length = sample_doc_from_bytes.length()
         assert sum(result) == doc_length
 
-    def test_byte_type_distribution_null_count(self, hexcore: Any) -> None:
+    def test_byte_type_distribution_null_count(self, hexcore: types.ModuleType) -> None:
         """Verify that a single-null-byte document has a null count of 1.
 
         Args:
@@ -229,7 +235,7 @@ class TestByteTypeDistribution:
         null_count = result[0]
         assert null_count == 1
 
-    def test_byte_type_distribution_printable_count(self, hexcore: Any) -> None:
+    def test_byte_type_distribution_printable_count(self, hexcore: types.ModuleType) -> None:
         """Verify that a document of ASCII printable text has printable count equal to its length.
 
         Args:
@@ -241,7 +247,7 @@ class TestByteTypeDistribution:
         printable_count = result[1]
         assert printable_count == len(data)
 
-    def test_byte_type_distribution_high_bytes_count(self, hexcore: Any) -> None:
+    def test_byte_type_distribution_high_bytes_count(self, hexcore: types.ModuleType) -> None:
         """Verify that a document of high bytes (0x80-0xFF) has high-byte count equal to its length.
 
         Args:
@@ -261,7 +267,7 @@ class TestDigramMatrix:
     equals doc_length - 1 (one digram per consecutive byte pair).
     """
 
-    def test_digram_matrix_has_65536_elements(self, sample_doc_from_bytes: Any) -> None:
+    def test_digram_matrix_has_65536_elements(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that digram_matrix() returns a flat list of 65536 integers.
 
         Args:
@@ -270,7 +276,7 @@ class TestDigramMatrix:
         result = sample_doc_from_bytes.digram_matrix()
         assert len(result) == 65536
 
-    def test_digram_matrix_sum_equals_length_minus_one(self, sample_doc_from_bytes: Any) -> None:
+    def test_digram_matrix_sum_equals_length_minus_one(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the sum of the digram matrix equals doc_length - 1.
 
         Args:
@@ -280,7 +286,7 @@ class TestDigramMatrix:
         doc_length = sample_doc_from_bytes.length()
         assert sum(result) == doc_length - 1
 
-    def test_digram_matrix_single_known_pair(self, hexcore: Any) -> None:
+    def test_digram_matrix_single_known_pair(self, hexcore: types.ModuleType) -> None:
         """Verify that two-byte data [0x00, 0x01] sets digram[0x00][0x01] to 1.
 
         Args:
@@ -299,7 +305,7 @@ class TestContentClassification:
     the range [0, 4] and that the count of blocks matches the expected ceiling.
     """
 
-    def test_content_classification_returns_list(self, sample_doc_from_bytes: Any) -> None:
+    def test_content_classification_returns_list(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that content_classification() returns a list.
 
         Args:
@@ -308,7 +314,7 @@ class TestContentClassification:
         result = sample_doc_from_bytes.content_classification(64)
         assert isinstance(result, list)
 
-    def test_content_classification_values_in_range(self, sample_doc_from_bytes: Any) -> None:
+    def test_content_classification_values_in_range(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that every classification value is an integer in the range [0, 4].
 
         Args:
@@ -319,7 +325,7 @@ class TestContentClassification:
             assert isinstance(value, int)
             assert 0 <= value <= 4
 
-    def test_content_classification_block_count(self, sample_doc_from_bytes: Any) -> None:
+    def test_content_classification_block_count(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the number of blocks equals ceil(doc_length / block_size).
 
         Args:
@@ -331,7 +337,7 @@ class TestContentClassification:
         result = sample_doc_from_bytes.content_classification(block_size)
         assert len(result) == expected_blocks
 
-    def test_content_classification_zeros_classified_low_entropy(self, hexcore: Any) -> None:
+    def test_content_classification_zeros_classified_low_entropy(self, hexcore: types.ModuleType) -> None:
         """Verify that all-zero data receives a low-entropy classification (0 or 1).
 
         Args:

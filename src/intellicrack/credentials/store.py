@@ -19,9 +19,9 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Final
 
-from ..core.logging import get_logger
-from ..core.types import IntellicrackError, ProviderCredentials, ProviderName
-from .env_loader import CredentialLoader, get_credential_loader
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import IntellicrackError, ProviderCredentials, ProviderName
+from intellicrack.credentials.env_loader import CredentialLoader, get_credential_loader
 
 
 if TYPE_CHECKING:
@@ -39,19 +39,13 @@ except ImportError:
 class CredentialStoreError(IntellicrackError):
     """Base error for credential store operations."""
 
-    pass
-
 
 class KeyringUnavailableError(CredentialStoreError):
     """Keyring backend is not available."""
 
-    pass
-
 
 class CredentialNotFoundError(CredentialStoreError):
     """Requested credential was not found."""
-
-    pass
 
 
 class CredentialSource(Enum):
@@ -138,7 +132,7 @@ class CredentialStore:
                 self._keyring = _keyring_module
                 self._keyring_available = True
                 _logger.info("keyring_backend_available", backend=_keyring_module.get_keyring().__class__.__name__)
-        except Exception as e:
+        except (OSError, RuntimeError, KeyError, ValueError) as e:
             _logger.warning("keyring_unavailable", error=str(e))
             return False
         else:
@@ -285,7 +279,7 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_credentials(data) if data else None
-        except Exception as e:
+        except (OSError, KeyError, ValueError, CredentialStoreError) as e:
             _logger.warning("keyring_get_failed", provider=provider.value, error=str(e))
             return None
 
@@ -337,7 +331,7 @@ class CredentialStore:
         try:
             await asyncio.to_thread(_store)
             _logger.info("credentials_stored", provider=provider.value, store="keyring")
-        except Exception as e:
+        except (OSError, KeyError, ValueError) as e:
             _logger.warning("credential_store_failed", provider=provider.value, error=str(e))
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
@@ -365,7 +359,7 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
-        except Exception:
+        except (OSError, KeyError, ValueError):
             _logger.debug("metadata_get_failed", provider=provider.value)
             return None
 
@@ -462,12 +456,12 @@ class CredentialStore:
         def _delete() -> bool:
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
-            except Exception:
+            except (OSError, KeyError, ValueError):
                 _logger.debug("keyring_delete_credential_failed", provider=provider.value)
                 return False
             try:
                 keyring.delete_password(self.SERVICE_NAME, metadata_key)
-            except Exception:
+            except (OSError, KeyError, ValueError):
                 _logger.debug("keyring_delete_metadata_failed", provider=provider.value)
             return True
 
@@ -502,7 +496,7 @@ class CredentialStore:
                                 created_at=now,
                                 updated_at=now,
                                 source=CredentialSource.ENV_FILE,
-                            )
+                            ),
                         )
 
         return results
@@ -510,6 +504,7 @@ class CredentialStore:
     async def migrate_from_env(
         self,
         providers: list[ProviderName] | None = None,
+        *,
         overwrite: bool = False,
     ) -> dict[ProviderName, bool]:
         """
@@ -554,8 +549,8 @@ class CredentialStore:
                     )
                     results[provider] = True
                     _logger.info("credentials_migrated", provider=provider.value, source="env", destination="keyring")
-                except Exception:
-                    _logger.exception("credential_migration_failed", provider=provider.value)
+                except (OSError, KeyError, ValueError, CredentialStoreError) as exc:
+                    _logger.warning("credential_migration_failed", provider=provider.value, error=str(exc), exc_info=True)
                     results[provider] = False
 
         return results

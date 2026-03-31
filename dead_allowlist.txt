@@ -258,3 +258,11 @@ wheelEvent
 xpu_available
 yara_scan
 yara_scan_files
+connect_hex_widget_to_tools
+display_type
+execute_pattern_bytes
+has_code
+is_executable
+is_readable
+is_writable
+load_template

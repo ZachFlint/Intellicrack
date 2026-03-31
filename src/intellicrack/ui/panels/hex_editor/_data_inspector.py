@@ -18,6 +18,7 @@ class DataInspectorMixin:
 
     _data_inspector_tree: QTreeWidget | None
     _document: Any | None
+    document: Any | None
 
     def _update_data_inspector(self, offset: int) -> None:
         """
@@ -26,12 +27,12 @@ class DataInspectorMixin:
         Args:
             offset: Byte offset to inspect.
         """
-        if self._data_inspector_tree is None or self._document is None:
+        if self._data_inspector_tree is None or self.document is None:
             return
 
         self._data_inspector_tree.clear()
         try:
-            result = self._document.inspect_at(offset)
+            result = self.document.inspect_at(offset)
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)

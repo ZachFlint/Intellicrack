@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """HexPat DSL compiler: lexer, parser, and JSON codegen.
 
 Compiles a C-like pattern definition language (.hexpat)
@@ -26,21 +25,13 @@ class HexPatError(Exception):
     """
     Error raised during HexPat DSL compilation.
 
-    Attributes:
+    Args:
+        message: Human-readable error description.
         line: Source line number where the error occurred.
         column: Source column number where the error occurred.
-        message: Human-readable error description.
     """
 
     def __init__(self, message: str, line: int = 0, column: int = 0) -> None:
-        """
-        Initialize a HexPat compilation error.
-
-        Args:
-            message: Human-readable error description.
-            line: Source line number where the error occurred.
-            column: Source column number where the error occurred.
-        """
         self.message = message
         self.line = line
         self.column = column
@@ -122,7 +113,7 @@ class Token:
     """
     A lexer token.
 
-    Args:
+    Attributes:
         type: Token type.
         value: Raw text of the token.
         line: Source line number.
@@ -215,7 +206,7 @@ class NumberLiteral:
     """
     Numeric literal expression node.
 
-    Args:
+    Attributes:
         value: Integer value.
     """
 
@@ -227,7 +218,7 @@ class StringLiteral:
     """
     String literal expression node.
 
-    Args:
+    Attributes:
         value: String content (without quotes).
     """
 
@@ -239,7 +230,7 @@ class IdentifierExpr:
     """
     Identifier reference expression node.
 
-    Args:
+    Attributes:
         name: Identifier name.
     """
 
@@ -256,7 +247,7 @@ class SizeofExpr:
     """
     Sizeof() expression node.
 
-    Args:
+    Attributes:
         target: Name of the target type or field.
     """
 
@@ -268,7 +259,7 @@ class BinaryExpr:
     """
     Binary operator expression node.
 
-    Args:
+    Attributes:
         op: Operator string.
         left: Left operand.
         right: Right operand.
@@ -284,7 +275,7 @@ class UnaryExpr:
     """
     Unary operator expression node.
 
-    Args:
+    Attributes:
         op: Operator string.
         operand: Operand expression.
     """
@@ -298,7 +289,7 @@ class AddressofExpr:
     """
     Addressof() expression node.
 
-    Args:
+    Attributes:
         target: Name of the target field.
     """
 
@@ -313,7 +304,7 @@ class PrimitiveType:
     """
     Primitive type AST node.
 
-    Args:
+    Attributes:
         name: Type name (e.g. "u8", "u32").
     """
 
@@ -325,7 +316,7 @@ class StructRefType:
     """
     Struct reference type AST node.
 
-    Args:
+    Attributes:
         name: Referenced struct name.
     """
 
@@ -337,7 +328,7 @@ class PaddingType:
     """
     Padding type AST node.
 
-    Args:
+    Attributes:
         size: Size expression.
     """
 
@@ -349,7 +340,7 @@ class PointerType:
     """
     Pointer type AST node.
 
-    Args:
+    Attributes:
         pointee: The type this pointer points to.
         line: Source line number.
         column: Source column number.
@@ -368,7 +359,7 @@ class FieldNode:
     """
     Field declaration AST node.
 
-    Args:
+    Attributes:
         name: Field name.
         type_node: Type of the field.
         endianness: Endianness prefix or None.
@@ -388,7 +379,7 @@ class ConditionalField:
     """
     Conditional field declaration AST node.
 
-    Args:
+    Attributes:
         condition: Condition expression.
         true_fields: Fields if condition is true.
         false_fields: Fields if condition is false.
@@ -404,7 +395,7 @@ class StructDecl:
     """
     Struct declaration AST node.
 
-    Args:
+    Attributes:
         name: Struct name.
         fields: List of field nodes.
     """
@@ -418,7 +409,7 @@ class UnionDecl:
     """
     Union declaration AST node.
 
-    Args:
+    Attributes:
         name: Union name.
         fields: List of field nodes.
     """
@@ -432,7 +423,7 @@ class EnumDecl:
     """
     Enum declaration AST node.
 
-    Args:
+    Attributes:
         name: Enum name.
         backing_type: Backing integer type.
         values: List of (name, value) pairs.
@@ -448,7 +439,7 @@ class BitfieldDecl:
     """
     Bitfield declaration AST node.
 
-    Args:
+    Attributes:
         name: Bitfield name.
         fields: List of (name, bit_width) pairs.
     """
@@ -491,12 +482,6 @@ class HexPatLexer:
     """
 
     def __init__(self, source: str) -> None:
-        """
-        Initialize the lexer with source code to tokenize.
-
-        Args:
-            source: HexPat DSL source code string.
-        """
         self._source = source
         self._pos = 0
         self._line = 1
@@ -623,7 +608,12 @@ class HexPatLexer:
         return self._source[idx] if idx < len(self._source) else ""
 
     def _skip_whitespace_and_comments(self) -> None:
-        """Skip whitespace and comments."""
+        """
+        Skip whitespace and comments.
+
+        Raises:
+            HexPatError: If a block comment is not terminated.
+        """
         while self._pos < len(self._source):
             ch = self._source[self._pos]
             if ch in {" ", "\t", "\r", "\n"}:
@@ -651,7 +641,12 @@ class HexPatLexer:
                 break
 
     def _read_string(self) -> None:
-        """Read a string literal token."""
+        """
+        Read a string literal token.
+
+        Raises:
+            HexPatError: If the string literal is not terminated.
+        """
         start_line = self._line
         start_col = self._col
         self._advance()
@@ -712,12 +707,6 @@ class HexPatParser:
     """
 
     def __init__(self, tokens: list[Token]) -> None:
-        """
-        Initialize the parser with a token sequence.
-
-        Args:
-            tokens: Token list produced by the lexer.
-        """
         self._tokens = tokens
         self._pos = 0
 
@@ -727,9 +716,6 @@ class HexPatParser:
 
         Returns:
             list[DeclNode]: List of parsed declaration AST nodes.
-
-        Raises:
-            HexPatError: On syntax errors.
         """
         decls: list[DeclNode] = []
         while not self._at_end():
@@ -1224,12 +1210,6 @@ class HexPatCodegen:
     """
 
     def __init__(self, declarations: list[DeclNode]) -> None:
-        """
-        Initialize the code generator with parsed declarations.
-
-        Args:
-            declarations: Parsed declaration AST nodes from the parser.
-        """
         self._decls = declarations
         self._nested_structs: dict[str, StructDecl] = {}
         self._nested_unions: dict[str, UnionDecl] = {}
@@ -1576,9 +1556,6 @@ class HexPatCompiler:
 
         Returns:
             str: JSON template definition string.
-
-        Raises:
-            HexPatError: On lexer, parser, or codegen errors.
         """
         result = HexPatCompiler.compile_to_dict(source)
         return json.dumps(result, indent=2)
@@ -1593,9 +1570,6 @@ class HexPatCompiler:
 
         Returns:
             dict[str, Any]: JSON-compatible template definition dict.
-
-        Raises:
-            HexPatError: On lexer, parser, or codegen errors.
         """
         lexer = HexPatLexer(source)
         tokens = lexer.tokenize()

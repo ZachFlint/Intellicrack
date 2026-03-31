@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Error types for the HexPat pattern language interpreter pipeline."""
 
 from __future__ import annotations
@@ -12,7 +11,7 @@ class HexPatError(Exception):
     """
     Base error for the HexPat interpreter.
 
-    Attributes:
+    Args:
         message: Human-readable error description.
         line: Source line number where the error occurred.
         column: Source column number where the error occurred.
@@ -26,15 +25,6 @@ class HexPatError(Exception):
         column: int = 0,
         file: str = "",
     ) -> None:
-        """
-        Initialize a HexPat error.
-
-        Args:
-            message: Human-readable error description.
-            line: Source line number where the error occurred.
-            column: Source column number where the error occurred.
-            file: Source file path where the error occurred.
-        """
         self.message: str = message
         self.line: int = line
         self.column: int = column
@@ -66,8 +56,12 @@ class HexPatRuntimeError(HexPatError):
     """
     Error during pattern evaluation against binary data.
 
-    Attributes:
-        offset: Byte offset in the binary data where the error occurred.
+    Args:
+        message: Human-readable error description.
+        line: Source line number where the error occurred.
+        column: Source column number where the error occurred.
+        file: Source file path where the error occurred.
+        offset: Byte offset in the binary data.
     """
 
     def __init__(
@@ -78,16 +72,6 @@ class HexPatRuntimeError(HexPatError):
         file: str = "",
         offset: int = 0,
     ) -> None:
-        """
-        Initialize a runtime error.
-
-        Args:
-            message: Human-readable error description.
-            line: Source line number where the error occurred.
-            column: Source column number where the error occurred.
-            file: Source file path where the error occurred.
-            offset: Byte offset in the binary data.
-        """
         self.offset: int = offset
         if offset > 0:
             message = f"{message} (at data offset 0x{offset:X})"

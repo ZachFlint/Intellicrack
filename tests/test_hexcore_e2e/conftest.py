@@ -12,6 +12,7 @@ so that the entire suite is skipped when hexcore is not built.
 from __future__ import annotations
 
 import asyncio
+import math
 import struct
 import zipfile
 from typing import TYPE_CHECKING, Any
@@ -23,7 +24,11 @@ from intellicrack.core.hexpat.interpreter import HexPatInterpreter
 
 
 if TYPE_CHECKING:
+    import types
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack_hexcore import HexDocument
 
 
 hexcore_mod: Any = pytest.importorskip(
@@ -64,24 +69,24 @@ ZIP_CONTENT_DATA = b"Hello, World!"
 
 
 @pytest.fixture
-def hexcore() -> Any:
+def hexcore() -> types.ModuleType:
     """Return the imported intellicrack_hexcore module.
 
     Returns:
-        Any: The intellicrack_hexcore native module.
+        types.ModuleType: The intellicrack_hexcore native module.
     """
     return hexcore_mod
 
 
 @pytest.fixture
-def empty_doc(hexcore: Any) -> Any:
+def empty_doc(hexcore: types.ModuleType) -> HexDocument:
     """Create a fresh, empty HexDocument.
 
     Args:
         hexcore: The native module fixture.
 
     Returns:
-        Any: A new HexDocument instance (zero length).
+        HexDocument: A new HexDocument instance (zero length).
     """
     return hexcore.HexDocument()
 
@@ -97,7 +102,7 @@ def sample_bytes() -> bytes:
 
 
 @pytest.fixture
-def sample_doc(hexcore: Any, tmp_path: Path, sample_bytes: bytes) -> Any:
+def sample_doc(hexcore: types.ModuleType, tmp_path: Path, sample_bytes: bytes) -> HexDocument:
     """Create a HexDocument loaded with known 256-byte test data.
 
     Args:
@@ -106,7 +111,7 @@ def sample_doc(hexcore: Any, tmp_path: Path, sample_bytes: bytes) -> Any:
         sample_bytes: The 256-byte payload fixture.
 
     Returns:
-        Any: HexDocument loaded from a temp file containing sample_bytes.
+        HexDocument: HexDocument loaded from a temp file containing sample_bytes.
     """
     f = tmp_path / "sample.bin"
     f.write_bytes(sample_bytes)
@@ -114,7 +119,7 @@ def sample_doc(hexcore: Any, tmp_path: Path, sample_bytes: bytes) -> Any:
 
 
 @pytest.fixture
-def sample_doc_from_bytes(hexcore: Any, sample_bytes: bytes) -> Any:
+def sample_doc_from_bytes(hexcore: types.ModuleType, sample_bytes: bytes) -> HexDocument:
     """Create a HexDocument from in-memory bytes (no file on disk).
 
     Args:
@@ -122,7 +127,7 @@ def sample_doc_from_bytes(hexcore: Any, sample_bytes: bytes) -> Any:
         sample_bytes: The 256-byte payload fixture.
 
     Returns:
-        Any: HexDocument created via open_bytes.
+        HexDocument: HexDocument created via open_bytes.
     """
     return hexcore.HexDocument.open_bytes(sample_bytes)
 
@@ -312,11 +317,11 @@ def zip_bytes(tmp_path: Path) -> bytes:
 
 
 @pytest.fixture
-def bridge() -> Any:
+def bridge() -> HexEditorBridge:
     """Create and initialize a HexEditorBridge instance.
 
     Returns:
-        Any: An initialized HexEditorBridge.
+        HexEditorBridge: An initialized HexEditorBridge.
     """
     b = HexEditorBridge()
     asyncio.get_event_loop().run_until_complete(b.initialize())
@@ -324,7 +329,7 @@ def bridge() -> Any:
 
 
 @pytest.fixture
-def loaded_bridge(bridge: Any, pe_binary: Path) -> Any:
+def loaded_bridge(bridge: HexEditorBridge, pe_binary: Path) -> HexEditorBridge:
     """Create a HexEditorBridge with a PE file already loaded.
 
     Args:
@@ -332,18 +337,18 @@ def loaded_bridge(bridge: Any, pe_binary: Path) -> Any:
         pe_binary: Path to the PE binary fixture.
 
     Returns:
-        Any: The bridge with the PE file opened.
+        HexEditorBridge: The bridge with the PE file opened.
     """
     asyncio.get_event_loop().run_until_complete(bridge.open_file(str(pe_binary)))
     return bridge
 
 
 @pytest.fixture
-def hexpat_interpreter() -> Any:
+def hexpat_interpreter() -> HexPatInterpreter:
     """Create a HexPatInterpreter instance.
 
     Returns:
-        Any: A fresh HexPatInterpreter.
+        HexPatInterpreter: A fresh HexPatInterpreter.
     """
     return HexPatInterpreter()
 
@@ -362,8 +367,8 @@ def pattern_data() -> bytes:
     struct.pack_into("<H", data, 0, 0x1234)
     struct.pack_into("<I", data, 2, 0xDEADBEEF)
     struct.pack_into("<Q", data, 6, 0xCAFEBABE12345678)
-    struct.pack_into("<f", data, 14, 3.14)
-    struct.pack_into("<d", data, 18, 2.71828)
+    struct.pack_into("<f", data, 14, math.pi)
+    struct.pack_into("<d", data, 18, math.e)
     data[26:30] = b"TEST"
     struct.pack_into("<i", data, 30, -42)
     struct.pack_into("<h", data, 34, -1000)
@@ -376,11 +381,11 @@ def pattern_data() -> bytes:
 
 
 @pytest.fixture
-def event_loop() -> Any:
+def event_loop() -> asyncio.AbstractEventLoop:
     """Provide or reuse an asyncio event loop for async bridge tests.
 
     Returns:
-        Any: An asyncio event loop.
+        asyncio.AbstractEventLoop: An asyncio event loop.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -393,14 +398,14 @@ def event_loop() -> Any:
     return loop
 
 
-def run_async(coro: Any) -> Any:
+def run_async(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously for test convenience.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()

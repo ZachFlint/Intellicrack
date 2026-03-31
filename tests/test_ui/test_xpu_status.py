@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """End-to-end tests for the XPU Status dialog and provider config XPU settings.
 
 Validates XPU status dialog construction, live refresh behavior, device
@@ -8,7 +13,7 @@ Help menu integration using real XPU backend APIs.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtWidgets import (
@@ -163,19 +168,19 @@ class TestXPUStatusDialogRefreshTimer:
     @staticmethod
     def test_timer_is_active_after_construction(xpu_dialog: XPUStatusDialog) -> None:
         """Refresh timer starts automatically on construction."""
-        assert xpu_dialog._refresh_timer.isActive()
+        assert xpu_dialog.refresh_timer.isActive()
 
     @staticmethod
     def test_timer_interval_is_2_seconds(xpu_dialog: XPUStatusDialog) -> None:
         """Refresh timer interval is 2000ms."""
-        assert xpu_dialog._refresh_timer.interval() == _LIVE_REFRESH_MS
+        assert xpu_dialog.refresh_timer.interval() == _LIVE_REFRESH_MS
 
     @staticmethod
     def test_timer_stops_on_close(xpu_dialog: XPUStatusDialog) -> None:
         """Refresh timer stops when the dialog is closed."""
-        assert xpu_dialog._refresh_timer.isActive()
+        assert xpu_dialog.refresh_timer.isActive()
         xpu_dialog.close()
-        assert not xpu_dialog._refresh_timer.isActive()
+        assert not xpu_dialog.refresh_timer.isActive()
 
 
 @pytest.mark.usefixtures("qapp")
@@ -185,7 +190,7 @@ class TestXPUStatusDialogDeviceInfo:
     @staticmethod
     def test_status_label_reflects_xpu_availability(xpu_dialog: XPUStatusDialog) -> None:
         """Status label shows 'XPU Active' or 'CPU Only' based on real hardware."""
-        text = xpu_dialog._status_label.text()
+        text = xpu_dialog.status_label.text()
         if is_xpu_available():
             assert text == "XPU Active"
         else:
@@ -197,7 +202,7 @@ class TestXPUStatusDialogDeviceInfo:
         """Device name label displays the real device name from XPU hardware."""
         info = get_xpu_device_info(0)
         assert info is not None
-        assert xpu_dialog._device_name_label.text() == info.device_name
+        assert xpu_dialog.device_name_label.text() == info.device_name
 
     @staticmethod
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU device available")
@@ -206,13 +211,13 @@ class TestXPUStatusDialogDeviceInfo:
         info = get_xpu_device_info(0)
         assert info is not None
         if info.driver_version:
-            assert xpu_dialog._driver_label.text() == info.driver_version
+            assert xpu_dialog.driver_label.text() == info.driver_version
 
     @staticmethod
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU device available")
     def test_capabilities_label_shows_dtype_flags(xpu_dialog: XPUStatusDialog) -> None:
         """Capabilities label contains dtype support flags from real hardware."""
-        text = xpu_dialog._caps_label.text()
+        text = xpu_dialog.caps_label.text()
         info = get_xpu_device_info(0)
         assert info is not None
         if info.supports_fp16:
@@ -232,13 +237,13 @@ class TestXPUStatusDialogMemory:
         allocated, total = get_xpu_memory_info(0)
         if total > 0:
             expected_pct = int((allocated / total) * 100)
-            assert abs(xpu_dialog._memory_bar.value() - expected_pct) <= 2
+            assert abs(xpu_dialog.memory_bar.value() - expected_pct) <= 2
 
     @staticmethod
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU device available")
     def test_memory_text_shows_gb_values(xpu_dialog: XPUStatusDialog) -> None:
         """Memory text label includes GB values and percentage."""
-        text = xpu_dialog._memory_text.text()
+        text = xpu_dialog.memory_text.text()
         assert "GB" in text
         assert "%" in text
 
@@ -246,7 +251,7 @@ class TestXPUStatusDialogMemory:
     @pytest.mark.skipif(is_xpu_available(), reason="XPU is available")
     def test_memory_shows_no_device_when_unavailable(xpu_dialog: XPUStatusDialog) -> None:
         """Memory text shows informational message when no XPU present."""
-        text = xpu_dialog._memory_text.text()
+        text = xpu_dialog.memory_text.text()
         assert text in {"No XPU device", "XPU memory info not available"}
 
 
@@ -257,14 +262,14 @@ class TestXPUStatusDialogCache:
     @staticmethod
     def test_cache_usage_label_has_value(xpu_dialog: XPUStatusDialog) -> None:
         """Cache usage label displays a value (MB or informational text)."""
-        text = xpu_dialog._cache_usage_label.text()
+        text = xpu_dialog.cache_usage_label.text()
         assert text != "--"
         assert len(text) > 0
 
     @staticmethod
     def test_cache_limit_label_has_value(xpu_dialog: XPUStatusDialog) -> None:
         """Cache limit label displays a value."""
-        text = xpu_dialog._cache_limit_label.text()
+        text = xpu_dialog.cache_limit_label.text()
         assert text != "--"
         assert len(text) > 0
 
@@ -276,13 +281,13 @@ class TestXPUStatusDialogRequirements:
     @staticmethod
     def test_requirements_text_is_populated(xpu_dialog: XPUStatusDialog) -> None:
         """Requirements text area contains check results after construction."""
-        html = xpu_dialog._requirements_text.toPlainText()
+        html = xpu_dialog.requirements_text.toPlainText()
         assert len(html) > 0
 
     @staticmethod
     def test_requirements_text_contains_met_or_warnings(xpu_dialog: XPUStatusDialog) -> None:
         """Requirements text shows either 'met' or warning items."""
-        html = xpu_dialog._requirements_text.toHtml()
+        html = xpu_dialog.requirements_text.toHtml()
         has_met = "requirements met" in html.lower()
         has_warnings = "warning" in html.lower() or "<li>" in html.lower()
         has_unavailable = "not available" in html.lower()
@@ -294,14 +299,14 @@ class TestProviderConfigXPUGroupBox:
     """Verify the XPU settings group box in the provider config dialog."""
 
     @staticmethod
-    def test_xpu_group_box_exists(provider_widget: Any) -> None:
+    def test_xpu_group_box_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Local Transformers provider widget contains 'XPU / Device Settings' group."""
         groups = provider_widget.findChildren(QGroupBox)
         titles = [g.title() for g in groups]
         assert "XPU / Device Settings" in titles
 
     @staticmethod
-    def test_prefer_xpu_checkbox_exists(provider_widget: Any) -> None:
+    def test_prefer_xpu_checkbox_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has a 'Prefer XPU over CPU' checkbox defaulting to checked."""
         cb: QCheckBox | None = getattr(provider_widget, "_prefer_xpu_cb", None)
         assert cb is not None
@@ -310,7 +315,7 @@ class TestProviderConfigXPUGroupBox:
         assert cb.text() == "Prefer XPU over CPU"
 
     @staticmethod
-    def test_device_combo_exists_and_populated(provider_widget: Any) -> None:
+    def test_device_combo_exists_and_populated(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has a device combo with at least one entry."""
         combo: QComboBox | None = getattr(provider_widget, "_device_combo", None)
         assert combo is not None
@@ -318,7 +323,7 @@ class TestProviderConfigXPUGroupBox:
         assert combo.count() >= 1
 
     @staticmethod
-    def test_device_combo_has_xpu_entries_when_available(provider_widget: Any) -> None:
+    def test_device_combo_has_xpu_entries_when_available(provider_widget: ProviderSettingsWidget) -> None:
         """Device combo shows real XPU devices when hardware is present."""
         combo: QComboBox | None = getattr(provider_widget, "_device_combo", None)
         assert combo is not None
@@ -332,7 +337,7 @@ class TestProviderConfigXPUGroupBox:
             assert "CPU" in combo.itemText(0)
 
     @staticmethod
-    def test_dtype_combo_has_four_options(provider_widget: Any) -> None:
+    def test_dtype_combo_has_four_options(provider_widget: ProviderSettingsWidget) -> None:
         """Dtype combo contains Auto, float16, bfloat16, float32."""
         combo: QComboBox | None = getattr(provider_widget, "_dtype_combo", None)
         assert combo is not None
@@ -341,7 +346,7 @@ class TestProviderConfigXPUGroupBox:
         assert items == ["Auto", "float16", "bfloat16", "float32"]
 
     @staticmethod
-    def test_memory_bar_exists(provider_widget: Any) -> None:
+    def test_memory_bar_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has an XPU memory progress bar."""
         bar: QProgressBar | None = getattr(provider_widget, "_xpu_mem_bar", None)
         assert bar is not None
@@ -350,7 +355,7 @@ class TestProviderConfigXPUGroupBox:
         assert bar.maximum() == _PROGRESS_BAR_MAX
 
     @staticmethod
-    def test_cache_spinbox_defaults(provider_widget: Any) -> None:
+    def test_cache_spinbox_defaults(provider_widget: ProviderSettingsWidget) -> None:
         """Cache size spinbox has correct range and default."""
         spin: QSpinBox | None = getattr(provider_widget, "_cache_spin", None)
         assert spin is not None
@@ -362,7 +367,7 @@ class TestProviderConfigXPUGroupBox:
         assert "MB" in spin.suffix()
 
     @staticmethod
-    def test_warnings_label_exists(provider_widget: Any) -> None:
+    def test_warnings_label_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has a warnings label for requirement check results."""
         label: QLabel | None = getattr(provider_widget, "_xpu_warnings_label", None)
         assert label is not None
@@ -370,7 +375,7 @@ class TestProviderConfigXPUGroupBox:
         assert label.wordWrap()
 
     @staticmethod
-    def test_memory_refresh_timer_active(provider_widget: Any) -> None:
+    def test_memory_refresh_timer_active(provider_widget: ProviderSettingsWidget) -> None:
         """XPU memory refresh timer starts on widget creation."""
         timer: QTimer | None = getattr(provider_widget, "_xpu_mem_timer", None)
         assert timer is not None
@@ -383,35 +388,35 @@ class TestProviderConfigXPUButtons:
     """Verify the XPU action buttons exist and are connected."""
 
     @staticmethod
-    def test_device_info_button_exists(provider_widget: Any) -> None:
+    def test_device_info_button_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has a 'Device Info' button."""
         buttons = provider_widget.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
         assert "Device Info" in texts
 
     @staticmethod
-    def test_clear_cache_button_exists(provider_widget: Any) -> None:
+    def test_clear_cache_button_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has a 'Clear Cache' button."""
         buttons = provider_widget.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
         assert "Clear Cache" in texts
 
     @staticmethod
-    def test_check_requirements_button_exists(provider_widget: Any) -> None:
+    def test_check_requirements_button_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has a 'Check Requirements' button."""
         buttons = provider_widget.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
         assert "Check Requirements" in texts
 
     @staticmethod
-    def test_auto_detect_button_exists(provider_widget: Any) -> None:
+    def test_auto_detect_button_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has an 'Auto-Detect' dtype button."""
         buttons = provider_widget.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
         assert "Auto-Detect" in texts
 
     @staticmethod
-    def test_apply_cache_button_exists(provider_widget: Any) -> None:
+    def test_apply_cache_button_exists(provider_widget: ProviderSettingsWidget) -> None:
         """Widget has an 'Apply' button for cache size."""
         buttons = provider_widget.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
@@ -423,21 +428,21 @@ class TestProviderConfigSettingsPersistence:
     """Verify XPU settings are included in get_settings() output."""
 
     @staticmethod
-    def test_get_settings_includes_prefer_xpu(provider_widget: Any) -> None:
+    def test_get_settings_includes_prefer_xpu(provider_widget: ProviderSettingsWidget) -> None:
         """get_settings() returns prefer_xpu boolean."""
         settings = provider_widget.get_settings()
         assert "prefer_xpu" in settings
         assert isinstance(settings["prefer_xpu"], bool)
 
     @staticmethod
-    def test_get_settings_includes_device_index(provider_widget: Any) -> None:
+    def test_get_settings_includes_device_index(provider_widget: ProviderSettingsWidget) -> None:
         """get_settings() returns device_index integer."""
         settings = provider_widget.get_settings()
         assert "device_index" in settings
         assert isinstance(settings["device_index"], int)
 
     @staticmethod
-    def test_get_settings_includes_dtype_override(provider_widget: Any) -> None:
+    def test_get_settings_includes_dtype_override(provider_widget: ProviderSettingsWidget) -> None:
         """get_settings() returns dtype_override string."""
         settings = provider_widget.get_settings()
         assert "dtype_override" in settings
@@ -445,7 +450,7 @@ class TestProviderConfigSettingsPersistence:
         assert settings["dtype_override"] in {"Auto", "float16", "bfloat16", "float32"}
 
     @staticmethod
-    def test_get_settings_includes_cache_size_mb(provider_widget: Any) -> None:
+    def test_get_settings_includes_cache_size_mb(provider_widget: ProviderSettingsWidget) -> None:
         """get_settings() returns cache_size_mb integer."""
         settings = provider_widget.get_settings()
         assert "cache_size_mb" in settings
@@ -453,7 +458,7 @@ class TestProviderConfigSettingsPersistence:
         assert settings["cache_size_mb"] == _CACHE_DEFAULT_MB
 
     @staticmethod
-    def test_settings_reflect_checkbox_change(provider_widget: Any) -> None:
+    def test_settings_reflect_checkbox_change(provider_widget: ProviderSettingsWidget) -> None:
         """Toggling prefer_xpu checkbox changes get_settings() output."""
         cb: QCheckBox | None = getattr(provider_widget, "_prefer_xpu_cb", None)
         assert cb is not None
@@ -462,7 +467,7 @@ class TestProviderConfigSettingsPersistence:
         assert settings["prefer_xpu"] is False
 
     @staticmethod
-    def test_settings_reflect_dtype_change(provider_widget: Any) -> None:
+    def test_settings_reflect_dtype_change(provider_widget: ProviderSettingsWidget) -> None:
         """Changing dtype combo changes get_settings() output."""
         combo: QComboBox | None = getattr(provider_widget, "_dtype_combo", None)
         assert combo is not None
@@ -471,7 +476,7 @@ class TestProviderConfigSettingsPersistence:
         assert settings["dtype_override"] == "bfloat16"
 
     @staticmethod
-    def test_settings_reflect_cache_size_change(provider_widget: Any) -> None:
+    def test_settings_reflect_cache_size_change(provider_widget: ProviderSettingsWidget) -> None:
         """Changing cache spinbox value changes get_settings() output."""
         spin: QSpinBox | None = getattr(provider_widget, "_cache_spin", None)
         assert spin is not None
@@ -519,10 +524,10 @@ class TestProviderListInclusion:
     def test_local_transformers_widget_creates_successfully() -> None:
         """ProviderSettingsWidget accepts 'local_transformers' as provider_id."""
         widget = ProviderSettingsWidget(provider_id="local_transformers")
-        assert widget._provider_id == "local_transformers"
+        assert widget.provider_id == "local_transformers"
 
     @staticmethod
     def test_grok_widget_creates_successfully() -> None:
         """ProviderSettingsWidget accepts 'grok' as provider_id."""
         widget = ProviderSettingsWidget(provider_id="grok")
-        assert widget._provider_id == "grok"
+        assert widget.provider_id == "grok"

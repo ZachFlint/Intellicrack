@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for hex editor async search workers.
 
 Verifies SearchWorker and NumericSearchWorker construction,
@@ -26,9 +31,6 @@ class SimpleDocument:
 
     Args:
         data: Raw byte content to search within.
-
-    Attributes:
-        _data: Stored byte content.
     """
 
     def __init__(self, data: bytes) -> None:
@@ -43,9 +45,6 @@ class SimpleDocument:
 
         Returns:
             list[tuple[int, int]]: List of (offset, length) tuples.
-
-        Raises:
-            ValueError: If query is not valid hex.
         """
         needle = bytes.fromhex(query)
         results: list[tuple[int, int]] = []
@@ -62,6 +61,7 @@ class SimpleDocument:
         self,
         query: str,
         encoding: str,
+        *,
         case_sensitive: bool,
         max_results: int,
     ) -> list[tuple[int, int]]:
@@ -143,11 +143,11 @@ class TestSearchWorkerConstruction:
         doc = SimpleDocument(data)
         worker = SearchWorker(doc, "Hex", "00", "utf-8", 50)
 
-        assert worker._document is doc
-        assert worker._mode == "Hex"
-        assert worker._query == "00"
-        assert worker._encoding == "utf-8"
-        assert worker._max_results == 50
+        assert worker.document is doc
+        assert worker.mode == "Hex"
+        assert worker.query == "00"
+        assert worker.encoding == "utf-8"
+        assert worker.max_results == 50
 
 
 @pytest.mark.usefixtures("qapp")

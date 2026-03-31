@@ -256,10 +256,8 @@ class TestNestedControl:
         )
         results = interp.execute_bytes(source, data)
         assert len(results) == 6
-        one_count = sum(bool(r["name"] == "one")
-                    for r in results)
-        zero_count = sum(bool(r["name"] == "zero")
-                     for r in results)
+        one_count = sum(bool(r["name"] == "one") for r in results)
+        zero_count = sum(bool(r["name"] == "zero") for r in results)
         assert one_count == 3
         assert zero_count == 3
 
@@ -303,9 +301,7 @@ class TestNestedControl:
             "}"
         )
         results = interp.execute_bytes(source, data)
-        type_a = sum(bool(r["name"] == "type_a")
-                 for r in results)
-        type_b = sum(bool(r["name"] == "type_b")
-                 for r in results)
+        type_a = sum(bool(r["name"] == "type_a") for r in results)
+        type_b = sum(bool(r["name"] == "type_b") for r in results)
         assert type_a == 2
         assert type_b == 2

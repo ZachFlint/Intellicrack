@@ -12,10 +12,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QFont  # noqa: TC002
+
+
+if TYPE_CHECKING:
+    from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -35,10 +38,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.config import Config, LogConfig, SessionConfig, UIConfig
-from ..core.logging import get_logger
-from ..core.types import ConfirmationLevel, ProviderName
-from .resources.font_manager import FontManager
+from intellicrack.core.config import Config, LogConfig, SessionConfig, UIConfig
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ConfirmationLevel, ProviderName
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 _logger = get_logger("ui.preferences")
@@ -296,7 +299,7 @@ class AppearanceSettingsWidget(QWidget):
                 font_family=self._font_family.currentText(),
                 font_size=self._font_size.value(),
                 show_tool_calls=self._show_tool_calls.isChecked(),
-            )
+            ),
         }
 
 
@@ -364,7 +367,7 @@ class SessionSettingsWidget(QWidget):
                 auto_save=self._autosave_enabled.isChecked(),
                 save_interval_seconds=self._autosave_interval.value(),
                 retention_days=self._retention_days.value(),
-            )
+            ),
         }
 
 
@@ -456,7 +459,7 @@ class LoggingSettingsWidget(QWidget):
                 console_enabled=self._console_logging.isChecked(),
                 max_file_size_mb=self._max_file_size.value(),
                 backup_count=self._backup_count.value(),
-            )
+            ),
         }
 
 
@@ -620,7 +623,7 @@ class PreferencesDialog(QDialog):
         button_layout.setContentsMargins(16, 12, 16, 12)
 
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply,
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
@@ -662,7 +665,7 @@ class PreferencesDialog(QDialog):
             try:
                 new_config.save(self._config_path)
                 _logger.info("configuration_saved", path=str(self._config_path))
-            except Exception as e:
+            except OSError as e:
                 _logger.exception("configuration_save_failed", error=str(e))
 
     def _build_config(self) -> Config:

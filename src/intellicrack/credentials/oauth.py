@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 OAuth 2.0 flow handling for Intellicrack providers.
 
@@ -26,17 +25,17 @@ import webbrowser
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 import httpx
 
-from ..core.logging import get_logger
-from ..core.types import IntellicrackError, ProviderCredentials, ProviderName
-from .store import CredentialSource, get_credential_store
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import IntellicrackError, ProviderCredentials, ProviderName
+from intellicrack.credentials.store import CredentialSource, get_credential_store
 
 
 if TYPE_CHECKING:
-    from .store import CredentialStore
+    from intellicrack.credentials.store import CredentialStore
 
 _logger = get_logger("credentials.oauth")
 
@@ -47,31 +46,21 @@ _HTTP_OK: Final = 200
 class OAuthError(IntellicrackError):
     """Base error for OAuth operations."""
 
-    pass
-
 
 class OAuthConfigurationError(OAuthError):
     """OAuth configuration is invalid or incomplete."""
-
-    pass
 
 
 class OAuthAuthorizationError(OAuthError):
     """Authorization failed or was denied."""
 
-    pass
-
 
 class OAuthTokenError(OAuthError):
     """Token operation failed (exchange, refresh, etc.)."""
 
-    pass
-
 
 class OAuthCallbackError(OAuthError):
     """Error during OAuth callback handling."""
-
-    pass
 
 
 class OAuthFlowType(Enum):
@@ -185,12 +174,12 @@ class OAuthToken:
         buffer = timedelta(minutes=10)
         return datetime.now(UTC) >= (self.expires_at - buffer)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, str | list[str] | None]:
         """
         Convert token to dictionary for storage.
 
         Returns:
-            dict[str, Any]: Dictionary representation.
+            dict[str, str | list[str] | None]: Dictionary representation.
         """
         return {
             "access_token": self.access_token,
@@ -202,7 +191,7 @@ class OAuthToken:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> OAuthToken:
+    def from_dict(cls, data: dict[str, str | list[str] | None]) -> OAuthToken:
         """
         Create token from dictionary.
 
@@ -213,21 +202,37 @@ class OAuthToken:
             OAuthToken: OAuthToken instance.
         """
         expires_at = None
-        if data.get("expires_at"):
-            expires_at = datetime.fromisoformat(data["expires_at"])
+        expires_at_raw = data.get("expires_at")
+        if isinstance(expires_at_raw, str) and expires_at_raw:
+            expires_at = datetime.fromisoformat(expires_at_raw)
+
+        access_token_raw = data.get("access_token", "")
+        access_token = access_token_raw if isinstance(access_token_raw, str) else ""
+
+        refresh_raw = data.get("refresh_token")
+        refresh_token = refresh_raw if isinstance(refresh_raw, str) else None
+
+        token_type_raw = data.get("token_type", "Bearer")
+        token_type = token_type_raw if isinstance(token_type_raw, str) else "Bearer"
+
+        scopes_raw = data.get("scopes", [])
+        scopes_list: list[str] = scopes_raw if isinstance(scopes_raw, list) else []
+
+        id_token_raw = data.get("id_token")
+        id_token = id_token_raw if isinstance(id_token_raw, str) else None
 
         _logger.debug(
             "oauth_token_deserialized",
-            has_refresh=bool(data.get("refresh_token")),
-            has_expiry=bool(data.get("expires_at")),
+            has_refresh=bool(refresh_token),
+            has_expiry=expires_at is not None,
         )
         return cls(
-            access_token=data["access_token"],
-            refresh_token=data.get("refresh_token"),
-            token_type=data.get("token_type", "Bearer"),
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type=token_type,
             expires_at=expires_at,
-            scopes=tuple(data.get("scopes", [])),
-            id_token=data.get("id_token"),
+            scopes=tuple(scopes_list),
+            id_token=id_token,
         )
 
 
@@ -554,6 +559,7 @@ class OAuthManager:
     async def start_authorization_flow(
         self,
         config: OAuthConfig,
+        *,
         open_browser: bool = True,
     ) -> str:
         """
@@ -687,7 +693,7 @@ class OAuthManager:
             error_body = e.response.text
             msg = f"Token exchange failed: {e.response.status_code} - {error_body}"
             raise OAuthTokenError(msg) from e
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, httpx.RequestError) as e:
             _logger.warning("oauth_code_exchange_failed", error=str(e))
             msg = f"Token exchange failed: {e}"
             raise OAuthTokenError(msg) from e
@@ -725,8 +731,8 @@ class OAuthManager:
             )
             _logger.debug("oauth_token_store_success", provider=provider.value)
             _logger.info("oauth_token_stored", provider=provider.value)
-        except Exception:
-            _logger.exception("oauth_token_store_failed", provider=provider.value)
+        except (OSError, KeyError, ValueError) as exc:
+            _logger.warning("oauth_token_store_failed", provider=provider.value, error=str(exc))
 
     async def _load_token(self, provider: OAuthProvider) -> OAuthToken | None:
         """
@@ -751,8 +757,8 @@ class OAuthManager:
             token_data = json.loads(creds.api_key)
             token = OAuthToken.from_dict(token_data)
             _logger.debug("oauth_token_load_success", provider=provider.value)
-        except Exception:
-            _logger.exception("oauth_token_load_failed", provider=provider.value)
+        except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
+            _logger.warning("oauth_token_load_failed", provider=provider.value, error=str(exc))
             return None
         else:
             return token
@@ -761,6 +767,7 @@ class OAuthManager:
         self,
         provider: OAuthProvider,
         config: OAuthConfig | None = None,
+        *,
         auto_refresh: bool = True,
     ) -> OAuthToken | None:
         """
@@ -849,7 +856,7 @@ class OAuthManager:
             _logger.warning("oauth_token_refresh_http_error", status_code=e.response.status_code, error=str(e))
             msg = f"Token refresh failed: {e.response.status_code}"
             raise OAuthTokenError(msg) from e
-        except Exception as e:
+        except (OSError, ConnectionError, TimeoutError, httpx.RequestError) as e:
             _logger.warning("oauth_token_refresh_failed", error=str(e))
             msg = f"Token refresh failed: {e}"
             raise OAuthTokenError(msg) from e
@@ -879,15 +886,15 @@ class OAuthManager:
                     data={"token": token.access_token},
                 )
                 _logger.info("oauth_token_revoked", provider=provider.value)
-            except Exception as e:
+            except (OSError, ConnectionError, TimeoutError, httpx.RequestError) as e:
                 _logger.warning("oauth_token_revocation_failed", error=str(e))
 
         if self._credential_store:
             provider_name = _oauth_provider_to_name(provider)
             try:
                 await self._credential_store.delete(provider_name)
-            except Exception:
-                _logger.exception("oauth_token_delete_failed", provider=provider.value)
+            except (OSError, KeyError, ValueError) as exc:
+                _logger.warning("oauth_token_delete_failed", provider=provider.value, error=str(exc))
 
         return True
 

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Runtime type registry for the HexPat pattern language evaluator."""
 
 from __future__ import annotations
@@ -43,24 +42,24 @@ class BuiltinTypes:
     """Registry of all built-in primitive types for the HexPat pattern language."""
 
     _TYPES: ClassVar[dict[str, HexPatType]] = {
-        "u8": HexPatType("u8", 1, False, None),
-        "u16": HexPatType("u16", 2, False, None),
-        "u32": HexPatType("u32", 4, False, None),
-        "u64": HexPatType("u64", 8, False, None),
-        "u128": HexPatType("u128", 16, False, None),
-        "s8": HexPatType("s8", 1, True, None),
-        "s16": HexPatType("s16", 2, True, None),
-        "s32": HexPatType("s32", 4, True, None),
-        "s64": HexPatType("s64", 8, True, None),
-        "s128": HexPatType("s128", 16, True, None),
-        "float": HexPatType("float", 4, False, None),
-        "double": HexPatType("double", 8, False, None),
-        "char": HexPatType("char", 1, False, None),
-        "char16": HexPatType("char16", 2, False, None),
-        "bool": HexPatType("bool", 1, False, None),
-        "str": HexPatType("str", -1, False, None),
-        "padding": HexPatType("padding", -1, False, None),
-        "auto": HexPatType("auto", -1, False, None),
+        "u8": HexPatType("u8", 1, signed=False, endian=None),
+        "u16": HexPatType("u16", 2, signed=False, endian=None),
+        "u32": HexPatType("u32", 4, signed=False, endian=None),
+        "u64": HexPatType("u64", 8, signed=False, endian=None),
+        "u128": HexPatType("u128", 16, signed=False, endian=None),
+        "s8": HexPatType("s8", 1, signed=True, endian=None),
+        "s16": HexPatType("s16", 2, signed=True, endian=None),
+        "s32": HexPatType("s32", 4, signed=True, endian=None),
+        "s64": HexPatType("s64", 8, signed=True, endian=None),
+        "s128": HexPatType("s128", 16, signed=True, endian=None),
+        "float": HexPatType("float", 4, signed=False, endian=None),
+        "double": HexPatType("double", 8, signed=False, endian=None),
+        "char": HexPatType("char", 1, signed=False, endian=None),
+        "char16": HexPatType("char16", 2, signed=False, endian=None),
+        "bool": HexPatType("bool", 1, signed=False, endian=None),
+        "str": HexPatType("str", -1, signed=False, endian=None),
+        "padding": HexPatType("padding", -1, signed=False, endian=None),
+        "auto": HexPatType("auto", -1, signed=False, endian=None),
     }
 
     @staticmethod
@@ -72,7 +71,7 @@ class BuiltinTypes:
             name: The primitive type name to look up.
 
         Returns:
-            The matching HexPatType, or None if the name is not a built-in type.
+            HexPatType | None: The matching HexPatType, or None if the name is not a built-in type.
         """
         return BuiltinTypes._TYPES.get(name)
 
@@ -82,7 +81,7 @@ class BuiltinTypes:
         Return the frozenset of all built-in primitive type names.
 
         Returns:
-            A frozenset containing every supported primitive type name.
+            frozenset[str]: A frozenset containing every supported primitive type name.
         """
         return frozenset(BuiltinTypes._TYPES)
 
@@ -158,7 +157,6 @@ class TypeRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize an empty TypeRegistry."""
         self._structs: dict[str, StructTypeInfo] = {}
         self._unions: dict[str, UnionTypeInfo] = {}
         self._enums: dict[str, EnumTypeInfo] = {}
@@ -245,7 +243,7 @@ class TypeRegistry:
             name: The type name to resolve.
 
         Returns:
-            The resolved type info, or None if the name is not registered.
+            HexPatType | StructTypeInfo | UnionTypeInfo | EnumTypeInfo | BitfieldTypeInfo | None: The resolved type info, or None if the name is not registered.
         """
         visited: set[str] = set()
         current = name
@@ -285,7 +283,7 @@ class TypeRegistry:
                 the returned HexPatType.
 
         Returns:
-            A HexPatType with the requested endianness applied, or None if the
+            HexPatType | None: A HexPatType with the requested endianness applied, or None if the
             name does not resolve to a primitive type.
         """
         resolved = self.resolve(name)

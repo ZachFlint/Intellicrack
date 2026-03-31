@@ -5,13 +5,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from intellicrack_hexcore import HexDocument
 
 
 class TestUndoRedo:
     """Tests covering the undo/redo stack behaviour under write operations."""
 
-    def test_can_undo_false_on_fresh_doc(self, empty_doc: Any) -> None:
+    def test_can_undo_false_on_fresh_doc(self, empty_doc: HexDocument) -> None:
         """Verify that a newly created document has no undo history.
 
         Args:
@@ -19,7 +23,7 @@ class TestUndoRedo:
         """
         assert not empty_doc.can_undo()
 
-    def test_can_redo_false_on_fresh_doc(self, empty_doc: Any) -> None:
+    def test_can_redo_false_on_fresh_doc(self, empty_doc: HexDocument) -> None:
         """Verify that a newly created document has no redo history.
 
         Args:
@@ -27,7 +31,7 @@ class TestUndoRedo:
         """
         assert not empty_doc.can_redo()
 
-    def test_write_enables_can_undo(self, sample_doc_from_bytes: Any) -> None:
+    def test_write_enables_can_undo(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that performing a write operation enables undo.
 
         Args:
@@ -36,7 +40,7 @@ class TestUndoRedo:
         sample_doc_from_bytes.write_bytes(0, b"\xff")
         assert sample_doc_from_bytes.can_undo()
 
-    def test_undo_restores_previous_data(self, sample_doc_from_bytes: Any) -> None:
+    def test_undo_restores_previous_data(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that undo() reverts the document to the state before the write.
 
         Args:
@@ -49,7 +53,7 @@ class TestUndoRedo:
         assert result is True
         assert sample_doc_from_bytes.read(0, 4) == original
 
-    def test_redo_restores_written_data(self, sample_doc_from_bytes: Any) -> None:
+    def test_redo_restores_written_data(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that redo() re-applies the undone write.
 
         Args:
@@ -63,7 +67,7 @@ class TestUndoRedo:
         assert result is True
         assert sample_doc_from_bytes.read(0, 4) == write_payload
 
-    def test_multiple_undo_steps(self, sample_doc_from_bytes: Any) -> None:
+    def test_multiple_undo_steps(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that successive undo calls walk back multiple operations.
 
         Args:
@@ -84,7 +88,7 @@ class TestUndoRedo:
         sample_doc_from_bytes.undo()
         assert sample_doc_from_bytes.read(0, 1) == original_0
 
-    def test_new_write_after_undo_clears_redo_stack(self, sample_doc_from_bytes: Any) -> None:
+    def test_new_write_after_undo_clears_redo_stack(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that writing after an undo invalidates the redo history.
 
         Args:
@@ -96,7 +100,7 @@ class TestUndoRedo:
         sample_doc_from_bytes.write_bytes(0, b"\xbb")
         assert not sample_doc_from_bytes.can_redo()
 
-    def test_can_redo_true_after_undo(self, sample_doc_from_bytes: Any) -> None:
+    def test_can_redo_true_after_undo(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that can_redo() is True immediately after an undo operation.
 
         Args:
@@ -106,7 +110,7 @@ class TestUndoRedo:
         sample_doc_from_bytes.undo()
         assert sample_doc_from_bytes.can_redo()
 
-    def test_undo_returns_false_when_stack_empty(self, empty_doc: Any) -> None:
+    def test_undo_returns_false_when_stack_empty(self, empty_doc: HexDocument) -> None:
         """Verify that undo() returns False when there is nothing to undo.
 
         Args:
@@ -114,7 +118,7 @@ class TestUndoRedo:
         """
         assert empty_doc.undo() is False
 
-    def test_redo_returns_false_when_stack_empty(self, empty_doc: Any) -> None:
+    def test_redo_returns_false_when_stack_empty(self, empty_doc: HexDocument) -> None:
         """Verify that redo() returns False when there is nothing to redo.
 
         Args:
@@ -126,7 +130,7 @@ class TestUndoRedo:
 class TestModificationTracking:
     """Tests covering is_modified() state transitions."""
 
-    def test_is_modified_false_on_fresh_open(self, sample_doc: Any) -> None:
+    def test_is_modified_false_on_fresh_open(self, sample_doc: HexDocument) -> None:
         """Verify that a freshly opened file-backed document is not modified.
 
         Args:
@@ -134,7 +138,7 @@ class TestModificationTracking:
         """
         assert not sample_doc.is_modified()
 
-    def test_is_modified_true_after_write(self, sample_doc_from_bytes: Any) -> None:
+    def test_is_modified_true_after_write(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that a write marks the document as modified.
 
         Args:
@@ -143,7 +147,7 @@ class TestModificationTracking:
         sample_doc_from_bytes.write_bytes(0, b"\xff")
         assert sample_doc_from_bytes.is_modified()
 
-    def test_is_modified_tracks_through_undo_redo(self, sample_doc_from_bytes: Any) -> None:
+    def test_is_modified_tracks_through_undo_redo(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify is_modified() reflects undo/redo transitions accurately.
 
         Args:

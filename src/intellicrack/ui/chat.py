@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Chat panel widget for the Intellicrack UI.
 
@@ -11,7 +10,7 @@ This module provides the chat interface for interacting with the AI orchestrator
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -26,9 +25,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.logging import get_logger
-from ..core.types import Message, ToolCall, ToolResult
-from .resources.font_manager import FontManager
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import Message, ToolCall, ToolResult
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -338,7 +337,7 @@ class ChatInput(QFrame):
                 }
             """)
 
-    def set_enabled(self, enabled: bool) -> None:
+    def set_enabled(self, *, enabled: bool) -> None:
         """
         Enable or disable the input.
 
@@ -464,7 +463,7 @@ class ChatPanel(QFrame):
         message = Message(
             role="assistant",
             content="",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
         self._messages.append(message)
 
@@ -507,14 +506,14 @@ class ChatPanel(QFrame):
                 if widget is not None:
                     widget.deleteLater()
 
-    def set_input_enabled(self, enabled: bool) -> None:
+    def set_input_enabled(self, *, enabled: bool) -> None:
         """
         Enable or disable the input widget.
 
         Args:
             enabled: Whether input should be enabled.
         """
-        self._input.set_enabled(enabled)
+        self._input.set_enabled(enabled=enabled)
 
     def _scroll_to_bottom(self) -> None:
         """Scroll the message area to the bottom."""

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Fix PyQt6 QtWidgets.pyi missing ``collections.abc`` import.
 
 PyQt6 6.10.x ships a ``QtWidgets.pyi`` type hint file that references
@@ -46,7 +51,7 @@ def _needs_patch(text: str) -> bool:
             r"^import\s+collections\s*,\s*(?!collections\.abc)",
             text,
             re.MULTILINE,
-        )
+        ),
     )
 
 

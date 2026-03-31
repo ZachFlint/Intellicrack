@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for process cleanup and resource management fixes.
 
 Validates that:
@@ -57,6 +62,19 @@ _BLOCKING_WAIT_TIMEOUT = 30
 # ─── 1. Process termination (sandbox_config.py finally-block pattern) ────────
 
 
+def _spawn_sleeper() -> subprocess.Popen[bytes]:
+    """Spawn a subprocess that sleeps for 60 seconds.
+
+    Returns:
+        subprocess.Popen[bytes]: The spawned process.
+    """
+    return subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(60)"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 @pytest.mark.asyncio
 async def test_terminate_tree_kills_running_process() -> None:
     """ProcessManager.terminate_tree kills a real running subprocess.
@@ -65,11 +83,7 @@ async def test_terminate_tree_kills_running_process() -> None:
     terminate_tree + unregister when the sandbox process is still alive.
     Reverting the fix (removing finally block) would leave the process running.
     """
-    process = subprocess.Popen(
-        [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    process = await asyncio.to_thread(_spawn_sleeper)
     pid = process.pid
 
     pm = ProcessManager.get_instance()
@@ -162,7 +176,7 @@ class _BlockingR2:
             _command: The r2 command (unused, blocks regardless).
 
         Returns:
-            A string that should never be reached in timeout tests.
+            str: A string that should never be reached in timeout tests.
         """
         _ = self._stop.wait(_BLOCKING_WAIT_TIMEOUT)
         return "never_returned"
@@ -183,7 +197,7 @@ class _FastR2:
             command: The r2 command to echo back.
 
         Returns:
-            Formatted result string.
+            str: Formatted result string.
         """
         return f"result:{command}"
 
@@ -210,31 +224,31 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
     """
     bridge = CutterBridge()
     blocker = _BlockingR2()
-    bridge._r2 = blocker
+    bridge.r2 = blocker
 
-    original_timeout: float = cutter_module._R2_COMMAND_TIMEOUT
-    cutter_module._R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
+    original_timeout: float = cutter_module.R2_COMMAND_TIMEOUT
+    cutter_module.R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
 
     try:
         start = time.monotonic()
         with pytest.raises(ToolError, match="cutter command timed out"):
-            _ = await bridge._r2_cmd("aaa")
+            _ = await bridge.r2_cmd("aaa")
         elapsed = time.monotonic() - start
 
         msg = f"Timeout should fire in ~0.5s, but took {elapsed:.1f}s. The asyncio.wait_for wrapper may be missing."
         assert elapsed < _ELAPSED_UPPER_BOUND, msg
     finally:
         blocker.release()
-        cutter_module._R2_COMMAND_TIMEOUT = original_timeout
+        cutter_module.R2_COMMAND_TIMEOUT = original_timeout
 
 
 @pytest.mark.asyncio
 async def test_r2_cmd_returns_result_within_timeout() -> None:
     """_r2_cmd returns normally when the command completes before timeout."""
     bridge = CutterBridge()
-    bridge._r2 = _FastR2()
+    bridge.r2 = _FastR2()
 
-    result = await bridge._r2_cmd("pd 10")
+    result = await bridge.r2_cmd("pd 10")
     assert result == "result:pd 10"
 
 
@@ -242,9 +256,9 @@ async def test_r2_cmd_returns_result_within_timeout() -> None:
 async def test_r2_cmd_converts_none_to_empty_string() -> None:
     """_r2_cmd converts None return from r2pipe to empty string."""
     bridge = CutterBridge()
-    bridge._r2 = _NoneR2()
+    bridge.r2 = _NoneR2()
 
-    result = await bridge._r2_cmd("?")
+    result = await bridge.r2_cmd("?")
     assert not result, "None r2 result should become empty string"
 
 
@@ -252,10 +266,10 @@ async def test_r2_cmd_converts_none_to_empty_string() -> None:
 async def test_r2_cmd_no_binary_raises_tool_error() -> None:
     """_r2_cmd raises ToolError when no binary is loaded (r2 is None)."""
     bridge = CutterBridge()
-    assert bridge._r2 is None
+    assert bridge.r2 is None
 
     with pytest.raises(ToolError):
-        _ = await bridge._r2_cmd("aaa")
+        _ = await bridge.r2_cmd("aaa")
 
 
 # ─── 3. QEMU pidfile retry logic (qemu.py) ──────────────────────────────────
@@ -263,8 +277,8 @@ async def test_r2_cmd_no_binary_raises_tool_error() -> None:
 
 def test_qemu_pidfile_retry_constants_are_reasonable() -> None:
     """Verify pidfile retry constants allow sufficient time for QEMU startup."""
-    max_retries = qemu_module._PIDFILE_MAX_RETRIES
-    retry_delay = qemu_module._PIDFILE_RETRY_DELAY
+    max_retries = qemu_module.PIDFILE_MAX_RETRIES
+    retry_delay = qemu_module.PIDFILE_RETRY_DELAY
 
     assert max_retries >= _MIN_RETRIES, "Need at least 2 retries for reliability"
     assert retry_delay >= _MIN_RETRY_DELAY, "Retry delay should be at least 1 second"
@@ -282,7 +296,7 @@ async def test_qemu_pidfile_retry_reads_immediate_file(tmp_path: Path) -> None:
     _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
 
     qemu_pid: int | None = None
-    for _attempt in range(qemu_module._PIDFILE_MAX_RETRIES):
+    for _attempt in range(qemu_module.PIDFILE_MAX_RETRIES):
         await asyncio.sleep(_SLEEP_DELAY_FIRST_RETRY)
         if pidfile.exists():
             try:
@@ -394,14 +408,14 @@ def test_ghidra_create_bridge_script_writes_real_file() -> None:
     tracked in _bridge_script_path for later cleanup.
     """
     bridge = GhidraBridge()
-    script_path = bridge._create_bridge_script()
+    script_path = bridge.create_bridge_script()
 
     try:
         assert script_path.exists(), "Bridge script should be created on disk"
         assert script_path.suffix == ".py"
         content = script_path.read_text()
         assert "ghidra_bridge_server" in content, "Script should contain ghidra_bridge_server import"
-        assert bridge._bridge_script_path == script_path, "Path should be tracked for cleanup"
+        assert bridge.bridge_script_path == script_path, "Path should be tracked for cleanup"
     finally:
         if script_path.exists():
             script_path.unlink(missing_ok=True)
@@ -418,13 +432,13 @@ async def test_ghidra_shutdown_deletes_bridge_script() -> None:
     cleaned up. Now shutdown() calls unlink() on it.
     """
     bridge = GhidraBridge()
-    script_path = bridge._create_bridge_script()
+    script_path = bridge.create_bridge_script()
     assert script_path.exists(), "Script should exist before shutdown"
 
     await bridge.shutdown()
 
     assert not script_path.exists(), "Bridge script should be deleted after shutdown"
-    assert bridge._bridge_script_path is None, "Path reference should be cleared after cleanup"
+    assert bridge.bridge_script_path is None, "Path reference should be cleared after cleanup"
 
 
 @pytest.mark.asyncio
@@ -435,7 +449,7 @@ async def test_ghidra_shutdown_removes_empty_parent_directory() -> None:
     shutdown() should also remove it.
     """
     bridge = GhidraBridge()
-    script_path = bridge._create_bridge_script()
+    script_path = bridge.create_bridge_script()
     parent_dir = script_path.parent
     assert parent_dir.exists()
 
@@ -452,7 +466,7 @@ async def test_ghidra_shutdown_preserves_nonempty_parent_directory() -> None:
     shutdown should only delete its own script, not the directory.
     """
     bridge = GhidraBridge()
-    script_path = bridge._create_bridge_script()
+    script_path = bridge.create_bridge_script()
     parent_dir = script_path.parent
 
     other_file = parent_dir / "other_session_script.py"
@@ -482,16 +496,8 @@ async def test_pid_based_kill_targets_specific_process() -> None:
     This test spawns two processes with the same Python executable, kills
     one by PID, and verifies the other survives.
     """
-    proc_a = subprocess.Popen(
-        [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    proc_b = subprocess.Popen(
-        [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    proc_a = await asyncio.to_thread(_spawn_sleeper)
+    proc_b = await asyncio.to_thread(_spawn_sleeper)
 
     try:
         assert psutil.pid_exists(proc_a.pid)

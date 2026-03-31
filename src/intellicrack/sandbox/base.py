@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Base sandbox protocol and types.
 
@@ -14,8 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-from ..core.logging import get_logger
-from ..core.types import SandboxError, SandboxTimeoutError
+from intellicrack.core.logging import get_logger
+from intellicrack.core.types import SandboxError, SandboxTimeoutError
 
 
 if TYPE_CHECKING:
@@ -324,7 +323,7 @@ class SandboxBase:
     async def run_command(
         self,
         command: str,
-        timeout: int | None = None,
+        time_limit: int | None = None,
         working_directory: str | None = None,
     ) -> tuple[int, str, str]:
         """
@@ -332,11 +331,8 @@ class SandboxBase:
 
         Args:
             command: Command to execute.
-            timeout: Optional timeout override.
+            time_limit: Optional timeout override in seconds.
             working_directory: Optional working directory.
-
-        Returns:
-            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
 
         Raises:
             SandboxError: If execution fails.
@@ -346,7 +342,7 @@ class SandboxBase:
             class_name=type(self).__name__,
             command=command,
         )
-        del timeout, working_directory
+        del time_limit, working_directory
         raise SandboxError(
             _ERR_EXEC_NOT_IMPL,
             _ERR_SANDBOX_NOT_IMPL_DETAIL,
@@ -356,7 +352,8 @@ class SandboxBase:
         self,
         binary_path: Path,
         args: list[str] | None = None,
-        timeout: int | None = None,
+        time_limit: int | None = None,
+        *,
         monitor: bool = True,
     ) -> ExecutionReport:
         """
@@ -365,11 +362,8 @@ class SandboxBase:
         Args:
             binary_path: Path to the binary to run.
             args: Optional command line arguments.
-            timeout: Optional timeout override.
+            time_limit: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
-
-        Returns:
-            ExecutionReport: ExecutionReport with results and activity.
 
         Raises:
             SandboxError: If execution fails.
@@ -379,7 +373,7 @@ class SandboxBase:
             class_name=type(self).__name__,
             binary_path=str(binary_path),
         )
-        del args, timeout, monitor
+        del args, time_limit, monitor
         raise SandboxError(
             _ERR_BINARY_EXEC_NOT_IMPL,
             _ERR_SANDBOX_NOT_IMPL_DETAIL,
@@ -436,9 +430,6 @@ class SandboxBase:
         Args:
             name: Snapshot name.
 
-        Returns:
-            str: The snapshot identifier.
-
         Raises:
             SandboxError: If not supported.
         """
@@ -469,9 +460,6 @@ class SandboxBase:
     async def list_snapshots(self) -> list[str]:
         """
         List available snapshots.
-
-        Returns:
-            list[str]: List of snapshot names.
 
         Raises:
             SandboxError: If not supported.

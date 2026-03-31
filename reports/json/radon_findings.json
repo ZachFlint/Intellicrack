@@ -1,132 +1,132 @@
 {
   "tool": "radon",
-  "generated": "2026-03-28T15:15:33.148188",
-  "total_findings": 151,
-  "total_files": 56,
+  "generated": "2026-03-31T03:09:15.017444+00:00",
+  "total_findings": 153,
+  "total_files": 57,
   "files": [
     {
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py",
       "count": 12,
       "findings": [
         {
-          "line": 1512,
+          "line": 1479,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._apply_numeric_op",
           "rank": "D",
           "complexity": 22,
           "message": "method 'HexPatEvaluator._apply_numeric_op' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1512:4: method 'HexPatEvaluator._apply_numeric_op' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1479:4: method 'HexPatEvaluator._apply_numeric_op' - complexity 22 (rank D)"
         },
         {
-          "line": 1326,
+          "line": 1297,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._read_primitive",
           "rank": "C",
           "complexity": 18,
           "message": "method 'HexPatEvaluator._read_primitive' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1326:4: method 'HexPatEvaluator._read_primitive' - complexity 18 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1297:4: method 'HexPatEvaluator._read_primitive' - complexity 18 (rank C)"
         },
         {
-          "line": 1394,
+          "line": 1365,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_expr",
           "rank": "C",
           "complexity": 18,
           "message": "method 'HexPatEvaluator._eval_expr' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1394:4: method 'HexPatEvaluator._eval_expr' - complexity 18 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1365:4: method 'HexPatEvaluator._eval_expr' - complexity 18 (rank C)"
         },
         {
-          "line": 1278,
+          "line": 1244,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_stmt_collect",
           "rank": "C",
           "complexity": 16,
           "message": "method 'HexPatEvaluator._eval_stmt_collect' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1278:4: method 'HexPatEvaluator._eval_stmt_collect' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1244:4: method 'HexPatEvaluator._eval_stmt_collect' - complexity 16 (rank C)"
         },
         {
-          "line": 1468,
+          "line": 1435,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_binary",
           "rank": "C",
           "complexity": 16,
           "message": "method 'HexPatEvaluator._eval_binary' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1468:4: method 'HexPatEvaluator._eval_binary' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1435:4: method 'HexPatEvaluator._eval_binary' - complexity 16 (rank C)"
         },
         {
-          "line": 1903,
+          "line": 1870,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_cast",
           "rank": "C",
           "complexity": 16,
           "message": "method 'HexPatEvaluator._eval_cast' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1903:4: method 'HexPatEvaluator._eval_cast' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1870:4: method 'HexPatEvaluator._eval_cast' - complexity 16 (rank C)"
         },
         {
-          "line": 383,
+          "line": 353,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._format_value",
           "rank": "C",
           "complexity": 15,
           "message": "method 'HexPatEvaluator._format_value' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:383:4: method 'HexPatEvaluator._format_value' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:353:4: method 'HexPatEvaluator._format_value' - complexity 15 (rank C)"
         },
         {
-          "line": 528,
+          "line": 495,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_stmt",
           "rank": "C",
           "complexity": 14,
           "message": "method 'HexPatEvaluator._eval_stmt' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:528:4: method 'HexPatEvaluator._eval_stmt' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:495:4: method 'HexPatEvaluator._eval_stmt' - complexity 14 (rank C)"
         },
         {
-          "line": 1735,
+          "line": 1702,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_assign",
           "rank": "C",
           "complexity": 13,
           "message": "method 'HexPatEvaluator._eval_assign' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1735:4: method 'HexPatEvaluator._eval_assign' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1702:4: method 'HexPatEvaluator._eval_assign' - complexity 13 (rank C)"
         },
         {
-          "line": 734,
+          "line": 701,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._instantiate_type",
           "rank": "C",
           "complexity": 12,
           "message": "method 'HexPatEvaluator._instantiate_type' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:734:4: method 'HexPatEvaluator._instantiate_type' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:701:4: method 'HexPatEvaluator._instantiate_type' - complexity 12 (rank C)"
         },
         {
-          "line": 1054,
+          "line": 1020,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._eval_array_type",
           "rank": "C",
           "complexity": 11,
           "message": "method 'HexPatEvaluator._eval_array_type' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1054:4: method 'HexPatEvaluator._eval_array_type' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1020:4: method 'HexPatEvaluator._eval_array_type' - complexity 11 (rank C)"
         },
         {
-          "line": 1830,
+          "line": 1797,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatEvaluator._sizeof_type_node",
           "rank": "C",
           "complexity": 11,
           "message": "method 'HexPatEvaluator._sizeof_type_node' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1830:4: method 'HexPatEvaluator._sizeof_type_node' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1797:4: method 'HexPatEvaluator._sizeof_type_node' - complexity 11 (rank C)"
         }
       ]
     },
@@ -135,74 +135,74 @@
       "count": 7,
       "findings": [
         {
-          "line": 172,
+          "line": 174,
           "column": 4,
           "entity_type": "M",
           "name": "PatternEditorMixin._on_pattern_compile",
           "rank": "C",
           "complexity": 17,
           "message": "method 'PatternEditorMixin._on_pattern_compile' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:172:4: method 'PatternEditorMixin._on_pattern_compile' - complexity 17 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:174:4: method 'PatternEditorMixin._on_pattern_compile' - complexity 17 (rank C)"
         },
         {
-          "line": 222,
+          "line": 224,
           "column": 4,
           "entity_type": "M",
           "name": "PatternEditorMixin._on_pattern_apply",
           "rank": "C",
           "complexity": 17,
           "message": "method 'PatternEditorMixin._on_pattern_apply' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:222:4: method 'PatternEditorMixin._on_pattern_apply' - complexity 17 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:224:4: method 'PatternEditorMixin._on_pattern_apply' - complexity 17 (rank C)"
         },
         {
-          "line": 466,
-          "column": 4,
-          "entity_type": "M",
-          "name": "PatternEditorMixin._populate_pattern_library",
-          "rank": "C",
-          "complexity": 15,
-          "message": "method 'PatternEditorMixin._populate_pattern_library' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:466:4: method 'PatternEditorMixin._populate_pattern_library' - complexity 15 (rank C)"
-        },
-        {
-          "line": 275,
+          "line": 277,
           "column": 4,
           "entity_type": "M",
           "name": "PatternEditorMixin._apply_via_interpreter",
           "rank": "C",
           "complexity": 14,
           "message": "method 'PatternEditorMixin._apply_via_interpreter' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:275:4: method 'PatternEditorMixin._apply_via_interpreter' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:277:4: method 'PatternEditorMixin._apply_via_interpreter' - complexity 14 (rank C)"
         },
         {
-          "line": 320,
+          "line": 322,
           "column": 4,
           "entity_type": "M",
           "name": "PatternEditorMixin._on_pattern_save",
           "rank": "C",
           "complexity": 14,
           "message": "method 'PatternEditorMixin._on_pattern_save' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:320:4: method 'PatternEditorMixin._on_pattern_save' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:322:4: method 'PatternEditorMixin._on_pattern_save' - complexity 14 (rank C)"
         },
         {
-          "line": 356,
+          "line": 468,
+          "column": 4,
+          "entity_type": "M",
+          "name": "PatternEditorMixin._populate_pattern_library",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'PatternEditorMixin._populate_pattern_library' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:468:4: method 'PatternEditorMixin._populate_pattern_library' - complexity 13 (rank C)"
+        },
+        {
+          "line": 358,
           "column": 4,
           "entity_type": "M",
           "name": "PatternEditorMixin._on_pattern_open",
           "rank": "C",
           "complexity": 12,
           "message": "method 'PatternEditorMixin._on_pattern_open' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:356:4: method 'PatternEditorMixin._on_pattern_open' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:358:4: method 'PatternEditorMixin._on_pattern_open' - complexity 12 (rank C)"
         },
         {
-          "line": 517,
+          "line": 519,
           "column": 4,
           "entity_type": "M",
           "name": "PatternEditorMixin._populate_hexpat_library_entries",
           "rank": "C",
           "complexity": 12,
           "message": "method 'PatternEditorMixin._populate_hexpat_library_entries' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:517:4: method 'PatternEditorMixin._populate_hexpat_library_entries' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:519:4: method 'PatternEditorMixin._populate_hexpat_library_entries' - complexity 12 (rank C)"
         }
       ]
     },
@@ -211,64 +211,120 @@
       "count": 6,
       "findings": [
         {
-          "line": 717,
+          "line": 723,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorWidget._format_group",
           "rank": "E",
           "complexity": 34,
           "message": "method 'HexEditorWidget._format_group' - complexity 34 (rank E)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:717:4: method 'HexEditorWidget._format_group' - complexity 34 (rank E)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:723:4: method 'HexEditorWidget._format_group' - complexity 34 (rank E)"
         },
         {
-          "line": 1180,
+          "line": 1188,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorWidget.keyPressEvent",
           "rank": "E",
           "complexity": 34,
           "message": "method 'HexEditorWidget.keyPressEvent' - complexity 34 (rank E)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1180:4: method 'HexEditorWidget.keyPressEvent' - complexity 34 (rank E)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1188:4: method 'HexEditorWidget.keyPressEvent' - complexity 34 (rank E)"
         },
         {
-          "line": 1753,
+          "line": 1772,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorWidget.copy_as_format",
           "rank": "D",
           "complexity": 27,
           "message": "method 'HexEditorWidget.copy_as_format' - complexity 27 (rank D)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1753:4: method 'HexEditorWidget.copy_as_format' - complexity 27 (rank D)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1772:4: method 'HexEditorWidget.copy_as_format' - complexity 27 (rank D)"
         },
         {
-          "line": 1436,
+          "line": 1444,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorWidget._do_paste",
           "rank": "C",
           "complexity": 17,
           "message": "method 'HexEditorWidget._do_paste' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1436:4: method 'HexEditorWidget._do_paste' - complexity 17 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1444:4: method 'HexEditorWidget._do_paste' - complexity 17 (rank C)"
         },
         {
-          "line": 1006,
+          "line": 1014,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorWidget._paint_ascii_byte",
           "rank": "C",
           "complexity": 15,
           "message": "method 'HexEditorWidget._paint_ascii_byte' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1006:4: method 'HexEditorWidget._paint_ascii_byte' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1014:4: method 'HexEditorWidget._paint_ascii_byte' - complexity 15 (rank C)"
         },
         {
-          "line": 1837,
+          "line": 1856,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorWidget.contextMenuEvent",
           "rank": "C",
           "complexity": 12,
           "message": "method 'HexEditorWidget.contextMenuEvent' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1837:4: method 'HexEditorWidget.contextMenuEvent' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1856:4: method 'HexEditorWidget.contextMenuEvent' - complexity 12 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 1741,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexEditorBridge.copy_as",
+          "rank": "E",
+          "complexity": 31,
+          "message": "method 'HexEditorBridge.copy_as' - complexity 31 (rank E)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:1741:4: method 'HexEditorBridge.copy_as' - complexity 31 (rank E)"
+        },
+        {
+          "line": 2868,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexEditorBridge.search_numeric",
+          "rank": "C",
+          "complexity": 16,
+          "message": "method 'HexEditorBridge.search_numeric' - complexity 16 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2868:4: method 'HexEditorBridge.search_numeric' - complexity 16 (rank C)"
+        },
+        {
+          "line": 2643,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexEditorBridge.calculate_hash_custom_crc",
+          "rank": "C",
+          "complexity": 12,
+          "message": "method 'HexEditorBridge.calculate_hash_custom_crc' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2643:4: method 'HexEditorBridge.calculate_hash_custom_crc' - complexity 12 (rank C)"
+        },
+        {
+          "line": 2934,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexEditorBridge.search_numeric_range",
+          "rank": "C",
+          "complexity": 12,
+          "message": "method 'HexEditorBridge.search_numeric_range' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2934:4: method 'HexEditorBridge.search_numeric_range' - complexity 12 (rank C)"
+        },
+        {
+          "line": 2389,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexEditorBridge.yara_scan_files",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'HexEditorBridge.yara_scan_files' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2389:4: method 'HexEditorBridge.yara_scan_files' - complexity 11 (rank C)"
         }
       ]
     },
@@ -277,34 +333,34 @@
       "count": 5,
       "findings": [
         {
-          "line": 1677,
+          "line": 1678,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.get_breakpoints",
           "rank": "C",
           "complexity": 15,
           "message": "method 'X64DbgBridge.get_breakpoints' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1677:4: method 'X64DbgBridge.get_breakpoints' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1678:4: method 'X64DbgBridge.get_breakpoints' - complexity 15 (rank C)"
         },
         {
-          "line": 2644,
+          "line": 2645,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.find_pattern",
           "rank": "C",
           "complexity": 15,
           "message": "method 'X64DbgBridge.find_pattern' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:2644:4: method 'X64DbgBridge.find_pattern' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:2645:4: method 'X64DbgBridge.find_pattern' - complexity 15 (rank C)"
         },
         {
-          "line": 1787,
+          "line": 1788,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.get_watchpoints",
           "rank": "C",
           "complexity": 14,
           "message": "method 'X64DbgBridge.get_watchpoints' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1787:4: method 'X64DbgBridge.get_watchpoints' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1788:4: method 'X64DbgBridge.get_watchpoints' - complexity 14 (rank C)"
         },
         {
           "line": 310,
@@ -317,14 +373,14 @@
           "raw": "src\\intellicrack\\bridges\\x64dbg.py:310:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)"
         },
         {
-          "line": 2132,
+          "line": 2133,
           "column": 4,
           "entity_type": "M",
           "name": "X64DbgBridge.get_memory_regions",
           "rank": "C",
           "complexity": 11,
           "message": "method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:2132:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:2133:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)"
         }
       ]
     },
@@ -333,54 +389,54 @@
       "count": 5,
       "findings": [
         {
-          "line": 1322,
+          "line": 1302,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatCodegen._gen_regular_field",
           "rank": "D",
           "complexity": 21,
           "message": "method 'HexPatCodegen._gen_regular_field' - complexity 21 (rank D)",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:1322:4: method 'HexPatCodegen._gen_regular_field' - complexity 21 (rank D)"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:1302:4: method 'HexPatCodegen._gen_regular_field' - complexity 21 (rank D)"
         },
         {
-          "line": 541,
+          "line": 526,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatLexer._read_multi_char_operator",
           "rank": "C",
           "complexity": 15,
           "message": "method 'HexPatLexer._read_multi_char_operator' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:541:4: method 'HexPatLexer._read_multi_char_operator' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:526:4: method 'HexPatLexer._read_multi_char_operator' - complexity 15 (rank C)"
         },
         {
-          "line": 1252,
+          "line": 1232,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatCodegen.generate",
           "rank": "C",
           "complexity": 14,
           "message": "method 'HexPatCodegen.generate' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:1252:4: method 'HexPatCodegen.generate' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:1232:4: method 'HexPatCodegen.generate' - complexity 14 (rank C)"
         },
         {
-          "line": 625,
+          "line": 610,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatLexer._skip_whitespace_and_comments",
           "rank": "C",
           "complexity": 13,
           "message": "method 'HexPatLexer._skip_whitespace_and_comments' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:625:4: method 'HexPatLexer._skip_whitespace_and_comments' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:610:4: method 'HexPatLexer._skip_whitespace_and_comments' - complexity 13 (rank C)"
         },
         {
-          "line": 1533,
+          "line": 1513,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatCodegen._eval_const_expr",
           "rank": "C",
           "complexity": 12,
           "message": "method 'HexPatCodegen._eval_const_expr' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:1533:4: method 'HexPatCodegen._eval_const_expr' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat_compiler.py:1513:4: method 'HexPatCodegen._eval_const_expr' - complexity 12 (rank C)"
         }
       ]
     },
@@ -389,347 +445,71 @@
       "count": 5,
       "findings": [
         {
-          "line": 292,
+          "line": 290,
           "column": 4,
           "entity_type": "M",
           "name": "MainWindow._restore_window_state",
           "rank": "C",
           "complexity": 14,
           "message": "method 'MainWindow._restore_window_state' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:292:4: method 'MainWindow._restore_window_state' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\ui\\app.py:290:4: method 'MainWindow._restore_window_state' - complexity 14 (rank C)"
         },
         {
-          "line": 1519,
+          "line": 1529,
           "column": 4,
           "entity_type": "M",
           "name": "MainWindow._on_refresh_models",
           "rank": "C",
           "complexity": 12,
           "message": "method 'MainWindow._on_refresh_models' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1519:4: method 'MainWindow._on_refresh_models' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\app.py:1529:4: method 'MainWindow._on_refresh_models' - complexity 12 (rank C)"
         },
         {
-          "line": 1884,
+          "line": 1924,
           "column": 4,
           "entity_type": "M",
           "name": "MainWindow._on_process_attached",
           "rank": "C",
           "complexity": 12,
           "message": "method 'MainWindow._on_process_attached' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1884:4: method 'MainWindow._on_process_attached' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\app.py:1924:4: method 'MainWindow._on_process_attached' - complexity 12 (rank C)"
         },
         {
-          "line": 1001,
+          "line": 1013,
           "column": 4,
           "entity_type": "M",
           "name": "MainWindow._on_tool_result",
           "rank": "C",
           "complexity": 11,
           "message": "method 'MainWindow._on_tool_result' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:1001:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\app.py:1013:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)"
         },
         {
-          "line": 2113,
+          "line": 2153,
           "column": 4,
           "entity_type": "M",
           "name": "MainWindow.closeEvent",
           "rank": "C",
           "complexity": 11,
           "message": "method 'MainWindow.closeEvent' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\app.py:2113:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": 221,
-          "column": 4,
-          "entity_type": "M",
-          "name": "SectionsMixin._auto_detect_file_type",
-          "rank": "C",
-          "complexity": 17,
-          "message": "method 'SectionsMixin._auto_detect_file_type' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:221:4: method 'SectionsMixin._auto_detect_file_type' - complexity 17 (rank C)"
-        },
-        {
-          "line": 78,
-          "column": 4,
-          "entity_type": "M",
-          "name": "SectionsMixin._populate_imports",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'SectionsMixin._populate_imports' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:78:4: method 'SectionsMixin._populate_imports' - complexity 13 (rank C)"
-        },
-        {
-          "line": 112,
-          "column": 4,
-          "entity_type": "M",
-          "name": "SectionsMixin._populate_exports",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'SectionsMixin._populate_exports' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:112:4: method 'SectionsMixin._populate_exports' - complexity 13 (rank C)"
-        },
-        {
-          "line": 147,
-          "column": 4,
-          "entity_type": "M",
-          "name": "SectionsMixin._populate_strings",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'SectionsMixin._populate_strings' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:147:4: method 'SectionsMixin._populate_strings' - complexity 13 (rank C)"
-        },
-        {
-          "line": 271,
-          "column": 4,
-          "entity_type": "M",
-          "name": "SectionsMixin._try_pattern_registry_match",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'SectionsMixin._try_pattern_registry_match' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:271:4: method 'SectionsMixin._try_pattern_registry_match' - complexity 13 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 1727,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexEditorBridge.copy_as",
-          "rank": "E",
-          "complexity": 31,
-          "message": "method 'HexEditorBridge.copy_as' - complexity 31 (rank E)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:1727:4: method 'HexEditorBridge.copy_as' - complexity 31 (rank E)"
-        },
-        {
-          "line": 2859,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexEditorBridge.search_numeric",
-          "rank": "C",
-          "complexity": 16,
-          "message": "method 'HexEditorBridge.search_numeric' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2859:4: method 'HexEditorBridge.search_numeric' - complexity 16 (rank C)"
-        },
-        {
-          "line": 2635,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexEditorBridge.calculate_hash_custom_crc",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'HexEditorBridge.calculate_hash_custom_crc' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2635:4: method 'HexEditorBridge.calculate_hash_custom_crc' - complexity 12 (rank C)"
-        },
-        {
-          "line": 2926,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexEditorBridge.search_numeric_range",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'HexEditorBridge.search_numeric_range' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2926:4: method 'HexEditorBridge.search_numeric_range' - complexity 12 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\hexpat\\parser.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 527,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatParser._parse_prefix",
-          "rank": "D",
-          "complexity": 21,
-          "message": "method 'HexPatParser._parse_prefix' - complexity 21 (rank D)",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:527:4: method 'HexPatParser._parse_prefix' - complexity 21 (rank D)"
-        },
-        {
-          "line": 709,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatParser._parse_statement",
-          "rank": "C",
-          "complexity": 16,
-          "message": "method 'HexPatParser._parse_statement' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:709:4: method 'HexPatParser._parse_statement' - complexity 16 (rank C)"
-        },
-        {
-          "line": 415,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatParser._parse_expression",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'HexPatParser._parse_expression' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:415:4: method 'HexPatParser._parse_expression' - complexity 13 (rank C)"
-        },
-        {
-          "line": 931,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatParser._parse_field_or_placement",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'HexPatParser._parse_field_or_placement' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:931:4: method 'HexPatParser._parse_field_or_placement' - complexity 13 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 90,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatPreprocessor.process",
-          "rank": "C",
-          "complexity": 17,
-          "message": "method 'HexPatPreprocessor.process' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:90:4: method 'HexPatPreprocessor.process' - complexity 17 (rank C)"
-        },
-        {
-          "line": 432,
-          "column": 0,
-          "entity_type": "F",
-          "name": "extract_pragmas_fast",
-          "rank": "C",
-          "complexity": 15,
-          "message": "function 'extract_pragmas_fast' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:432:0: function 'extract_pragmas_fast' - complexity 15 (rank C)"
-        },
-        {
-          "line": 360,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatPreprocessor._process_conditionals",
-          "rank": "C",
-          "complexity": 13,
-          "message": "method 'HexPatPreprocessor._process_conditionals' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:360:4: method 'HexPatPreprocessor._process_conditionals' - complexity 13 (rank C)"
-        },
-        {
-          "line": 210,
-          "column": 4,
-          "entity_type": "M",
-          "name": "HexPatPreprocessor._process_source",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'HexPatPreprocessor._process_source' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:210:4: method 'HexPatPreprocessor._process_source' - complexity 12 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\google.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 343,
-          "column": 4,
-          "entity_type": "M",
-          "name": "GoogleProvider.chat_stream",
-          "rank": "C",
-          "complexity": 20,
-          "message": "method 'GoogleProvider.chat_stream' - complexity 20 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:343:4: method 'GoogleProvider.chat_stream' - complexity 20 (rank C)"
-        },
-        {
-          "line": 546,
-          "column": 4,
-          "entity_type": "M",
-          "name": "GoogleProvider._parse_response",
-          "rank": "C",
-          "complexity": 18,
-          "message": "method 'GoogleProvider._parse_response' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:546:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)"
-        },
-        {
-          "line": 214,
-          "column": 4,
-          "entity_type": "M",
-          "name": "GoogleProvider.chat",
-          "rank": "C",
-          "complexity": 17,
-          "message": "method 'GoogleProvider.chat' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:214:4: method 'GoogleProvider.chat' - complexity 17 (rank C)"
-        },
-        {
-          "line": 584,
-          "column": 4,
-          "entity_type": "M",
-          "name": "GoogleProvider._convert_messages_to_provider_format",
-          "rank": "C",
-          "complexity": 15,
-          "message": "method 'GoogleProvider._convert_messages_to_provider_format' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\providers\\google.py:584:4: method 'GoogleProvider._convert_messages_to_provider_format' - complexity 15 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 930,
-          "column": 4,
-          "entity_type": "M",
-          "name": "LocalTransformersProvider._parse_tool_calls",
-          "rank": "C",
-          "complexity": 16,
-          "message": "method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:930:4: method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)"
-        },
-        {
-          "line": 461,
-          "column": 4,
-          "entity_type": "M",
-          "name": "LocalTransformersProvider.chat_stream",
-          "rank": "C",
-          "complexity": 15,
-          "message": "method 'LocalTransformersProvider.chat_stream' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:461:4: method 'LocalTransformersProvider.chat_stream' - complexity 15 (rank C)"
-        },
-        {
-          "line": 372,
-          "column": 4,
-          "entity_type": "M",
-          "name": "LocalTransformersProvider.chat",
-          "rank": "C",
-          "complexity": 12,
-          "message": "method 'LocalTransformersProvider.chat' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:372:4: method 'LocalTransformersProvider.chat' - complexity 12 (rank C)"
-        },
-        {
-          "line": 299,
-          "column": 4,
-          "entity_type": "M",
-          "name": "LocalTransformersProvider.list_models",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'LocalTransformersProvider.list_models' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:299:4: method 'LocalTransformersProvider.list_models' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\app.py:2153:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)"
         }
       ]
     },
     {
       "path": "src\\intellicrack\\ui\\session_manager.py",
-      "count": 4,
+      "count": 5,
       "findings": [
+        {
+          "line": 421,
+          "column": 4,
+          "entity_type": "M",
+          "name": "SessionManagerDialog._update_details",
+          "rank": "C",
+          "complexity": 19,
+          "message": "method 'SessionManagerDialog._update_details' - complexity 19 (rank C)",
+          "raw": "src\\intellicrack\\ui\\session_manager.py:421:4: method 'SessionManagerDialog._update_details' - complexity 19 (rank C)"
+        },
         {
           "line": 250,
           "column": 4,
@@ -751,24 +531,264 @@
           "raw": "src\\intellicrack\\ui\\session_manager.py:305:4: method 'SessionManagerDialog._load_sessions_from_disk' - complexity 12 (rank C)"
         },
         {
-          "line": 582,
+          "line": 592,
           "column": 4,
           "entity_type": "M",
           "name": "SessionManagerDialog._export_session",
           "rank": "C",
           "complexity": 12,
           "message": "method 'SessionManagerDialog._export_session' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:582:4: method 'SessionManagerDialog._export_session' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:592:4: method 'SessionManagerDialog._export_session' - complexity 12 (rank C)"
         },
         {
-          "line": 650,
+          "line": 660,
           "column": 4,
           "entity_type": "M",
           "name": "SessionManagerDialog._prepare_export_data",
           "rank": "C",
           "complexity": 11,
           "message": "method 'SessionManagerDialog._prepare_export_data' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\session_manager.py:650:4: method 'SessionManagerDialog._prepare_export_data' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\session_manager.py:660:4: method 'SessionManagerDialog._prepare_export_data' - complexity 11 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 224,
+          "column": 4,
+          "entity_type": "M",
+          "name": "SectionsMixin._auto_detect_file_type",
+          "rank": "C",
+          "complexity": 17,
+          "message": "method 'SectionsMixin._auto_detect_file_type' - complexity 17 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:224:4: method 'SectionsMixin._auto_detect_file_type' - complexity 17 (rank C)"
+        },
+        {
+          "line": 81,
+          "column": 4,
+          "entity_type": "M",
+          "name": "SectionsMixin._populate_imports",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'SectionsMixin._populate_imports' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:81:4: method 'SectionsMixin._populate_imports' - complexity 13 (rank C)"
+        },
+        {
+          "line": 115,
+          "column": 4,
+          "entity_type": "M",
+          "name": "SectionsMixin._populate_exports",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'SectionsMixin._populate_exports' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:115:4: method 'SectionsMixin._populate_exports' - complexity 13 (rank C)"
+        },
+        {
+          "line": 150,
+          "column": 4,
+          "entity_type": "M",
+          "name": "SectionsMixin._populate_strings",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'SectionsMixin._populate_strings' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:150:4: method 'SectionsMixin._populate_strings' - complexity 13 (rank C)"
+        },
+        {
+          "line": 274,
+          "column": 4,
+          "entity_type": "M",
+          "name": "SectionsMixin._try_pattern_registry_match",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'SectionsMixin._try_pattern_registry_match' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:274:4: method 'SectionsMixin._try_pattern_registry_match' - complexity 13 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\hexpat\\parser.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 496,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatParser._parse_prefix",
+          "rank": "D",
+          "complexity": 21,
+          "message": "method 'HexPatParser._parse_prefix' - complexity 21 (rank D)",
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:496:4: method 'HexPatParser._parse_prefix' - complexity 21 (rank D)"
+        },
+        {
+          "line": 672,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatParser._parse_statement",
+          "rank": "C",
+          "complexity": 16,
+          "message": "method 'HexPatParser._parse_statement' - complexity 16 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:672:4: method 'HexPatParser._parse_statement' - complexity 16 (rank C)"
+        },
+        {
+          "line": 387,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatParser._parse_expression",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'HexPatParser._parse_expression' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:387:4: method 'HexPatParser._parse_expression' - complexity 13 (rank C)"
+        },
+        {
+          "line": 879,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatParser._parse_field_or_placement",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'HexPatParser._parse_field_or_placement' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\parser.py:879:4: method 'HexPatParser._parse_field_or_placement' - complexity 13 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 82,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatPreprocessor.process",
+          "rank": "C",
+          "complexity": 17,
+          "message": "method 'HexPatPreprocessor.process' - complexity 17 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:82:4: method 'HexPatPreprocessor.process' - complexity 17 (rank C)"
+        },
+        {
+          "line": 417,
+          "column": 0,
+          "entity_type": "F",
+          "name": "extract_pragmas_fast",
+          "rank": "C",
+          "complexity": 15,
+          "message": "function 'extract_pragmas_fast' - complexity 15 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:417:0: function 'extract_pragmas_fast' - complexity 15 (rank C)"
+        },
+        {
+          "line": 345,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatPreprocessor._process_conditionals",
+          "rank": "C",
+          "complexity": 13,
+          "message": "method 'HexPatPreprocessor._process_conditionals' - complexity 13 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:345:4: method 'HexPatPreprocessor._process_conditionals' - complexity 13 (rank C)"
+        },
+        {
+          "line": 198,
+          "column": 4,
+          "entity_type": "M",
+          "name": "HexPatPreprocessor._process_source",
+          "rank": "C",
+          "complexity": 12,
+          "message": "method 'HexPatPreprocessor._process_source' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\core\\hexpat\\preprocessor.py:198:4: method 'HexPatPreprocessor._process_source' - complexity 12 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\google.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 344,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GoogleProvider.chat_stream",
+          "rank": "C",
+          "complexity": 20,
+          "message": "method 'GoogleProvider.chat_stream' - complexity 20 (rank C)",
+          "raw": "src\\intellicrack\\providers\\google.py:344:4: method 'GoogleProvider.chat_stream' - complexity 20 (rank C)"
+        },
+        {
+          "line": 548,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GoogleProvider._parse_response",
+          "rank": "C",
+          "complexity": 18,
+          "message": "method 'GoogleProvider._parse_response' - complexity 18 (rank C)",
+          "raw": "src\\intellicrack\\providers\\google.py:548:4: method 'GoogleProvider._parse_response' - complexity 18 (rank C)"
+        },
+        {
+          "line": 214,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GoogleProvider.chat",
+          "rank": "C",
+          "complexity": 17,
+          "message": "method 'GoogleProvider.chat' - complexity 17 (rank C)",
+          "raw": "src\\intellicrack\\providers\\google.py:214:4: method 'GoogleProvider.chat' - complexity 17 (rank C)"
+        },
+        {
+          "line": 586,
+          "column": 4,
+          "entity_type": "M",
+          "name": "GoogleProvider._convert_messages_to_provider_format",
+          "rank": "C",
+          "complexity": 15,
+          "message": "method 'GoogleProvider._convert_messages_to_provider_format' - complexity 15 (rank C)",
+          "raw": "src\\intellicrack\\providers\\google.py:586:4: method 'GoogleProvider._convert_messages_to_provider_format' - complexity 15 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 933,
+          "column": 4,
+          "entity_type": "M",
+          "name": "LocalTransformersProvider._parse_tool_calls",
+          "rank": "C",
+          "complexity": 16,
+          "message": "method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:933:4: method 'LocalTransformersProvider._parse_tool_calls' - complexity 16 (rank C)"
+        },
+        {
+          "line": 463,
+          "column": 4,
+          "entity_type": "M",
+          "name": "LocalTransformersProvider.chat_stream",
+          "rank": "C",
+          "complexity": 15,
+          "message": "method 'LocalTransformersProvider.chat_stream' - complexity 15 (rank C)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:463:4: method 'LocalTransformersProvider.chat_stream' - complexity 15 (rank C)"
+        },
+        {
+          "line": 373,
+          "column": 4,
+          "entity_type": "M",
+          "name": "LocalTransformersProvider.chat",
+          "rank": "C",
+          "complexity": 12,
+          "message": "method 'LocalTransformersProvider.chat' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:373:4: method 'LocalTransformersProvider.chat' - complexity 12 (rank C)"
+        },
+        {
+          "line": 300,
+          "column": 4,
+          "entity_type": "M",
+          "name": "LocalTransformersProvider.list_models",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'LocalTransformersProvider.list_models' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:300:4: method 'LocalTransformersProvider.list_models' - complexity 11 (rank C)"
         }
       ]
     },
@@ -807,14 +827,14 @@
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py:96:4: method 'PatchesMixin._on_export_patches' - complexity 15 (rank C)"
         },
         {
-          "line": 25,
+          "line": 24,
           "column": 0,
           "entity_type": "C",
           "name": "PatchesMixin",
           "rank": "C",
           "complexity": 13,
           "message": "class 'PatchesMixin' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py:25:0: class 'PatchesMixin' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py:24:0: class 'PatchesMixin' - complexity 13 (rank C)"
         }
       ]
     },
@@ -865,38 +885,74 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 546,
+          "column": 4,
+          "entity_type": "M",
+          "name": "FridaBridge.shutdown",
+          "rank": "C",
+          "complexity": 16,
+          "message": "method 'FridaBridge.shutdown' - complexity 16 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:546:4: method 'FridaBridge.shutdown' - complexity 16 (rank C)"
+        },
+        {
+          "line": 1148,
+          "column": 4,
+          "entity_type": "M",
+          "name": "FridaBridge.hook_function",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'FridaBridge.hook_function' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1148:4: method 'FridaBridge.hook_function' - complexity 11 (rank C)"
+        },
+        {
+          "line": 1804,
+          "column": 4,
+          "entity_type": "M",
+          "name": "FridaBridge.find_functions_named",
+          "rank": "C",
+          "complexity": 11,
+          "message": "method 'FridaBridge.find_functions_named' - complexity 11 (rank C)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1804:4: method 'FridaBridge.find_functions_named' - complexity 11 (rank C)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\hexpat\\lexer.py",
       "count": 3,
       "findings": [
         {
-          "line": 394,
+          "line": 365,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatLexer._scan_operator",
           "rank": "F",
           "complexity": 42,
           "message": "method 'HexPatLexer._scan_operator' - complexity 42 (rank F)",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:394:4: method 'HexPatLexer._scan_operator' - complexity 42 (rank F)"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:365:4: method 'HexPatLexer._scan_operator' - complexity 42 (rank F)"
         },
         {
-          "line": 295,
+          "line": 266,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatLexer._scan_number",
           "rank": "E",
           "complexity": 38,
           "message": "method 'HexPatLexer._scan_number' - complexity 38 (rank E)",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:295:4: method 'HexPatLexer._scan_number' - complexity 38 (rank E)"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:266:4: method 'HexPatLexer._scan_number' - complexity 38 (rank E)"
         },
         {
-          "line": 511,
+          "line": 483,
           "column": 4,
           "entity_type": "M",
           "name": "HexPatLexer._scan_token",
           "rank": "C",
           "complexity": 12,
           "message": "method 'HexPatLexer._scan_token' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:511:4: method 'HexPatLexer._scan_token' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\lexer.py:483:4: method 'HexPatLexer._scan_token' - complexity 12 (rank C)"
         }
       ]
     },
@@ -905,34 +961,34 @@
       "count": 3,
       "findings": [
         {
-          "line": 573,
+          "line": 577,
           "column": 4,
           "entity_type": "M",
           "name": "ModelDiscovery.filter",
           "rank": "C",
           "complexity": 20,
           "message": "method 'ModelDiscovery.filter' - complexity 20 (rank C)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:573:4: method 'ModelDiscovery.filter' - complexity 20 (rank C)"
+          "raw": "src\\intellicrack\\providers\\discovery.py:577:4: method 'ModelDiscovery.filter' - complexity 20 (rank C)"
         },
         {
-          "line": 685,
+          "line": 689,
           "column": 4,
           "entity_type": "M",
           "name": "ModelDiscovery.get_recommended_model",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ModelDiscovery.get_recommended_model' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:685:4: method 'ModelDiscovery.get_recommended_model' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\providers\\discovery.py:689:4: method 'ModelDiscovery.get_recommended_model' - complexity 16 (rank C)"
         },
         {
-          "line": 479,
+          "line": 482,
           "column": 4,
           "entity_type": "M",
           "name": "ModelDiscovery.discover_provider",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ModelDiscovery.discover_provider' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\discovery.py:479:4: method 'ModelDiscovery.discover_provider' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\discovery.py:482:4: method 'ModelDiscovery.discover_provider' - complexity 11 (rank C)"
         }
       ]
     },
@@ -941,14 +997,14 @@
       "count": 3,
       "findings": [
         {
-          "line": 447,
+          "line": 448,
           "column": 4,
           "entity_type": "M",
           "name": "HuggingFaceProvider.chat_stream",
           "rank": "D",
           "complexity": 22,
           "message": "method 'HuggingFaceProvider.chat_stream' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:447:4: method 'HuggingFaceProvider.chat_stream' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\providers\\huggingface.py:448:4: method 'HuggingFaceProvider.chat_stream' - complexity 22 (rank D)"
         },
         {
           "line": 166,
@@ -977,14 +1033,14 @@
       "count": 3,
       "findings": [
         {
-          "line": 390,
+          "line": 391,
           "column": 4,
           "entity_type": "M",
           "name": "OpenRouterProvider.chat_stream",
           "rank": "D",
           "complexity": 22,
           "message": "method 'OpenRouterProvider.chat_stream' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\providers\\openrouter.py:390:4: method 'OpenRouterProvider.chat_stream' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\providers\\openrouter.py:391:4: method 'OpenRouterProvider.chat_stream' - complexity 22 (rank D)"
         },
         {
           "line": 223,
@@ -1013,34 +1069,34 @@
       "count": 3,
       "findings": [
         {
-          "line": 839,
+          "line": 858,
           "column": 4,
           "entity_type": "M",
           "name": "QEMUSandbox._build_qemu_command",
           "rank": "C",
           "complexity": 16,
           "message": "method 'QEMUSandbox._build_qemu_command' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:839:4: method 'QEMUSandbox._build_qemu_command' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:858:4: method 'QEMUSandbox._build_qemu_command' - complexity 16 (rank C)"
         },
         {
-          "line": 1664,
+          "line": 1700,
           "column": 4,
           "entity_type": "M",
           "name": "QEMUSandbox.run_binary",
           "rank": "C",
           "complexity": 14,
           "message": "method 'QEMUSandbox.run_binary' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1664:4: method 'QEMUSandbox.run_binary' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1700:4: method 'QEMUSandbox.run_binary' - complexity 14 (rank C)"
         },
         {
-          "line": 1829,
+          "line": 1868,
           "column": 4,
           "entity_type": "M",
           "name": "QEMUSandbox._parse_network_log",
           "rank": "C",
           "complexity": 12,
           "message": "method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1829:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1868:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1069,14 +1125,14 @@
           "raw": "src\\intellicrack\\ui\\provider_config.py:565:4: method 'ModelRefreshWorker._fetch_models' - complexity 12 (rank C)"
         },
         {
-          "line": 1895,
+          "line": 1910,
           "column": 4,
           "entity_type": "M",
           "name": "ProviderSettingsWidget._load_settings",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ProviderSettingsWidget._load_settings' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1895:4: method 'ProviderSettingsWidget._load_settings' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1910:4: method 'ProviderSettingsWidget._load_settings' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1085,70 +1141,34 @@
       "count": 3,
       "findings": [
         {
-          "line": 817,
+          "line": 825,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryPanel._parse_elf_sections",
           "rank": "C",
           "complexity": 13,
           "message": "method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:817:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:825:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)"
         },
         {
-          "line": 582,
+          "line": 588,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryPanel._parse_pe_sections",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:582:4: method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:588:4: method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)"
         },
         {
-          "line": 772,
+          "line": 781,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryPanel._parse_pe_ilt_entries",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:772:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 420,
-          "column": 4,
-          "entity_type": "M",
-          "name": "CFGGraphScene._compute_layers",
-          "rank": "C",
-          "complexity": 16,
-          "message": "method 'CFGGraphScene._compute_layers' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:420:4: method 'CFGGraphScene._compute_layers' - complexity 16 (rank C)"
-        },
-        {
-          "line": 315,
-          "column": 4,
-          "entity_type": "M",
-          "name": "CFGGraphScene.load_graph",
-          "rank": "C",
-          "complexity": 14,
-          "message": "method 'CFGGraphScene.load_graph' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:315:4: method 'CFGGraphScene.load_graph' - complexity 14 (rank C)"
-        },
-        {
-          "line": 303,
-          "column": 0,
-          "entity_type": "C",
-          "name": "CFGGraphScene",
-          "rank": "C",
-          "complexity": 11,
-          "message": "class 'CFGGraphScene' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:303:0: class 'CFGGraphScene' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:781:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1157,50 +1177,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 559,
+          "line": 560,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryBridge._detect_architecture",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:559:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\binary.py:560:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)"
         },
         {
-          "line": 674,
+          "line": 675,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryBridge._get_imports_internal",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\binary.py:674:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 546,
-          "column": 4,
-          "entity_type": "M",
-          "name": "FridaBridge.shutdown",
-          "rank": "C",
-          "complexity": 16,
-          "message": "method 'FridaBridge.shutdown' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:546:4: method 'FridaBridge.shutdown' - complexity 16 (rank C)"
-        },
-        {
-          "line": 1800,
-          "column": 4,
-          "entity_type": "M",
-          "name": "FridaBridge.find_functions_named",
-          "rank": "C",
-          "complexity": 11,
-          "message": "method 'FridaBridge.find_functions_named' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py:1800:4: method 'FridaBridge.find_functions_named' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\binary.py:675:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1209,24 +1203,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 241,
+          "line": 239,
           "column": 4,
           "entity_type": "M",
           "name": "ToolInstaller.find_tool",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ToolInstaller.find_tool' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\installer.py:241:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\installer.py:239:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)"
         },
         {
-          "line": 588,
+          "line": 587,
           "column": 4,
           "entity_type": "M",
           "name": "ToolInstaller._get_latest_release_url",
           "rank": "C",
           "complexity": 16,
           "message": "method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\installer.py:588:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\installer.py:587:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)"
         }
       ]
     },
@@ -1235,24 +1229,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 595,
+          "line": 594,
           "column": 0,
           "entity_type": "F",
           "name": "get_schema_for_provider",
           "rank": "C",
           "complexity": 17,
           "message": "function 'get_schema_for_provider' - complexity 17 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:595:0: function 'get_schema_for_provider' - complexity 17 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\schemas.py:594:0: function 'get_schema_for_provider' - complexity 17 (rank C)"
         },
         {
-          "line": 313,
+          "line": 312,
           "column": 0,
           "entity_type": "F",
           "name": "validate_tool_parameter",
           "rank": "C",
           "complexity": 11,
           "message": "function 'validate_tool_parameter' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:313:0: function 'validate_tool_parameter' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\schemas.py:312:0: function 'validate_tool_parameter' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1261,24 +1255,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 293,
+          "line": 287,
           "column": 4,
           "entity_type": "M",
           "name": "HexDisassembler.auto_detect_arch",
           "rank": "D",
           "complexity": 29,
           "message": "method 'HexDisassembler.auto_detect_arch' - complexity 29 (rank D)",
-          "raw": "src\\intellicrack\\core\\disassembler.py:293:4: method 'HexDisassembler.auto_detect_arch' - complexity 29 (rank D)"
+          "raw": "src\\intellicrack\\core\\disassembler.py:287:4: method 'HexDisassembler.auto_detect_arch' - complexity 29 (rank D)"
         },
         {
-          "line": 140,
+          "line": 138,
           "column": 4,
           "entity_type": "M",
           "name": "HexDisassembler._resolve_arch_mode",
           "rank": "C",
           "complexity": 19,
           "message": "method 'HexDisassembler._resolve_arch_mode' - complexity 19 (rank C)",
-          "raw": "src\\intellicrack\\core\\disassembler.py:140:4: method 'HexDisassembler._resolve_arch_mode' - complexity 19 (rank C)"
+          "raw": "src\\intellicrack\\core\\disassembler.py:138:4: method 'HexDisassembler._resolve_arch_mode' - complexity 19 (rank C)"
         }
       ]
     },
@@ -1287,24 +1281,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 429,
+          "line": 430,
           "column": 4,
           "entity_type": "M",
           "name": "Orchestrator._run_agent_loop",
           "rank": "C",
           "complexity": 13,
           "message": "method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:429:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:430:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)"
         },
         {
-          "line": 1707,
+          "line": 1711,
           "column": 4,
           "entity_type": "M",
           "name": "Orchestrator.shutdown",
           "rank": "C",
           "complexity": 12,
           "message": "method 'Orchestrator.shutdown' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:1707:4: method 'Orchestrator.shutdown' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:1711:4: method 'Orchestrator.shutdown' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1313,24 +1307,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 93,
+          "line": 103,
           "column": 0,
           "entity_type": "F",
           "name": "_eval_ast_node",
           "rank": "D",
           "complexity": 23,
           "message": "function '_eval_ast_node' - complexity 23 (rank D)",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py:93:0: function '_eval_ast_node' - complexity 23 (rank D)"
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py:103:0: function '_eval_ast_node' - complexity 23 (rank D)"
         },
         {
-          "line": 287,
+          "line": 297,
           "column": 4,
           "entity_type": "M",
           "name": "RustTransformNode.process",
           "rank": "C",
           "complexity": 12,
           "message": "method 'RustTransformNode.process' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py:287:4: method 'RustTransformNode.process' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py:297:4: method 'RustTransformNode.process' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1339,14 +1333,14 @@
       "count": 2,
       "findings": [
         {
-          "line": 431,
+          "line": 432,
           "column": 4,
           "entity_type": "M",
           "name": "AnthropicProvider.chat_stream",
           "rank": "C",
           "complexity": 16,
           "message": "method 'AnthropicProvider.chat_stream' - complexity 16 (rank C)",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:431:4: method 'AnthropicProvider.chat_stream' - complexity 16 (rank C)"
+          "raw": "src\\intellicrack\\providers\\anthropic.py:432:4: method 'AnthropicProvider.chat_stream' - complexity 16 (rank C)"
         },
         {
           "line": 212,
@@ -1365,14 +1359,14 @@
       "count": 2,
       "findings": [
         {
-          "line": 424,
+          "line": 425,
           "column": 4,
           "entity_type": "M",
           "name": "GrokProvider.chat_stream",
           "rank": "D",
           "complexity": 24,
           "message": "method 'GrokProvider.chat_stream' - complexity 24 (rank D)",
-          "raw": "src\\intellicrack\\providers\\grok.py:424:4: method 'GrokProvider.chat_stream' - complexity 24 (rank D)"
+          "raw": "src\\intellicrack\\providers\\grok.py:425:4: method 'GrokProvider.chat_stream' - complexity 24 (rank D)"
         },
         {
           "line": 241,
@@ -1417,14 +1411,14 @@
       "count": 2,
       "findings": [
         {
-          "line": 582,
+          "line": 584,
           "column": 4,
           "entity_type": "M",
           "name": "OllamaProvider.chat_stream",
           "rank": "C",
           "complexity": 18,
           "message": "method 'OllamaProvider.chat_stream' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\providers\\ollama.py:582:4: method 'OllamaProvider.chat_stream' - complexity 18 (rank C)"
+          "raw": "src\\intellicrack\\providers\\ollama.py:584:4: method 'OllamaProvider.chat_stream' - complexity 18 (rank C)"
         },
         {
           "line": 340,
@@ -1443,14 +1437,14 @@
       "count": 2,
       "findings": [
         {
-          "line": 466,
+          "line": 467,
           "column": 4,
           "entity_type": "M",
           "name": "OpenAIProvider.chat_stream",
           "rank": "D",
           "complexity": 24,
           "message": "method 'OpenAIProvider.chat_stream' - complexity 24 (rank D)",
-          "raw": "src\\intellicrack\\providers\\openai.py:466:4: method 'OpenAIProvider.chat_stream' - complexity 24 (rank D)"
+          "raw": "src\\intellicrack\\providers\\openai.py:467:4: method 'OpenAIProvider.chat_stream' - complexity 24 (rank D)"
         },
         {
           "line": 272,
@@ -1469,24 +1463,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 220,
+          "line": 219,
           "column": 0,
           "entity_type": "F",
           "name": "get_xpu_device_info",
           "rank": "D",
           "complexity": 22,
           "message": "function 'get_xpu_device_info' - complexity 22 (rank D)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:220:0: function 'get_xpu_device_info' - complexity 22 (rank D)"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:219:0: function 'get_xpu_device_info' - complexity 22 (rank D)"
         },
         {
-          "line": 431,
+          "line": 430,
           "column": 0,
           "entity_type": "F",
           "name": "get_xpu_memory_info",
           "rank": "C",
           "complexity": 11,
           "message": "function 'get_xpu_memory_info' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\xpu_utils.py:431:0: function 'get_xpu_memory_info' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\xpu_utils.py:430:0: function 'get_xpu_memory_info' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1495,24 +1489,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 312,
+          "line": 319,
           "column": 4,
           "entity_type": "M",
           "name": "WindowsSandbox._generate_wsb_config",
           "rank": "C",
           "complexity": 12,
           "message": "method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:312:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:319:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)"
         },
         {
-          "line": 562,
+          "line": 575,
           "column": 4,
           "entity_type": "M",
           "name": "WindowsSandbox.run_binary",
           "rank": "C",
           "complexity": 12,
           "message": "method 'WindowsSandbox.run_binary' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:562:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\windows.py:575:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1521,24 +1515,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 1571,
+          "line": 1584,
           "column": 4,
           "entity_type": "M",
           "name": "ToolOutputPanel._on_tab_close_requested",
           "rank": "C",
           "complexity": 18,
           "message": "method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1571:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tools.py:1584:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)"
         },
         {
-          "line": 1634,
+          "line": 1647,
           "column": 4,
           "entity_type": "M",
           "name": "ToolOutputPanel.close_embedded_tools",
           "rank": "C",
           "complexity": 14,
           "message": "method 'ToolOutputPanel.close_embedded_tools' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tools.py:1634:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tools.py:1647:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 14 (rank C)"
         }
       ]
     },
@@ -1547,24 +1541,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 433,
+          "line": 440,
           "column": 4,
           "entity_type": "M",
           "name": "ToolStatusCheckWorker._check_ghidra",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:433:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:440:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)"
         },
         {
-          "line": 502,
+          "line": 509,
           "column": 4,
           "entity_type": "M",
           "name": "ToolStatusCheckWorker._check_cutter",
           "rank": "C",
           "complexity": 11,
           "message": "method 'ToolStatusCheckWorker._check_cutter' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\tool_config.py:502:4: method 'ToolStatusCheckWorker._check_cutter' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\tool_config.py:509:4: method 'ToolStatusCheckWorker._check_cutter' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1573,24 +1567,24 @@
       "count": 2,
       "findings": [
         {
-          "line": 652,
+          "line": 655,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorPanel._on_send_to_ai",
           "rank": "C",
           "complexity": 13,
           "message": "method 'HexEditorPanel._on_send_to_ai' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:652:4: method 'HexEditorPanel._on_send_to_ai' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:655:4: method 'HexEditorPanel._on_send_to_ai' - complexity 13 (rank C)"
         },
         {
-          "line": 491,
+          "line": 494,
           "column": 4,
           "entity_type": "M",
           "name": "HexEditorPanel.load_file",
           "rank": "C",
           "complexity": 11,
           "message": "method 'HexEditorPanel.load_file' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:491:4: method 'HexEditorPanel.load_file' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:494:4: method 'HexEditorPanel.load_file' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1599,14 +1593,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 1151,
+          "line": 1156,
           "column": 4,
           "entity_type": "M",
           "name": "ProcessBridge.search_pattern",
           "rank": "C",
           "complexity": 14,
           "message": "method 'ProcessBridge.search_pattern' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\bridges\\process.py:1151:4: method 'ProcessBridge.search_pattern' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\bridges\\process.py:1156:4: method 'ProcessBridge.search_pattern' - complexity 14 (rank C)"
         }
       ]
     },
@@ -1615,14 +1609,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 437,
+          "line": 440,
           "column": 0,
           "entity_type": "F",
           "name": "_sanitize_arguments",
           "rank": "C",
           "complexity": 11,
           "message": "function '_sanitize_arguments' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\core\\logging.py:437:0: function '_sanitize_arguments' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\core\\logging.py:440:0: function '_sanitize_arguments' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1631,14 +1625,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 273,
+          "line": 294,
           "column": 4,
           "entity_type": "M",
           "name": "ProcessManager._sync_cleanup",
           "rank": "C",
-          "complexity": 13,
-          "message": "method 'ProcessManager._sync_cleanup' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\core\\process_manager.py:273:4: method 'ProcessManager._sync_cleanup' - complexity 13 (rank C)"
+          "complexity": 14,
+          "message": "method 'ProcessManager._sync_cleanup' - complexity 14 (rank C)",
+          "raw": "src\\intellicrack\\core\\process_manager.py:294:4: method 'ProcessManager._sync_cleanup' - complexity 14 (rank C)"
         }
       ]
     },
@@ -1679,14 +1673,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 145,
+          "line": 138,
           "column": 4,
           "entity_type": "M",
           "name": "PatternRegistry.match_file",
           "rank": "C",
           "complexity": 12,
           "message": "method 'PatternRegistry.match_file' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:145:4: method 'PatternRegistry.match_file' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:138:4: method 'PatternRegistry.match_file' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1711,14 +1705,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 563,
+          "line": 558,
           "column": 4,
           "entity_type": "M",
           "name": "CredentialStore.validate",
           "rank": "C",
           "complexity": 15,
           "message": "method 'CredentialStore.validate' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\credentials\\store.py:563:4: method 'CredentialStore.validate' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\credentials\\store.py:558:4: method 'CredentialStore.validate' - complexity 15 (rank C)"
         }
       ]
     },
@@ -1727,14 +1721,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 489,
+          "line": 532,
           "column": 4,
           "entity_type": "M",
           "name": "LLMProviderBase._convert_messages_to_openai_format",
           "rank": "C",
           "complexity": 11,
           "message": "method 'LLMProviderBase._convert_messages_to_openai_format' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\providers\\base.py:489:4: method 'LLMProviderBase._convert_messages_to_openai_format' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\providers\\base.py:532:4: method 'LLMProviderBase._convert_messages_to_openai_format' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1743,14 +1737,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 152,
+          "line": 143,
           "column": 4,
           "entity_type": "M",
           "name": "SandboxManager.create",
           "rank": "C",
           "complexity": 11,
           "message": "method 'SandboxManager.create' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\sandbox\\manager.py:152:4: method 'SandboxManager.create' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\sandbox\\manager.py:143:4: method 'SandboxManager.create' - complexity 11 (rank C)"
         }
       ]
     },
@@ -1759,14 +1753,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 806,
+          "line": 808,
           "column": 4,
           "entity_type": "M",
           "name": "PythonSyntaxHighlighter._highlight_triple_quotes",
           "rank": "C",
           "complexity": 12,
           "message": "method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)",
-          "raw": "src\\intellicrack\\ui\\highlighter.py:806:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)"
+          "raw": "src\\intellicrack\\ui\\highlighter.py:808:4: method 'PythonSyntaxHighlighter._highlight_triple_quotes' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1775,14 +1769,30 @@
       "count": 1,
       "findings": [
         {
-          "line": 99,
+          "line": 100,
           "column": 4,
           "entity_type": "M",
           "name": "SandboxTestWorker.run",
           "rank": "C",
           "complexity": 15,
           "message": "method 'SandboxTestWorker.run' - complexity 15 (rank C)",
-          "raw": "src\\intellicrack\\ui\\sandbox_config.py:99:4: method 'SandboxTestWorker.run' - complexity 15 (rank C)"
+          "raw": "src\\intellicrack\\ui\\sandbox_config.py:100:4: method 'SandboxTestWorker.run' - complexity 15 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 440,
+          "column": 4,
+          "entity_type": "M",
+          "name": "CFGGraphScene._compute_layers",
+          "rank": "C",
+          "complexity": 16,
+          "message": "method 'CFGGraphScene._compute_layers' - complexity 16 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\graph_view.py:440:4: method 'CFGGraphScene._compute_layers' - complexity 16 (rank C)"
         }
       ]
     },
@@ -1791,14 +1801,30 @@
       "count": 1,
       "findings": [
         {
-          "line": 179,
+          "line": 181,
           "column": 0,
           "entity_type": "F",
           "name": "_ast_eval_node",
           "rank": "C",
           "complexity": 14,
           "message": "function '_ast_eval_node' - complexity 14 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:179:0: function '_ast_eval_node' - complexity 14 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py:181:0: function '_ast_eval_node' - complexity 14 (rank C)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 54,
+          "column": 0,
+          "entity_type": "F",
+          "name": "_find_hxd_executable",
+          "rank": "C",
+          "complexity": 12,
+          "message": "function '_find_hxd_executable' - complexity 12 (rank C)",
+          "raw": "src\\intellicrack\\ui\\panels\\hxd_panel.py:54:0: function '_find_hxd_executable' - complexity 12 (rank C)"
         }
       ]
     },
@@ -1823,14 +1849,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 501,
+          "line": 500,
           "column": 4,
           "entity_type": "M",
           "name": "SearchMixin._on_numeric_search",
           "rank": "C",
           "complexity": 20,
           "message": "method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:501:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:500:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)"
         }
       ]
     },

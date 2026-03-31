@@ -1,8 +1,8 @@
 {
   "tool": "blinter",
-  "generated": "2026-03-28T15:26:55.442777",
-  "total_findings": 19,
-  "total_files": 10,
+  "generated": "2026-03-31T03:19:40.327484+00:00",
+  "total_findings": 33,
+  "total_files": 17,
   "files": [
     {
       "path": "D:\\Intellicrack\\scripts\\build-cli-launcher.cmd",
@@ -57,7 +57,51 @@
       ]
     },
     {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-a1127576\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
       "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-a18bc8fe\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-a1c30ab0\\scripts\\build-cli-launcher.cmd",
       "count": 2,
       "findings": [
         {
@@ -101,7 +145,51 @@
       ]
     },
     {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-a54bd3a3\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
       "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-a57053be\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-a7106281\\scripts\\build-cli-launcher.cmd",
       "count": 2,
       "findings": [
         {
@@ -167,7 +255,73 @@
       ]
     },
     {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-aca90621\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-ad44f135\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
       "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-ad7f5752\\scripts\\build-cli-launcher.cmd",
+      "count": 2,
+      "findings": [
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 7: Missing error handling (W025)"
+        },
+        {
+          "line": 7,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC011",
+          "message": "Unvalidated path traversal",
+          "raw": "Line 7: Unvalidated path traversal (SEC011)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\.claude\\worktrees\\agent-adcc5316\\scripts\\build-cli-launcher.cmd",
       "count": 2,
       "findings": [
         {

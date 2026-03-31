@@ -12,21 +12,24 @@ import pytest
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
 pytest.importorskip("capstone", reason="capstone not installed")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -49,7 +52,7 @@ _EXPECTED_INSN_KEYS: set[str] = {"address", "bytes", "mnemonic", "operands", "si
 class TestDisassemblePeTextSection:
     """Tests targeting the .text section of the minimal PE binary with known 0xCC bytes."""
 
-    def test_disassemble_pe_text_int3_mnemonic(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_int3_mnemonic(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that 0xCC bytes at PE .text offset disassemble as int3.
 
         Args:
@@ -59,7 +62,7 @@ class TestDisassemblePeTextSection:
         assert results
         assert results[0]["mnemonic"] == "int3"
 
-    def test_disassemble_pe_text_count_1_returns_exactly_one(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_count_1_returns_exactly_one(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that count=1 returns exactly 1 instruction.
 
         Args:
@@ -68,7 +71,7 @@ class TestDisassemblePeTextSection:
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=1, arch="x86", mode="64"))
         assert len(results) == 1
 
-    def test_disassemble_pe_text_count_4_returns_up_to_4(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_count_4_returns_up_to_4(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that count=4 on 4 INT3 bytes returns at most 4 instructions.
 
         Args:
@@ -77,7 +80,7 @@ class TestDisassemblePeTextSection:
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=4, arch="x86", mode="64"))
         assert 1 <= len(results) <= 4
 
-    def test_disassemble_pe_text_address_equals_offset(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_address_equals_offset(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the first instruction address equals the PE .text offset.
 
         Args:
@@ -87,7 +90,7 @@ class TestDisassemblePeTextSection:
         assert len(results) == 1
         assert results[0]["address"] == _PE_TEXT_OFFSET
 
-    def test_disassemble_pe_text_all_required_keys_present(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_all_required_keys_present(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify each instruction dict in PE .text disassembly has all required keys.
 
         Args:
@@ -98,7 +101,7 @@ class TestDisassemblePeTextSection:
         for insn in results:
             assert _EXPECTED_INSN_KEYS.issubset(insn.keys())
 
-    def test_disassemble_pe_text_with_auto_arch(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_with_auto_arch(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that arch='auto' on the PE .text section produces non-empty results.
 
         Args:
@@ -107,7 +110,7 @@ class TestDisassemblePeTextSection:
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=4, arch="auto"))
         assert isinstance(results, list)
 
-    def test_disassemble_pe_text_explicit_x86_64_matches_auto(self, loaded_bridge: Any) -> None:
+    def test_disassemble_pe_text_explicit_x86_64_matches_auto(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that arch='x86',mode='64' returns the same mnemonic as auto on PE .text.
 
         Args:
@@ -124,7 +127,7 @@ class TestDisassemblePeTextSection:
 class TestDisassembleMzHeader:
     """Tests disassembling from offset 0 (MZ header) of the PE binary."""
 
-    def test_disassemble_at_mz_header_does_not_crash(self, loaded_bridge: Any) -> None:
+    def test_disassemble_at_mz_header_does_not_crash(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that disassembling at offset 0 (MZ header) does not raise.
 
         Args:
@@ -133,22 +136,20 @@ class TestDisassembleMzHeader:
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="x86", mode="64"))
         assert isinstance(results, list)
 
-    def test_disassemble_mz_header_address_starts_at_zero(self, loaded_bridge: Any) -> None:
+    def test_disassemble_mz_header_address_starts_at_zero(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the first instruction address is 0 when disassembling from offset 0.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        if results := _run(
-            loaded_bridge.disassemble(0, count=1, arch="x86", mode="64")
-        ):
+        if results := _run(loaded_bridge.disassemble(0, count=1, arch="x86", mode="64")):
             assert results[0]["address"] == 0
 
 
 class TestDisassembleX86Mode32:
     """Tests for explicit 32-bit mode disassembly."""
 
-    def test_disassemble_with_mode_32_returns_instructions(self, bridge: Any, tmp_path: Path) -> None:
+    def test_disassemble_with_mode_32_returns_instructions(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that arch='x86',mode='32' disassembles INT3 bytes without error.
 
         Args:
@@ -167,7 +168,7 @@ class TestDisassembleX86Mode32:
 class TestDisassembleKnownX86Sequence:
     """Tests with a precisely crafted NOP/INT3 byte sequence."""
 
-    def test_nop_nop_nop_int3_sequence(self, bridge: Any, tmp_path: Path) -> None:
+    def test_nop_nop_nop_int3_sequence(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that NOP NOP NOP INT3 disassembles to first 3 NOP and last INT3.
 
         Args:
@@ -184,7 +185,7 @@ class TestDisassembleKnownX86Sequence:
             assert results[i]["mnemonic"] == "nop"
         assert results[3]["mnemonic"] == "int3"
 
-    def test_nop_bytes_field_is_valid_hex_string(self, bridge: Any, tmp_path: Path) -> None:
+    def test_nop_bytes_field_is_valid_hex_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that the bytes field of a NOP instruction is a valid hex string.
 
         Args:
@@ -202,7 +203,7 @@ class TestDisassembleKnownX86Sequence:
         decoded = bytes.fromhex(bytes_field)
         assert len(decoded) > 0
 
-    def test_nop_size_field_is_positive_int(self, bridge: Any, tmp_path: Path) -> None:
+    def test_nop_size_field_is_positive_int(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that the size field of a NOP instruction is a positive integer.
 
         Args:
@@ -219,7 +220,7 @@ class TestDisassembleKnownX86Sequence:
         assert isinstance(size_val, int)
         assert size_val > 0
 
-    def test_int3_bytes_field_equals_cc_hex(self, bridge: Any, tmp_path: Path) -> None:
+    def test_int3_bytes_field_equals_cc_hex(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that the bytes field for an INT3 instruction is 'cc'.
 
         Args:
@@ -238,7 +239,7 @@ class TestDisassembleKnownX86Sequence:
 class TestDisassembleEdgeCases:
     """Tests for boundary and edge-case behavior in disassembly."""
 
-    def test_disassemble_at_end_of_file_returns_empty_or_partial(self, loaded_bridge: Any, pe_bytes: bytes) -> None:
+    def test_disassemble_at_end_of_file_returns_empty_or_partial(self, loaded_bridge: HexEditorBridge, pe_bytes: bytes) -> None:
         """Verify disassembling near end of document returns empty list or fewer instructions.
 
         Args:

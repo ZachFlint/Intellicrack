@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Regression tests for provider bug fixes.
 
 Validates that the 7 critical/high bug fixes to the AI provider system
@@ -40,7 +45,7 @@ class TestAsyncCacheDiscovery:
     def test_init_model_discovery_is_coroutine() -> None:
         """Verify _init_model_discovery is an async coroutine function."""
         main_mod = importlib.import_module("intellicrack.main")
-        func: Any = main_mod._init_model_discovery
+        func: Any = main_mod.init_model_discovery
         assert inspect.iscoroutinefunction(func)
 
 
@@ -50,7 +55,7 @@ class TestOAuthFlowValidation:
     @staticmethod
     def test_oauth_provider_rejects_invalid_id() -> None:
         """Verify OAuthProvider rejects unknown provider strings."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"(?i)invalid|not a valid"):
             OAuthProvider("invalid_xyz")
 
     @staticmethod
@@ -166,20 +171,20 @@ class TestOpenRouterPricingConversion:
     @staticmethod
     def test_na_string_raises_value_error() -> None:
         """Verify 'N/A' raises ValueError on float conversion."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"could not convert"):
             _ = float("N/A")
 
     @staticmethod
     def test_empty_string_raises_value_error() -> None:
         """Verify empty string raises ValueError on float conversion."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"could not convert"):
             _ = float("")
 
     @staticmethod
     def test_none_raises_type_error() -> None:
         """Verify None raises TypeError on float conversion."""
-        with pytest.raises(TypeError):
-            none_val: Any = None
+        none_val: Any = None
+        with pytest.raises(TypeError, match=r"float"):
             _ = float(none_val)
 
     @staticmethod

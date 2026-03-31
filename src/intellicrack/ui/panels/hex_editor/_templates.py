@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """Templates mixin for the hex editor panel."""
 
 from __future__ import annotations
@@ -35,13 +34,14 @@ class TemplatesMixin:
     """Mixin providing struct template application and display for the hex editor panel."""
 
     _document: Any | None
+    document: Any | None
     _hex_widget: Any | None
     _template_combo: QComboBox | None
     _templates_tree: QTreeWidget | None
 
     def _on_apply_template(self) -> None:
         """Apply the selected struct template at the current cursor offset."""
-        if self._document is None or self._template_combo is None or self._templates_tree is None:
+        if self.document is None or self._template_combo is None or self._templates_tree is None:
             return
 
         template_name = self._template_combo.currentText()
@@ -53,7 +53,7 @@ class TemplatesMixin:
             cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
 
         try:
-            result = self._document.apply_template(template_name, cursor_offset)
+            result = self.document.apply_template(template_name, cursor_offset)
         except (AttributeError, ValueError) as exc:
             logger.debug("template_apply_failed", error=str(exc))
         else:
@@ -159,12 +159,12 @@ class TemplatesMixin:
 
     def _populate_template_combo(self) -> None:
         """Populate the template combo box with available templates."""
-        if self._template_combo is None or self._document is None:
+        if self._template_combo is None or self.document is None:
             return
 
         self._template_combo.clear()
         try:
-            templates: list[tuple[str, str]] = self._document.list_templates()
+            templates: list[tuple[str, str]] = self.document.list_templates()
         except (AttributeError, ValueError, RuntimeError) as exc:
             logger.debug("list_templates_failed", error=str(exc))
             templates = []

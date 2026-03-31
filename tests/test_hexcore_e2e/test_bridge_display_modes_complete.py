@@ -8,22 +8,26 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -39,7 +43,7 @@ def _run(coro: Any) -> Any:
 class TestDisplayModesExtended:
     """Tests for display mode set/get roundtrip for modes not covered previously."""
 
-    def test_set_hex16_be_returns_true(self, bridge: Any) -> None:
+    def test_set_hex16_be_returns_true(self, bridge: HexEditorBridge) -> None:
         """Verify that set_display_mode('hex16_be') returns True.
 
         Args:
@@ -48,7 +52,7 @@ class TestDisplayModesExtended:
         result: bool = _run(bridge.set_display_mode("hex16_be"))
         assert result
 
-    def test_get_after_set_hex16_be(self, bridge: Any) -> None:
+    def test_get_after_set_hex16_be(self, bridge: HexEditorBridge) -> None:
         """Verify that get_display_mode returns 'hex16_be' after setting it.
 
         Args:
@@ -58,7 +62,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex16_be"
 
-    def test_roundtrip_hex32_le(self, bridge: Any) -> None:
+    def test_roundtrip_hex32_le(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'hex32_le' returns 'hex32_le'.
 
         Args:
@@ -68,7 +72,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex32_le"
 
-    def test_roundtrip_hex32_be(self, bridge: Any) -> None:
+    def test_roundtrip_hex32_be(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'hex32_be' returns 'hex32_be'.
 
         Args:
@@ -78,7 +82,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex32_be"
 
-    def test_roundtrip_hex64_le(self, bridge: Any) -> None:
+    def test_roundtrip_hex64_le(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'hex64_le' returns 'hex64_le'.
 
         Args:
@@ -88,7 +92,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex64_le"
 
-    def test_roundtrip_hex64_be(self, bridge: Any) -> None:
+    def test_roundtrip_hex64_be(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'hex64_be' returns 'hex64_be'.
 
         Args:
@@ -98,7 +102,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex64_be"
 
-    def test_roundtrip_dec_u8(self, bridge: Any) -> None:
+    def test_roundtrip_dec_u8(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'dec_u8' returns 'dec_u8'.
 
         Args:
@@ -108,7 +112,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "dec_u8"
 
-    def test_roundtrip_dec_u16(self, bridge: Any) -> None:
+    def test_roundtrip_dec_u16(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'dec_u16' returns 'dec_u16'.
 
         Args:
@@ -118,7 +122,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "dec_u16"
 
-    def test_roundtrip_dec_s8(self, bridge: Any) -> None:
+    def test_roundtrip_dec_s8(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'dec_s8' returns 'dec_s8'.
 
         Args:
@@ -128,7 +132,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "dec_s8"
 
-    def test_roundtrip_dec_s16(self, bridge: Any) -> None:
+    def test_roundtrip_dec_s16(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'dec_s16' returns 'dec_s16'.
 
         Args:
@@ -138,7 +142,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "dec_s16"
 
-    def test_roundtrip_dec_s32(self, bridge: Any) -> None:
+    def test_roundtrip_dec_s32(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'dec_s32' returns 'dec_s32'.
 
         Args:
@@ -148,7 +152,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "dec_s32"
 
-    def test_roundtrip_float64(self, bridge: Any) -> None:
+    def test_roundtrip_float64(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'float64' returns 'float64'.
 
         Args:
@@ -158,7 +162,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "float64"
 
-    def test_roundtrip_rgba8(self, bridge: Any) -> None:
+    def test_roundtrip_rgba8(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'rgba8' returns 'rgba8'.
 
         Args:
@@ -168,7 +172,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "rgba8"
 
-    def test_roundtrip_hexii(self, bridge: Any) -> None:
+    def test_roundtrip_hexii(self, bridge: HexEditorBridge) -> None:
         """Verify that setting and getting 'hexii' returns 'hexii'.
 
         Args:
@@ -178,7 +182,7 @@ class TestDisplayModesExtended:
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hexii"
 
-    def test_sequential_mode_changes_last_wins(self, bridge: Any) -> None:
+    def test_sequential_mode_changes_last_wins(self, bridge: HexEditorBridge) -> None:
         """Verify that setting multiple modes in sequence leaves the bridge at the final mode.
 
         Args:
@@ -193,7 +197,7 @@ class TestDisplayModesExtended:
 class TestHighlightPatternCondition:
     """Tests for add_highlight_rule with condition_type='pattern'."""
 
-    def test_add_pattern_rule_returns_uuid_string(self, bridge: Any) -> None:
+    def test_add_pattern_rule_returns_uuid_string(self, bridge: HexEditorBridge) -> None:
         """Verify that add_highlight_rule with condition_type='pattern' returns a valid UUID.
 
         Args:
@@ -205,7 +209,7 @@ class TestHighlightPatternCondition:
         parsed = uuid.UUID(rule_id)
         assert str(parsed) == rule_id
 
-    def test_list_rules_contains_added_pattern_rule(self, bridge: Any) -> None:
+    def test_list_rules_contains_added_pattern_rule(self, bridge: HexEditorBridge) -> None:
         """Verify that a pattern rule appears in list_highlight_rules after being added.
 
         Args:
@@ -217,7 +221,7 @@ class TestHighlightPatternCondition:
         ids = [r["id"] for r in rules]
         assert rule_id in ids
 
-    def test_pattern_rule_condition_type_stored_correctly(self, bridge: Any) -> None:
+    def test_pattern_rule_condition_type_stored_correctly(self, bridge: HexEditorBridge) -> None:
         """Verify that the stored rule has condition_type equal to 'pattern'.
 
         Args:
@@ -229,7 +233,7 @@ class TestHighlightPatternCondition:
         matched = next(r for r in rules if r["id"] == rule_id)
         assert matched["condition_type"] == "pattern"
 
-    def test_pattern_rule_condition_params_stored_correctly(self, bridge: Any) -> None:
+    def test_pattern_rule_condition_params_stored_correctly(self, bridge: HexEditorBridge) -> None:
         """Verify that the stored rule condition_params matches the input JSON.
 
         Args:
@@ -243,7 +247,7 @@ class TestHighlightPatternCondition:
         stored_params: dict[str, Any] = matched["condition_params"]
         assert stored_params["pattern"] == pattern_value
 
-    def test_remove_pattern_rule_returns_true(self, bridge: Any) -> None:
+    def test_remove_pattern_rule_returns_true(self, bridge: HexEditorBridge) -> None:
         """Verify that remove_highlight_rule returns True for an existing pattern rule.
 
         Args:
@@ -254,7 +258,7 @@ class TestHighlightPatternCondition:
         removed: bool = _run(bridge.remove_highlight_rule(rule_id))
         assert removed
 
-    def test_remove_pattern_rule_no_longer_in_list(self, bridge: Any) -> None:
+    def test_remove_pattern_rule_no_longer_in_list(self, bridge: HexEditorBridge) -> None:
         """Verify that a removed pattern rule no longer appears in list_highlight_rules.
 
         Args:

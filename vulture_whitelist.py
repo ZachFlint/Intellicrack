@@ -244,3 +244,5 @@ intellicrack.ui.resources.font_manager.DEFAULT_CODE_FONT  # unused-variable (API
 intellicrack.providers.huggingface._api_token  # unused-attribute (lifecycle tracking)
 intellicrack.providers.model_loader.use_flash_attention  # unused-variable (config extraction)
 intellicrack.providers.model_loader.quantization_config  # unused-variable (config extraction)
+intellicrack.bridges.hex_editor.execute_pattern_bytes  # unused-method (bridge tool_definitions dispatch)
+intellicrack.ui.tools.connect_hex_widget_to_tools  # unused-method (called by host panel at runtime)

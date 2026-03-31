@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """Tests for ProcessManager process tracking and cleanup.
 
 Tests validate:
@@ -55,7 +60,11 @@ EXPECTED_DASHED_GROUPS = 4
 
 @pytest.fixture
 def process_manager() -> Generator[ProcessManager]:
-    """Provide a fresh ProcessManager instance for each test."""
+    """Provide a fresh ProcessManager instance for each test.
+
+    Yields:
+        Generator[ProcessManager]: A fresh ProcessManager instance.
+    """
     ProcessManager.reset_instance()
     pm = ProcessManager.get_instance()
     yield pm
@@ -312,10 +321,10 @@ class TestExternalPidRegistration:
             metadata={"test_key": "test_value"},
         )
 
-        assert TEST_PID_EXTERNAL in process_manager._external_pids
-        assert process_manager._external_pids[TEST_PID_EXTERNAL]["name"] == "test-external"
-        assert process_manager._external_pids[TEST_PID_EXTERNAL]["process_type"] == ProcessType.SANDBOX
-        assert process_manager._external_pids[TEST_PID_EXTERNAL]["metadata"]["test_key"] == "test_value"
+        assert TEST_PID_EXTERNAL in process_manager.external_pids
+        assert process_manager.external_pids[TEST_PID_EXTERNAL]["name"] == "test-external"
+        assert process_manager.external_pids[TEST_PID_EXTERNAL]["process_type"] == ProcessType.SANDBOX
+        assert process_manager.external_pids[TEST_PID_EXTERNAL]["metadata"]["test_key"] == "test_value"
 
     @staticmethod
     def test_unregister_external_pid_removes_entry(
@@ -324,12 +333,12 @@ class TestExternalPidRegistration:
         """Verify unregister_external_pid removes the registered PID."""
         process_manager.register_external_pid(TEST_PID_UNREGISTER, name="test-unregister")
 
-        assert TEST_PID_UNREGISTER in process_manager._external_pids
+        assert TEST_PID_UNREGISTER in process_manager.external_pids
 
         result = process_manager.unregister_external_pid(TEST_PID_UNREGISTER)
 
         assert result is True
-        assert TEST_PID_UNREGISTER not in process_manager._external_pids
+        assert TEST_PID_UNREGISTER not in process_manager.external_pids
 
     @staticmethod
     def test_unregister_external_pid_returns_false_for_unknown(
@@ -348,7 +357,7 @@ class TestExternalPidRegistration:
         process_manager.register_external_pid(TEST_PID_DUPLICATE, name="original-name")
         process_manager.register_external_pid(TEST_PID_DUPLICATE, name="new-name")
 
-        assert process_manager._external_pids[TEST_PID_DUPLICATE]["name"] == "original-name"
+        assert process_manager.external_pids[TEST_PID_DUPLICATE]["name"] == "original-name"
 
 
 class TestTerminateExternalPid:
@@ -364,7 +373,7 @@ class TestTerminateExternalPid:
         result = process_manager.terminate_external_pid(NONEXISTENT_PID)
 
         assert result is False
-        assert NONEXISTENT_PID not in process_manager._external_pids
+        assert NONEXISTENT_PID not in process_manager.external_pids
 
     @staticmethod
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -441,7 +450,7 @@ class TestProcessCleanup:
 
         time.sleep(PROCESS_STARTUP_DELAY)
 
-        process_manager._sync_cleanup()
+        process_manager.sync_cleanup()
 
         exit1 = proc1.wait(timeout=CLEANUP_WAIT_TIMEOUT)
         exit2 = proc2.wait(timeout=CLEANUP_WAIT_TIMEOUT)
@@ -465,12 +474,12 @@ class TestProcessCleanup:
 
         time.sleep(PROCESS_STARTUP_DELAY)
 
-        process_manager._sync_cleanup()
+        process_manager.sync_cleanup()
 
         exit_code = proc.wait(timeout=CLEANUP_WAIT_TIMEOUT)
 
         assert exit_code is not None
-        assert proc.pid not in process_manager._external_pids
+        assert proc.pid not in process_manager.external_pids
 
     @staticmethod
     @pytest.mark.asyncio
@@ -478,7 +487,8 @@ class TestProcessCleanup:
         process_manager: ProcessManager,
     ) -> None:
         """Verify cleanup_all_async terminates all tracked processes."""
-        proc = subprocess.Popen(
+        proc = await asyncio.to_thread(
+            subprocess.Popen,
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -487,7 +497,7 @@ class TestProcessCleanup:
         process_manager.register(proc, name="async-cleanup-test")
         process_manager.register_external_pid(ASYNC_CLEANUP_EXTERNAL_PID, name="external-async-test")
 
-        time.sleep(PROCESS_STARTUP_DELAY)
+        await asyncio.to_thread(time.sleep, PROCESS_STARTUP_DELAY)
 
         await process_manager.cleanup_all_async()
 
@@ -495,7 +505,7 @@ class TestProcessCleanup:
 
         assert exit_code is not None
         assert process_manager.process_count == EXPECTED_TRACKED_COUNT_ZERO
-        assert ASYNC_CLEANUP_EXTERNAL_PID not in process_manager._external_pids
+        assert ASYNC_CLEANUP_EXTERNAL_PID not in process_manager.external_pids
 
 
 class TestTrackedProcess:
@@ -550,11 +560,11 @@ class TestHandlerInstallation:
         process_manager: ProcessManager,
     ) -> None:
         """Verify install_handlers registers atexit callback."""
-        assert process_manager._atexit_registered is False
+        assert process_manager.atexit_registered is False
 
         process_manager.install_handlers()
 
-        assert process_manager._atexit_registered is True
+        assert process_manager.atexit_registered is True
 
     @staticmethod
     def test_install_handlers_idempotent(
@@ -565,7 +575,7 @@ class TestHandlerInstallation:
         process_manager.install_handlers()
         process_manager.install_handlers()
 
-        assert process_manager._atexit_registered is True
+        assert process_manager.atexit_registered is True
 
     @staticmethod
     def test_uninstall_handlers_clears_registration(
@@ -573,11 +583,11 @@ class TestHandlerInstallation:
     ) -> None:
         """Verify uninstall_handlers clears atexit registration."""
         process_manager.install_handlers()
-        assert process_manager._atexit_registered is True
+        assert process_manager.atexit_registered is True
 
         process_manager.uninstall_handlers()
 
-        assert process_manager._atexit_registered is False
+        assert process_manager.atexit_registered is False
 
     @staticmethod
     def test_shutdown_event_initially_clear(
@@ -591,7 +601,7 @@ class TestHandlerInstallation:
         process_manager: ProcessManager,
     ) -> None:
         """Verify shutdown event can be set and cleared."""
-        process_manager._shutdown_event.set()
+        process_manager.shutdown_event.set()
         assert process_manager.is_shutdown_requested() is True
 
         process_manager.clear_shutdown_request()

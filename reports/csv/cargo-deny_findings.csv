@@ -1,0 +1,2 @@
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+cargo-deny,D:\Intellicrack\src\intellicrack-hexcore\deny.toml,6,17,error,unexpected-value,unexpected-value,"expected '[""all"", ""workspace"", ""transitive"", ""none""]'",,,,,,,,,,,,

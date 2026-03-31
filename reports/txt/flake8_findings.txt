@@ -1,3 +1,31 @@
+7 findings in tests/test_hexcore_e2e\test_hashing.py
+
+tests/test_hexcore_e2e\test_hashing.py:285:141: E501 line too long (154 > 140 characters)
+
+tests/test_hexcore_e2e\test_hashing.py:299:141: E501 line too long (151 > 140 characters)
+
+tests/test_hexcore_e2e\test_hashing.py:314:141: E501 line too long (142 > 140 characters)
+
+tests/test_hexcore_e2e\test_hashing.py:338:141: E501 line too long (154 > 140 characters)
+
+tests/test_hexcore_e2e\test_hashing.py:353:141: E501 line too long (159 > 140 characters)
+
+tests/test_hexcore_e2e\test_hashing.py:362:141: E501 line too long (145 > 140 characters)
+
+tests/test_hexcore_e2e\test_hashing.py:363:141: E501 line too long (147 > 140 characters)
+
+
+4 findings in tests/test_hexcore_e2e\test_bridge_hash_advanced.py
+
+tests/test_hexcore_e2e\test_bridge_hash_advanced.py:263:141: E501 line too long (149 > 140 characters)
+
+tests/test_hexcore_e2e\test_bridge_hash_advanced.py:278:141: E501 line too long (144 > 140 characters)
+
+tests/test_hexcore_e2e\test_bridge_hash_advanced.py:303:141: E501 line too long (142 > 140 characters)
+
+tests/test_hexcore_e2e\test_bridge_hash_advanced.py:345:141: E501 line too long (149 > 140 characters)
+
+
 4 findings in tests/test_hexcore_e2e\test_hexpat_parser_e2e.py
 
 tests/test_hexcore_e2e\test_hexpat_parser_e2e.py:13:1: E402 module level import not at top of file
@@ -18,11 +46,25 @@ tests/test_bridges\test_x64dbg_new_methods.py:221:9: F841 local variable '_buf_a
 tests/test_bridges\test_x64dbg_new_methods.py:236:9: F841 local variable '_buf_addr' is assigned to but never used
 
 
+2 findings in src/intellicrack/core\orchestrator.py
+
+src/intellicrack/core\orchestrator.py:547:141: E501 line too long (146 > 140 characters)
+
+src/intellicrack/core\orchestrator.py:594:141: E501 line too long (232 > 140 characters)
+
+
+2 findings in src/intellicrack/core\script_gen.py
+
+src/intellicrack/core\script_gen.py:734:141: E501 line too long (169 > 140 characters)
+
+src/intellicrack/core\script_gen.py:735:141: E501 line too long (142 > 140 characters)
+
+
 2 findings in src/intellicrack/providers\xpu_utils.py
 
-src/intellicrack/providers\xpu_utils.py:546:141: E501 line too long (146 > 140 characters)
+src/intellicrack/providers\xpu_utils.py:545:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/providers\xpu_utils.py:576:141: E501 line too long (179 > 140 characters)
+src/intellicrack/providers\xpu_utils.py:575:141: E501 line too long (179 > 140 characters)
 
 
 2 findings in tests/test_hexcore_e2e\test_hexpat_type_system_e2e.py
@@ -32,11 +74,18 @@ tests/test_hexcore_e2e\test_hexpat_type_system_e2e.py:13:1: E402 module level im
 tests/test_hexcore_e2e\test_hexpat_type_system_e2e.py:19:1: E402 module level import not at top of file
 
 
+2 findings in tests/test_hexcore_e2e\test_search.py
+
+tests/test_hexcore_e2e\test_search.py:337:141: E501 line too long (144 > 140 characters)
+
+tests/test_hexcore_e2e\test_search.py:383:141: E501 line too long (142 > 140 characters)
+
+
 2 findings in tests/test_hexcore_e2e\test_templates.py
 
-tests/test_hexcore_e2e\test_templates.py:638:9: F841 local variable '_exc' is assigned to but never used
+tests/test_hexcore_e2e\test_templates.py:642:9: F841 local variable '_exc' is assigned to but never used
 
-tests/test_hexcore_e2e\test_templates.py:662:9: F841 local variable '_exc' is assigned to but never used
+tests/test_hexcore_e2e\test_templates.py:666:9: F841 local variable '_exc' is assigned to but never used
 
 
 2 findings in tests/test_providers\test_agentic_capabilities.py
@@ -48,42 +97,42 @@ tests/test_providers\test_agentic_capabilities.py:217:9: F841 local variable '_c
 
 1 findings in src/intellicrack/bridges\ghidra.py
 
-src/intellicrack/bridges\ghidra.py:2429:141: E501 line too long (146 > 140 characters)
+src/intellicrack/bridges\ghidra.py:2458:141: E501 line too long (146 > 140 characters)
 
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:3065:141: E501 line too long (143 > 140 characters)
+src/intellicrack/bridges\x64dbg.py:3066:141: E501 line too long (143 > 140 characters)
 
 
 1 findings in src/intellicrack/core\config.py
 
-src/intellicrack/core\config.py:331:141: E501 line too long (149 > 140 characters)
+src/intellicrack/core\config.py:330:141: E501 line too long (149 > 140 characters)
+
+
+1 findings in src/intellicrack/core\hexpat\type_system.py
+
+src/intellicrack/core\hexpat\type_system.py:246:141: E501 line too long (160 > 140 characters)
 
 
 1 findings in src/intellicrack/sandbox\windows.py
 
-src/intellicrack/sandbox\windows.py:445:141: E501 line too long (160 > 140 characters)
-
-
-1 findings in src/intellicrack/ui\app.py
-
-src/intellicrack/ui\app.py:77:5: F811 redefinition of unused 'Callable' from line 19
+src/intellicrack/sandbox\windows.py:457:141: E501 line too long (160 > 140 characters)
 
 
 1 findings in src/intellicrack/ui\chat.py
 
-src/intellicrack/ui\chat.py:489:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
+src/intellicrack/ui\chat.py:488:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
 
 
 1 findings in src/intellicrack/ui\tool_config.py
 
-src/intellicrack/ui\tool_config.py:101:141: E501 line too long (142 > 140 characters)
+src/intellicrack/ui\tool_config.py:100:141: E501 line too long (142 > 140 characters)
 
 
 1 findings in tests/test_core\test_main.py
 
-tests/test_core\test_main.py:47:9: F841 local variable '_store' is assigned to but never used
+tests/test_core\test_main.py:52:9: F841 local variable '_store' is assigned to but never used
 
 
 1 findings in tests/test_hexcore_e2e\test_hexpat_compiler_e2e.py

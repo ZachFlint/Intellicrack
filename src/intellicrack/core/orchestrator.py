@@ -15,20 +15,20 @@ import asyncio
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, cast
 from uuid import uuid4
 
 import structlog.contextvars
 
-from ..bridges.schemas import (
+from intellicrack.bridges.schemas import (
     build_schema_parameters,
     get_all_schemas_for_provider,
     validate_and_convert,
 )
-from .analysis_aggregator import AnalysisAggregator
-from .logging import get_logger, log_analysis_operation
-from .types import (
+from intellicrack.core.analysis_aggregator import AnalysisAggregator
+from intellicrack.core.logging import get_logger, log_analysis_operation
+from intellicrack.core.types import (
     CacheConfig,
     ConfirmationLevel,
     Message,
@@ -36,6 +36,7 @@ from .types import (
     ProviderName,
     ThinkingConfig,
     ToolChoice,
+    ToolError,
     ToolName,
     ToolResult,
 )
@@ -46,12 +47,12 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-    from ..providers.base import LLMProvider
-    from ..providers.registry import ProviderRegistry
-    from .script_gen import ScriptManager
-    from .session import Session, SessionManager
-    from .tools import ToolRegistry
-    from .types import BinaryInfo, BridgeAnalysisSummary, ToolCall, ToolDefinition
+    from intellicrack.core.script_gen import ScriptManager
+    from intellicrack.core.session import Session, SessionManager
+    from intellicrack.core.tools import ToolRegistry
+    from intellicrack.core.types import BinaryInfo, BridgeAnalysisSummary, ToolCall, ToolDefinition
+    from intellicrack.providers.base import LLMProvider
+    from intellicrack.providers.registry import ProviderRegistry
 
 
 _logger = get_logger("core.orchestrator")
@@ -404,7 +405,7 @@ class Orchestrator:
         user_message = Message(
             role="user",
             content=text,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
         self._current_session.messages.append(user_message)
 
@@ -453,7 +454,7 @@ class Orchestrator:
 
         while iteration < self._config.max_iterations:
             if self._cancel_event.is_set():
-                raise asyncio.CancelledError()
+                raise asyncio.CancelledError
 
             iteration += 1
             _logger.debug("agent_loop_iteration", iteration=iteration)
@@ -483,7 +484,7 @@ class Orchestrator:
                 role="tool",
                 content="",
                 tool_results=tool_results,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
             )
             self._current_session.messages.append(tool_message)
 
@@ -521,7 +522,7 @@ class Orchestrator:
         system_message = Message(
             role="system",
             content=system_prompt,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         messages = [system_message, *self._current_session.messages]
@@ -543,8 +544,7 @@ class Orchestrator:
             return ""
 
         prompt_parts = [
-            "You are Intellicrack, an advanced AI-powered reverse engineering assistant "
-            "specialized in analyzing software licensing protections.",
+            "You are Intellicrack, an advanced AI-powered reverse engineering assistant specialized in analyzing software licensing protections.",
             "",
             "Your capabilities include:",
             "- Static analysis via Ghidra (decompilation, disassembly, cross-references)",
@@ -591,9 +591,7 @@ class Orchestrator:
             "- `ghidra.undo` / `ghidra.redo` - Undo/redo changes",
             "",
             "### Escape Hatch",
-            "- `ghidra.execute_script` - Run arbitrary Jython in Ghidra's JVM. Use this "
-            "when no structured tool covers your need. You have access to all Ghidra APIs "
-            "including currentProgram, getMemory(), getFunctionManager(), etc.",
+            "- `ghidra.execute_script` - Run arbitrary Jython in Ghidra's JVM. Use this when no structured tool covers your need. You have access to all Ghidra APIs including currentProgram, getMemory(), getFunctionManager(), etc.",
             "",
             "## x64dbg Tools",
             "",
@@ -765,8 +763,8 @@ class Orchestrator:
             for model_info in models:
                 if model_info.id == self._current_session.model:
                     return model_info.context_window
-        except Exception:
-            _logger.debug("context_window_lookup_failed")
+        except (OSError, RuntimeError, ValueError) as exc:
+            _logger.debug("context_window_lookup_failed", error=str(exc))
         return 128000
 
     @staticmethod
@@ -813,6 +811,7 @@ class Orchestrator:
         provider: LLMProvider,
         messages: list[Message],
         tools: list[ToolDefinition],
+        *,
         is_final_response: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -888,6 +887,7 @@ class Orchestrator:
 
     def _should_use_streaming(
         self,
+        *,
         tools_available: bool,
         is_final_response: bool,
     ) -> bool:
@@ -918,6 +918,7 @@ class Orchestrator:
         tools: list[ToolDefinition],
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -959,7 +960,7 @@ class Orchestrator:
             enable_cache=enable_cache,
         ):
             if self._cancel_event.is_set():
-                raise asyncio.CancelledError()
+                raise asyncio.CancelledError
 
             content_parts.append(chunk)
             if self._on_stream_chunk:
@@ -980,7 +981,7 @@ class Orchestrator:
             role="assistant",
             content=content,
             tool_calls=tool_calls,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         ), tool_calls
 
     async def _non_stream_response(
@@ -990,6 +991,7 @@ class Orchestrator:
         tools: list[ToolDefinition],
         tool_choice: ToolChoice | None = None,
         thinking: ThinkingConfig | None = None,
+        *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """
@@ -1052,7 +1054,7 @@ class Orchestrator:
 
         for call in tool_calls:
             if self._cancel_event.is_set():
-                raise asyncio.CancelledError()
+                raise asyncio.CancelledError
 
             if self._on_tool_call:
                 self._on_tool_call(call)
@@ -1129,14 +1131,15 @@ class Orchestrator:
                 duration_ms=elapsed_ms,
             )
 
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as e:
             elapsed_ms = (time.time() - start_time) * 1000
             self._stats.failed_tool_calls += 1
 
-            _logger.exception(
+            _logger.warning(
                 "tool_call_failed",
                 tool=call.tool_name,
                 function=call.function_name,
+                error=str(e),
             )
 
             return ToolResult(
@@ -1276,7 +1279,7 @@ class Orchestrator:
         self._state = "processing"
         return False
 
-    def confirm_pending(self, confirmed: bool) -> None:
+    def confirm_pending(self, *, confirmed: bool) -> None:
         """
         Confirm or decline a pending operation.
 
@@ -1297,18 +1300,19 @@ class Orchestrator:
             try:
                 await provider.cancel_request()
                 _logger.debug("cancel_provider_request_sent", provider=provider_name)
-            except Exception:
-                _logger.exception("cancel_provider_request_failed", provider=provider_name)
+            except (OSError, RuntimeError) as exc:
+                _logger.warning("cancel_provider_request_failed", provider=provider_name, error=str(exc))
 
         if self._pending_confirmation and not self._pending_confirmation.future.done():
             call_id = self._pending_confirmation.call.id
             try:
-                self._pending_confirmation.future.set_result(False)
+                declined = False
+                self._pending_confirmation.future.set_result(declined)
                 _logger.debug("cancel_pending_confirmation_declined", call_id=call_id)
-            except Exception:
-                _logger.exception("cancel_pending_confirmation_failed", call_id=call_id)
+            except (asyncio.InvalidStateError, RuntimeError) as exc:
+                _logger.warning("cancel_pending_confirmation_failed", call_id=call_id, error=str(exc))
 
-    async def add_binary(self, path: Path, run_bridge_analysis: bool = True) -> BinaryInfo:
+    async def add_binary(self, path: Path, *, run_bridge_analysis: bool = True) -> BinaryInfo:
         """
         Add a binary to the current session.
 
@@ -1354,7 +1358,7 @@ class Orchestrator:
         try:
             aggregator = AnalysisAggregator(self._tools)
             analysis = await aggregator.aggregate(binary_info.name, binary_info)
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError, ToolError) as e:
             _logger.warning("bridge_analysis_failed", binary=binary_info.name, error=str(e))
             return None
         else:
@@ -1568,8 +1572,8 @@ class Orchestrator:
             return None
         try:
             bridge: object | None = getattr(self._tools, getter_name)()
-        except Exception:
-            _logger.debug("bridge_getter_failed", exc_info=True, tool_name=tool_name, getter=getter_name)
+        except (ToolError, OSError, RuntimeError, AttributeError) as exc:
+            _logger.debug("bridge_getter_failed", tool_name=tool_name, getter=getter_name, error=str(exc))
             return None
         else:
             return bridge
@@ -1617,7 +1621,7 @@ class Orchestrator:
         """
         _logger.debug("system_status_queried")
         return {
-            "state": self.state,
+            "state": self._state,
             "session_id": self.current_session.id if self.current_session else None,
             "metrics": self.stats.to_dict(),
             "tools": await self.get_tool_status(),
@@ -1671,14 +1675,14 @@ class Orchestrator:
         )
         await self.add_patch(patch)
 
-    def resolve_confirmation(self, approved: bool) -> None:
+    def resolve_confirmation(self, *, approved: bool) -> None:
         """
         Resolve any pending confirmation request.
 
         Args:
             approved: Whether to approve the request.
         """
-        self.confirm_pending(approved)
+        self.confirm_pending(confirmed=approved)
 
     async def activate_binary_by_name(self, name: str) -> None:
         """
@@ -1714,22 +1718,23 @@ class Orchestrator:
 
         try:
             await self.cancel()
-        except Exception:
-            _logger.exception("shutdown_cancel_failed", state=self._state)
+        except (OSError, RuntimeError, asyncio.InvalidStateError) as exc:
+            _logger.warning("shutdown_cancel_failed", state=self._state, error=str(exc))
 
         try:
             await self._tools.shutdown()
-        except Exception:
-            _logger.exception("shutdown_tools_cleanup_failed", state=self._state)
+        except (OSError, RuntimeError, ToolError) as exc:
+            _logger.warning("shutdown_tools_cleanup_failed", state=self._state, error=str(exc))
 
         if self._current_session:
             try:
                 await self._sessions.update(self._current_session)
-            except Exception:
-                _logger.exception(
+            except (OSError, RuntimeError, ValueError) as exc:
+                _logger.warning(
                     "shutdown_session_save_failed",
                     session_id=self._current_session.id,
                     state=self._state,
+                    error=str(exc),
                 )
 
         for provider_name in self._providers.list_registered():
@@ -1745,8 +1750,8 @@ class Orchestrator:
                     )
                     await unload_coro
                     _logger.debug("shutdown_provider_model_unloaded", provider=provider_name.value)
-                except Exception:
-                    _logger.exception("shutdown_provider_unload_failed", provider=provider_name.value)
+                except (OSError, RuntimeError, ValueError) as exc:
+                    _logger.warning("shutdown_provider_unload_failed", provider=provider_name.value, error=str(exc))
 
         session_cleanup = getattr(self._sessions, "cleanup", None)
         if callable(session_cleanup):
@@ -1757,8 +1762,8 @@ class Orchestrator:
                 )
                 deleted: int = await cleanup_coro
                 _logger.info("shutdown_session_cleanup_completed", deleted=deleted)
-            except Exception:
-                _logger.exception("shutdown_session_cleanup_failed")
+            except (OSError, RuntimeError, ValueError) as exc:
+                _logger.warning("shutdown_session_cleanup_failed", error=str(exc))
 
         self._current_session = None
         self._state = "idle"

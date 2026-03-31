@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Unified stack viewer panel for debugging.
 
@@ -337,11 +336,11 @@ class StackFrameTable(QTableWidget):
 
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(enable=True)
         sv_v_header = self.verticalHeader()
         if sv_v_header is not None:
-            sv_v_header.setVisible(False)
-        self.setShowGrid(False)
+            sv_v_header.setVisible(v=False)
+        self.setShowGrid(show=False)
 
         self.cellClicked.connect(self._on_cell_clicked)
         self.cellDoubleClicked.connect(self._on_cell_double_clicked)
@@ -453,7 +452,7 @@ class StackViewerPanel(QWidget):
         super().__init__(parent)
         self._sources: dict[str, X64DbgStackSource | FridaStackSource] = {}
         self._active_source: str | None = None
-        self._refresh_timer: QTimer | None = None
+        self.refresh_timer: QTimer | None = None
         self._setup_ui()
         self._setup_default_sources()
 
@@ -476,9 +475,9 @@ class StackViewerPanel(QWidget):
         self._source_combo.currentTextChanged.connect(self._on_source_changed)
         toolbar_layout.addWidget(self._source_combo)
 
-        self._status_label = QLabel(self.tr("Not connected"))
-        self._status_label.setProperty("status", "idle")
-        toolbar_layout.addWidget(self._status_label)
+        self.status_label = QLabel(self.tr("Not connected"))
+        self.status_label.setProperty("status", "idle")
+        toolbar_layout.addWidget(self.status_label)
 
         toolbar_layout.addStretch()
 
@@ -488,7 +487,11 @@ class StackViewerPanel(QWidget):
 
         self._auto_refresh_btn = QPushButton(self.tr("Auto"))
         self._auto_refresh_btn.setCheckable(True)
-        self._auto_refresh_btn.toggled.connect(self._on_auto_refresh_toggled)
+
+        def _auto_refresh_slot(c: int) -> None:
+            self._on_auto_refresh_toggled(checked=bool(c))
+
+        self._auto_refresh_btn.toggled.connect(_auto_refresh_slot)
         toolbar_layout.addWidget(self._auto_refresh_btn)
 
         layout.addWidget(toolbar)
@@ -535,7 +538,7 @@ class StackViewerPanel(QWidget):
         self._update_status()
         self.refresh()
 
-    def _on_auto_refresh_toggled(self, checked: bool) -> None:
+    def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
         """
         Handle auto-refresh toggle.
 
@@ -543,12 +546,12 @@ class StackViewerPanel(QWidget):
             checked: Whether auto-refresh is enabled.
         """
         if checked:
-            if not self._refresh_timer:
-                self._refresh_timer = QTimer(self)
-                self._refresh_timer.timeout.connect(self.refresh)
-            self._refresh_timer.start(500)
-        elif self._refresh_timer:
-            self._refresh_timer.stop()
+            if not self.refresh_timer:
+                self.refresh_timer = QTimer(self)
+                self.refresh_timer.timeout.connect(self.refresh)
+            self.refresh_timer.start(500)
+        elif self.refresh_timer:
+            self.refresh_timer.stop()
 
     def _on_frame_double_clicked(self, address: int) -> None:
         """
@@ -563,32 +566,32 @@ class StackViewerPanel(QWidget):
     def _update_status(self) -> None:
         """Update connection status display."""
         if not self._active_source:
-            self._status_label.setText(self.tr("No source selected"))
-            self._status_label.setProperty("status", "idle")
+            self.status_label.setText(self.tr("No source selected"))
+            self.status_label.setProperty("status", "idle")
             self._restyle_status_label()
             return
 
         source = self._sources.get(self._active_source)
         if not source:
-            self._status_label.setText(self.tr("Source not found"))
-            self._status_label.setProperty("status", "error")
+            self.status_label.setText(self.tr("Source not found"))
+            self.status_label.setProperty("status", "error")
             self._restyle_status_label()
             return
 
         if source.is_connected():
-            self._status_label.setText(self.tr("Connected"))
-            self._status_label.setProperty("status", "success")
+            self.status_label.setText(self.tr("Connected"))
+            self.status_label.setProperty("status", "success")
         else:
-            self._status_label.setText(self.tr("Not connected"))
-            self._status_label.setProperty("status", "idle")
+            self.status_label.setText(self.tr("Not connected"))
+            self.status_label.setProperty("status", "idle")
         self._restyle_status_label()
 
     def _restyle_status_label(self) -> None:
         """Force the status label to re-evaluate QSS after property change."""
-        style = self._status_label.style()
+        style = self.status_label.style()
         if style is not None:
-            style.unpolish(self._status_label)
-            style.polish(self._status_label)
+            style.unpolish(self.status_label)
+            style.polish(self.status_label)
 
     def refresh(self) -> None:
         """Refresh the stack frames from the active source."""
@@ -607,7 +610,7 @@ class StackViewerPanel(QWidget):
 
         self._frame_count_label.setText(f"{len(frames)} frames")
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(tz=datetime.UTC)
         self._last_update_label.setText(f"Updated: {now.strftime('%H:%M:%S')}")
 
     def set_x64dbg_bridge(self, bridge: object) -> None:

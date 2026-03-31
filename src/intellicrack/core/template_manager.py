@@ -2,7 +2,6 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
 """
 Template file management for the hex editor pattern system.
 
@@ -14,9 +13,14 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.core.logging import get_logger
+
+
+if TYPE_CHECKING:
+    from intellicrack.core.hexpat import PatternRegistry
+    from intellicrack.core.types import HexDocumentFull
 
 
 _logger = get_logger("core.template_manager")
@@ -29,7 +33,7 @@ try:
     )
 
     _hexpat_registry_available = True
-except Exception:
+except (ImportError, OSError, AttributeError):
     _logger.debug("hexpat_registry_unavailable")
 
 
@@ -38,7 +42,7 @@ class TemplateInfo:
     """
     Metadata about a template file.
 
-    Args:
+    Attributes:
         name: Template name.
         description: Human-readable description.
         category: Category grouping (e.g. PE, ELF, Custom).
@@ -84,7 +88,7 @@ class TemplateManager:
         self._user_dir.mkdir(parents=True, exist_ok=True)
         _logger.debug("template_directories_ensured", path=str(self._templates_dir))
 
-    def bootstrap_builtins(self, document: Any) -> None:
+    def bootstrap_builtins(self, document: HexDocumentFull) -> None:
         """
         Export all built-in templates as JSON files.
 
@@ -130,7 +134,7 @@ class TemplateManager:
                 if isinstance(raw_json, str):
                     target_path.write_text(raw_json, encoding="utf-8")
                     exported += 1
-            except Exception as exc:
+            except (OSError, ValueError, RuntimeError) as exc:
                 _logger.debug("builtin_export_failed", template_name=name, error=str(exc))
 
         _logger.info("builtin_templates_bootstrapped", count=exported)
@@ -294,7 +298,7 @@ class TemplateManager:
                 json_path=json_path,
                 dsl_path=dsl_path,
             )
-        except Exception as exc:
+        except (OSError, ValueError, KeyError) as exc:
             _logger.debug(
                 "template_parse_failed",
                 path=str(json_path),
@@ -313,12 +317,13 @@ class TemplateManager:
         project_root = Path(__file__).resolve().parents[3]
         return project_root / "vendor" / "community-patterns" / "patterns"
 
-    def get_pattern_registry(self) -> Any | None:
+    def get_pattern_registry(self) -> PatternRegistry | None:
         """
         Get or create the PatternRegistry for .hexpat pattern discovery.
 
         Returns:
-            Any | None: A PatternRegistry instance, or None if unavailable.
+            PatternRegistry | None: A PatternRegistry instance, or None if
+                unavailable.
         """
         if self._pattern_registry is not None:
             return self._pattern_registry

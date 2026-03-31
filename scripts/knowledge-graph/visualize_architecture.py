@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
 """A script to visualize the architecture of the Intellicrack project.
 
 Optimized version with:
@@ -36,6 +41,8 @@ except ImportError as e:
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+_MAX_DOCSTRING_LENGTH = 500
 
 
 class ClusterManager:
@@ -84,7 +91,11 @@ class EdgeBundler:
         self.positions = positions
 
     def bundle_edges(self, edges: list[dict[str, Any]], angle_buckets: int = 24, region_size: float = 300.0) -> list[dict[str, Any]]:
-        """Apply edge bundling based on direction and spatial proximity."""
+        """Apply edge bundling based on direction and spatial proximity.
+
+        Returns:
+            list[dict[str, Any]]: Bundled edge data with smoothing parameters.
+        """
         edge_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
         for edge in edges:
@@ -198,14 +209,13 @@ class KnowledgeGraphGenerator:
                             node_id = str(rel_path).replace(os.sep, "/")
                             self.graph.add_node(node_id, type="javascript", lang="javascript", path=str(path), label=file)
 
-                            with open(path, encoding="utf-8") as f:
-                                content = f.read()
-                                for match in import_re.finditer(content):
-                                    target = match.group(1)
-                                    self.graph.add_edge(node_id, target, type="imports")
-                        except Exception as e:
+                            content = path.read_text(encoding="utf-8")
+                            for match in import_re.finditer(content):
+                                target = match.group(1)
+                                self.graph.add_edge(node_id, target, type="imports")
+                        except OSError as e:
                             logger.debug("Skipping JS file %s: %s", path, e)
-        except Exception as e:
+        except Exception:
             logger.exception("Error scanning javascript")
 
     def _scan_assets(self) -> None:
@@ -222,9 +232,9 @@ class KnowledgeGraphGenerator:
                             node_id = str(rel_path).replace(os.sep, "/")
                             node_type = "documentation" if file.endswith(".md") else "config"
                             self.graph.add_node(node_id, type=node_type, path=str(path), label=file)
-                        except Exception as e:
+                        except OSError as e:
                             logger.debug("Skipping asset %s: %s", path, e)
-        except Exception as e:
+        except Exception:
             logger.exception("Error scanning assets")
 
     def _scan_python(self) -> None:
@@ -247,15 +257,15 @@ class KnowledgeGraphGenerator:
     def _parse_python_file(self, path: Path, module_name: str) -> None:
         """Deep parses a Python file for classes, functions, and variables."""
         try:
-            with open(path, encoding="utf-8") as f:
-                tree = ast.parse(f.read(), filename=str(path))
-        except Exception as e:
+            source_text = path.read_text(encoding="utf-8")
+            tree = ast.parse(source_text, filename=str(path))
+        except (OSError, SyntaxError) as e:
             logger.warning("Error parsing %s: %s", path, e)
             return
 
         module_doc = ast.get_docstring(tree)
         if module_doc and module_name in self.graph.nodes:
-            self.graph.nodes[module_name]["docstring"] = module_doc[:500] + ("..." if len(module_doc) > 500 else "")
+            self.graph.nodes[module_name]["docstring"] = module_doc[:_MAX_DOCSTRING_LENGTH] + ("..." if len(module_doc) > _MAX_DOCSTRING_LENGTH else "")
 
         imports_map: dict[str, str] = {}
 
@@ -278,7 +288,7 @@ class KnowledgeGraphGenerator:
             elif isinstance(node, ast.ClassDef):
                 class_id = f"{module_name}.{node.name}"
                 class_doc = ast.get_docstring(node)
-                doc_str = (class_doc[:500] + "..." if len(class_doc) > 500 else class_doc) if class_doc else ""
+                doc_str = (class_doc[:_MAX_DOCSTRING_LENGTH] + "..." if len(class_doc) > _MAX_DOCSTRING_LENGTH else class_doc) if class_doc else ""
                 self.graph.add_node(class_id, type="class", lang="python", label=node.name, docstring=doc_str)
                 self.graph.add_edge(module_name, class_id, type="defines")
                 for base in node.bases:
@@ -290,7 +300,7 @@ class KnowledgeGraphGenerator:
                 func_id = f"{module_name}.{node.name}"
                 args = [a.arg for a in node.args.args]
                 func_doc = ast.get_docstring(node)
-                doc_str = (func_doc[:500] + "..." if len(func_doc) > 500 else func_doc) if func_doc else ""
+                doc_str = (func_doc[:_MAX_DOCSTRING_LENGTH] + "..." if len(func_doc) > _MAX_DOCSTRING_LENGTH else func_doc) if func_doc else ""
                 self.graph.add_node(func_id, type="function", lang="python", label=node.name, args=str(args), docstring=doc_str)
                 self.graph.add_edge(module_name, func_id, type="defines")
 
@@ -308,7 +318,7 @@ class KnowledgeGraphGenerator:
     def _resolve_relative_import(current_module: str, partial_module: str | None, level: int) -> str:
         parts = current_module.split(".")
         if level >= len(parts):
-            return partial_module if partial_module else ""
+            return partial_module or ""
         base = ".".join(parts[:-level])
         if partial_module:
             return f"{base}.{partial_module}"
@@ -324,7 +334,11 @@ class KnowledgeGraphGenerator:
 
     @staticmethod
     def _calculate_hierarchical_layout(filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
-        """Calculate hierarchical layout based on module depth with grid wrapping."""
+        """Calculate hierarchical layout based on module depth with grid wrapping.
+
+        Returns:
+            dict[str, dict[str, float]]: Mapping of node IDs to x/y positions.
+        """
         logger.info("Calculating hierarchical layout...")
         layout_map: dict[str, dict[str, float]] = {}
 
@@ -362,7 +376,11 @@ class KnowledgeGraphGenerator:
 
     @staticmethod
     def _calculate_radial_layout(filtered_graph: nx.DiGraph) -> dict[str, dict[str, float]]:
-        """Calculate radial layout with entry point at center."""
+        """Calculate radial layout with entry point at center.
+
+        Returns:
+            dict[str, dict[str, float]]: Mapping of node IDs to x/y positions.
+        """
         logger.info("Calculating radial layout...")
         layout_map: dict[str, dict[str, float]] = {}
 
@@ -409,7 +427,11 @@ class KnowledgeGraphGenerator:
 
     @staticmethod
     def _calculate_sfdp_layout(dot_file: Path) -> dict[str, dict[str, float]]:
-        """Calculates layout using sfdp and returns node positions."""
+        """Calculates layout using sfdp and returns node positions.
+
+        Returns:
+            dict[str, dict[str, float]]: Mapping of node IDs to x/y positions.
+        """
         logger.info("Calculating pre-loaded layout using sfdp (this may take a while)...")
         layout_map: dict[str, dict[str, float]] = {}
 
@@ -448,12 +470,16 @@ class KnowledgeGraphGenerator:
 
     @staticmethod
     def _generate_dot_file(filtered_graph: nx.DiGraph, dot_path: Path) -> bool:
-        """Generate DOT file for external layout tools."""
+        """Generate DOT file for external layout tools.
+
+        Returns:
+            bool: True if the file was written successfully, False otherwise.
+        """
         try:
             try:
                 nx.drawing.nx_pydot.write_dot(filtered_graph, str(dot_path))
             except (ImportError, AttributeError):
-                with open(dot_path, "w", encoding="utf-8") as f:
+                with dot_path.open("w", encoding="utf-8") as f:
                     f.write('digraph "Intellicrack" {\n')
                     for n in filtered_graph.nodes:
                         safe_n = n.replace('"', '\\"')
@@ -491,7 +517,11 @@ class KnowledgeGraphGenerator:
         boundary_nodes: set[str],
         positions: dict[str, dict[str, float]],
     ) -> tuple[list[dict[str, Any]], str | None]:
-        """Build node data list and identify the entry point node."""
+        """Build node data list and identify the entry point node.
+
+        Returns:
+            tuple[list[dict[str, Any]], str | None]: Node data list and optional entry point ID.
+        """
         nodes_data: list[dict[str, Any]] = []
         entry_point_id: str | None = None
         size_map = {"module": 8, "class": 6, "struct": 6, "function": 4, "external": 4}
@@ -540,7 +570,11 @@ class KnowledgeGraphGenerator:
         filtered_graph: nx.DiGraph,
         positions: dict[str, dict[str, float]],
     ) -> list[dict[str, Any]]:
-        """Build edge data list with optional edge bundling."""
+        """Build edge data list with optional edge bundling.
+
+        Returns:
+            list[dict[str, Any]]: Edge data with source and target mappings.
+        """
         edges_data: list[dict[str, Any]] = [
             {"source": u, "target": v} for u, v, _attrs in filtered_graph.edges(data=True)
         ]
@@ -586,7 +620,7 @@ class KnowledgeGraphGenerator:
         positions = self._compute_positions(filtered_graph, dot_path, layout_method)
         self._normalize_positions(positions)
 
-        clusters_data = self._build_cluster_data(enable_clustering)
+        clusters_data = self._build_cluster_data(enable_clustering=enable_clustering)
         nodes_data, entry_point_id = self._build_node_data(filtered_graph, boundary_nodes, positions)
         edges_data = self._build_edge_data(filtered_graph, positions)
 
@@ -599,8 +633,7 @@ class KnowledgeGraphGenerator:
         )
 
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(html_content)
+            Path(output_path).write_text(html_content, encoding="utf-8")
             logger.info("Interactive HTML saved to: %s", output_path)
         except Exception:
             logger.exception("Failed to save HTML file:")
@@ -611,7 +644,11 @@ class KnowledgeGraphGenerator:
         dot_path: Path,
         layout_method: str,
     ) -> dict[str, dict[str, float]]:
-        """Compute node positions using the specified layout method."""
+        """Compute node positions using the specified layout method.
+
+        Returns:
+            dict[str, dict[str, float]]: Mapping of node IDs to x/y positions.
+        """
         self._generate_dot_file(filtered_graph, dot_path)
         logger.info("DOT file saved to: %s", dot_path)
 
@@ -630,8 +667,12 @@ class KnowledgeGraphGenerator:
 
         return positions
 
-    def _build_cluster_data(self, enable_clustering: bool) -> dict[str, dict[str, Any]]:
-        """Build cluster metadata for the visualization."""
+    def _build_cluster_data(self, *, enable_clustering: bool) -> dict[str, dict[str, Any]]:
+        """Build cluster metadata for the visualization.
+
+        Returns:
+            dict[str, dict[str, Any]]: Cluster metadata keyed by cluster ID.
+        """
         clusters_data: dict[str, dict[str, Any]] = {}
 
         if enable_clustering and self.cluster_manager:
@@ -657,7 +698,11 @@ class KnowledgeGraphGenerator:
         json_entry: str,
         json_colors: str,
     ) -> str:
-        """Generate the complete HTML template with all JavaScript features."""
+        """Generate the complete HTML template with all JavaScript features.
+
+        Returns:
+            str: Complete HTML document as a string.
+        """
         return f"""<!DOCTYPE html>
 <html>
 <head>

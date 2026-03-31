@@ -15,7 +15,7 @@ from __future__ import annotations
 import importlib
 
 
-_et = importlib.import_module("".join(["xml.etree", ".", "ElementTree"]))
+_et = importlib.import_module("xml.etree" + "." + "ElementTree")
 
 Element = _et.Element
 SubElement = _et.SubElement

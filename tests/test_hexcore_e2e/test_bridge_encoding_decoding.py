@@ -12,7 +12,7 @@ encodings the system supports.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -20,19 +20,21 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from pathlib import Path
+
 
 pytest.importorskip("intellicrack_hexcore")
 
 
-def _run(coro: Any) -> Any:
+def _run(coro: Coroutine[object, object, object]) -> object:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        Any: The result of the coroutine.
+        object: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -48,7 +50,7 @@ def _run(coro: Any) -> Any:
 class TestDecodeText:
     """Tests for bridge.decode_text operating on real HexDocument data."""
 
-    def test_decode_ascii_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_ascii_text_from_file(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text must return the original ASCII string for ASCII-encoded bytes.
 
         Args:
@@ -65,7 +67,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_utf8_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_utf8_text_from_file(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text with utf-8 encoding must reproduce the original UTF-8 string.
 
         Args:
@@ -82,7 +84,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_latin1_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_latin1_text_from_file(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text with latin-1 encoding must reproduce extended Latin-1 characters.
 
         Args:
@@ -99,7 +101,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_utf16le_text_from_file(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_utf16le_text_from_file(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text with utf-16le encoding must reproduce the original UTF-16 LE string.
 
         Args:
@@ -116,7 +118,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_text_at_nonzero_offset(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_text_at_nonzero_offset(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text at an offset must skip leading bytes and read from the correct position.
 
         Args:
@@ -134,7 +136,7 @@ class TestDecodeText:
 
         assert result == text
 
-    def test_decode_text_at_multiple_offsets(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_text_at_multiple_offsets(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text correctly reads different text spans from the same document.
 
         Args:
@@ -154,7 +156,7 @@ class TestDecodeText:
         assert result_a == word_a
         assert result_b == word_b
 
-    def test_decode_text_invalid_encoding_handles_gracefully(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_text_invalid_encoding_handles_gracefully(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text with an unknown encoding must not crash; it may raise or return a string.
 
         Args:
@@ -177,7 +179,7 @@ class TestDecodeText:
             assert result is not None
             assert isinstance(result, str)
 
-    def test_decode_text_returns_string_type(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_text_returns_string_type(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text must return a str object, not bytes or None.
 
         Args:
@@ -193,7 +195,7 @@ class TestDecodeText:
 
         assert isinstance(result, str)
 
-    def test_decode_text_single_byte_ascii(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_text_single_byte_ascii(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text on a single ASCII byte must return the corresponding character.
 
         Args:
@@ -212,7 +214,7 @@ class TestDecodeText:
 class TestListEncodings:
     """Tests for bridge.list_encodings returning supported encoding metadata."""
 
-    def test_list_encodings_returns_nonempty_list(self, bridge: Any) -> None:
+    def test_list_encodings_returns_nonempty_list(self, bridge: HexEditorBridge) -> None:
         """list_encodings must return a list with at least one entry.
 
         Args:
@@ -223,7 +225,7 @@ class TestListEncodings:
         assert isinstance(result, list)
         assert result
 
-    def test_list_encodings_entries_have_name_key(self, bridge: Any) -> None:
+    def test_list_encodings_entries_have_name_key(self, bridge: HexEditorBridge) -> None:
         """Every entry in list_encodings must contain a 'name' key.
 
         Args:
@@ -234,7 +236,7 @@ class TestListEncodings:
         for entry in result:
             assert "name" in entry
 
-    def test_list_encodings_entries_have_label_key(self, bridge: Any) -> None:
+    def test_list_encodings_entries_have_label_key(self, bridge: HexEditorBridge) -> None:
         """Every entry in list_encodings must contain a 'label' key.
 
         Args:
@@ -245,7 +247,7 @@ class TestListEncodings:
         for entry in result:
             assert "label" in entry
 
-    def test_list_encodings_contains_utf8_entry(self, bridge: Any) -> None:
+    def test_list_encodings_contains_utf8_entry(self, bridge: HexEditorBridge) -> None:
         """list_encodings must include an entry whose name contains 'utf-8' or 'utf8'.
 
         Args:
@@ -256,7 +258,7 @@ class TestListEncodings:
         names_lower = [e["name"].lower() for e in result]
         assert any("utf-8" in n or "utf8" in n for n in names_lower)
 
-    def test_list_encodings_contains_ascii_entry(self, bridge: Any) -> None:
+    def test_list_encodings_contains_ascii_entry(self, bridge: HexEditorBridge) -> None:
         """list_encodings must include an entry whose name contains 'ascii'.
 
         Args:
@@ -267,7 +269,7 @@ class TestListEncodings:
         names_lower = [e["name"].lower() for e in result]
         assert any("ascii" in n for n in names_lower)
 
-    def test_list_encodings_names_are_nonempty_strings(self, bridge: Any) -> None:
+    def test_list_encodings_names_are_nonempty_strings(self, bridge: HexEditorBridge) -> None:
         """Every encoding name in list_encodings must be a non-empty str.
 
         Args:
@@ -279,7 +281,7 @@ class TestListEncodings:
             assert isinstance(entry["name"], str)
             assert len(entry["name"]) > 0
 
-    def test_list_encodings_labels_are_nonempty_strings(self, bridge: Any) -> None:
+    def test_list_encodings_labels_are_nonempty_strings(self, bridge: HexEditorBridge) -> None:
         """Every encoding label in list_encodings must be a non-empty str.
 
         Args:
@@ -291,7 +293,7 @@ class TestListEncodings:
             assert isinstance(entry["label"], str)
             assert len(entry["label"]) > 0
 
-    def test_list_encodings_with_open_document(self, bridge: Any, tmp_path: Path) -> None:
+    def test_list_encodings_with_open_document(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """list_encodings must work the same way with or without an open document.
 
         Args:
@@ -321,7 +323,7 @@ class TestListEncodings:
 
         _run(fresh.shutdown())
 
-    def test_decode_text_encoding_present_in_list_encodings(self, bridge: Any, tmp_path: Path) -> None:
+    def test_decode_text_encoding_present_in_list_encodings(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Every name returned by list_encodings must be usable with decode_text.
 
         Args:
