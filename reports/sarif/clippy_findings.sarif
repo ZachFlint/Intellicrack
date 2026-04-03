@@ -379,6 +379,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_inspector.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 476,
+                  "startColumn": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "this method could have a `#[must_use]` attribute"
           },
           "locations": [
@@ -1303,27 +1324,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_inspector.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 476,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "approximate value of `f{32, 64}::consts::PI` found"
           },
           "locations": [
@@ -1492,18 +1492,39 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "long literal lacking separators"
+            "text": "binding's name is too similar to existing binding"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/patch_export.rs",
+                  "uri": "src/entropy.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 22,
-                  "startColumn": 27
+                  "startLine": 250,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "binding's name is too similar to existing binding"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/entropy.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 249,
+                  "startColumn": 13
                 }
               }
             }
@@ -1519,1020 +1540,12 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/patch_export.rs",
+                  "uri": "src/entropy.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 29,
-                  "startColumn": 33
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 33,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 34,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 35,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 36,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 37,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 48,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 58,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 59,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 60,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 61,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 62,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 63,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 74,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this function could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 185,
-                  "startColumn": 8
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 248,
-                  "startColumn": 35
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 256,
+                  "startLine": 284,
                   "startColumn": 40
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/patch_export.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 262,
-                  "startColumn": 50
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 16,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 29,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 33,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "returning a `str` unnecessarily tied to the lifetime of arguments"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 74,
-                  "startColumn": 30
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 103,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "variables can be used directly in the `format!` string"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 120,
-                  "startColumn": 54
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 134,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "implicit borrow as raw pointer"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 144,
-                  "startColumn": 21
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "`as` casting between raw pointers without changing their constness"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 181,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "implicit borrow as raw pointer"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 183,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "adding items after statements is confusing, since items exist from the start of the scope"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 199,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "`as` casting between raw pointers without changing their constness"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 209,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "implicit borrow as raw pointer"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 211,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "returning a `str` unnecessarily tied to the lifetime of arguments"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/data_source.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 230,
-                  "startColumn": 30
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "these match arms have identical bodies"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 68,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `usize` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 122,
-                  "startColumn": 33
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 144,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 161,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "casting `u32` to `u8` may truncate the value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 165,
-                  "startColumn": 55
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "redundant closure"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 170,
-                  "startColumn": 65
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "redundant closure"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 174,
-                  "startColumn": 65
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "variables can be used directly in the `format!` string"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 182,
-                  "startColumn": 56
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this function could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 192,
-                  "startColumn": 8
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this could be rewritten as `let...else`"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 205,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this function could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 271,
-                  "startColumn": 8
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "redundant closure"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 170,
-                  "startColumn": 65
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "redundant closure"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 336,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "redundant closure"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 348,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "redundant closure"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/encodings.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 498,
-                  "startColumn": 23
                 }
               }
             }
@@ -2794,69 +1807,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "binding's name is too similar to existing binding"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/entropy.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 250,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "binding's name is too similar to existing binding"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/entropy.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 249,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/entropy.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 284,
-                  "startColumn": 40
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "variables can be used directly in the `format!` string"
           },
           "locations": [
@@ -2995,6 +1945,69 @@
                 "region": {
                   "startLine": 285,
                   "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/hash.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 483,
+                  "startColumn": 59
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/hash.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 483,
+                  "startColumn": 71
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/hash.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 483,
+                  "startColumn": 95
                 }
               }
             }
@@ -3451,12 +2464,12 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/hash.rs",
+                  "uri": "src/patch_export.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 483,
-                  "startColumn": 59
+                  "startLine": 22,
+                  "startColumn": 27
                 }
               }
             }
@@ -3472,12 +2485,12 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/hash.rs",
+                  "uri": "src/patch_export.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 483,
-                  "startColumn": 71
+                  "startLine": 29,
+                  "startColumn": 33
                 }
               }
             }
@@ -3493,12 +2506,54 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/hash.rs",
+                  "uri": "src/patch_export.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 483,
-                  "startColumn": 95
+                  "startLine": 248,
+                  "startColumn": 35
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 256,
+                  "startColumn": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 262,
+                  "startColumn": 50
                 }
               }
             }
@@ -3514,12 +2569,12 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
+                  "uri": "src/patch_export.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 28,
-                  "startColumn": 5
+                  "startLine": 17,
+                  "startColumn": 1
                 }
               }
             }
@@ -3529,17 +2584,311 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "casting `u64` to `usize` may truncate the value on targets with 32-bit wide pointers"
+            "text": "casting `usize` to `u8` may truncate the value"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
+                  "uri": "src/patch_export.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 32,
+                  "startLine": 33,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 36,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 48,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 59,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 61,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 62,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 74,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this function could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/patch_export.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 185,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "long literal lacking separators"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/search.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 950,
                   "startColumn": 24
                 }
               }
@@ -3550,18 +2899,18 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "this method could have a `#[must_use]` attribute"
+            "text": "long literal lacking separators"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
+                  "uri": "src/search.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 54,
-                  "startColumn": 12
+                  "startLine": 954,
+                  "startColumn": 49
                 }
               }
             }
@@ -3571,18 +2920,18 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "this method could have a `#[must_use]` attribute"
+            "text": "long literal lacking separators"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
+                  "uri": "src/search.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 63,
-                  "startColumn": 12
+                  "startLine": 962,
+                  "startColumn": 24
                 }
               }
             }
@@ -3592,564 +2941,18 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "this method could have a `#[must_use]` attribute"
+            "text": "long literal lacking separators"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
+                  "uri": "src/search.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 72,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 76,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 80,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 84,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 88,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 95,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 114,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "used underscore-prefixed binding"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 131,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "used underscore-prefixed binding"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 21,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "used underscore-prefixed binding"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 141,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "used underscore-prefixed binding"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 21,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function returning `Result` missing `# Errors` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/mmap_io.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 149,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 22,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 42,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 46,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 50,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 72,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 79,
-                  "startColumn": 12
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this could be rewritten as `let...else`"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 90,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function which may panic missing `# Panics` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 110,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function which may panic missing `# Panics` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 129,
-                  "startColumn": 45
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function which may panic missing `# Panics` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 166,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "docs for function which may panic missing `# Panics` section"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 180,
-                  "startColumn": 37
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this could be rewritten as `let...else`"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 174,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this `if` has identical blocks"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 201,
-                  "startColumn": 45
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this `if` has identical blocks"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 210,
-                  "startColumn": 16
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "this method could have a `#[must_use]` attribute"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 229,
-                  "startColumn": 12
+                  "startLine": 965,
+                  "startColumn": 49
                 }
               }
             }
@@ -5503,90 +4306,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/search.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 950,
-                  "startColumn": 24
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/search.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 954,
-                  "startColumn": 49
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/search.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 962,
-                  "startColumn": 24
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "long literal lacking separators"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/search.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 965,
-                  "startColumn": 49
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "redundant closure"
           },
           "locations": [
@@ -5641,6 +4360,27 @@
                 "region": {
                   "startLine": 975,
                   "startColumn": 51
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "unused import: `StructTemplate`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/templates/eval.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 885,
+                  "startColumn": 56
                 }
               }
             }
@@ -6259,18 +4999,1278 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "unused import: `StructTemplate`"
+            "text": "docs for function returning `Result` missing `# Errors` section"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/templates/eval.rs",
+                  "uri": "src/data_source.rs",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 885,
+                  "startLine": 16,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "returning a `str` unnecessarily tied to the lifetime of arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 74,
+                  "startColumn": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 103,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "variables can be used directly in the `format!` string"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 120,
+                  "startColumn": 54
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 134,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "implicit borrow as raw pointer"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 144,
+                  "startColumn": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "`as` casting between raw pointers without changing their constness"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 181,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "implicit borrow as raw pointer"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 183,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "adding items after statements is confusing, since items exist from the start of the scope"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 199,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "`as` casting between raw pointers without changing their constness"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 209,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "implicit borrow as raw pointer"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 211,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "returning a `str` unnecessarily tied to the lifetime of arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/data_source.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 230,
+                  "startColumn": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "these match arms have identical bodies"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `usize` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 33
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 144,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 161,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `u32` to `u8` may truncate the value"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 165,
+                  "startColumn": 55
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "redundant closure"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 170,
+                  "startColumn": 65
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "redundant closure"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 174,
+                  "startColumn": 65
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "variables can be used directly in the `format!` string"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 182,
                   "startColumn": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this function could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 192,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this could be rewritten as `let...else`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 205,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this function could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 271,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "redundant closure"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 336,
+                  "startColumn": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "redundant closure"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 348,
+                  "startColumn": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "redundant closure"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 498,
+                  "startColumn": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "redundant closure"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/encodings.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 170,
+                  "startColumn": 65
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "casting `u64` to `usize` may truncate the value on targets with 32-bit wide pointers"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 32,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 63,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 72,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 76,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 80,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 84,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 88,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 95,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 114,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "used underscore-prefixed binding"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 131,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "used underscore-prefixed binding"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "used underscore-prefixed binding"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 141,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "used underscore-prefixed binding"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function returning `Result` missing `# Errors` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/mmap_io.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 149,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 46,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 50,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 72,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this could be rewritten as `let...else`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 90,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function which may panic missing `# Panics` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 110,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function which may panic missing `# Panics` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 129,
+                  "startColumn": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function which may panic missing `# Panics` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 166,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "docs for function which may panic missing `# Panics` section"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 180,
+                  "startColumn": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this could be rewritten as `let...else`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 174,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this `if` has identical blocks"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 201,
+                  "startColumn": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this `if` has identical blocks"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 210,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "this method could have a `#[must_use]` attribute"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/piece_table.rs",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 229,
+                  "startColumn": 12
                 }
               }
             }
@@ -8087,7 +8087,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-03-31T03:23:15.545639+00:00"
+          "endTimeUtc": "2026-04-01T02:38:04.717690+00:00"
         }
       ]
     }

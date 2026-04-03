@@ -71,8 +71,7 @@ class PatternEditorMixin:
     def _populate_template_combo(self) -> None: ...
 
     def _build_pattern_editor(self) -> QFrame:
-        """
-        Build the collapsible pattern editor panel.
+        """Build the collapsible pattern editor panel.
 
         Returns:
             QFrame: Frame containing the pattern editor UI.
@@ -221,8 +220,7 @@ class PatternEditorMixin:
             logger.info("pattern_compiled")
 
     def _on_pattern_apply(self) -> None:
-        """
-        Apply the pattern at the current cursor offset.
+        """Apply the pattern at the current cursor offset.
 
         Tries the HexPat interpreter first for direct execution, then falls back to compile-register-apply via the Rust backend.
         """
@@ -274,8 +272,7 @@ class PatternEditorMixin:
             logger.info("pattern_applied", template_name=name, offset=cursor_offset)
 
     def _apply_via_interpreter(self, source: str, offset: int) -> None:
-        """
-        Execute HexPat source directly via the interpreter.
+        """Execute HexPat source directly via the interpreter.
 
         Args:
             source: HexPat DSL source code.
@@ -402,8 +399,7 @@ class PatternEditorMixin:
             self._pattern_status_label.setText("New pattern")
 
     def _on_pattern_library_clicked(self, item: QTreeWidgetItem, column: int) -> None:
-        """
-        Load the selected template from the library into the editors.
+        """Load the selected template from the library into the editors.
 
         Handles both built-in JSON templates and .hexpat pattern files.
 
@@ -441,8 +437,7 @@ class PatternEditorMixin:
             logger.debug("pattern_library_loaded", template_name=template_name)
 
     def _load_hexpat_from_library(self, file_path: str, name: str) -> None:
-        """
-        Load a .hexpat pattern file into the DSL editor.
+        """Load a .hexpat pattern file into the DSL editor.
 
         Args:
             file_path: Absolute path to the .hexpat file.

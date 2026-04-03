@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Ollama LLM provider implementation with dual local/cloud support.
+"""Ollama LLM provider implementation with dual local/cloud support.
 
 This module provides integration with both locally running Ollama models and the Ollama cloud API for chat completion and tool/function
 calling.
@@ -55,8 +54,7 @@ _ERR_PULL_FAILED = "Failed to pull model %s: %s"
 
 
 class OllamaProvider(LLMProviderBase):
-    """
-    Ollama LLM provider implementation with dual local/cloud support.
+    """Ollama LLM provider implementation with dual local/cloud support.
 
     Provides simultaneous integration with local Ollama instances and the
     Ollama cloud API at https://ollama.com. Models from each source are
@@ -83,8 +81,7 @@ class OllamaProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """
-        Get the provider's name.
+        """Get the provider's name.
 
         Returns:
             ProviderName: ProviderName.OLLAMA
@@ -93,8 +90,7 @@ class OllamaProvider(LLMProviderBase):
 
     @property
     def local_available(self) -> bool:
-        """
-        Check if local Ollama is available.
+        """Check if local Ollama is available.
 
         Returns:
             bool: True if local Ollama instance is connected.
@@ -103,8 +99,7 @@ class OllamaProvider(LLMProviderBase):
 
     @property
     def cloud_available(self) -> bool:
-        """
-        Check if Ollama cloud is available.
+        """Check if Ollama cloud is available.
 
         Returns:
             bool: True if cloud API is connected.
@@ -112,8 +107,7 @@ class OllamaProvider(LLMProviderBase):
         return self._cloud_available
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """
-        Connect to both local and cloud Ollama if available.
+        """Connect to both local and cloud Ollama if available.
 
         Attempts to connect to both local Ollama instance and cloud API.
         Connection succeeds if at least one source is available.
@@ -218,8 +212,7 @@ class OllamaProvider(LLMProviderBase):
             self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
-        """
-        Fetch available models from both local and cloud Ollama.
+        """Fetch available models from both local and cloud Ollama.
 
         Returns models prefixed with their source (local/ or cloud/).
 
@@ -246,8 +239,7 @@ class OllamaProvider(LLMProviderBase):
         return sorted(models, key=lambda m: m.name)
 
     async def _fetch_local_models(self) -> list[ModelInfo]:
-        """
-        Fetch models from local Ollama instance.
+        """Fetch models from local Ollama instance.
 
         Returns:
             list[ModelInfo]: List of local models with 'local/' prefix.
@@ -292,8 +284,7 @@ class OllamaProvider(LLMProviderBase):
         return models
 
     async def _fetch_cloud_models(self) -> list[ModelInfo]:
-        """
-        Fetch models from Ollama cloud API.
+        """Fetch models from Ollama cloud API.
 
         Returns:
             list[ModelInfo]: List of cloud models with 'cloud/' prefix.
@@ -337,8 +328,7 @@ class OllamaProvider(LLMProviderBase):
         return models
 
     def _get_client_and_model(self, model: str) -> tuple[httpx.AsyncClient, str, str]:
-        """
-        Get appropriate client and base URL for the specified model.
+        """Get appropriate client and base URL for the specified model.
 
         Args:
             model: Model ID, optionally prefixed with 'local/' or 'cloud/'.
@@ -372,8 +362,7 @@ class OllamaProvider(LLMProviderBase):
         base_url: str,
         model_names: list[str],
     ) -> dict[str, tuple[int, bool]]:
-        """
-        Fetch context window sizes and tool support from /api/show.
+        """Fetch context window sizes and tool support from /api/show.
 
         Uses ``asyncio.gather`` to query models in parallel.  Tool support
         is detected by searching the model template for the Ollama
@@ -430,8 +419,7 @@ class OllamaProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Send a chat completion request to Ollama.
+        """Send a chat completion request to Ollama.
 
         Automatically routes to local or cloud based on model prefix.
 
@@ -510,8 +498,7 @@ class OllamaProvider(LLMProviderBase):
         base_url: str,
         request_body: dict[str, object],
     ) -> dict[str, Any]:
-        """
-        Execute the Ollama API chat call with error handling.
+        """Execute the Ollama API chat call with error handling.
 
         Args:
             client: The httpx async client to use.
@@ -539,8 +526,7 @@ class OllamaProvider(LLMProviderBase):
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
 
     def _parse_ollama_tool_calls(self, data: dict[str, Any]) -> list[ToolCall]:
-        """
-        Parse tool calls from an Ollama API response.
+        """Parse tool calls from an Ollama API response.
 
         Args:
             data: The parsed JSON response from Ollama.
@@ -592,8 +578,7 @@ class OllamaProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """
-        Stream a chat completion response from Ollama.
+        """Stream a chat completion response from Ollama.
 
         Automatically routes to local or cloud based on model prefix.
         When tools are provided, falls back to a non-streaming request
@@ -693,8 +678,7 @@ class OllamaProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal messages to Ollama format.
+        """Convert internal messages to Ollama format.
 
         Args:
             messages: List of Message objects.
@@ -713,8 +697,7 @@ class OllamaProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal tools to Ollama format.
+        """Convert internal tools to Ollama format.
 
         Args:
             tools: List of ToolDefinition objects.
@@ -729,8 +712,7 @@ class OllamaProvider(LLMProviderBase):
         return ollama_tools
 
     async def pull_model(self, model_name: str) -> AsyncIterator[str]:
-        """
-        Pull a model from Ollama library to local instance.
+        """Pull a model from Ollama library to local instance.
 
         Args:
             model_name: Name of model to pull (may be prefixed with local/).

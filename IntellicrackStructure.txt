@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Tue, Mar 31, 2026 03:38:15 AM
+Generated: Fri, Apr 03, 2026 11:18:00 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -2903,7 +2903,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   │   ├── action_stop.svg
 │   │   │   │   ├── action_test.svg
 │   │   │   │   ├── ai-assistant.png
-│   │   │   │   ├── ai_brain.svg
 │   │   │   │   ├── ai_inference.svg
 │   │   │   │   ├── ai_model.svg
 │   │   │   │   ├── ai_neural.svg
@@ -3010,6 +3009,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   │   ├── dark_theme.qss
 │   │   │   │   └── light_theme.qss
 │   │   │   ├── icon.ico
+│   │   │   ├── splash-icon.png
 │   │   │   └── splash.png
 │   │   ├── bridges/
 │   │   │   ├── __init__.py
@@ -6704,7 +6704,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── examples/
 │       │   │   │   ├── incremental/
 │       │   │   │   │   └── intellicrack_hexcore-0kdzqcywb6a1r/
-│       │   │   │   │       ├── s-hh5qeiaviu-0wsxpp5-5dkioh43pqyd40yexsvwz41pj/
+│       │   │   │   │       ├── s-hh6sulc6ov-1cn0ncm-5dkioh43pqyd40yexsvwz41pj/
 │       │   │   │   │       │   ├── 031jm7xj0vuguwr2t5kk24mnb.o
 │       │   │   │   │       │   ├── 07e4r59azm15svcuajm13dif8.o
 │       │   │   │   │       │   ├── 0b2ya29zvucayq0jk0a5hnxl9.o
@@ -6964,11 +6964,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │       │   ├── ez4j9lcg1akjd0tmh41nkwau2.o
 │       │   │   │   │       │   ├── query-cache.bin
 │       │   │   │   │       │   └── work-products.bin
-│       │   │   │   │       └── s-hh5qeiaviu-0wsxpp5.lock
+│       │   │   │   │       └── s-hh6sulc6ov-1cn0ncm.lock
 │       │   │   │   └── .cargo-lock
 │       │   │   ├── .rustc_info.json
-│       │   │   ├── intellicrack-hexcore-10352-7311384354774570169_12.profraw
-│       │   │   ├── intellicrack-hexcore-9132-7311384354774570169_2.profraw
+│       │   │   ├── intellicrack-hexcore-14620-7311384354774570169_12.profraw
+│       │   │   ├── intellicrack-hexcore-3280-7311384354774570169_2.profraw
 │       │   │   └── intellicrack-hexcore-profraw-list
 │       │   ├── maturin/
 │       │   │   └── intellicrack_hexcore.dll
@@ -7920,6 +7920,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   ├── test_ui/
 │   │   ├── __init__.py
 │   │   ├── conftest.py
+│   │   ├── launch_splash_demo.py
 │   │   ├── test_app_embedded_tools.py
 │   │   ├── test_async_bridge.py
 │   │   ├── test_binary_panel_fixes.py
@@ -24178,13 +24179,9 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .yamllint
 ├── .yarnrc.yml
 ├── AGENTS.md
-├── basedpyright_output.txt
-├── bp_full.txt
-├── bp_remaining.txt
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── CODE_OF_CONDUCT.md
-├── codeql_log.txt
 ├── config.toml
 ├── CONTRIBUTING.md
 ├── coverage.json
@@ -24209,7 +24206,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── README.md
 ├── REMOVE_NUL.cmd
 ├── requirements.txt
-├── ruff_results.json
 ├── SECURITY.md
 ├── vulture_whitelist.py
 └── yarn.lock

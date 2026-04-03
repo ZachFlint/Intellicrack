@@ -38,8 +38,7 @@ _HIGHLIGHT_LIGHT: Final[str] = "#FF8800"
 
 
 def _get_highlight_color() -> str:
-    """
-    Return a theme-appropriate highlight color for search results.
+    """Return a theme-appropriate highlight color for search results.
 
     Returns:
         str: Hex color string suitable for the active theme.
@@ -50,8 +49,7 @@ def _get_highlight_color() -> str:
 
 
 class SearchWorker(QThread):
-    """
-    Background worker for hex/text/regex search operations.
+    """Background worker for hex/text/regex search operations.
 
     Executes document search FFI calls on a background thread to
     avoid blocking the Qt main thread on large files.
@@ -100,8 +98,7 @@ class SearchWorker(QThread):
             self.search_error.emit(exc)
 
     def _execute_search(self) -> list[tuple[int, int]]:
-        """
-        Dispatch to the appropriate document search method.
+        """Dispatch to the appropriate document search method.
 
         Returns:
             list[tuple[int, int]]: List of (offset, length) match tuples.
@@ -131,8 +128,7 @@ class SearchWorker(QThread):
 
 
 class NumericSearchWorker(QThread):
-    """
-    Background worker for numeric value search with Python fallback.
+    """Background worker for numeric value search with Python fallback.
 
     Scans the document chunk-by-chunk for numeric values matching
     the given range, running entirely on a background thread.
@@ -203,8 +199,7 @@ class NumericSearchWorker(QThread):
             self.search_error.emit(exc)
 
     def _search_native(self) -> list[tuple[int, int]]:
-        """
-        Use the document's native numeric search FFI methods.
+        """Use the document's native numeric search FFI methods.
 
         Dispatches to ``search_numeric_range`` for range queries or
         ``search_numeric`` for exact-value queries, with correct Rust
@@ -237,8 +232,7 @@ class NumericSearchWorker(QThread):
         return [(r[0], self._byte_width) for r in raw]
 
     def _search_fallback(self) -> list[tuple[int, int]]:
-        """
-        Scan the document chunk-by-chunk for matching numeric values.
+        """Scan the document chunk-by-chunk for matching numeric values.
 
         Returns:
             list[tuple[int, int]]: List of (offset, byte_width) match tuples.
@@ -326,8 +320,7 @@ class SearchMixin:
         self._search_worker.start()
 
     def _on_search_finished(self, results: list[tuple[int, int]]) -> None:
-        """
-        Handle completed search results from the background worker.
+        """Handle completed search results from the background worker.
 
         Args:
             results: List of (offset, length) match tuples.
@@ -360,8 +353,7 @@ class SearchMixin:
         logger.info("search_completed", result_count=len(results))
 
     def _on_search_error(self, exc: object) -> None:
-        """
-        Handle search failure from the background worker.
+        """Handle search failure from the background worker.
 
         Args:
             exc: The exception that occurred during search.
@@ -391,8 +383,7 @@ class SearchMixin:
             goto_fn(offset)
 
     def _build_numeric_search_panel(self) -> QFrame:
-        """
-        Build the collapsible numeric search panel.
+        """Build the collapsible numeric search panel.
 
         Returns:
             QFrame: Frame containing the numeric search controls.
@@ -464,8 +455,7 @@ class SearchMixin:
         return frame
 
     def _on_numeric_range_toggled(self, *, checked: bool) -> None:
-        """
-        Show or hide the max value field when range search is toggled.
+        """Show or hide the max value field when range search is toggled.
 
         Args:
             checked: True if range search is enabled.
@@ -474,8 +464,7 @@ class SearchMixin:
             self._numeric_max_input.setVisible(checked)
 
     def _on_search_mode_changed(self, mode: str) -> None:
-        """
-        Show or hide the numeric search panel and apply input validators based on mode.
+        """Show or hide the numeric search panel and apply input validators based on mode.
 
         When the mode is ``Hex``, a hex-byte validator is attached to the
         search input.  For all other modes, any existing validator is cleared.
@@ -577,8 +566,7 @@ class SearchMixin:
         self._numeric_search_worker.start()
 
     def _on_numeric_search_finished(self, results: list[tuple[int, int]]) -> None:
-        """
-        Handle completed numeric search results from the background worker.
+        """Handle completed numeric search results from the background worker.
 
         Args:
             results: List of (offset, byte_width) match tuples.
@@ -609,8 +597,7 @@ class SearchMixin:
         logger.info("numeric_search_completed", result_count=len(results))
 
     def _on_numeric_search_error(self, exc: object) -> None:
-        """
-        Handle numeric search failure from the background worker.
+        """Handle numeric search failure from the background worker.
 
         Args:
             exc: The exception that occurred during search.

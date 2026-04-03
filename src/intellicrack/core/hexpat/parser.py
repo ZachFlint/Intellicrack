@@ -115,8 +115,7 @@ _EOF_TOKEN = Token(TokenType.EOF, "", 0, 0)
 
 
 class HexPatParser:
-    """
-    Recursive-descent parser for the HexPat .hexpat pattern language.
+    """Recursive-descent parser for the HexPat .hexpat pattern language.
 
     Consumes a flat list of tokens produced by the lexer and builds an AST
     consisting of top-level declarations and statements.
@@ -136,8 +135,7 @@ class HexPatParser:
         self.file_path: str = file_path
 
     def parse(self) -> list[DeclNode | StmtNode]:
-        """
-        Parse the token stream into a list of top-level declarations and statements.
+        """Parse the token stream into a list of top-level declarations and statements.
 
         Returns:
             list[DeclNode | StmtNode]: Ordered list of top-level AST nodes.
@@ -168,8 +166,7 @@ class HexPatParser:
         return nodes
 
     def _current(self) -> Token:
-        """
-        Return the current token without consuming it.
+        """Return the current token without consuming it.
 
         Returns:
             Token: Current token, or an EOF token if past the end.
@@ -177,8 +174,7 @@ class HexPatParser:
         return self._tokens[self._pos] if self._pos < len(self._tokens) else _EOF_TOKEN
 
     def _peek(self, offset: int = 1) -> Token:
-        """
-        Return the token at current position plus offset without consuming.
+        """Return the token at current position plus offset without consuming.
 
         Args:
             offset: Number of positions ahead to look.
@@ -190,8 +186,7 @@ class HexPatParser:
         return self._tokens[idx] if idx < len(self._tokens) else _EOF_TOKEN
 
     def _advance(self) -> Token:
-        """
-        Consume and return the current token.
+        """Consume and return the current token.
 
         Returns:
             Token: The token that was current before advancing.
@@ -202,8 +197,7 @@ class HexPatParser:
         return tok
 
     def _expect(self, tt: TokenType) -> Token:
-        """
-        Consume the current token if it matches the expected type.
+        """Consume the current token if it matches the expected type.
 
         Args:
             tt: Expected token type.
@@ -221,8 +215,7 @@ class HexPatParser:
         return self._advance()
 
     def _match(self, *types: TokenType) -> bool:
-        """
-        Consume the current token if it matches any of the given types.
+        """Consume the current token if it matches any of the given types.
 
         Args:
             *types: Token types to match against.
@@ -236,8 +229,7 @@ class HexPatParser:
         return False
 
     def _at_end(self) -> bool:
-        """
-        Check whether the token stream is exhausted.
+        """Check whether the token stream is exhausted.
 
         Returns:
             bool: True if at EOF.
@@ -245,8 +237,7 @@ class HexPatParser:
         return self._current().type == TokenType.EOF
 
     def _save(self) -> int:
-        """
-        Save the current parser position.
+        """Save the current parser position.
 
         Returns:
             int: Current position index.
@@ -254,8 +245,7 @@ class HexPatParser:
         return self._pos
 
     def _restore(self, pos: int) -> None:
-        """
-        Restore the parser to a previously saved position.
+        """Restore the parser to a previously saved position.
 
         Args:
             pos: Position index to restore to.
@@ -263,8 +253,7 @@ class HexPatParser:
         self._pos = pos
 
     def _try_parse_annotations(self) -> tuple[tuple[str, ExprNode | None], ...]:
-        """
-        Attempt to parse an annotation block if one is present.
+        """Attempt to parse an annotation block if one is present.
 
         Returns:
             tuple[tuple[str, ExprNode | None], ...]: Parsed annotations or an empty tuple when no annotation block follows.
@@ -274,8 +263,7 @@ class HexPatParser:
         return self._parse_annotations()
 
     def _parse_annotations(self) -> tuple[tuple[str, ExprNode | None], ...]:
-        """
-        Parse a double-bracket annotation block.
+        """Parse a double-bracket annotation block.
 
         Returns:
             tuple[tuple[str, ExprNode | None], ...]: Tuple of (name, optional_expr) annotation pairs.
@@ -297,8 +285,7 @@ class HexPatParser:
         return tuple(items)
 
     def _parse_type(self) -> TypeNode:
-        """
-        Parse a type specifier, including optional array suffix.
+        """Parse a type specifier, including optional array suffix.
 
         Returns:
             TypeNode: A TypeNode representing the parsed type.
@@ -385,8 +372,7 @@ class HexPatParser:
         return base
 
     def _parse_expression(self, min_bp: int = 0) -> ExprNode:
-        """
-        Parse an expression using Pratt-style operator precedence.
+        """Parse an expression using Pratt-style operator precedence.
 
         Args:
             min_bp: Minimum binding power threshold for infix operators.
@@ -494,8 +480,7 @@ class HexPatParser:
         return left
 
     def _parse_prefix(self) -> ExprNode:
-        """
-        Parse a prefix expression (literal, identifier, unary operator, grouping).
+        """Parse a prefix expression (literal, identifier, unary operator, grouping).
 
         Returns:
             ExprNode: Parsed prefix expression node.
@@ -617,8 +602,7 @@ class HexPatParser:
         raise HexPatParseError(msg, tok.line, tok.column, self.file_path)
 
     def _parse_paren_or_cast(self) -> ExprNode:
-        """
-        Parse a parenthesised expression or a cast expression.
+        """Parse a parenthesised expression or a cast expression.
 
         Returns:
             ExprNode: A CastExpr when the form is (Type)(expr), otherwise the inner expression.
@@ -653,8 +637,7 @@ class HexPatParser:
         return inner
 
     def _parse_block(self, *, allow_fields: bool = False) -> tuple[StmtNode, ...]:
-        """
-        Parse a brace-enclosed block of statements.
+        """Parse a brace-enclosed block of statements.
 
         Args:
             allow_fields: When True, field declarations are permitted within the block.
@@ -670,8 +653,7 @@ class HexPatParser:
         return tuple(stmts)
 
     def _parse_statement(self, *, allow_fields: bool = False) -> StmtNode:
-        """
-        Parse a single statement.
+        """Parse a single statement.
 
         Args:
             allow_fields: When True, type-name-followed-by-identifier is parsed as a
@@ -737,8 +719,7 @@ class HexPatParser:
         return self._parse_expr_stmt()
 
     def _looks_like_field(self) -> bool:
-        """
-        Check whether the current position starts a field declaration.
+        """Check whether the current position starts a field declaration.
 
         Uses look-ahead without consuming tokens.
 
@@ -751,8 +732,7 @@ class HexPatParser:
         return result
 
     def _check_field_lookahead(self) -> bool:
-        """
-        Perform the actual field lookahead check without save/restore.
+        """Perform the actual field lookahead check without save/restore.
 
         Returns:
             bool: True when the current token sequence matches a field declaration pattern.
@@ -772,8 +752,7 @@ class HexPatParser:
         return self._current().type in {TokenType.IDENTIFIER, TokenType.STAR}
 
     def _parse_expr_or_placement_stmt(self, *, allow_fields: bool) -> StmtNode:
-        """
-        Parse an expression statement or a top-level placement statement.
+        """Parse an expression statement or a top-level placement statement.
 
         Attempts to parse a placement (type + name + optional offset) and falls
         back to a plain expression statement when that fails.
@@ -797,8 +776,7 @@ class HexPatParser:
             return stmt
 
     def _parse_expr_stmt(self) -> ExprStmt:
-        """
-        Parse an expression used as a statement.
+        """Parse an expression used as a statement.
 
         Returns:
             ExprStmt: An ExprStmt node.
@@ -809,8 +787,7 @@ class HexPatParser:
         return ExprStmt(expr=expr, line=tok.line, column=tok.column)
 
     def _parse_top_level_statement(self) -> DeclNode | StmtNode:
-        """
-        Parse a single top-level statement or placement declaration.
+        """Parse a single top-level statement or placement declaration.
 
         Returns:
             DeclNode | StmtNode: A top-level AST node.
@@ -882,8 +859,7 @@ class HexPatParser:
         *,
         in_struct_body: bool,
     ) -> FieldDecl | PlacementStmt:
-        """
-        Parse a field declaration or placement statement.
+        """Parse a field declaration or placement statement.
 
         Args:
             endianness: Pre-parsed endianness specifier, or None.
@@ -981,8 +957,7 @@ class HexPatParser:
         )
 
     def _parse_if_stmt(self) -> ConditionalField:
-        """
-        Parse an if/else-if/else conditional statement.
+        """Parse an if/else-if/else conditional statement.
 
         Returns:
             ConditionalField: A ConditionalField node.
@@ -1005,8 +980,7 @@ class HexPatParser:
         )
 
     def _parse_while_stmt(self) -> WhileStmt:
-        """
-        Parse a while loop statement.
+        """Parse a while loop statement.
 
         Returns:
             WhileStmt: A WhileStmt node.
@@ -1019,8 +993,7 @@ class HexPatParser:
         return WhileStmt(condition=condition, body=body, line=tok.line, column=tok.column)
 
     def _parse_for_stmt(self) -> ForStmt:
-        """
-        Parse a for loop statement.
+        """Parse a for loop statement.
 
         Returns:
             ForStmt: A ForStmt node.
@@ -1064,8 +1037,7 @@ class HexPatParser:
         )
 
     def _parse_match_stmt(self) -> MatchStmt:
-        """
-        Parse a match statement.
+        """Parse a match statement.
 
         Returns:
             MatchStmt: A MatchStmt node.
@@ -1110,8 +1082,7 @@ class HexPatParser:
         return MatchStmt(value=value, arms=tuple(arms), line=tok.line, column=tok.column)
 
     def _parse_try_stmt(self) -> TryStmt:
-        """
-        Parse a try/catch statement.
+        """Parse a try/catch statement.
 
         Returns:
             TryStmt: A TryStmt node.
@@ -1128,8 +1099,7 @@ class HexPatParser:
         )
 
     def _parse_return_stmt(self) -> ReturnStmt:
-        """
-        Parse a return statement.
+        """Parse a return statement.
 
         Returns:
             ReturnStmt: A ReturnStmt node.
@@ -1145,8 +1115,7 @@ class HexPatParser:
         self,
         annotations: tuple[tuple[str, ExprNode | None], ...],
     ) -> StructDecl:
-        """
-        Parse a struct declaration.
+        """Parse a struct declaration.
 
         Args:
             annotations: Pre-parsed annotation pairs collected before the struct keyword.
@@ -1174,8 +1143,7 @@ class HexPatParser:
         self,
         annotations: tuple[tuple[str, ExprNode | None], ...],
     ) -> UnionDecl:
-        """
-        Parse a union declaration.
+        """Parse a union declaration.
 
         Args:
             annotations: Pre-parsed annotation pairs collected before the union keyword.
@@ -1195,8 +1163,7 @@ class HexPatParser:
         )
 
     def _parse_enum(self) -> EnumDecl:
-        """
-        Parse an enum declaration.
+        """Parse an enum declaration.
 
         Returns:
             EnumDecl: An EnumDecl node.
@@ -1238,8 +1205,7 @@ class HexPatParser:
         self,
         annotations: tuple[tuple[str, ExprNode | None], ...],
     ) -> BitfieldDecl:
-        """
-        Parse a bitfield declaration.
+        """Parse a bitfield declaration.
 
         Args:
             annotations: Pre-parsed annotation pairs collected before the bitfield keyword.
@@ -1276,8 +1242,7 @@ class HexPatParser:
         )
 
     def _parse_function(self) -> FunctionDecl:
-        """
-        Parse a function declaration.
+        """Parse a function declaration.
 
         Returns:
             FunctionDecl: A FunctionDecl node.
@@ -1331,8 +1296,7 @@ class HexPatParser:
         )
 
     def _parse_namespace(self) -> NamespaceDecl:
-        """
-        Parse a namespace declaration.
+        """Parse a namespace declaration.
 
         Returns:
             NamespaceDecl: A NamespaceDecl node.
@@ -1376,8 +1340,7 @@ class HexPatParser:
         )
 
     def _parse_using(self) -> UsingDecl:
-        """
-        Parse a using (type alias) declaration.
+        """Parse a using (type alias) declaration.
 
         Returns:
             UsingDecl: A UsingDecl node.

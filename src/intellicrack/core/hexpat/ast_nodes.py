@@ -11,8 +11,7 @@ from typing import TypeAlias
 
 @dataclass(frozen=True)
 class NumberLiteral:
-    """
-    An integer literal expression node.
+    """An integer literal expression node.
 
     Attributes:
         value: The integer value of the literal.
@@ -27,8 +26,7 @@ class NumberLiteral:
 
 @dataclass(frozen=True)
 class FloatLiteral:
-    """
-    A floating-point literal expression node.
+    """A floating-point literal expression node.
 
     Attributes:
         value: The float value of the literal.
@@ -43,8 +41,7 @@ class FloatLiteral:
 
 @dataclass(frozen=True)
 class StringLiteral:
-    """
-    A string literal expression node.
+    """A string literal expression node.
 
     Attributes:
         value: The string value of the literal.
@@ -59,8 +56,7 @@ class StringLiteral:
 
 @dataclass(frozen=True)
 class CharLiteral:
-    """
-    A single-character literal expression node.
+    """A single-character literal expression node.
 
     Attributes:
         value: The single-character string value.
@@ -75,8 +71,7 @@ class CharLiteral:
 
 @dataclass(frozen=True)
 class BoolLiteral:
-    """
-    A boolean literal expression node.
+    """A boolean literal expression node.
 
     Attributes:
         value: The boolean value of the literal.
@@ -91,8 +86,7 @@ class BoolLiteral:
 
 @dataclass(frozen=True)
 class NullLiteral:
-    """
-    A null literal expression node representing the null value.
+    """A null literal expression node representing the null value.
 
     Attributes:
         line: Source line number where this node appears.
@@ -105,8 +99,7 @@ class NullLiteral:
 
 @dataclass(frozen=True)
 class IdentifierExpr:
-    """
-    An identifier reference expression node.
+    """An identifier reference expression node.
 
     Attributes:
         name: The identifier name.
@@ -121,8 +114,7 @@ class IdentifierExpr:
 
 @dataclass(frozen=True)
 class DollarExpr:
-    """
-    A dollar-sign expression node representing the current binary offset.
+    """A dollar-sign expression node representing the current binary offset.
 
     Attributes:
         line: Source line number where this node appears.
@@ -135,8 +127,7 @@ class DollarExpr:
 
 @dataclass(frozen=True)
 class SizeofExpr:
-    """
-    A sizeof expression node that evaluates the size of a type or expression.
+    """A sizeof expression node that evaluates the size of a type or expression.
 
     Attributes:
         target: The expression or type whose size is evaluated.
@@ -151,8 +142,7 @@ class SizeofExpr:
 
 @dataclass(frozen=True)
 class AddressOfExpr:
-    """
-    An address-of expression node that yields the address of an expression.
+    """An address-of expression node that yields the address of an expression.
 
     Attributes:
         target: The expression whose address is taken.
@@ -167,8 +157,7 @@ class AddressOfExpr:
 
 @dataclass(frozen=True)
 class TypeNameOfExpr:
-    """
-    A type-name-of expression node that yields the type name of an expression.
+    """A type-name-of expression node that yields the type name of an expression.
 
     Attributes:
         target: The expression whose type name is retrieved.
@@ -183,8 +172,7 @@ class TypeNameOfExpr:
 
 @dataclass(frozen=True)
 class BinaryExpr:
-    """
-    A binary operation expression node.
+    """A binary operation expression node.
 
     Attributes:
         op: The operator string (e.g., "+", "-", "==", "&&").
@@ -203,8 +191,7 @@ class BinaryExpr:
 
 @dataclass(frozen=True)
 class UnaryExpr:
-    """
-    A unary operation expression node.
+    """A unary operation expression node.
 
     Attributes:
         op: The operator string (e.g., "-", "!", "~").
@@ -221,8 +208,7 @@ class UnaryExpr:
 
 @dataclass(frozen=True)
 class TernaryExpr:
-    """
-    A ternary conditional expression node (condition ? true_expr : false_expr).
+    """A ternary conditional expression node (condition ? true_expr : false_expr).
 
     Attributes:
         condition: The boolean condition expression.
@@ -241,8 +227,7 @@ class TernaryExpr:
 
 @dataclass(frozen=True)
 class FunctionCallExpr:
-    """
-    A function call expression node.
+    """A function call expression node.
 
     Attributes:
         callee: The expression that resolves to the callable.
@@ -259,8 +244,7 @@ class FunctionCallExpr:
 
 @dataclass(frozen=True)
 class MemberAccessExpr:
-    """
-    A member access expression node (e.g., object.member).
+    """A member access expression node (e.g., object.member).
 
     Attributes:
         object_expr: The expression representing the object being accessed.
@@ -294,8 +278,7 @@ class NamespaceAccessExpr:
 
 @dataclass(frozen=True)
 class ArraySubscriptExpr:
-    """
-    An array subscript expression node (e.g., array[index]).
+    """An array subscript expression node (e.g., array[index]).
 
     Attributes:
         array: The array expression being subscripted.
@@ -312,8 +295,7 @@ class ArraySubscriptExpr:
 
 @dataclass(frozen=True)
 class CastExpr:
-    """
-    A type cast expression node.
+    """A type cast expression node.
 
     Attributes:
         target_type: The type to cast to.
@@ -330,8 +312,7 @@ class CastExpr:
 
 @dataclass(frozen=True)
 class AssignExpr:
-    """
-    An assignment expression node (e.g., target = value, target += value).
+    """An assignment expression node (e.g., target = value, target += value).
 
     Attributes:
         target: The expression being assigned to.
@@ -350,8 +331,7 @@ class AssignExpr:
 
 @dataclass(frozen=True)
 class PrimitiveType:
-    """
-    A primitive built-in type node (e.g., u8, s32, float, bool).
+    """A primitive built-in type node (e.g., u8, s32, float, bool).
 
     Attributes:
         name: The primitive type name such as "u8", "s32", "float", or "bool".
@@ -368,8 +348,7 @@ class PrimitiveType:
 
 @dataclass(frozen=True)
 class NamedType:
-    """
-    A user-defined named type reference node.
+    """A user-defined named type reference node.
 
     Attributes:
         name: The type name identifier.
@@ -386,8 +365,7 @@ class NamedType:
 
 @dataclass(frozen=True)
 class PointerType:
-    """
-    A pointer type node referencing another type.
+    """A pointer type node referencing another type.
 
     Attributes:
         pointee: The type that this pointer points to.
@@ -402,8 +380,7 @@ class PointerType:
 
 @dataclass(frozen=True)
 class ArrayType:
-    """
-    An array type node with optional fixed size or while-condition for dynamic arrays.
+    """An array type node with optional fixed size or while-condition for dynamic arrays.
 
     Attributes:
         element: The element type of the array.
@@ -422,8 +399,7 @@ class ArrayType:
 
 @dataclass(frozen=True)
 class PaddingType:
-    """
-    A padding type node representing a fixed-size gap in a structure layout.
+    """A padding type node representing a fixed-size gap in a structure layout.
 
     Attributes:
         size: The expression determining the padding size in bytes.
@@ -438,8 +414,7 @@ class PaddingType:
 
 @dataclass(frozen=True)
 class AutoType:
-    """
-    An auto type node indicating that the type should be inferred.
+    """An auto type node indicating that the type should be inferred.
 
     Attributes:
         line: Source line number where this node appears.
@@ -452,8 +427,7 @@ class AutoType:
 
 @dataclass(frozen=True)
 class FieldDecl:
-    """
-    A field declaration statement node within a struct or union body.
+    """A field declaration statement node within a struct or union body.
 
     Attributes:
         name: The field name identifier.
@@ -482,8 +456,7 @@ class FieldDecl:
 
 @dataclass(frozen=True)
 class ConditionalField:
-    """
-    A conditional field statement node (if/else branching inside a struct body).
+    """A conditional field statement node (if/else branching inside a struct body).
 
     Attributes:
         condition: The boolean condition expression.
@@ -502,8 +475,7 @@ class ConditionalField:
 
 @dataclass(frozen=True)
 class VarDecl:
-    """
-    A variable declaration statement node.
+    """A variable declaration statement node.
 
     Attributes:
         name: The variable name identifier.
@@ -524,8 +496,7 @@ class VarDecl:
 
 @dataclass(frozen=True)
 class ReturnStmt:
-    """
-    A return statement node.
+    """A return statement node.
 
     Attributes:
         value: The optional expression whose value is returned.
@@ -540,8 +511,7 @@ class ReturnStmt:
 
 @dataclass(frozen=True)
 class BreakStmt:
-    """
-    A break statement node that exits the innermost loop or match.
+    """A break statement node that exits the innermost loop or match.
 
     Attributes:
         line: Source line number where this node appears.
@@ -554,8 +524,7 @@ class BreakStmt:
 
 @dataclass(frozen=True)
 class ContinueStmt:
-    """
-    A continue statement node that skips to the next iteration of the innermost loop.
+    """A continue statement node that skips to the next iteration of the innermost loop.
 
     Attributes:
         line: Source line number where this node appears.
@@ -568,8 +537,7 @@ class ContinueStmt:
 
 @dataclass(frozen=True)
 class WhileStmt:
-    """
-    A while loop statement node.
+    """A while loop statement node.
 
     Attributes:
         condition: The loop continuation condition expression.
@@ -586,8 +554,7 @@ class WhileStmt:
 
 @dataclass(frozen=True)
 class ForStmt:
-    """
-    A for loop statement node.
+    """A for loop statement node.
 
     Attributes:
         init: Optional initialization statement executed before the loop.
@@ -608,8 +575,7 @@ class ForStmt:
 
 @dataclass(frozen=True)
 class MatchArm:
-    """
-    A single arm of a match statement, associating patterns with a body.
+    """A single arm of a match statement, associating patterns with a body.
 
     Attributes:
         patterns: The tuple of expressions used as match patterns.
@@ -628,8 +594,7 @@ class MatchArm:
 
 @dataclass(frozen=True)
 class MatchStmt:
-    """
-    A match statement node that dispatches control based on a value.
+    """A match statement node that dispatches control based on a value.
 
     Attributes:
         value: The expression whose value is matched against the arms.
@@ -646,8 +611,7 @@ class MatchStmt:
 
 @dataclass(frozen=True)
 class TryStmt:
-    """
-    A try/catch statement node for error handling.
+    """A try/catch statement node for error handling.
 
     Attributes:
         try_body: The statements in the try block.
@@ -664,8 +628,7 @@ class TryStmt:
 
 @dataclass(frozen=True)
 class ExprStmt:
-    """
-    An expression used as a statement node.
+    """An expression used as a statement node.
 
     Attributes:
         expr: The expression evaluated for its side effects.
@@ -680,8 +643,7 @@ class ExprStmt:
 
 @dataclass(frozen=True)
 class PlacementStmt:
-    """
-    A placement statement node that places a typed field at an explicit address.
+    """A placement statement node that places a typed field at an explicit address.
 
     Attributes:
         type_node: The type being placed in memory.
@@ -708,8 +670,7 @@ class PlacementStmt:
 
 @dataclass(frozen=True)
 class FunctionParam:
-    """
-    A single parameter in a function declaration.
+    """A single parameter in a function declaration.
 
     Attributes:
         name: The parameter name identifier.
@@ -730,8 +691,7 @@ class FunctionParam:
 
 @dataclass(frozen=True)
 class StructDecl:
-    """
-    A struct declaration node defining a composite binary layout type.
+    """A struct declaration node defining a composite binary layout type.
 
     Attributes:
         name: The struct type name identifier.
@@ -752,8 +712,7 @@ class StructDecl:
 
 @dataclass(frozen=True)
 class UnionDecl:
-    """
-    A union declaration node defining overlapping binary layout alternatives.
+    """A union declaration node defining overlapping binary layout alternatives.
 
     Attributes:
         name: The union type name identifier.
@@ -772,8 +731,7 @@ class UnionDecl:
 
 @dataclass(frozen=True)
 class EnumEntry:
-    """
-    A single entry within an enum declaration.
+    """A single entry within an enum declaration.
 
     Attributes:
         name: The enum entry name identifier.
@@ -790,8 +748,7 @@ class EnumEntry:
 
 @dataclass(frozen=True)
 class EnumDecl:
-    """
-    An enum declaration node defining a set of named constants.
+    """An enum declaration node defining a set of named constants.
 
     Attributes:
         name: The enum type name identifier.
@@ -810,8 +767,7 @@ class EnumDecl:
 
 @dataclass(frozen=True)
 class BitfieldEntry:
-    """
-    A single bit-width entry within a bitfield declaration.
+    """A single bit-width entry within a bitfield declaration.
 
     Attributes:
         name: The bitfield entry name identifier.
@@ -828,8 +784,7 @@ class BitfieldEntry:
 
 @dataclass(frozen=True)
 class BitfieldDecl:
-    """
-    A bitfield declaration node defining bit-packed fields within an integer.
+    """A bitfield declaration node defining bit-packed fields within an integer.
 
     Attributes:
         name: The bitfield type name identifier.
@@ -848,8 +803,7 @@ class BitfieldDecl:
 
 @dataclass(frozen=True)
 class FunctionDecl:
-    """
-    A function declaration node defining a callable pattern function.
+    """A function declaration node defining a callable pattern function.
 
     Attributes:
         name: The function name identifier.
@@ -870,8 +824,7 @@ class FunctionDecl:
 
 @dataclass(frozen=True)
 class NamespaceDecl:
-    """
-    A namespace declaration node grouping related declarations under a qualified name.
+    """A namespace declaration node grouping related declarations under a qualified name.
 
     Attributes:
         name: The namespace identifier.
@@ -888,8 +841,7 @@ class NamespaceDecl:
 
 @dataclass(frozen=True)
 class UsingDecl:
-    """
-    A using declaration node that creates a type alias.
+    """A using declaration node that creates a type alias.
 
     Attributes:
         alias: The new type alias name.

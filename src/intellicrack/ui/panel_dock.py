@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Detachable panel window for floating tool panels.
+"""Detachable panel window for floating tool panels.
 
 Provides a QMainWindow wrapper that hosts a panel widget detached from the main ToolOutputPanel tab container, allowing panels to float
 independently, be moved to secondary monitors, and be re-docked back into the tab bar.
@@ -36,8 +35,7 @@ _DEFAULT_DOCK_HEIGHT: Final[int] = 600
 
 
 class DetachedPanelWindow(QMainWindow):
-    """
-    Floating window wrapper for a detached tool panel.
+    """Floating window wrapper for a detached tool panel.
 
     Hosts a single panel widget as its central widget with a
     toolbar containing a re-dock button. Emitting
@@ -87,8 +85,7 @@ class DetachedPanelWindow(QMainWindow):
 
     @property
     def panel(self) -> QWidget:
-        """
-        Get the hosted panel widget.
+        """Get the hosted panel widget.
 
         Returns:
             QWidget: The panel widget.
@@ -97,8 +94,7 @@ class DetachedPanelWindow(QMainWindow):
 
     @property
     def panel_title(self) -> str:
-        """
-        Get the tab title for re-docking.
+        """Get the tab title for re-docking.
 
         Returns:
             str: The original tab title.
@@ -124,8 +120,7 @@ class DetachedPanelWindow(QMainWindow):
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
-        """
-        Emit reattach signal instead of destroying the panel.
+        """Emit reattach signal instead of destroying the panel.
 
         Args:
             a0: The close event.

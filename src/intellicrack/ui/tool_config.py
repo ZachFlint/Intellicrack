@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Tool configuration dialog for Intellicrack.
+"""Tool configuration dialog for Intellicrack.
 
 This module provides the UI for configuring reverse engineering tool bridges, including path settings, installation, and connection options.
 """
@@ -75,8 +74,7 @@ _COMPAT_SPLIT_RIGHT: Final[int] = 400
 
 
 class ToolInstallWorker(QThread):
-    """
-    Worker thread for installing tools.
+    """Worker thread for installing tools.
 
     Downloads and installs tools in a separate thread to avoid blocking UI.
 
@@ -207,8 +205,7 @@ class ToolInstallWorker(QThread):
             self.install_finished.emit(success, f"{name} installed successfully")
 
     def _post_install_ghidra(self) -> None:
-        """
-        Post-installation setup for Ghidra.
+        """Post-installation setup for Ghidra.
 
         Raises:
             RuntimeError: If Ghidra installation not found or bridge install fails.
@@ -336,8 +333,7 @@ class ToolInstallWorker(QThread):
             _logger.debug("cutter_install_verified", path=str(cutter_exe))
 
     def _find_cutter_executable(self) -> Path | None:
-        """
-        Locate the Cutter executable after extraction.
+        """Locate the Cutter executable after extraction.
 
         Returns:
             Path | None: Path to the Cutter executable, or ``None`` if not found.
@@ -357,8 +353,7 @@ class ToolInstallWorker(QThread):
 
 
 class ToolStatusCheckWorker(QThread):
-    """
-    Worker thread for checking tool status.
+    """Worker thread for checking tool status.
 
     Args:
         tool_id: The tool identifier.
@@ -394,8 +389,7 @@ class ToolStatusCheckWorker(QThread):
             self.status_checked.emit(self._tool_id, is_available, f"Check failed: {e}")
 
     def _check_tool(self) -> tuple[bool, str]:
-        """
-        Check if the tool is available and working.
+        """Check if the tool is available and working.
 
         Returns:
             tuple[bool, str]: Tuple of (is_available, status_message).
@@ -420,8 +414,7 @@ class ToolStatusCheckWorker(QThread):
         return True, "Installed"
 
     def _check_builtin(self) -> tuple[bool, str]:
-        """
-        Check built-in tools.
+        """Check built-in tools.
 
         Returns:
             tuple[bool, str]: Tuple of (is_available, status_message).
@@ -437,8 +430,7 @@ class ToolStatusCheckWorker(QThread):
 
     @staticmethod
     def _check_ghidra(tool_path: Path) -> tuple[bool, str]:
-        """
-        Check Ghidra installation.
+        """Check Ghidra installation.
 
         Looks for the headless analyzer script (support/analyzeHeadless)
         which is the executable used by the Ghidra bridge. Never checks
@@ -478,8 +470,7 @@ class ToolStatusCheckWorker(QThread):
 
     @staticmethod
     def _check_x64dbg(tool_path: Path) -> tuple[bool, str]:
-        """
-        Check x64dbg installation.
+        """Check x64dbg installation.
 
         Args:
             tool_path: Path to x64dbg installation.
@@ -506,8 +497,7 @@ class ToolStatusCheckWorker(QThread):
 
     @staticmethod
     def _check_cutter(tool_path: Path) -> tuple[bool, str]:
-        """
-        Check Cutter installation.
+        """Check Cutter installation.
 
         Args:
             tool_path: Path to Cutter installation.
@@ -547,8 +537,7 @@ class ToolStatusCheckWorker(QThread):
 
 
 class ToolConfigDialog(QDialog):
-    """
-    Dialog for configuring reverse engineering tools.
+    """Dialog for configuring reverse engineering tools.
 
     Allows users to:
     - Configure tool installation paths
@@ -647,8 +636,7 @@ class ToolConfigDialog(QDialog):
             self._tool_list.setCurrentRow(0)
 
     def _on_tool_selected(self, index: int) -> None:
-        """
-        Handle tool selection change.
+        """Handle tool selection change.
 
         Args:
             index: The selected tool index.
@@ -674,8 +662,7 @@ class ToolConfigDialog(QDialog):
             self.tool_updated.emit(tool_id)
 
     def get_settings(self) -> dict[str, dict[str, Any]]:
-        """
-        Get all tool settings.
+        """Get all tool settings.
 
         Returns:
             dict[str, dict[str, Any]]: Dictionary mapping tool IDs to their settings.
@@ -685,8 +672,7 @@ class ToolConfigDialog(QDialog):
 
 
 class ToolSettingsWidget(QFrame):
-    """
-    Widget for configuring a single tool.
+    """Widget for configuring a single tool.
 
     Displays path configuration, enable/disable toggle, and
     installation options for a specific tool.
@@ -846,8 +832,7 @@ class ToolSettingsWidget(QFrame):
             self._path_input.setToolTip("This tool does not require a path")
 
     def _load_from_config(self) -> dict[str, Any]:
-        """
-        Load settings from the config file.
+        """Load settings from the config file.
 
         Returns:
             dict[str, Any]: Dictionary of saved settings for this tool.
@@ -893,8 +878,7 @@ class ToolSettingsWidget(QFrame):
         self._status_worker.start()
 
     def _on_status_checked(self, tool_id: str, *, is_available: bool, message: str) -> None:
-        """
-        Handle status check completion.
+        """Handle status check completion.
 
         Args:
             tool_id: The tool that was checked.
@@ -956,8 +940,7 @@ class ToolSettingsWidget(QFrame):
             self._install_worker.start()
 
     def _on_install_finished(self, *, success: bool, message: str) -> None:
-        """
-        Handle installation completion.
+        """Handle installation completion.
 
         Args:
             success: Whether installation was successful.
@@ -973,8 +956,7 @@ class ToolSettingsWidget(QFrame):
             QMessageBox.warning(self, "Installation Failed", message)
 
     def get_settings(self) -> dict[str, Any]:
-        """
-        Get current settings as a dictionary.
+        """Get current settings as a dictionary.
 
         Returns:
             dict[str, Any]: Dictionary of current settings.
@@ -1014,8 +996,7 @@ class ToolSettingsWidget(QFrame):
 
 
 class ToolCapabilitiesWidget(QFrame):
-    """
-    Widget displaying tool capabilities in a grid format.
+    """Widget displaying tool capabilities in a grid format.
 
     Args:
         parent: Parent widget.
@@ -1078,8 +1059,7 @@ class ToolCapabilitiesWidget(QFrame):
         layout.addStretch()
 
     def set_tool(self, name: str, capabilities: dict[str, bool], archs: list[str], formats: list[str]) -> None:
-        """
-        Update the display for a specific tool.
+        """Update the display for a specific tool.
 
         Args:
             name: Tool display name.
@@ -1113,8 +1093,7 @@ class ToolCapabilitiesWidget(QFrame):
 
 
 class ToolStatusDialog(QDialog):
-    """
-    Dialog showing status and capabilities of all configured tools.
+    """Dialog showing status and capabilities of all configured tools.
 
     Displays which tools are installed, their connection state,
     supported capabilities, architectures, and file formats.
@@ -1258,8 +1237,7 @@ class ToolStatusDialog(QDialog):
         layout.addLayout(button_layout)
 
     def _on_tool_selected(self, row: int) -> None:
-        """
-        Handle tool selection in the list.
+        """Handle tool selection in the list.
 
         Args:
             row: Selected row index.
@@ -1289,8 +1267,7 @@ class ToolStatusDialog(QDialog):
             self._refresh_status()
 
     def _load_settings(self) -> dict[str, dict[str, Any]]:
-        """
-        Load all tool settings from config.
+        """Load all tool settings from config.
 
         Returns:
             dict[str, dict[str, Any]]: Dictionary mapping tool IDs to their settings.
@@ -1340,8 +1317,7 @@ class ToolStatusDialog(QDialog):
             worker.start()
 
     def _on_tool_status_received(self, tool_id: str, *, is_available: bool, message: str) -> None:
-        """
-        Handle status check completion for a single tool.
+        """Handle status check completion for a single tool.
 
         Args:
             tool_id: The tool that was checked.

@@ -59,7 +59,7 @@ _load_env()
 
 
 API_KEY_MODEL: Final[str] = os.environ.get(
-    "GEMINI_COMMIT_MODEL", "gemini-2.5-flash",
+    "GEMINI_COMMIT_MODEL", "gemini-flash-latest",
 )
 SINGLE_CALL_TOKEN_LIMIT: Final[int] = 900_000
 CHUNK_TOKEN_TARGET: Final[int] = 800_000

@@ -1,29 +1,29 @@
 8 findings in src/intellicrack/sandbox/base.py
 
-323: DOC201: Method `SandboxBase.run_command` does not have a return section in docstring
+309: DOC201: Method `SandboxBase.run_command` does not have a return section in docstring
 
-323: DOC203: Method `SandboxBase.run_command` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+309: DOC203: Method `SandboxBase.run_command` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
 
-351: DOC201: Method `SandboxBase.run_binary` does not have a return section in docstring
+336: DOC201: Method `SandboxBase.run_binary` does not have a return section in docstring
 
-351: DOC203: Method `SandboxBase.run_binary` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+336: DOC203: Method `SandboxBase.run_binary` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
 
-426: DOC201: Method `SandboxBase.take_snapshot` does not have a return section in docstring
+408: DOC201: Method `SandboxBase.take_snapshot` does not have a return section in docstring
 
-426: DOC203: Method `SandboxBase.take_snapshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+408: DOC203: Method `SandboxBase.take_snapshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
 
-460: DOC201: Method `SandboxBase.list_snapshots` does not have a return section in docstring
+440: DOC201: Method `SandboxBase.list_snapshots` does not have a return section in docstring
 
-460: DOC203: Method `SandboxBase.list_snapshots` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+440: DOC203: Method `SandboxBase.list_snapshots` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
 
 
 2 findings in src/intellicrack/bridges/schemas.py
 
-29: DOC201: Function `_assert_never` does not have a return section in docstring
+28: DOC201: Function `_assert_never` does not have a return section in docstring
 
-29: DOC203: Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+28: DOC203: Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
 
 
 1 findings in src/intellicrack/providers/base.py
 
-317: DOC503: Method `LLMProviderBase._retry_with_backoff` exceptions in the "Raises" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions'].
+304: DOC503: Method `LLMProviderBase._retry_with_backoff` exceptions in the "Raises" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions'].

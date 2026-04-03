@@ -984,21 +984,21 @@ src\intellicrack\bridges\schemas.py:626:17: error[no-matching-overload] No overl
 
 8 findings in src\intellicrack\providers\anthropic.py
 
-src\intellicrack\providers\anthropic.py:502:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\providers\anthropic.py:501:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:505:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\providers\anthropic.py:504:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:506:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\providers\anthropic.py:505:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:506:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\providers\anthropic.py:505:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:506:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\providers\anthropic.py:505:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:507:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\providers\anthropic.py:506:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:514:44: error[invalid-argument-type] Argument to function `len` is incorrect: Expected `Sized`, found `object`
+src\intellicrack\providers\anthropic.py:513:44: error[invalid-argument-type] Argument to function `len` is incorrect: Expected `Sized`, found `object`
 
-src\intellicrack\providers\anthropic.py:604:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
+src\intellicrack\providers\anthropic.py:603:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
 
 
 8 findings in tests\test_hexcore_e2e\test_bridge_yara.py
@@ -1156,17 +1156,17 @@ src\intellicrack\sandbox\windows.py:231:57: error[unresolved-attribute] Attribut
 
 6 findings in src\intellicrack\ui\xpu_status.py
 
-src\intellicrack\ui\xpu_status.py:48:34: error[invalid-assignment] Object of type `None` is not assignable to `def check_windows_requirements() -> tuple[bool, list[str]]`
+src\intellicrack\ui\xpu_status.py:47:34: error[invalid-assignment] Object of type `None` is not assignable to `def check_windows_requirements() -> tuple[bool, list[str]]`
 
-src\intellicrack\ui\xpu_status.py:49:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
+src\intellicrack\ui\xpu_status.py:48:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
 
-src\intellicrack\ui\xpu_status.py:50:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None`
+src\intellicrack\ui\xpu_status.py:49:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None`
 
-src\intellicrack\ui\xpu_status.py:51:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]`
+src\intellicrack\ui\xpu_status.py:50:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]`
 
-src\intellicrack\ui\xpu_status.py:52:24: error[invalid-assignment] Object of type `None` is not assignable to `def is_xpu_available() -> bool`
+src\intellicrack\ui\xpu_status.py:51:24: error[invalid-assignment] Object of type `None` is not assignable to `def is_xpu_available() -> bool`
 
-src\intellicrack\ui\xpu_status.py:58:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`
+src\intellicrack\ui\xpu_status.py:57:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`
 
 
 6 findings in tests\test_hexcore_e2e\test_bridge_sandbox.py
@@ -1308,9 +1308,9 @@ src\intellicrack\ui\app.py:70:29: error[invalid-assignment] Object of type `None
 
 2 findings in src\intellicrack\ui\panels\cutter_panel.py
 
-src\intellicrack\ui\panels\cutter_panel.py:95:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\cutter_panel.py:94:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
-src\intellicrack\ui\panels\cutter_panel.py:667:40: error[invalid-assignment] Object of type `list[object] | list[dict[str, Any]]` is not assignable to `list[dict[str, Any]]`
+src\intellicrack\ui\panels\cutter_panel.py:666:40: error[invalid-assignment] Object of type `list[object] | list[dict[str, Any]]` is not assignable to `list[dict[str, Any]]`
 
 
 2 findings in tests\test_bridges\test_x64dbg.py
@@ -1336,7 +1336,7 @@ tests\test_providers\test_registry.py:100:15: error[invalid-method-override] Inv
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:2522:62: error[call-non-callable] Object of type `None` is not callable
+src\intellicrack\bridges\hex_editor.py:2521:62: error[call-non-callable] Object of type `None` is not callable
 
 
 1 findings in src\intellicrack\core\logging.py
@@ -1376,7 +1376,7 @@ src\intellicrack\ui\panels\binary_panel.py:46:12: error[invalid-assignment] Obje
 
 1 findings in src\intellicrack\ui\panels\frida_panel.py
 
-src\intellicrack\ui\panels\frida_panel.py:103:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\frida_panel.py:102:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\ghidra_panel.py
@@ -1396,7 +1396,7 @@ src\intellicrack\ui\panels\hex_editor\_yara.py:151:56: error[invalid-argument-ty
 
 1 findings in src\intellicrack\ui\panels\hex_editor\panel.py
 
-src\intellicrack\ui\panels\hex_editor\panel.py:206:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\hex_editor\panel.py:205:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor_widget.py

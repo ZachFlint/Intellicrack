@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Preferences dialog for Intellicrack.
+"""Preferences dialog for Intellicrack.
 
 This module provides a comprehensive preferences dialog with categorized settings for general, appearance, session, and logging options.
 """
@@ -48,8 +47,7 @@ _logger = get_logger("ui.preferences")
 
 
 def _combo_find_data(combo: QComboBox, data: object) -> int:
-    """
-    Find index of item with given data in a QComboBox.
+    """Find index of item with given data in a QComboBox.
 
     Args:
         combo: The combo box to search.
@@ -66,8 +64,7 @@ def _combo_find_data(combo: QComboBox, data: object) -> int:
 
 
 def _combo_current_data(combo: QComboBox) -> object:
-    """
-    Get the current item's data from a QComboBox.
+    """Get the current item's data from a QComboBox.
 
     Args:
         combo: The combo box.
@@ -83,8 +80,7 @@ def _combo_current_data(combo: QComboBox) -> object:
 
 
 def _item_set_font(item: QListWidgetItem, font: QFont) -> None:
-    """
-    Set font on a QListWidgetItem.
+    """Set font on a QListWidgetItem.
 
     Args:
         item: The list widget item.
@@ -96,8 +92,7 @@ def _item_set_font(item: QListWidgetItem, font: QFont) -> None:
 
 
 class GeneralSettingsWidget(QWidget):
-    """
-    Widget for general application settings.
+    """Widget for general application settings.
 
     Args:
         config: Application configuration.
@@ -189,8 +184,7 @@ class GeneralSettingsWidget(QWidget):
             self._confirm_combo.setCurrentIndex(idx)
 
     def get_settings(self) -> dict[str, Any]:
-        """
-        Get current settings.
+        """Get current settings.
 
         Returns:
             dict[str, Any]: Dictionary of settings.
@@ -207,8 +201,7 @@ class GeneralSettingsWidget(QWidget):
 
 
 class AppearanceSettingsWidget(QWidget):
-    """
-    Widget for appearance settings.
+    """Widget for appearance settings.
 
     Args:
         config: Application configuration.
@@ -285,8 +278,7 @@ class AppearanceSettingsWidget(QWidget):
         self._show_tool_calls.setChecked(self._config.ui.show_tool_calls)
 
     def get_settings(self) -> dict[str, Any]:
-        """
-        Get current settings.
+        """Get current settings.
 
         Returns:
             dict[str, Any]: Dictionary of settings.
@@ -304,8 +296,7 @@ class AppearanceSettingsWidget(QWidget):
 
 
 class SessionSettingsWidget(QWidget):
-    """
-    Widget for session settings.
+    """Widget for session settings.
 
     Args:
         config: Application configuration.
@@ -356,8 +347,7 @@ class SessionSettingsWidget(QWidget):
         self._retention_days.setValue(self._config.session.retention_days)
 
     def get_settings(self) -> dict[str, Any]:
-        """
-        Get current settings.
+        """Get current settings.
 
         Returns:
             dict[str, Any]: Dictionary of settings.
@@ -372,8 +362,7 @@ class SessionSettingsWidget(QWidget):
 
 
 class LoggingSettingsWidget(QWidget):
-    """
-    Widget for logging settings.
+    """Widget for logging settings.
 
     Args:
         config: Application configuration.
@@ -444,8 +433,7 @@ class LoggingSettingsWidget(QWidget):
         self._backup_count.setValue(self._config.log.backup_count)
 
     def get_settings(self) -> dict[str, Any]:
-        """
-        Get current settings.
+        """Get current settings.
 
         Returns:
             dict[str, Any]: Dictionary of settings.
@@ -464,8 +452,7 @@ class LoggingSettingsWidget(QWidget):
 
 
 class PreferencesDialog(QDialog):
-    """
-    Preferences dialog with categorized settings.
+    """Preferences dialog with categorized settings.
 
     Provides a unified interface for configuring all application
     settings organized into logical categories.
@@ -488,8 +475,7 @@ class PreferencesDialog(QDialog):
         self._setup_ui()
 
     def set_config_path(self, path: Path) -> None:
-        """
-        Set the configuration file path for saving.
+        """Set the configuration file path for saving.
 
         Args:
             path: Path to the configuration file.
@@ -642,8 +628,7 @@ class PreferencesDialog(QDialog):
         self._category_list.setCurrentRow(0)
 
     def _on_category_changed(self, index: int) -> None:
-        """
-        Handle category selection change.
+        """Handle category selection change.
 
         Args:
             index: Selected category index.
@@ -669,8 +654,7 @@ class PreferencesDialog(QDialog):
                 _logger.exception("configuration_save_failed", error=str(e))
 
     def _build_config(self) -> Config:
-        """
-        Build a new Config from all widget settings.
+        """Build a new Config from all widget settings.
 
         Returns:
             Config: New Config instance with updated values.
@@ -691,8 +675,7 @@ class PreferencesDialog(QDialog):
         )
 
     def get_config(self) -> Config:
-        """
-        Get the current configuration.
+        """Get the current configuration.
 
         Returns:
             Config: The current configuration object.

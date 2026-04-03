@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Resource path resolution for Intellicrack assets.
+"""Resource path resolution for Intellicrack assets.
 
 Provides centralized path resolution supporting both development environments and PyInstaller frozen applications.
 """
@@ -25,8 +24,7 @@ _PACKAGE_NAME: Final[str] = "intellicrack"
 
 
 class AssetNotFoundError(FileNotFoundError):
-    """
-    Raised when an asset directory or file cannot be found.
+    """Raised when an asset directory or file cannot be found.
 
     Args:
         searched_paths: List of paths that were searched.
@@ -44,8 +42,7 @@ class AssetNotFoundError(FileNotFoundError):
 
 
 def _get_package_root() -> Path:
-    """
-    Get the root directory of the intellicrack package.
+    """Get the root directory of the intellicrack package.
 
     Returns:
         Path: Path to the package root directory.
@@ -63,8 +60,7 @@ def _get_package_root() -> Path:
 
 
 def get_assets_path() -> Path:
-    """
-    Get the path to the assets directory.
+    """Get the path to the assets directory.
 
     Returns:
         Path: Path to the assets directory.
@@ -98,8 +94,7 @@ def get_assets_path() -> Path:
 
 
 def get_resource_path(resource_path: str) -> Path:
-    """
-    Resolve a resource path relative to the assets directory.
+    """Resolve a resource path relative to the assets directory.
 
     Args:
         resource_path: Relative path to the resource within assets directory.
@@ -121,8 +116,7 @@ def get_resource_path(resource_path: str) -> Path:
 
 
 def get_icon_path(icon_name: str) -> Path:
-    """
-    Get the path to an icon file.
+    """Get the path to an icon file.
 
     Args:
         icon_name: Name of the icon file (with or without extension).
@@ -149,8 +143,7 @@ def get_icon_path(icon_name: str) -> Path:
 
 
 def get_font_path(font_name: str) -> Path:
-    """
-    Get the path to a font file.
+    """Get the path to a font file.
 
     Args:
         font_name: Name of the font file.
@@ -164,8 +157,7 @@ def get_font_path(font_name: str) -> Path:
 
 
 def get_style_path(style_name: str) -> Path:
-    """
-    Get the path to a stylesheet file.
+    """Get the path to a stylesheet file.
 
     Args:
         style_name: Name of the stylesheet file.
@@ -179,8 +171,7 @@ def get_style_path(style_name: str) -> Path:
 
 
 def resource_exists(resource_path: str) -> bool:
-    """
-    Check if a resource exists.
+    """Check if a resource exists.
 
     Args:
         resource_path: Relative path to the resource within assets directory.

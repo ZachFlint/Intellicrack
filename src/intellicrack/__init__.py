@@ -53,8 +53,7 @@ if TYPE_CHECKING:
 
 
 def __getattr__(name: str) -> object:
-    """
-    Lazy import for main components.
+    """Lazy import for main components.
 
     This allows importing frequently used components directly from
     the intellicrack namespace without loading all dependencies upfront.

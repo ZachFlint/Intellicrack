@@ -1,6 +1,6 @@
 {
   "tool": "flake8",
-  "generated": "2026-03-31T03:05:17.421715+00:00",
+  "generated": "2026-04-01T02:41:10.575207+00:00",
   "total_findings": 41,
   "total_files": 20,
   "files": [
@@ -159,18 +159,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 547,
+          "line": 528,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/core\\orchestrator.py:547:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/core\\orchestrator.py:528:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 594,
+          "line": 575,
           "column": 141,
           "code": "E501",
           "message": "line too long (232 > 140 characters)",
-          "raw": "src/intellicrack/core\\orchestrator.py:594:141: E501 line too long (232 > 140 characters)"
+          "raw": "src/intellicrack/core\\orchestrator.py:575:141: E501 line too long (232 > 140 characters)"
         }
       ]
     },
@@ -179,18 +179,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 734,
+          "line": 704,
           "column": 141,
           "code": "E501",
           "message": "line too long (169 > 140 characters)",
-          "raw": "src/intellicrack/core\\script_gen.py:734:141: E501 line too long (169 > 140 characters)"
+          "raw": "src/intellicrack/core\\script_gen.py:704:141: E501 line too long (169 > 140 characters)"
         },
         {
-          "line": 735,
+          "line": 705,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/core\\script_gen.py:735:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/core\\script_gen.py:705:141: E501 line too long (142 > 140 characters)"
         }
       ]
     },
@@ -199,18 +199,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 545,
+          "line": 528,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:545:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:528:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 575,
+          "line": 557,
           "column": 141,
           "code": "E501",
           "message": "line too long (179 > 140 characters)",
-          "raw": "src/intellicrack/providers\\xpu_utils.py:575:141: E501 line too long (179 > 140 characters)"
+          "raw": "src/intellicrack/providers\\xpu_utils.py:557:141: E501 line too long (179 > 140 characters)"
         }
       ]
     },
@@ -299,11 +299,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 2458,
+          "line": 2410,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:2458:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:2410:141: E501 line too long (146 > 140 characters)"
         }
       ]
     },
@@ -312,11 +312,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 3066,
+          "line": 2980,
           "column": 141,
           "code": "E501",
           "message": "line too long (143 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\x64dbg.py:3066:141: E501 line too long (143 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\x64dbg.py:2980:141: E501 line too long (143 > 140 characters)"
         }
       ]
     },
@@ -325,11 +325,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 330,
+          "line": 315,
           "column": 141,
           "code": "E501",
           "message": "line too long (149 > 140 characters)",
-          "raw": "src/intellicrack/core\\config.py:330:141: E501 line too long (149 > 140 characters)"
+          "raw": "src/intellicrack/core\\config.py:315:141: E501 line too long (149 > 140 characters)"
         }
       ]
     },
@@ -338,11 +338,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 246,
+          "line": 232,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "src/intellicrack/core\\hexpat\\type_system.py:246:141: E501 line too long (160 > 140 characters)"
+          "raw": "src/intellicrack/core\\hexpat\\type_system.py:232:141: E501 line too long (160 > 140 characters)"
         }
       ]
     },
@@ -351,11 +351,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 457,
+          "line": 450,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "src/intellicrack/sandbox\\windows.py:457:141: E501 line too long (160 > 140 characters)"
+          "raw": "src/intellicrack/sandbox\\windows.py:450:141: E501 line too long (160 > 140 characters)"
         }
       ]
     },
@@ -364,11 +364,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 488,
+          "line": 478,
           "column": 13,
           "code": "F824",
           "message": "`nonlocal content_label` is unused: name is never assigned in scope",
-          "raw": "src/intellicrack/ui\\chat.py:488:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
+          "raw": "src/intellicrack/ui\\chat.py:478:13: F824 `nonlocal content_label` is unused: name is never assigned in scope"
         }
       ]
     },
@@ -377,11 +377,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 100,
+          "line": 97,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/ui\\tool_config.py:100:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/ui\\tool_config.py:97:141: E501 line too long (142 > 140 characters)"
         }
       ]
     },

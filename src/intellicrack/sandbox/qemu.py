@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-QEMU sandbox implementation for isolated binary analysis.
+"""QEMU sandbox implementation for isolated binary analysis.
 
 This module provides cross-platform sandbox functionality using QEMU virtualization for safe execution and behavioral monitoring of
 binaries.
@@ -109,8 +108,7 @@ class AcceleratorType(Enum):
 
 @dataclass
 class QEMUConfig:
-    """
-    Configuration for QEMU sandbox.
+    """Configuration for QEMU sandbox.
 
     Attributes:
         guest_os: Guest operating system type.
@@ -141,8 +139,7 @@ class QEMUConfig:
 
 @dataclass
 class QMPResponse:
-    """
-    Response from QMP command.
+    """Response from QMP command.
 
     Attributes:
         success: Whether the command succeeded.
@@ -157,8 +154,7 @@ class QMPResponse:
 
 @dataclass
 class GuestAgentMessage:
-    """
-    Message from the guest agent.
+    """Message from the guest agent.
 
     Attributes:
         message_type: Type of the guest agent message.
@@ -172,8 +168,7 @@ class GuestAgentMessage:
 
 
 class QMPClient:
-    """
-    QEMU Machine Protocol client for VM control.
+    """QEMU Machine Protocol client for VM control.
 
     Provides asynchronous communication with QEMU via QMP for
     VM control, snapshot management, and status queries.
@@ -192,8 +187,7 @@ class QMPClient:
         self._lock = asyncio.Lock()
 
     async def connect(self, time_limit: float = 30.0) -> bool:
-        """
-        Connect to QMP server.
+        """Connect to QMP server.
 
         Args:
             time_limit: Connection timeout in seconds.
@@ -240,8 +234,7 @@ class QMPClient:
         command: dict[str, object],
         time_limit: float = 10.0,
     ) -> QMPResponse:
-        """
-        Send a QMP command and get response.
+        """Send a QMP command and get response.
 
         Args:
             command: QMP command dictionary.
@@ -282,8 +275,7 @@ class QMPClient:
                 return QMPResponse(success=False, error=str(e))
 
     async def query_status(self) -> QMPResponse:
-        """
-        Query VM status.
+        """Query VM status.
 
         Returns:
             QMPResponse: VM status response.
@@ -291,8 +283,7 @@ class QMPClient:
         return await self._send_command({"execute": "query-status"})
 
     async def stop(self) -> QMPResponse:
-        """
-        Pause the VM.
+        """Pause the VM.
 
         Returns:
             QMPResponse: Command response.
@@ -300,8 +291,7 @@ class QMPClient:
         return await self._send_command({"execute": "stop"})
 
     async def cont(self) -> QMPResponse:
-        """
-        Resume the VM.
+        """Resume the VM.
 
         Returns:
             QMPResponse: Command response.
@@ -309,8 +299,7 @@ class QMPClient:
         return await self._send_command({"execute": "cont"})
 
     async def quit(self) -> QMPResponse:
-        """
-        Quit QEMU.
+        """Quit QEMU.
 
         Returns:
             QMPResponse: Command response.
@@ -318,8 +307,7 @@ class QMPClient:
         return await self._send_command({"execute": "quit"})
 
     async def savevm(self, name: str) -> QMPResponse:
-        """
-        Save a VM snapshot.
+        """Save a VM snapshot.
 
         Args:
             name: Snapshot name.
@@ -333,8 +321,7 @@ class QMPClient:
         })
 
     async def loadvm(self, name: str) -> QMPResponse:
-        """
-        Load a VM snapshot.
+        """Load a VM snapshot.
 
         Args:
             name: Snapshot name.
@@ -348,8 +335,7 @@ class QMPClient:
         })
 
     async def delvm(self, name: str) -> QMPResponse:
-        """
-        Delete a VM snapshot.
+        """Delete a VM snapshot.
 
         Args:
             name: Snapshot name.
@@ -363,8 +349,7 @@ class QMPClient:
         })
 
     async def info_snapshots(self) -> QMPResponse:
-        """
-        Get list of snapshots.
+        """Get list of snapshots.
 
         Returns:
             QMPResponse: Snapshot list response.
@@ -376,8 +361,7 @@ class QMPClient:
 
 
 class GuestAgentClient:
-    """
-    Client for communicating with the QEMU guest agent.
+    """Client for communicating with the QEMU guest agent.
 
     Provides bidirectional communication with the guest OS for
     command execution, file transfer, and behavioral monitoring.
@@ -399,8 +383,7 @@ class GuestAgentClient:
 
     @property
     def is_connected(self) -> bool:
-        """
-        Whether the client is currently connected.
+        """Whether the client is currently connected.
 
         Returns:
             bool: True if the guest agent connection is active.
@@ -408,8 +391,7 @@ class GuestAgentClient:
         return self.connected
 
     async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
-        """
-        Connect to guest agent with retry.
+        """Connect to guest agent with retry.
 
         Args:
             time_limit: Total timeout in seconds for connection attempts.
@@ -499,8 +481,7 @@ class GuestAgentClient:
         args: Sequence[str] | None = None,
         time_limit: float = 30.0,
     ) -> tuple[int, str, str]:
-        """
-        Send a command to execute in the guest.
+        """Send a command to execute in the guest.
 
         Args:
             command: Command to execute.
@@ -555,8 +536,7 @@ class GuestAgentClient:
             return result
 
     async def get_pending_messages(self) -> list[GuestAgentMessage]:
-        """
-        Get all pending messages from the agent.
+        """Get all pending messages from the agent.
 
         Returns:
             list[GuestAgentMessage]: List of pending messages.
@@ -573,8 +553,7 @@ class GuestAgentClient:
 
 
 class QEMUSandbox(SandboxBase):
-    """
-    QEMU-based sandbox for cross-platform binary analysis.
+    """QEMU-based sandbox for cross-platform binary analysis.
 
     Uses QEMU virtualization with hardware acceleration (WHPX on Windows,
     KVM on Linux) or software emulation (TCG) for isolated binary execution.
@@ -615,8 +594,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def qemu_config(self) -> QEMUConfig:
-        """
-        Get QEMU configuration.
+        """Get QEMU configuration.
 
         Returns:
             QEMUConfig: Current QEMU configuration.
@@ -625,8 +603,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def vnc_port(self) -> int | None:
-        """
-        Get the VNC port if VNC display is active.
+        """Get the VNC port if VNC display is active.
 
         Returns:
             int | None: VNC port number, or None if VNC is not enabled.
@@ -634,8 +611,7 @@ class QEMUSandbox(SandboxBase):
         return self._vnc_port
 
     def enable_vnc_display(self) -> None:
-        """
-        Switch display mode to VNC for GUI embedding.
+        """Switch display mode to VNC for GUI embedding.
 
         This must be called before ``start()`` to take effect.
         If the sandbox is already running, restart is required.
@@ -656,8 +632,7 @@ class QEMUSandbox(SandboxBase):
         _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
 
     async def is_available(self) -> bool:
-        """
-        Check if QEMU is available.
+        """Check if QEMU is available.
 
         Checks for QEMU executable and determines available acceleration.
 
@@ -680,8 +655,7 @@ class QEMUSandbox(SandboxBase):
         return True
 
     async def _find_qemu(self) -> Path | None:
-        """
-        Find QEMU executable.
+        """Find QEMU executable.
 
         Returns:
             Path | None: Path to QEMU executable or None if not found.
@@ -713,8 +687,7 @@ class QEMUSandbox(SandboxBase):
         return await asyncio.to_thread(_find_existing)
 
     async def _detect_accelerator(self) -> AcceleratorType:
-        """
-        Detect available hardware acceleration.
+        """Detect available hardware acceleration.
 
         Returns:
             AcceleratorType: Best available accelerator type.
@@ -787,8 +760,7 @@ class QEMUSandbox(SandboxBase):
 
     @staticmethod
     def _get_free_port(start: int = 10000, end: int = 60000) -> int:
-        """
-        Find an available port.
+        """Find an available port.
 
         Args:
             start: Start of port range.
@@ -809,8 +781,7 @@ class QEMUSandbox(SandboxBase):
 
     @staticmethod
     def _check_qemu_started(returncode: int | None, stderr: bytes | None) -> None:
-        """
-        Check if QEMU process started successfully.
+        """Check if QEMU process started successfully.
 
         Args:
             returncode: Process return code.
@@ -825,8 +796,7 @@ class QEMUSandbox(SandboxBase):
             raise SandboxError(_ERR_QEMU_START)
 
     async def _verify_qemu_pid(self, qemu_pid: int | None) -> None:
-        """
-        Verify that the QEMU process started and its PID was read successfully.
+        """Verify that the QEMU process started and its PID was read successfully.
 
         Args:
             qemu_pid: The PID read from the pidfile, or None if unreadable.
@@ -840,8 +810,7 @@ class QEMUSandbox(SandboxBase):
             raise SandboxError(_ERR_PIDFILE_UNREADABLE)
 
     async def _connect_and_verify_qmp(self) -> None:
-        """
-        Connect to QMP and verify VM status.
+        """Connect to QMP and verify VM status.
 
         Raises:
             SandboxError: If connection or status check fails.
@@ -856,8 +825,7 @@ class QEMUSandbox(SandboxBase):
             raise SandboxError(_ERR_VM_STATUS)
 
     async def _build_qemu_command(self) -> list[str]:
-        """
-        Build QEMU command line.
+        """Build QEMU command line.
 
         Returns:
             list[str]: QEMU command as list of arguments.
@@ -959,8 +927,7 @@ class QEMUSandbox(SandboxBase):
 
     @staticmethod
     def _ensure_qemu_started(qemu_pid: int | None) -> None:
-        """
-        Raise SandboxError if QEMU failed to start.
+        """Raise SandboxError if QEMU failed to start.
 
         Args:
             qemu_pid: The QEMU process ID, or None if startup failed.
@@ -972,8 +939,7 @@ class QEMUSandbox(SandboxBase):
             raise SandboxError(_ERR_QEMU_START)
 
     async def start(self) -> None:
-        """
-        Start the QEMU virtual machine.
+        """Start the QEMU virtual machine.
 
         Raises:
             SandboxError: If VM cannot be started.
@@ -1070,8 +1036,7 @@ class QEMUSandbox(SandboxBase):
             raise SandboxError(_ERR_SANDBOX_START) from e
 
     async def stop(self) -> None:
-        """
-        Stop the QEMU virtual machine.
+        """Stop the QEMU virtual machine.
 
         Raises:
             SandboxError: If VM cannot be stopped.
@@ -1142,8 +1107,7 @@ class QEMUSandbox(SandboxBase):
         self._shared_folder = None
 
     async def _create_guest_agent_script(self) -> None:
-        """
-        Create guest agent monitoring scripts.
+        """Create guest agent monitoring scripts.
 
         Raises:
             ValueError: If an unsupported guest OS is configured.
@@ -1576,8 +1540,7 @@ python3 /mnt/shared/monitor/agent.py &
         time_limit: int | None = None,
         working_directory: str | None = None,
     ) -> tuple[int, str, str]:
-        """
-        Execute a command in the sandbox.
+        """Execute a command in the sandbox.
 
         Args:
             command: Command to execute.
@@ -1626,8 +1589,7 @@ python3 /mnt/shared/monitor/agent.py &
         script_id: str,
         result_name: str,
     ) -> tuple[str, str]:
-        """
-        Generate an OS-specific execution script for the sandbox guest.
+        """Generate an OS-specific execution script for the sandbox guest.
 
         Args:
             command: Command to execute in the guest.
@@ -1665,8 +1627,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         result_path: Path,
         time_limit: int,
     ) -> tuple[int, str, str]:
-        """
-        Poll the shared folder for command execution results.
+        """Poll the shared folder for command execution results.
 
         Args:
             result_path: Path to the expected result file.
@@ -1705,8 +1666,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
-        """
-        Run a binary in the sandbox with monitoring.
+        """Run a binary in the sandbox with monitoring.
 
         Args:
             binary_path: Path to the binary to run.
@@ -1797,8 +1757,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         )
 
     async def _parse_file_log(self) -> list[FileChange]:
-        """
-        Parse file monitoring log.
+        """Parse file monitoring log.
 
         Returns:
             list[FileChange]: List of file changes detected during execution.
@@ -1831,8 +1790,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return changes
 
     async def _parse_registry_log(self) -> list[RegistryChange]:
-        """
-        Parse registry monitoring log.
+        """Parse registry monitoring log.
 
         Returns:
             list[RegistryChange]: List of registry changes detected during execution.
@@ -1866,8 +1824,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return changes
 
     async def _parse_network_log(self) -> list[NetworkActivity]:
-        """
-        Parse network monitoring log.
+        """Parse network monitoring log.
 
         Returns:
             list[NetworkActivity]: List of network activity detected during execution.
@@ -1907,8 +1864,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return activities
 
     async def _parse_process_log(self) -> list[ProcessActivity]:
-        """
-        Parse process monitoring log.
+        """Parse process monitoring log.
 
         Returns:
             list[ProcessActivity]: List of process activity detected during execution.
@@ -1944,8 +1900,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return activities
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
-        """
-        Copy a file into the sandbox.
+        """Copy a file into the sandbox.
 
         Args:
             source: Local source path.
@@ -1972,8 +1927,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
-        """
-        Copy a file from the sandbox.
+        """Copy a file from the sandbox.
 
         Args:
             source: Source path relative to shared folder.
@@ -2001,8 +1955,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
 
     async def take_snapshot(self, name: str) -> str:
-        """
-        Take a snapshot of the VM state.
+        """Take a snapshot of the VM state.
 
         Args:
             name: Snapshot name.
@@ -2025,8 +1978,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return name
 
     async def restore_snapshot(self, snapshot_id: str) -> None:
-        """
-        Restore a VM snapshot.
+        """Restore a VM snapshot.
 
         Args:
             snapshot_id: Snapshot name to restore.
@@ -2045,8 +1997,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         _logger.info("snapshot_restored", extra={"snapshot_id": snapshot_id})
 
     async def list_snapshots(self) -> list[str]:
-        """
-        List available snapshots.
+        """List available snapshots.
 
         Returns:
             list[str]: List of snapshot names.
@@ -2068,8 +2019,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return snapshots
 
     async def delete_snapshot(self, name: str) -> None:
-        """
-        Delete a snapshot.
+        """Delete a snapshot.
 
         Args:
             name: Snapshot name to delete.

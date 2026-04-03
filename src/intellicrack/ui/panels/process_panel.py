@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Process management panel for Intellicrack.
+"""Process management panel for Intellicrack.
 
 Provides a process list viewer with details, modules, threads, and memory map inspection for target process analysis.
 """
@@ -137,8 +136,7 @@ if sys.platform == "win32":
 
 
 def _enumerate_processes() -> list[dict[str, int | str]]:
-    """
-    Enumerate all running processes via Win32 ToolHelp API.
+    """Enumerate all running processes via Win32 ToolHelp API.
 
     Returns:
         list[dict[str, int | str]]: List of process info dicts with pid, name, thread_count fields.
@@ -172,8 +170,7 @@ def _enumerate_processes() -> list[dict[str, int | str]]:
 
 
 def _get_process_memory_mb(pid: int) -> float:
-    """
-    Get working set memory size for a process in megabytes.
+    """Get working set memory size for a process in megabytes.
 
     Args:
         pid: Process ID.
@@ -201,8 +198,7 @@ def _get_process_memory_mb(pid: int) -> float:
 
 
 def _detect_process_architecture(pid: int) -> str:
-    """
-    Detect whether a process is 32-bit or 64-bit.
+    """Detect whether a process is 32-bit or 64-bit.
 
     Args:
         pid: Process ID.
@@ -232,8 +228,7 @@ def _detect_process_architecture(pid: int) -> str:
 
 
 def _enumerate_modules(pid: int) -> list[dict[str, str | int]]:
-    """
-    Enumerate loaded modules for a process.
+    """Enumerate loaded modules for a process.
 
     Args:
         pid: Process ID.
@@ -274,8 +269,7 @@ def _enumerate_modules(pid: int) -> list[dict[str, str | int]]:
 
 
 def _enumerate_threads(pid: int) -> list[dict[str, int]]:
-    """
-    Enumerate threads belonging to a process.
+    """Enumerate threads belonging to a process.
 
     Args:
         pid: Process ID.
@@ -311,8 +305,7 @@ def _enumerate_threads(pid: int) -> list[dict[str, int]]:
 
 
 class _TrackedRefreshWorker(QThread):
-    """
-    Background worker for fetching tracked process data without blocking the UI.
+    """Background worker for fetching tracked process data without blocking the UI.
 
     Queries ProcessManager for all tracked processes and their running state
     in a separate thread, then emits the serialized results back to the main thread.
@@ -355,8 +348,7 @@ class _TrackedRefreshWorker(QThread):
 
 
 class _ProcessRefreshWorker(QThread):
-    """
-    Background worker for enumerating processes without blocking the UI.
+    """Background worker for enumerating processes without blocking the UI.
 
     Performs Win32 API calls (CreateToolhelp32Snapshot, OpenProcess,
     IsWow64Process, GetProcessMemoryInfo) in a separate thread and emits
@@ -406,8 +398,7 @@ class _ProcessRefreshWorker(QThread):
 
 
 class ProcessPanel(QWidget):
-    """
-    Panel for process listing, inspection, and management.
+    """Panel for process listing, inspection, and management.
 
     Provides a searchable process list with detailed views
     for modules, threads, and memory layout of selected processes.
@@ -557,8 +548,7 @@ class ProcessPanel(QWidget):
         self._on_refresh()
 
     def _build_tracked_tab(self) -> QWidget:
-        """
-        Build the Tracked Processes tab widget.
+        """Build the Tracked Processes tab widget.
 
         Returns:
             QWidget: The configured tracked processes tab widget.
@@ -610,8 +600,7 @@ class ProcessPanel(QWidget):
         return tab
 
     def _on_refresh(self) -> None:
-        """
-        Refresh the process list from the system.
+        """Refresh the process list from the system.
 
         Spawns a background worker to enumerate processes without blocking the UI thread. If a worker is already running, the request is
         skipped to prevent concurrent enumeration.
@@ -635,8 +624,7 @@ class ProcessPanel(QWidget):
         self._refresh_worker.start()
 
     def _on_refresh_finished(self, processes: list[dict[str, int | str | float]]) -> None:
-        """
-        Handle process enumeration results from the background worker.
+        """Handle process enumeration results from the background worker.
 
         Updates the process table on the main thread with the enumerated
         process data. Re-enables the refresh button.
@@ -681,8 +669,7 @@ class ProcessPanel(QWidget):
         _logger.debug("process_list_refreshed", visible_count=visible_count)
 
     def _on_filter_changed(self, _text: str) -> None:
-        """
-        Handle search filter text changes.
+        """Handle search filter text changes.
 
         Args:
             _text: New filter text (unused, read from widget directly).
@@ -690,8 +677,7 @@ class ProcessPanel(QWidget):
         self._on_refresh()
 
     def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
-        """
-        Toggle automatic process list refresh.
+        """Toggle automatic process list refresh.
 
         Args:
             checked: Whether auto-refresh is enabled.
@@ -704,8 +690,7 @@ class ProcessPanel(QWidget):
             self._auto_refresh_timer.stop()
 
     def _on_tracked_auto_refresh_toggled(self, *, checked: bool) -> None:
-        """
-        Toggle automatic refresh for the tracked processes tab.
+        """Toggle automatic refresh for the tracked processes tab.
 
         Args:
             checked: Whether auto-refresh is enabled.
@@ -718,8 +703,7 @@ class ProcessPanel(QWidget):
             self._tracked_refresh_timer.stop()
 
     def _on_top_tab_changed(self, index: int) -> None:
-        """
-        Handle top-level tab change.
+        """Handle top-level tab change.
 
         Args:
             index: Index of the newly selected tab.
@@ -728,8 +712,7 @@ class ProcessPanel(QWidget):
             self._refresh_tracked_tab()
 
     def _refresh_tracked_tab(self) -> None:
-        """
-        Refresh the tracked processes table from ProcessManager.
+        """Refresh the tracked processes table from ProcessManager.
 
         Spawns a background worker to query ProcessManager without blocking the UI thread. If a worker is already running, the request is
         skipped to prevent concurrent queries.
@@ -752,8 +735,7 @@ class ProcessPanel(QWidget):
         self._tracked_refresh_worker.start()
 
     def _on_tracked_refresh_finished(self, tracked_data: list[dict[str, str | int | None]]) -> None:
-        """
-        Handle tracked process data from the background worker.
+        """Handle tracked process data from the background worker.
 
         Updates the tracked processes table on the main thread with the
         collected data. Re-enables the refresh button.
@@ -787,8 +769,7 @@ class ProcessPanel(QWidget):
         _logger.debug("tracked_tab_refreshed", count=count)
 
     def _on_process_selection_changed(self, current: QModelIndex, _previous: QModelIndex) -> None:
-        """
-        Handle process table selection change.
+        """Handle process table selection change.
 
         Args:
             current: Currently selected model index.
@@ -808,8 +789,7 @@ class ProcessPanel(QWidget):
         self._load_process_details(pid)
 
     def _load_process_details(self, pid: int) -> None:
-        """
-        Load modules, threads, and info for a selected process.
+        """Load modules, threads, and info for a selected process.
 
         Args:
             pid: Process ID to inspect.
@@ -876,8 +856,7 @@ class ProcessPanel(QWidget):
             _logger.exception("process_terminate_failed", pid=self._selected_pid, error=str(e))
 
     def get_selected_pid(self) -> int | None:
-        """
-        Get the currently selected process ID.
+        """Get the currently selected process ID.
 
         Returns:
             int | None: The selected PID or None.
@@ -885,8 +864,7 @@ class ProcessPanel(QWidget):
         return self._selected_pid
 
     def start_tool(self) -> bool:
-        """
-        Start the process panel (refreshes process list).
+        """Start the process panel (refreshes process list).
 
         Returns:
             bool: True always since native panels are always ready.
@@ -896,8 +874,7 @@ class ProcessPanel(QWidget):
         return True
 
     def stop_tool(self) -> bool:
-        """
-        Stop the process panel and cleanup.
+        """Stop the process panel and cleanup.
 
         Stops the auto-refresh timers and waits for any running background
         workers to finish before emitting the tool_closed signal.

@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Sandbox configuration dialog for Intellicrack.
+"""Sandbox configuration dialog for Intellicrack.
 
 This module provides the UI for configuring Windows Sandbox settings, including isolation options, resource limits, and execution policies.
 """
@@ -59,8 +58,7 @@ if TYPE_CHECKING:
 
 
 class SandboxTestWorker(QThread):
-    """
-    Worker thread for testing Windows Sandbox.
+    """Worker thread for testing Windows Sandbox.
 
     Launches Windows Sandbox with a test configuration and monitors
     its execution without blocking the UI.
@@ -204,8 +202,7 @@ class SandboxTestWorker(QThread):
                     _logger.debug("wsb_file_delete_failed", exc_info=True)
 
     def _generate_wsb_config(self) -> str:
-        """
-        Generate Windows Sandbox .wsb configuration XML.
+        """Generate Windows Sandbox .wsb configuration XML.
 
         Returns:
             str: XML configuration string.
@@ -260,8 +257,7 @@ class SandboxTestWorker(QThread):
 
 
 class SandboxConfigDialog(QDialog):
-    """
-    Dialog for configuring Windows Sandbox.
+    """Dialog for configuring Windows Sandbox.
 
     Allows users to configure sandbox isolation settings, resource
     limits, network access, and shared folders.
@@ -487,8 +483,7 @@ class SandboxConfigDialog(QDialog):
         self._set_controls_enabled(enabled=True)
 
     def _set_unavailable(self, reason: str) -> None:
-        """
-        Update UI for sandbox unavailable state.
+        """Update UI for sandbox unavailable state.
 
         Args:
             reason: Reason sandbox is unavailable.
@@ -510,8 +505,7 @@ class SandboxConfigDialog(QDialog):
         self._set_controls_enabled(enabled=False)
 
     def _set_controls_enabled(self, *, enabled: bool) -> None:
-        """
-        Enable or disable all configuration controls.
+        """Enable or disable all configuration controls.
 
         Args:
             enabled: Whether controls should be enabled.
@@ -628,8 +622,7 @@ class SandboxConfigDialog(QDialog):
             self._test_btn.setText("Test Sandbox")
 
     def _on_test_output(self, message: str) -> None:
-        """
-        Handle test output messages.
+        """Handle test output messages.
 
         Args:
             message: Output message from the test worker.
@@ -638,8 +631,7 @@ class SandboxConfigDialog(QDialog):
             self._progress_dialog.setLabelText(message)
 
     def _on_test_finished(self, *, success: bool, message: str) -> None:
-        """
-        Handle test completion.
+        """Handle test completion.
 
         Args:
             success: Whether the test succeeded.
@@ -713,8 +705,7 @@ class SandboxConfigDialog(QDialog):
             )
 
     def get_settings(self) -> dict[str, object]:
-        """
-        Get current settings as a dictionary.
+        """Get current settings as a dictionary.
 
         Returns:
             dict[str, object]: Dictionary of current settings.
@@ -731,8 +722,7 @@ class SandboxConfigDialog(QDialog):
         }
 
     def is_sandbox_available(self) -> bool:
-        """
-        Check if sandbox is available.
+        """Check if sandbox is available.
 
         Returns:
             bool: True if sandbox is available.
@@ -741,8 +731,7 @@ class SandboxConfigDialog(QDialog):
 
 
 class SandboxMonitorWidget(QFrame):
-    """
-    Widget for monitoring active sandbox sessions.
+    """Widget for monitoring active sandbox sessions.
 
     Displays information about running sandbox instances and
     allows control over them.
@@ -813,8 +802,7 @@ class SandboxMonitorWidget(QFrame):
         layout.addLayout(control_layout)
 
     def set_running(self, *, is_running: bool, binary_name: str = "", pid: int | None = None) -> None:
-        """
-        Update the running state display.
+        """Update the running state display.
 
         Args:
             is_running: Whether sandbox is currently running.
@@ -834,8 +822,7 @@ class SandboxMonitorWidget(QFrame):
             self._stop_btn.setEnabled(False)
 
     def append_output(self, text: str) -> None:
-        """
-        Append text to the output display.
+        """Append text to the output display.
 
         Args:
             text: Text to append.

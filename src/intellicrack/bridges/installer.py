@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Tool installer and detector for Intellicrack.
+"""Tool installer and detector for Intellicrack.
 
 This module handles automatic detection, downloading, and installation of reverse engineering tools required by the platform.
 """
@@ -46,8 +45,7 @@ _ONE_MB = 1024 * 1024
 
 @dataclass
 class ToolInfo:
-    """
-    Information about a tool.
+    """Information about a tool.
 
     Attributes:
         name: Tool name enum.
@@ -70,8 +68,7 @@ class ToolInfo:
 
 @dataclass
 class ToolVersion:
-    """
-    Parsed tool version.
+    """Parsed tool version.
 
     Attributes:
         major: Major version number.
@@ -86,8 +83,7 @@ class ToolVersion:
     raw: str = ""
 
     def __str__(self) -> str:
-        """
-        Get string representation.
+        """Get string representation.
 
         Returns:
             str: Version string in major.minor.patch format.
@@ -95,8 +91,7 @@ class ToolVersion:
         return f"{self.major}.{self.minor}.{self.patch}"
 
     def __ge__(self, other: ToolVersion) -> bool:
-        """
-        Compare versions.
+        """Compare versions.
 
         Args:
             other: Version to compare against.
@@ -113,8 +108,7 @@ class ToolVersion:
 
 @dataclass
 class InstallResult:
-    """
-    Result of tool installation.
+    """Result of tool installation.
 
     Attributes:
         success: Whether installation succeeded.
@@ -203,8 +197,7 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
 
 
 class ToolInstaller:
-    """
-    Handles automatic tool detection and installation.
+    """Handles automatic tool detection and installation.
 
     Args:
         tools_directory: Directory where tools should be installed.
@@ -217,8 +210,7 @@ class ToolInstaller:
         self.tools_directory.mkdir(parents=True, exist_ok=True)
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """
-        Get or create HTTP client.
+        """Get or create HTTP client.
 
         Returns:
             httpx.AsyncClient: Async HTTP client instance.
@@ -237,8 +229,7 @@ class ToolInstaller:
             self._http_client = None
 
     async def find_tool(self, tool: ToolName) -> Path | None:
-        """
-        Find an installed tool.
+        """Find an installed tool.
 
         Searches common installation paths first, then PATH,
         then the tools directory.
@@ -296,8 +287,7 @@ class ToolInstaller:
 
     @staticmethod
     async def _find_frida() -> Path | None:
-        """
-        Check if Frida Python package is installed.
+        """Check if Frida Python package is installed.
 
         Returns:
             Path | None: Path indicating Frida is installed, or None.
@@ -317,8 +307,7 @@ class ToolInstaller:
         return None
 
     async def get_version(self, tool: ToolName, path: Path) -> ToolVersion | None:
-        """
-        Get the version of an installed tool.
+        """Get the version of an installed tool.
 
         Args:
             tool: The tool to check.
@@ -369,8 +358,7 @@ class ToolInstaller:
 
     @staticmethod
     def _get_ghidra_version(path: Path) -> ToolVersion | None:
-        """
-        Get Ghidra version by parsing Ghidra/application.properties.
+        """Get Ghidra version by parsing Ghidra/application.properties.
 
         Reads the application.version property from the properties file
         instead of launching a subprocess, which avoids accidentally
@@ -425,8 +413,7 @@ class ToolInstaller:
 
     @staticmethod
     def _parse_version(version_str: str) -> ToolVersion:
-        """
-        Parse a version string.
+        """Parse a version string.
 
         Args:
             version_str: Raw version string.
@@ -445,8 +432,7 @@ class ToolInstaller:
         return version
 
     async def verify_tool(self, tool: ToolName, path: Path) -> bool:
-        """
-        Verify a tool installation is valid.
+        """Verify a tool installation is valid.
 
         Args:
             tool: The tool to verify.
@@ -485,8 +471,7 @@ class ToolInstaller:
         return False
 
     async def install_tool(self, tool: ToolName) -> InstallResult:
-        """
-        Download and install a tool.
+        """Download and install a tool.
 
         Args:
             tool: The tool to install.
@@ -545,8 +530,7 @@ class ToolInstaller:
             return InstallResult(success=False, error=str(e))
 
     async def _install_frida(self) -> InstallResult:
-        """
-        Install Frida Python package.
+        """Install Frida Python package.
 
         Returns:
             InstallResult: InstallResult with installation status.
@@ -585,8 +569,7 @@ class ToolInstaller:
             return InstallResult(success=False, error=str(e))
 
     async def _get_latest_release_url(self, tool: ToolName) -> str | None:
-        """
-        Get the latest release download URL from GitHub.
+        """Get the latest release download URL from GitHub.
 
         Args:
             tool: Tool to get release for.
@@ -634,8 +617,7 @@ class ToolInstaller:
         return None
 
     async def _download_file(self, url: str) -> Path | None:
-        """
-        Download a file to temporary location.
+        """Download a file to temporary location.
 
         Args:
             url: URL to download.
@@ -676,8 +658,7 @@ class ToolInstaller:
             return temp_path
 
     async def _extract_archive(self, archive_path: Path, tool: ToolName) -> Path:
-        """
-        Extract an archive to the tools directory.
+        """Extract an archive to the tools directory.
 
         Args:
             archive_path: Path to the archive.
@@ -712,8 +693,7 @@ class ToolInstaller:
 
     @staticmethod
     def _extract_zip(archive_path: Path, dest_dir: Path) -> None:
-        """
-        Extract a zip archive.
+        """Extract a zip archive.
 
         Args:
             archive_path: Path to zip file.
@@ -723,8 +703,7 @@ class ToolInstaller:
             zf.extractall(dest_dir)
 
     async def ensure_tool(self, tool: ToolName) -> Path:
-        """
-        Ensure a tool is available, installing if necessary.
+        """Ensure a tool is available, installing if necessary.
 
         Args:
             tool: The tool to ensure.
@@ -749,8 +728,7 @@ class ToolInstaller:
         raise ToolError(_ERR_ENSURE_FAILED)
 
     async def get_all_tool_status(self) -> dict[ToolName, tuple[bool, Path | None]]:
-        """
-        Get status of all tools.
+        """Get status of all tools.
 
         Returns:
             dict[ToolName, tuple[bool, Path | None]]: Dict mapping tool name to (available, path) tuple.
@@ -775,8 +753,7 @@ _PLUGIN_ARCHS: list[tuple[str, str, str]] = [
 
 
 def _find_cmake() -> Path | None:
-    """
-    Locate the cmake executable.
+    """Locate the cmake executable.
 
     Searches PATH first, then falls back to the Visual Studio bundled cmake
     via ``vswhere.exe``.
@@ -811,8 +788,7 @@ def _find_cmake() -> Path | None:
 
 
 def _detect_vs_generator(cmake_path: Path) -> str | None:
-    """
-    Detect the highest available Visual Studio CMake generator.
+    """Detect the highest available Visual Studio CMake generator.
 
     Runs ``cmake --help`` and parses its output for ``Visual Studio NN YYYY``
     generator lines.
@@ -847,8 +823,7 @@ def _detect_vs_generator(cmake_path: Path) -> str | None:
 
 
 def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
-    """
-    Build the x64dbg bridge plugin from source using CMake + Visual Studio.
+    """Build the x64dbg bridge plugin from source using CMake + Visual Studio.
 
     Attempts to compile both x64 and x32 architectures. Succeeds if at least
     one architecture builds successfully.
@@ -938,8 +913,7 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
 
 
 def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
-    """
-    Locate a pre-built plugin binary in known build output locations.
+    """Locate a pre-built plugin binary in known build output locations.
 
     Args:
         plugin_dir: Root of the x64dbg_plugin source tree.
@@ -960,8 +934,7 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
 
 
 def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
-    """
-    Deploy the Intellicrack bridge plugin into x64dbg's plugins directories.
+    """Deploy the Intellicrack bridge plugin into x64dbg's plugins directories.
 
     Copies pre-built ``.dp64`` / ``.dp32`` binaries from the plugin source tree
     into the corresponding ``release/{arch}/plugins/`` folders inside the x64dbg

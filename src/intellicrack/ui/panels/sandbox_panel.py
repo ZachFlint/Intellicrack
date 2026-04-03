@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Sandbox management panel for Intellicrack.
+"""Sandbox management panel for Intellicrack.
 
 Provides sandbox creation, configuration, binary execution, snapshot management, and execution report viewing.
 """
@@ -56,8 +55,7 @@ _SPLIT_RIGHT: Final[int] = 400
 
 
 class SandboxPanel(AnalysisPanelBase):
-    """
-    Panel for sandbox environment management and binary execution.
+    """Panel for sandbox environment management and binary execution.
 
     Provides controls for creating and managing sandboxed environments,
     executing binaries with monitoring, taking/restoring snapshots,
@@ -88,8 +86,7 @@ class SandboxPanel(AnalysisPanelBase):
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """
-        Add sandbox-specific controls to the toolbar.
+        """Add sandbox-specific controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
@@ -120,8 +117,7 @@ class SandboxPanel(AnalysisPanelBase):
 
     @override
     def _create_content(self) -> QWidget:
-        """
-        Create the sandbox management content area.
+        """Create the sandbox management content area.
 
         Returns:
             QWidget: Splitter with execution controls and output tabs.
@@ -221,8 +217,7 @@ class SandboxPanel(AnalysisPanelBase):
                 _logger.debug("sandbox_stop_skipped", exc_info=True)
 
     def set_sandbox(self, sandbox: SandboxBase) -> None:
-        """
-        Set the sandbox backend instance.
+        """Set the sandbox backend instance.
 
         Args:
             sandbox: The SandboxBase implementation to use.
@@ -231,8 +226,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.info("sandbox_backend_set", backend_type=type(sandbox).__name__)
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
-        """
-        Set the sandbox manager for type-aware creation.
+        """Set the sandbox manager for type-aware creation.
 
         When a manager is set, the Create button uses the combo box
         selection to create the correct sandbox type.
@@ -249,8 +243,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def get_sandbox(self) -> SandboxBase | None:
-        """
-        Get the current sandbox backend.
+        """Get the current sandbox backend.
 
         Returns:
             SandboxBase | None: The attached sandbox or None.
@@ -258,8 +251,7 @@ class SandboxPanel(AnalysisPanelBase):
         return self._sandbox
 
     def _log(self, message: str) -> None:
-        """
-        Append a message to the console output.
+        """Append a message to the console output.
 
         Args:
             message: Text to display.
@@ -267,8 +259,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._console_output.appendPlainText(message)
 
     def _set_sandbox_controls_active(self, *, active: bool) -> None:
-        """
-        Enable or disable controls based on sandbox state.
+        """Enable or disable controls based on sandbox state.
 
         Args:
             active: True to enable sandbox-active controls.
@@ -281,8 +272,7 @@ class SandboxPanel(AnalysisPanelBase):
         self.restore_btn.setEnabled(active)
 
     def _selected_sandbox_type(self) -> SandboxType:
-        """
-        Get the sandbox type from the combo box selection.
+        """Get the sandbox type from the combo box selection.
 
         Returns:
             SandboxType: Sandbox type literal: ``"windows"`` or ``"qemu"``.
@@ -320,8 +310,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_mgr_create_success(self, result: object) -> None:
-        """
-        Handle successful sandbox creation via SandboxManager.
+        """Handle successful sandbox creation via SandboxManager.
 
         Extracts the SandboxBase from the returned SandboxInstance
         and delegates to the standard creation success handler.
@@ -337,8 +326,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._on_create_success(result)
 
     def _on_create_success(self, _result: object) -> None:
-        """
-        Handle successful sandbox creation.
+        """Handle successful sandbox creation.
 
         Args:
             _result: Bridge call result (unused).
@@ -357,8 +345,7 @@ class SandboxPanel(AnalysisPanelBase):
         QTimer.singleShot(2000, self._connect_vnc_display)
 
     def _on_create_error(self, exc: object) -> None:
-        """
-        Handle sandbox creation failure.
+        """Handle sandbox creation failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -368,8 +355,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.warning("sandbox_create_failed", error=str(exc))
 
     def _on_cleanup_stale_success(self, result: object) -> None:
-        """
-        Handle successful stale sandbox cleanup.
+        """Handle successful stale sandbox cleanup.
 
         Args:
             result: Number of instances cleaned up.
@@ -380,8 +366,7 @@ class SandboxPanel(AnalysisPanelBase):
             _logger.info("stale_sandboxes_cleaned_up", count=count)
 
     def _on_cleanup_stale_error(self, exc: object) -> None:
-        """
-        Handle stale cleanup failure.
+        """Handle stale cleanup failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -403,8 +388,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_destroy_success(self, _result: object) -> None:
-        """
-        Handle successful sandbox destruction.
+        """Handle successful sandbox destruction.
 
         Args:
             _result: Bridge call result (unused).
@@ -419,8 +403,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.info("sandbox_destroyed", sandbox_id=self.sandbox_id)
 
     def _on_destroy_error(self, exc: object) -> None:
-        """
-        Handle sandbox destruction failure.
+        """Handle sandbox destruction failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -447,8 +430,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_restart_success(self, _result: object) -> None:
-        """
-        Handle successful sandbox restart.
+        """Handle successful sandbox restart.
 
         Args:
             _result: Bridge call result (unused).
@@ -459,8 +441,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.info("sandbox_restarted", sandbox_id=self.sandbox_id)
 
     def _on_restart_error(self, exc: object) -> None:
-        """
-        Handle sandbox restart failure.
+        """Handle sandbox restart failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -514,8 +495,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_copy_to_sandbox_success(self, _result: object) -> None:
-        """
-        Handle successful file copy, proceed to run the binary.
+        """Handle successful file copy, proceed to run the binary.
 
         Args:
             _result: Bridge call result (unused).
@@ -533,8 +513,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_run_binary_success(self, _result: object) -> None:
-        """
-        Handle successful binary execution.
+        """Handle successful binary execution.
 
         Args:
             _result: Bridge call result (unused).
@@ -546,8 +525,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.info("sandbox_binary_executed", binary=binary_name)
 
     def _on_run_binary_error(self, exc: object) -> None:
-        """
-        Handle binary execution failure.
+        """Handle binary execution failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -570,8 +548,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_take_snapshot_success(self, result: object) -> None:
-        """
-        Handle successful snapshot creation.
+        """Handle successful snapshot creation.
 
         Args:
             result: The snapshot ID from the bridge.
@@ -584,8 +561,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.info("sandbox_snapshot_taken", snapshot_id=snapshot_id)
 
     def _on_take_snapshot_error(self, exc: object) -> None:
-        """
-        Handle snapshot failure.
+        """Handle snapshot failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -614,8 +590,7 @@ class SandboxPanel(AnalysisPanelBase):
         )
 
     def _on_restore_snapshot_success(self, _result: object) -> None:
-        """
-        Handle successful snapshot restore.
+        """Handle successful snapshot restore.
 
         Args:
             _result: Bridge call result (unused).
@@ -627,8 +602,7 @@ class SandboxPanel(AnalysisPanelBase):
         _logger.info("sandbox_snapshot_restored", snapshot_id=snapshot_id)
 
     def _on_restore_snapshot_error(self, exc: object) -> None:
-        """
-        Handle snapshot restore failure.
+        """Handle snapshot restore failure.
 
         Args:
             exc: The exception from the failed operation.
@@ -652,8 +626,7 @@ class SandboxPanel(AnalysisPanelBase):
             self._status_indicator.setText("Active (status unavailable)")
 
     def _on_vnc_status_changed(self, *, connected: bool) -> None:
-        """
-        Handle VNC connection status changes.
+        """Handle VNC connection status changes.
 
         Args:
             connected: True if VNC is now connected.
@@ -689,8 +662,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._network_tree.clear()
 
     def load_execution_report(self, report: ExecutionReport) -> None:
-        """
-        Display an execution report in the output tabs.
+        """Display an execution report in the output tabs.
 
         Args:
             report: The execution report to display.

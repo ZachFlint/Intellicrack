@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Configuration management for Intellicrack.
+"""Configuration management for Intellicrack.
 
 This module provides the complete configuration system including loading from TOML files, saving, and default configurations for all
 components.
@@ -27,8 +26,7 @@ _ERR_TOMLI_W_REQUIRED = "tomli_w is required for saving config"
 
 
 def get_project_root() -> Path:
-    """
-    Compute the project root directory from this file's location.
+    """Compute the project root directory from this file's location.
 
     Returns:
         Path: Path to the repository root (parent of ``src/``).
@@ -37,8 +35,7 @@ def get_project_root() -> Path:
 
 
 def get_config_dir() -> Path:
-    """
-    Return the project-local configuration directory.
+    """Return the project-local configuration directory.
 
     Returns:
         Path: Path to ``<project_root>/.intellicrack/``.
@@ -47,8 +44,7 @@ def get_config_dir() -> Path:
 
 
 def get_config_file(filename: str) -> Path:
-    """
-    Return the path to a specific configuration file.
+    """Return the path to a specific configuration file.
 
     Args:
         filename: Name of the configuration file (e.g. ``"providers.json"``).
@@ -61,8 +57,7 @@ def get_config_file(filename: str) -> Path:
 
 @dataclass
 class ProviderConfig:
-    """
-    Configuration for a single LLM provider.
+    """Configuration for a single LLM provider.
 
     Attributes:
         enabled: Whether this provider is enabled.
@@ -81,8 +76,7 @@ class ProviderConfig:
 
 @dataclass
 class ToolConfig:
-    """
-    Configuration for a single tool.
+    """Configuration for a single tool.
 
     Attributes:
         enabled: Whether this tool is enabled.
@@ -101,8 +95,7 @@ class ToolConfig:
 
 @dataclass
 class SandboxConfig:
-    """
-    Windows Sandbox configuration.
+    """Windows Sandbox configuration.
 
     Attributes:
         enabled: Whether sandbox is enabled.
@@ -119,8 +112,7 @@ class SandboxConfig:
 
 @dataclass
 class UIConfig:
-    """
-    User interface configuration.
+    """User interface configuration.
 
     Attributes:
         theme: UI theme name.
@@ -137,8 +129,7 @@ class UIConfig:
 
 @dataclass
 class SessionConfig:
-    """
-    Session persistence configuration.
+    """Session persistence configuration.
 
     Attributes:
         auto_save: Whether to auto-save sessions.
@@ -153,8 +144,7 @@ class SessionConfig:
 
 @dataclass
 class LogConfig:
-    """
-    Logging configuration.
+    """Logging configuration.
 
     Attributes:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
@@ -176,8 +166,7 @@ class LogConfig:
 
 
 def _default_providers() -> dict[ProviderName, ProviderConfig]:
-    """
-    Create default provider configurations.
+    """Create default provider configurations.
 
     Returns:
         dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their default configurations.
@@ -220,8 +209,7 @@ def _default_providers() -> dict[ProviderName, ProviderConfig]:
 
 
 def _default_tools() -> dict[ToolName, ToolConfig]:
-    """
-    Create default tool configurations.
+    """Create default tool configurations.
 
     Returns:
         dict[ToolName, ToolConfig]: Dictionary mapping tool names to their default configurations.
@@ -263,8 +251,7 @@ def _default_tools() -> dict[ToolName, ToolConfig]:
 
 @dataclass
 class Config:
-    """
-    Complete application configuration.
+    """Complete application configuration.
 
     Attributes:
         tools_directory: Directory for auto-installed tools.
@@ -296,8 +283,7 @@ class Config:
 
     @classmethod
     def load(cls, path: Path) -> Config:
-        """
-        Load configuration from TOML file.
+        """Load configuration from TOML file.
 
         Args:
             path: Path to the TOML configuration file.
@@ -320,8 +306,7 @@ class Config:
 
     @staticmethod
     def _parse_general(general: dict[str, Any]) -> tuple[Path, Path, Path, ProviderName, ConfirmationLevel]:
-        """
-        Parse general configuration section.
+        """Parse general configuration section.
 
         Args:
             general: Dictionary with general configuration values.
@@ -360,8 +345,7 @@ class Config:
 
     @staticmethod
     def _parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
-        """
-        Parse providers configuration section.
+        """Parse providers configuration section.
 
         Args:
             providers_data: Dictionary with provider configuration values.
@@ -390,8 +374,7 @@ class Config:
 
     @staticmethod
     def _parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
-        """
-        Parse tools configuration section.
+        """Parse tools configuration section.
 
         Args:
             tools_data: Dictionary with tool configuration values.
@@ -423,8 +406,7 @@ class Config:
 
     @staticmethod
     def _parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
-        """
-        Parse sandbox, UI, session, and log configuration sections.
+        """Parse sandbox, UI, session, and log configuration sections.
 
         Args:
             data: Full configuration dictionary.
@@ -470,8 +452,7 @@ class Config:
 
     @classmethod
     def _from_dict(cls, data: dict[str, Any]) -> Config:
-        """
-        Create Config from dictionary.
+        """Create Config from dictionary.
 
         Args:
             data: Dictionary with configuration values.
@@ -501,8 +482,7 @@ class Config:
 
     @staticmethod
     def parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
-        """
-        Parse providers configuration section.
+        """Parse providers configuration section.
 
         Args:
             providers_data: Dictionary with provider configuration values.
@@ -514,8 +494,7 @@ class Config:
 
     @staticmethod
     def parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
-        """
-        Parse tools configuration section.
+        """Parse tools configuration section.
 
         Args:
             tools_data: Dictionary with tool configuration values.
@@ -527,8 +506,7 @@ class Config:
 
     @staticmethod
     def parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
-        """
-        Parse sandbox, UI, session, and log configuration sections.
+        """Parse sandbox, UI, session, and log configuration sections.
 
         Args:
             data: Full configuration dictionary.
@@ -540,8 +518,7 @@ class Config:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
-        """
-        Create Config from dictionary.
+        """Create Config from dictionary.
 
         Args:
             data: Dictionary with configuration values.
@@ -552,8 +529,7 @@ class Config:
         return cls._from_dict(data)
 
     def save(self, path: Path) -> None:
-        """
-        Save configuration to TOML file.
+        """Save configuration to TOML file.
 
         Args:
             path: Path to write the TOML configuration file.
@@ -575,8 +551,7 @@ class Config:
         _logger.info("config_saved", path=str(path))
 
     def _to_dict(self) -> dict[str, Any]:
-        """
-        Convert Config to dictionary for TOML serialization.
+        """Convert Config to dictionary for TOML serialization.
 
         Returns:
             dict[str, Any]: Dictionary representation of the configuration.
@@ -647,8 +622,7 @@ class Config:
 
     @classmethod
     def default(cls) -> Config:
-        """
-        Create default configuration.
+        """Create default configuration.
 
         Returns:
             Config: Config instance with all default values.
@@ -665,8 +639,7 @@ class Config:
             )
 
     def get_provider_config(self, provider: ProviderName) -> ProviderConfig:
-        """
-        Get configuration for a specific provider.
+        """Get configuration for a specific provider.
 
         Args:
             provider: The provider to get configuration for.
@@ -677,8 +650,7 @@ class Config:
         return self.providers.get(provider, ProviderConfig())
 
     def get_tool_config(self, tool: ToolName) -> ToolConfig:
-        """
-        Get configuration for a specific tool.
+        """Get configuration for a specific tool.
 
         Args:
             tool: The tool to get configuration for.
@@ -689,8 +661,7 @@ class Config:
         return self.tools.get(tool, ToolConfig())
 
     def is_provider_enabled(self, provider: ProviderName) -> bool:
-        """
-        Check if a provider is enabled.
+        """Check if a provider is enabled.
 
         Args:
             provider: The provider to check.
@@ -702,8 +673,7 @@ class Config:
         return config.enabled
 
     def is_tool_enabled(self, tool: ToolName) -> bool:
-        """
-        Check if a tool is enabled.
+        """Check if a tool is enabled.
 
         Args:
             tool: The tool to check.

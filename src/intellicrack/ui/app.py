@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Main application window for Intellicrack.
+"""Main application window for Intellicrack.
 
 This module provides the main PyQt6 application window that combines all UI components and connects them to the orchestrator.
 """
@@ -92,8 +91,7 @@ def _unhandled_exception_hook(
     exc_value: BaseException,
     exc_tb: types.TracebackType | None,
 ) -> None:
-    """
-    Global exception hook for unhandled exceptions during Qt event loop.
+    """Global exception hook for unhandled exceptions during Qt event loop.
 
     Args:
         exc_type: Exception type.
@@ -110,8 +108,7 @@ def _unhandled_exception_hook(
 
 
 class AsyncWorker(QThread):
-    """
-    Worker thread for running async operations.
+    """Worker thread for running async operations.
 
     Runs an asyncio event loop in a separate thread to execute
     async operations without blocking the UI.
@@ -153,8 +150,7 @@ class AsyncWorker(QThread):
 
 
 class MainWindow(QMainWindow):
-    """
-    Main application window for Intellicrack.
+    """Main application window for Intellicrack.
 
     Combines chat panel, tool output panel, menus, and toolbar
     into the main application interface.
@@ -236,8 +232,7 @@ class MainWindow(QMainWindow):
         self._restore_window_state()
 
     def _apply_smart_window_size(self) -> None:
-        """
-        Size and center the window based on available screen geometry.
+        """Size and center the window based on available screen geometry.
 
         Detects the primary monitor's usable area (excluding taskbar) and sizes the window slightly smaller with a small margin. Caps at
         1400x900 on large screens and floors at 800x600 minimum. Falls back to 1400x900 if screen detection fails.
@@ -328,8 +323,7 @@ class MainWindow(QMainWindow):
         _logger.debug("window_state_restored")
 
     def wire_script_manager(self, manager: object, validator: object | None = None) -> None:
-        """
-        Wire a script manager and validator into the UI.
+        """Wire a script manager and validator into the UI.
 
         Stores references and forwards to the tool panel for
         deferred backend wiring.
@@ -344,8 +338,7 @@ class MainWindow(QMainWindow):
         _logger.debug("script_manager_wired")
 
     def set_model_discovery(self, discovery: ModelDiscovery) -> None:
-        """
-        Set the model discovery instance.
+        """Set the model discovery instance.
 
         Args:
             discovery: ModelDiscovery for provider model enumeration.
@@ -426,8 +419,7 @@ class MainWindow(QMainWindow):
         handler: Callable[[], object],
         shortcut: str | None = None,
     ) -> None:
-        """
-        Add an action to a menu with optional shortcut.
+        """Add an action to a menu with optional shortcut.
 
         Args:
             menu: The menu to add the action to.
@@ -442,8 +434,7 @@ class MainWindow(QMainWindow):
         menu.addAction(action)
 
     def _setup_file_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the File menu.
+        """Set up the File menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -472,8 +463,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(file_menu, "Exit", self.close, "Alt+F4")
 
     def _setup_view_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the View menu.
+        """Set up the View menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -515,8 +505,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.detach_current_tab()
 
     def _setup_tools_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the Tools menu.
+        """Set up the Tools menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -550,8 +539,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(tools_menu, "Open in Ghidra...", self._on_open_binary_in_ghidra)
 
     def _setup_providers_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the Providers menu.
+        """Set up the Providers menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -569,8 +557,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(providers_menu, "Browse Models...", self._on_browse_models)
 
     def _setup_sandbox_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the Sandbox menu.
+        """Set up the Sandbox menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -587,8 +574,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(sandbox_menu, "Open Sandbox", self._on_open_sandbox)
 
     def _setup_settings_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the Settings menu.
+        """Set up the Settings menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -608,8 +594,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(settings_menu, "Focus Chat Input", self._on_focus_chat_input, "Ctrl+/")
 
     def _setup_help_menu(self, menubar: QMenuBar) -> None:
-        """
-        Set up the Help menu.
+        """Set up the Help menu.
 
         Args:
             menubar: The menu bar to add the menu to.
@@ -625,8 +610,7 @@ class MainWindow(QMainWindow):
         self._add_menu_action(help_menu, "About", self._on_about)
 
     def _setup_menus(self) -> None:
-        """
-        Set up the menu bar.
+        """Set up the menu bar.
 
         Raises:
             TypeError: If the menu bar could not be retrieved.
@@ -901,8 +885,7 @@ class MainWindow(QMainWindow):
             _logger.debug("tool_installer_init_skipped", error=str(e))
 
     async def _refresh_tool_status(self) -> dict[str, object]:
-        """
-        Refresh tool installation status asynchronously.
+        """Refresh tool installation status asynchronously.
 
         Returns:
             dict[str, object]: Dictionary mapping tool names to (available, path) tuples.
@@ -920,8 +903,7 @@ class MainWindow(QMainWindow):
         return result
 
     def _on_bridge_analysis_received(self, analysis: object) -> None:
-        """
-        Handle bridge analysis completion from orchestrator.
+        """Handle bridge analysis completion from orchestrator.
 
         Marshals the analysis data to the Qt main thread via signal emission.
         This callback is invoked from an async worker thread, so direct UI
@@ -935,8 +917,7 @@ class MainWindow(QMainWindow):
         self.bridge_analysis_received.emit(analysis)
 
     def _on_bridge_analysis_activated(self, _analysis: object) -> None:
-        """
-        Activate the analysis tab after bridge analysis completes.
+        """Activate the analysis tab after bridge analysis completes.
 
         Args:
             _analysis: The bridge analysis result (unused here).
@@ -944,8 +925,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.activate_analysis_tab()
 
     def _request_tool_confirmation(self, call: ToolCall) -> asyncio.Future[bool]:
-        """
-        Request user confirmation for a tool call.
+        """Request user confirmation for a tool call.
 
         Args:
             call: The tool call requiring confirmation.
@@ -971,8 +951,7 @@ class MainWindow(QMainWindow):
         return future
 
     def _on_user_message(self, text: str) -> None:
-        """
-        Handle user message submission.
+        """Handle user message submission.
 
         Args:
             text: User's message text.
@@ -991,8 +970,7 @@ class MainWindow(QMainWindow):
         self._run_async(process())
 
     def _on_stream_chunk(self, chunk: str) -> None:
-        """
-        Handle streaming response chunk.
+        """Handle streaming response chunk.
 
         Args:
             chunk: Text chunk from LLM.
@@ -1001,8 +979,7 @@ class MainWindow(QMainWindow):
             self._stream_append(chunk)
 
     def _on_tool_call(self, call: ToolCall) -> None:
-        """
-        Handle tool call notification.
+        """Handle tool call notification.
 
         Args:
             call: The tool call being executed.
@@ -1011,8 +988,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.log(f"[CALL] {call.tool_name}.{call.function_name}")
 
     def _on_tool_result(self, result: ToolResult) -> None:
-        """
-        Handle tool result notification.
+        """Handle tool result notification.
 
         Args:
             result: The tool execution result.
@@ -1046,8 +1022,7 @@ class MainWindow(QMainWindow):
             self.tool_panel.log(f"Error: {result.error}")
 
     def _run_async(self, coro: Coroutine[object, object, object]) -> None:
-        """
-        Run an async operation in a worker thread.
+        """Run an async operation in a worker thread.
 
         Args:
             coro: Coroutine to execute.
@@ -1058,8 +1033,7 @@ class MainWindow(QMainWindow):
         self._current_worker.start()
 
     def _on_async_finished(self, result: object) -> None:
-        """
-        Handle async operation completion.
+        """Handle async operation completion.
 
         Args:
             result: Operation result.
@@ -1070,8 +1044,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit("Ready")
 
     def _on_async_error(self, error: Exception) -> None:
-        """
-        Handle async operation error.
+        """Handle async operation error.
 
         Args:
             error: The error that occurred.
@@ -1082,8 +1055,7 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Error", str(error))
 
     def _update_status(self, status: str) -> None:
-        """
-        Update the status bar.
+        """Update the status bar.
 
         Args:
             status: Status message.
@@ -1091,8 +1063,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText(status)
 
     def _on_address_clicked(self, address: int) -> None:
-        """
-        Handle address click in the tool panel.
+        """Handle address click in the tool panel.
 
         Args:
             address: The clicked memory address.
@@ -1112,8 +1083,7 @@ class MainWindow(QMainWindow):
             self._load_binary(Path(path))
 
     def _load_binary(self, path: Path) -> None:
-        """
-        Load a binary file.
+        """Load a binary file.
 
         Args:
             path: Path to the binary.
@@ -1373,8 +1343,7 @@ class MainWindow(QMainWindow):
             self._apply_tool_settings(settings)
 
     def _apply_tool_settings(self, settings: dict[str, dict[str, object]]) -> None:
-        """
-        Apply tool configuration settings at runtime.
+        """Apply tool configuration settings at runtime.
 
         The ToolConfigDialog handles persistence via its own JSON config file.
         This method updates runtime state: for tools that have a changed path
@@ -1416,8 +1385,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Tool settings applied ({count} tools configured)")
 
     def _on_tool_reinit_finished(self, result: object) -> None:
-        """
-        Handle tool re-initialization completion.
+        """Handle tool re-initialization completion.
 
         Args:
             result: Worker result (unused).
@@ -1426,8 +1394,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit("Tool re-initialization complete")
 
     def _on_tool_reinit_error(self, error: Exception) -> None:
-        """
-        Handle tool re-initialization failure.
+        """Handle tool re-initialization failure.
 
         Args:
             error: The exception that occurred.
@@ -1449,8 +1416,7 @@ class MainWindow(QMainWindow):
             self._apply_provider_settings(settings)
 
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
-        """
-        Apply provider configuration settings at runtime.
+        """Apply provider configuration settings at runtime.
 
         The ProviderConfigDialog handles persistence via its own JSON config file.
         This method reconnects providers with updated API keys and credentials
@@ -1507,8 +1473,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Provider settings applied ({count} providers configured)")
 
     def _on_provider_reconnect_finished(self, result: object) -> None:
-        """
-        Handle provider reconnection completion.
+        """Handle provider reconnection completion.
 
         Args:
             result: Worker result (unused).
@@ -1517,8 +1482,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit("Provider connections updated")
 
     def _on_provider_reconnect_error(self, error: Exception) -> None:
-        """
-        Handle provider reconnection failure.
+        """Handle provider reconnection failure.
 
         Args:
             error: The exception that occurred.
@@ -1584,8 +1548,7 @@ class MainWindow(QMainWindow):
         self.model_refresh_worker.start()
 
     def _on_models_refresh_finished(self, *, success: bool, models: list[str], message: str) -> None:
-        """
-        Handle models refresh completion.
+        """Handle models refresh completion.
 
         Args:
             success: Whether the refresh was successful.
@@ -1620,8 +1583,7 @@ class MainWindow(QMainWindow):
         self.status_update.emit("Fetching models...")
 
     def _on_browse_models_result(self, result: object) -> None:
-        """
-        Handle browse models async result.
+        """Handle browse models async result.
 
         Args:
             result: The list of ModelInfo objects from the provider.
@@ -1663,8 +1625,7 @@ class MainWindow(QMainWindow):
             self._apply_sandbox_settings(settings)
 
     def _apply_sandbox_settings(self, settings: dict[str, object]) -> None:
-        """
-        Apply sandbox configuration settings.
+        """Apply sandbox configuration settings.
 
         The SandboxConfigDialog handles persistence via its own JSON config file.
         This method is called after the dialog saves settings to update any
@@ -1922,8 +1883,7 @@ class MainWindow(QMainWindow):
             self.process_attached_wired = True
 
     def _on_process_attached(self, pid: int) -> None:
-        """
-        Handle process attachment by showing a memory region picker.
+        """Handle process attachment by showing a memory region picker.
 
         When the user attaches to a process via the Process panel,
         list its readable memory regions and let the user select one
@@ -2072,8 +2032,7 @@ class MainWindow(QMainWindow):
             self._show_tool_error("Ghidra", "Failed to open binary in Ghidra")
 
     def _show_tool_error(self, tool_name: str, message: str) -> None:
-        """
-        Show tool-related error dialog.
+        """Show tool-related error dialog.
 
         Args:
             tool_name: Name of the tool.
@@ -2088,8 +2047,7 @@ class MainWindow(QMainWindow):
         )
 
     def _show_no_binary_warning(self, action: str) -> None:
-        """
-        Show warning when no binary is loaded.
+        """Show warning when no binary is loaded.
 
         Args:
             action: The action being attempted.
@@ -2102,8 +2060,7 @@ class MainWindow(QMainWindow):
         )
 
     def _on_provider_changed(self, index: int) -> None:
-        """
-        Handle provider selection change.
+        """Handle provider selection change.
 
         Args:
             index: New selection index.
@@ -2114,8 +2071,7 @@ class MainWindow(QMainWindow):
         _logger.info("provider_changed", provider=provider_value)
 
     def _on_sandbox_toggled(self, *, checked: bool) -> None:
-        """
-        Handle sandbox toggle.
+        """Handle sandbox toggle.
 
         Args:
             checked: Whether sandbox is enabled.
@@ -2123,8 +2079,7 @@ class MainWindow(QMainWindow):
         self._sandbox_btn.setText(f"Sandbox: {'ON' if checked else 'OFF'}")
 
     def _on_auto_approve_toggled(self, *, checked: bool) -> None:
-        """
-        Handle auto-approve toggle.
+        """Handle auto-approve toggle.
 
         Args:
             checked: Whether auto-approve is enabled.
@@ -2151,8 +2106,7 @@ class MainWindow(QMainWindow):
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
-        """
-        Handle window close event.
+        """Handle window close event.
 
         Checks for unsaved hex editor changes, persists window state,
         then shuts down bridges, sandbox, and background workers.

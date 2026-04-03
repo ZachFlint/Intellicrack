@@ -22,8 +22,7 @@ _logger = get_logger("core.hexpat_compiler")
 
 
 class HexPatError(Exception):
-    """
-    Error raised during HexPat DSL compilation.
+    """Error raised during HexPat DSL compilation.
 
     Args:
         message: Human-readable error description.
@@ -110,8 +109,7 @@ class TokenType(enum.Enum):
 
 @dataclass
 class Token:
-    """
-    A lexer token.
+    """A lexer token.
 
     Attributes:
         type: Token type.
@@ -203,8 +201,7 @@ _TYPE_MAP: dict[str, dict[str, str]] = {
 
 @dataclass
 class NumberLiteral:
-    """
-    Numeric literal expression node.
+    """Numeric literal expression node.
 
     Attributes:
         value: Integer value.
@@ -215,8 +212,7 @@ class NumberLiteral:
 
 @dataclass
 class StringLiteral:
-    """
-    String literal expression node.
+    """String literal expression node.
 
     Attributes:
         value: String content (without quotes).
@@ -227,8 +223,7 @@ class StringLiteral:
 
 @dataclass
 class IdentifierExpr:
-    """
-    Identifier reference expression node.
+    """Identifier reference expression node.
 
     Attributes:
         name: Identifier name.
@@ -244,8 +239,7 @@ class DollarExpr:
 
 @dataclass
 class SizeofExpr:
-    """
-    Sizeof() expression node.
+    """Sizeof() expression node.
 
     Attributes:
         target: Name of the target type or field.
@@ -256,8 +250,7 @@ class SizeofExpr:
 
 @dataclass
 class BinaryExpr:
-    """
-    Binary operator expression node.
+    """Binary operator expression node.
 
     Attributes:
         op: Operator string.
@@ -272,8 +265,7 @@ class BinaryExpr:
 
 @dataclass
 class UnaryExpr:
-    """
-    Unary operator expression node.
+    """Unary operator expression node.
 
     Attributes:
         op: Operator string.
@@ -286,8 +278,7 @@ class UnaryExpr:
 
 @dataclass
 class AddressofExpr:
-    """
-    Addressof() expression node.
+    """Addressof() expression node.
 
     Attributes:
         target: Name of the target field.
@@ -301,8 +292,7 @@ ExprNode = NumberLiteral | StringLiteral | IdentifierExpr | DollarExpr | SizeofE
 
 @dataclass
 class PrimitiveType:
-    """
-    Primitive type AST node.
+    """Primitive type AST node.
 
     Attributes:
         name: Type name (e.g. "u8", "u32").
@@ -313,8 +303,7 @@ class PrimitiveType:
 
 @dataclass
 class StructRefType:
-    """
-    Struct reference type AST node.
+    """Struct reference type AST node.
 
     Attributes:
         name: Referenced struct name.
@@ -325,8 +314,7 @@ class StructRefType:
 
 @dataclass
 class PaddingType:
-    """
-    Padding type AST node.
+    """Padding type AST node.
 
     Attributes:
         size: Size expression.
@@ -337,8 +325,7 @@ class PaddingType:
 
 @dataclass
 class PointerType:
-    """
-    Pointer type AST node.
+    """Pointer type AST node.
 
     Attributes:
         pointee: The type this pointer points to.
@@ -356,8 +343,7 @@ TypeNode = PrimitiveType | StructRefType | PaddingType | PointerType
 
 @dataclass
 class FieldNode:
-    """
-    Field declaration AST node.
+    """Field declaration AST node.
 
     Attributes:
         name: Field name.
@@ -376,8 +362,7 @@ class FieldNode:
 
 @dataclass
 class ConditionalField:
-    """
-    Conditional field declaration AST node.
+    """Conditional field declaration AST node.
 
     Attributes:
         condition: Condition expression.
@@ -392,8 +377,7 @@ class ConditionalField:
 
 @dataclass
 class StructDecl:
-    """
-    Struct declaration AST node.
+    """Struct declaration AST node.
 
     Attributes:
         name: Struct name.
@@ -406,8 +390,7 @@ class StructDecl:
 
 @dataclass
 class UnionDecl:
-    """
-    Union declaration AST node.
+    """Union declaration AST node.
 
     Attributes:
         name: Union name.
@@ -420,8 +403,7 @@ class UnionDecl:
 
 @dataclass
 class EnumDecl:
-    """
-    Enum declaration AST node.
+    """Enum declaration AST node.
 
     Attributes:
         name: Enum name.
@@ -436,8 +418,7 @@ class EnumDecl:
 
 @dataclass
 class BitfieldDecl:
-    """
-    Bitfield declaration AST node.
+    """Bitfield declaration AST node.
 
     Attributes:
         name: Bitfield name.
@@ -474,8 +455,7 @@ _SINGLE_CHAR_TOKENS: dict[str, TokenType] = {
 
 
 class HexPatLexer:
-    """
-    Tokenizer for HexPat DSL source code.
+    """Tokenizer for HexPat DSL source code.
 
     Args:
         source: Source code string to tokenize.
@@ -489,8 +469,7 @@ class HexPatLexer:
         self._tokens: list[Token] = []
 
     def tokenize(self) -> list[Token]:
-        """
-        Tokenize the entire source into a list of tokens.
+        """Tokenize the entire source into a list of tokens.
 
         Returns:
             list[Token]: List of tokens including a trailing EOF token.
@@ -524,8 +503,7 @@ class HexPatLexer:
         return self._tokens
 
     def _read_multi_char_operator(self, ch: str) -> None:
-        """
-        Read a potentially multi-character operator token.
+        """Read a potentially multi-character operator token.
 
         Args:
             ch: The current character.
@@ -595,8 +573,7 @@ class HexPatLexer:
             self._pos += 1
 
     def _peek(self, offset: int = 0) -> str:
-        """
-        Peek at a character at current position plus offset.
+        """Peek at a character at current position plus offset.
 
         Args:
             offset: Number of characters ahead to look.
@@ -608,8 +585,7 @@ class HexPatLexer:
         return self._source[idx] if idx < len(self._source) else ""
 
     def _skip_whitespace_and_comments(self) -> None:
-        """
-        Skip whitespace and comments.
+        """Skip whitespace and comments.
 
         Raises:
             HexPatError: If a block comment is not terminated.
@@ -641,8 +617,7 @@ class HexPatLexer:
                 break
 
     def _read_string(self) -> None:
-        """
-        Read a string literal token.
+        """Read a string literal token.
 
         Raises:
             HexPatError: If the string literal is not terminated.
@@ -699,8 +674,7 @@ class HexPatLexer:
 
 
 class HexPatParser:
-    """
-    Recursive descent parser for HexPat DSL.
+    """Recursive descent parser for HexPat DSL.
 
     Args:
         tokens: List of tokens from the lexer.
@@ -711,8 +685,7 @@ class HexPatParser:
         self._pos = 0
 
     def parse(self) -> list[DeclNode]:
-        """
-        Parse the token stream into a list of declarations.
+        """Parse the token stream into a list of declarations.
 
         Returns:
             list[DeclNode]: List of parsed declaration AST nodes.
@@ -725,8 +698,7 @@ class HexPatParser:
         return decls
 
     def _current(self) -> Token:
-        """
-        Get the current token.
+        """Get the current token.
 
         Returns:
             Token: Current token.
@@ -734,8 +706,7 @@ class HexPatParser:
         return self._tokens[self._pos]
 
     def _at_end(self) -> bool:
-        """
-        Check if at the end of tokens.
+        """Check if at the end of tokens.
 
         Returns:
             bool: True if at EOF.
@@ -743,8 +714,7 @@ class HexPatParser:
         return self._current().type == TokenType.EOF
 
     def _advance(self) -> Token:
-        """
-        Advance and return the current token.
+        """Advance and return the current token.
 
         Returns:
             Token: The token that was current before advancing.
@@ -755,8 +725,7 @@ class HexPatParser:
         return tok
 
     def _expect(self, tt: TokenType) -> Token:
-        """
-        Expect and consume a specific token type.
+        """Expect and consume a specific token type.
 
         Args:
             tt: Expected token type.
@@ -774,8 +743,7 @@ class HexPatParser:
         return self._advance()
 
     def _match(self, *types: TokenType) -> Token | None:
-        """
-        Consume token if it matches any of the given types.
+        """Consume token if it matches any of the given types.
 
         Args:
             *types: Token types to match against.
@@ -786,8 +754,7 @@ class HexPatParser:
         return self._advance() if self._current().type in types else None
 
     def _parse_declaration(self) -> DeclNode | None:
-        """
-        Parse a top-level declaration.
+        """Parse a top-level declaration.
 
         Returns:
             DeclNode | None: Parsed declaration or None.
@@ -844,8 +811,7 @@ class HexPatParser:
                 return
 
     def _parse_struct(self) -> StructDecl:
-        """
-        Parse a struct declaration.
+        """Parse a struct declaration.
 
         Returns:
             StructDecl: Parsed struct declaration.
@@ -859,8 +825,7 @@ class HexPatParser:
         return StructDecl(name=name_tok.value, fields=fields)
 
     def _parse_union(self) -> UnionDecl:
-        """
-        Parse a union declaration.
+        """Parse a union declaration.
 
         Returns:
             UnionDecl: Parsed union declaration.
@@ -878,8 +843,7 @@ class HexPatParser:
         return UnionDecl(name=name_tok.value, fields=fields)
 
     def _parse_enum(self) -> EnumDecl:
-        """
-        Parse an enum declaration with optional auto-incrementing values.
+        """Parse an enum declaration with optional auto-incrementing values.
 
         Returns:
             EnumDecl: Parsed enum declaration.
@@ -904,8 +868,7 @@ class HexPatParser:
         return EnumDecl(name=name_tok.value, backing_type=backing, values=values)
 
     def _parse_bitfield(self) -> BitfieldDecl:
-        """
-        Parse a bitfield declaration.
+        """Parse a bitfield declaration.
 
         Returns:
             BitfieldDecl: Parsed bitfield declaration.
@@ -926,8 +889,7 @@ class HexPatParser:
         return BitfieldDecl(name=name_tok.value, fields=fields)
 
     def _parse_field_list(self) -> list[FieldNode | ConditionalField]:
-        """
-        Parse a list of fields within braces.
+        """Parse a list of fields within braces.
 
         Returns:
             list[FieldNode | ConditionalField]: Parsed field list.
@@ -939,8 +901,7 @@ class HexPatParser:
         return fields
 
     def _parse_field(self) -> FieldNode | ConditionalField:
-        """
-        Parse a single field or conditional.
+        """Parse a single field or conditional.
 
         Returns:
             FieldNode | ConditionalField: Parsed field node.
@@ -987,8 +948,7 @@ class HexPatParser:
         )
 
     def _parse_padding_field(self, endianness: str | None) -> FieldNode:
-        """
-        Parse a padding field declaration.
+        """Parse a padding field declaration.
 
         Args:
             endianness: Endianness prefix or None.
@@ -1014,8 +974,7 @@ class HexPatParser:
         )
 
     def _parse_conditional(self) -> ConditionalField:
-        """
-        Parse a conditional field block.
+        """Parse a conditional field block.
 
         Returns:
             ConditionalField: Parsed conditional field.
@@ -1042,8 +1001,7 @@ class HexPatParser:
         )
 
     def _parse_type_spec(self) -> TypeNode:
-        """
-        Parse a type specifier.
+        """Parse a type specifier.
 
         Returns:
             TypeNode: Parsed type node.
@@ -1068,8 +1026,7 @@ class HexPatParser:
         raise HexPatError(msg, tok.line, tok.column)
 
     def _parse_annotations(self) -> dict[str, ExprNode]:
-        """
-        Parse an annotation block ``[[ ... ]]``.
+        """Parse an annotation block ``[[ ... ]]``.
 
         Returns:
             dict[str, ExprNode]: Parsed annotations.
@@ -1087,8 +1044,7 @@ class HexPatParser:
         return annotations
 
     def _parse_expression(self) -> ExprNode:
-        """
-        Parse an expression.
+        """Parse an expression.
 
         Returns:
             ExprNode: Parsed expression node.
@@ -1096,8 +1052,7 @@ class HexPatParser:
         return self._parse_comparison()
 
     def _parse_comparison(self) -> ExprNode:
-        """
-        Parse a comparison expression.
+        """Parse a comparison expression.
 
         Returns:
             ExprNode: Parsed expression.
@@ -1117,8 +1072,7 @@ class HexPatParser:
         return left
 
     def _parse_additive(self) -> ExprNode:
-        """
-        Parse an additive expression.
+        """Parse an additive expression.
 
         Returns:
             ExprNode: Parsed expression.
@@ -1131,8 +1085,7 @@ class HexPatParser:
         return left
 
     def _parse_multiplicative(self) -> ExprNode:
-        """
-        Parse a multiplicative expression.
+        """Parse a multiplicative expression.
 
         Returns:
             ExprNode: Parsed expression.
@@ -1145,8 +1098,7 @@ class HexPatParser:
         return left
 
     def _parse_unary(self) -> ExprNode:
-        """
-        Parse a unary expression.
+        """Parse a unary expression.
 
         Returns:
             ExprNode: Parsed expression.
@@ -1158,8 +1110,7 @@ class HexPatParser:
         return self._parse_primary()
 
     def _parse_primary(self) -> ExprNode:
-        """
-        Parse a primary expression.
+        """Parse a primary expression.
 
         Returns:
             ExprNode: Parsed expression.
@@ -1202,8 +1153,7 @@ class HexPatParser:
 
 
 class HexPatCodegen:
-    """
-    Generates JSON template definitions from a HexPat AST.
+    """Generates JSON template definitions from a HexPat AST.
 
     Args:
         declarations: List of parsed declaration nodes.
@@ -1230,8 +1180,7 @@ class HexPatCodegen:
                 self._nested_bitfields[decl.name] = decl
 
     def generate(self) -> dict[str, Any]:
-        """
-        Generate the JSON template dict from all declarations.
+        """Generate the JSON template dict from all declarations.
 
         Returns:
             dict[str, Any]: JSON-serializable template definition.
@@ -1284,8 +1233,7 @@ class HexPatCodegen:
         return result
 
     def _gen_field(self, node: FieldNode | ConditionalField) -> list[dict[str, Any]]:
-        """
-        Generate field definition dicts from a field node.
+        """Generate field definition dicts from a field node.
 
         Conditionals may produce multiple fields (if + else branches).
 
@@ -1300,8 +1248,7 @@ class HexPatCodegen:
         return [self._gen_regular_field(node)]
 
     def _gen_regular_field(self, node: FieldNode) -> dict[str, Any]:
-        """
-        Generate a regular field definition dict.
+        """Generate a regular field definition dict.
 
         Args:
             node: Field AST node.
@@ -1383,8 +1330,7 @@ class HexPatCodegen:
         return result
 
     def _gen_conditional(self, node: ConditionalField) -> list[dict[str, Any]]:
-        """
-        Generate conditional field definition dicts.
+        """Generate conditional field definition dicts.
 
         For if/else constructs, emits the true-branch as a Conditional field.
         If false_fields exist, emits a second Conditional with inverted op.
@@ -1475,8 +1421,7 @@ class HexPatCodegen:
         return results
 
     def _gen_type(self, type_node: TypeNode) -> dict[str, Any]:
-        """
-        Generate a JSON field type from a type node.
+        """Generate a JSON field type from a type node.
 
         Args:
             type_node: Type AST node.
@@ -1511,8 +1456,7 @@ class HexPatCodegen:
 
     @staticmethod
     def _eval_const_expr(expr: ExprNode) -> int:
-        """
-        Evaluate a constant expression at compile time.
+        """Evaluate a constant expression at compile time.
 
         Args:
             expr: Expression node to evaluate.
@@ -1540,16 +1484,14 @@ class HexPatCodegen:
 
 
 class HexPatCompiler:
-    """
-    Compiles HexPat DSL source code into JSON template definitions.
+    """Compiles HexPat DSL source code into JSON template definitions.
 
     Orchestrates the lexer, parser, and codegen pipeline.
     """
 
     @staticmethod
     def compile(source: str) -> str:
-        """
-        Compile DSL source to a JSON string.
+        """Compile DSL source to a JSON string.
 
         Args:
             source: HexPat DSL source code.
@@ -1562,8 +1504,7 @@ class HexPatCompiler:
 
     @staticmethod
     def compile_to_dict(source: str) -> dict[str, Any]:
-        """
-        Compile DSL source to a Python dict.
+        """Compile DSL source to a Python dict.
 
         Args:
             source: HexPat DSL source code.

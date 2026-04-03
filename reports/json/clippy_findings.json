@@ -1,6 +1,6 @@
 {
   "tool": "clippy",
-  "generated": "2026-03-31T03:23:15.545639+00:00",
+  "generated": "2026-04-01T02:38:04.717690+00:00",
   "total_findings": 384,
   "total_files": 16,
   "files": [
@@ -8,6 +8,34 @@
       "path": "src\\search.rs",
       "count": 71,
       "findings": [
+        {
+          "line": 950,
+          "column": 24,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\search.rs:950:24: [warning] long literal lacking separators"
+        },
+        {
+          "line": 954,
+          "column": 49,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\search.rs:954:49: [warning] long literal lacking separators"
+        },
+        {
+          "line": 962,
+          "column": 24,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\search.rs:962:24: [warning] long literal lacking separators"
+        },
+        {
+          "line": 965,
+          "column": 49,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\search.rs:965:49: [warning] long literal lacking separators"
+        },
         {
           "line": 30,
           "column": 24,
@@ -457,34 +485,6 @@
           "raw": "src\\search.rs:745:13: [warning] casting `u64` to `i64` may wrap around the value"
         },
         {
-          "line": 950,
-          "column": 24,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\search.rs:950:24: [warning] long literal lacking separators"
-        },
-        {
-          "line": 954,
-          "column": 49,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\search.rs:954:49: [warning] long literal lacking separators"
-        },
-        {
-          "line": 962,
-          "column": 24,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\search.rs:962:24: [warning] long literal lacking separators"
-        },
-        {
-          "line": 965,
-          "column": 49,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\search.rs:965:49: [warning] long literal lacking separators"
-        },
-        {
           "line": 883,
           "column": 23,
           "severity": "warning",
@@ -629,6 +629,13 @@
           "severity": "warning",
           "message": "long literal lacking separators",
           "raw": "src\\data_inspector.rs:229:41: [warning] long literal lacking separators"
+        },
+        {
+          "line": 476,
+          "column": 23,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\data_inspector.rs:476:23: [warning] long literal lacking separators"
         },
         {
           "line": 8,
@@ -937,13 +944,6 @@
           "severity": "warning",
           "message": "casting `u64` to `i64` may wrap around the value",
           "raw": "src\\data_inspector.rs:315:29: [warning] casting `u64` to `i64` may wrap around the value"
-        },
-        {
-          "line": 476,
-          "column": 23,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\data_inspector.rs:476:23: [warning] long literal lacking separators"
         },
         {
           "line": 464,
@@ -1287,6 +1287,13 @@
       "count": 30,
       "findings": [
         {
+          "line": 885,
+          "column": 56,
+          "severity": "warning",
+          "message": "unused import: `StructTemplate`",
+          "raw": "src\\templates\\eval.rs:885:56: [warning] unused import: `StructTemplate`"
+        },
+        {
           "line": 20,
           "column": 12,
           "severity": "warning",
@@ -1488,13 +1495,6 @@
           "severity": "warning",
           "message": "variables can be used directly in the `format!` string",
           "raw": "src\\templates\\eval.rs:875:53: [warning] variables can be used directly in the `format!` string"
-        },
-        {
-          "line": 885,
-          "column": 56,
-          "severity": "warning",
-          "message": "unused import: `StructTemplate`",
-          "raw": "src\\templates\\eval.rs:885:56: [warning] unused import: `StructTemplate`"
         }
       ]
     },
@@ -1502,6 +1502,27 @@
       "path": "src\\hash.rs",
       "count": 24,
       "findings": [
+        {
+          "line": 483,
+          "column": 59,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\hash.rs:483:59: [warning] long literal lacking separators"
+        },
+        {
+          "line": 483,
+          "column": 71,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\hash.rs:483:71: [warning] long literal lacking separators"
+        },
+        {
+          "line": 483,
+          "column": 95,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\hash.rs:483:95: [warning] long literal lacking separators"
+        },
         {
           "line": 68,
           "column": 1,
@@ -1648,27 +1669,6 @@
           "severity": "warning",
           "message": "variables can be used directly in the `format!` string",
           "raw": "src\\hash.rs:265:18: [warning] variables can be used directly in the `format!` string"
-        },
-        {
-          "line": 483,
-          "column": 59,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\hash.rs:483:59: [warning] long literal lacking separators"
-        },
-        {
-          "line": 483,
-          "column": 71,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\hash.rs:483:71: [warning] long literal lacking separators"
-        },
-        {
-          "line": 483,
-          "column": 95,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\hash.rs:483:95: [warning] long literal lacking separators"
         }
       ]
     },
@@ -1676,6 +1676,27 @@
       "path": "src\\entropy.rs",
       "count": 22,
       "findings": [
+        {
+          "line": 250,
+          "column": 13,
+          "severity": "warning",
+          "message": "binding's name is too similar to existing binding",
+          "raw": "src\\entropy.rs:250:13: [warning] binding's name is too similar to existing binding"
+        },
+        {
+          "line": 249,
+          "column": 13,
+          "severity": "warning",
+          "message": "binding's name is too similar to existing binding",
+          "raw": "src\\entropy.rs:249:13: [warning] binding's name is too similar to existing binding"
+        },
+        {
+          "line": 284,
+          "column": 40,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\entropy.rs:284:40: [warning] long literal lacking separators"
+        },
         {
           "line": 3,
           "column": 8,
@@ -1761,27 +1782,6 @@
           "raw": "src\\entropy.rs:164:8: [warning] manual `RangeInclusive::contains` implementation"
         },
         {
-          "line": 250,
-          "column": 13,
-          "severity": "warning",
-          "message": "binding's name is too similar to existing binding",
-          "raw": "src\\entropy.rs:250:13: [warning] binding's name is too similar to existing binding"
-        },
-        {
-          "line": 249,
-          "column": 13,
-          "severity": "warning",
-          "message": "binding's name is too similar to existing binding",
-          "raw": "src\\entropy.rs:249:13: [warning] binding's name is too similar to existing binding"
-        },
-        {
-          "line": 284,
-          "column": 40,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\entropy.rs:284:40: [warning] long literal lacking separators"
-        },
-        {
           "line": 178,
           "column": 9,
           "severity": "warning",
@@ -1849,6 +1849,27 @@
           "severity": "warning",
           "message": "long literal lacking separators",
           "raw": "src\\patch_export.rs:29:33: [warning] long literal lacking separators"
+        },
+        {
+          "line": 248,
+          "column": 35,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\patch_export.rs:248:35: [warning] long literal lacking separators"
+        },
+        {
+          "line": 256,
+          "column": 40,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\patch_export.rs:256:40: [warning] long literal lacking separators"
+        },
+        {
+          "line": 262,
+          "column": 50,
+          "severity": "warning",
+          "message": "long literal lacking separators",
+          "raw": "src\\patch_export.rs:262:50: [warning] long literal lacking separators"
         },
         {
           "line": 17,
@@ -1954,27 +1975,6 @@
           "severity": "warning",
           "message": "this function could have a `#[must_use]` attribute",
           "raw": "src\\patch_export.rs:185:8: [warning] this function could have a `#[must_use]` attribute"
-        },
-        {
-          "line": 248,
-          "column": 35,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\patch_export.rs:248:35: [warning] long literal lacking separators"
-        },
-        {
-          "line": 256,
-          "column": 40,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\patch_export.rs:256:40: [warning] long literal lacking separators"
-        },
-        {
-          "line": 262,
-          "column": 50,
-          "severity": "warning",
-          "message": "long literal lacking separators",
-          "raw": "src\\patch_export.rs:262:50: [warning] long literal lacking separators"
         }
       ]
     },
@@ -2435,13 +2435,6 @@
           "raw": "src\\encodings.rs:271:8: [warning] this function could have a `#[must_use]` attribute"
         },
         {
-          "line": 170,
-          "column": 65,
-          "severity": "warning",
-          "message": "redundant closure",
-          "raw": "src\\encodings.rs:170:65: [warning] redundant closure"
-        },
-        {
           "line": 336,
           "column": 23,
           "severity": "warning",
@@ -2461,6 +2454,13 @@
           "severity": "warning",
           "message": "redundant closure",
           "raw": "src\\encodings.rs:498:23: [warning] redundant closure"
+        },
+        {
+          "line": 170,
+          "column": 65,
+          "severity": "warning",
+          "message": "redundant closure",
+          "raw": "src\\encodings.rs:170:65: [warning] redundant closure"
         }
       ]
     },

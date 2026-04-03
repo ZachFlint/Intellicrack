@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-X64dbg debugger panel for Intellicrack.
+"""X64dbg debugger panel for Intellicrack.
 
 Provides disassembly, register inspection, breakpoint management, memory viewing, stack traces, and command console for interactive
 debugging via the X64DbgBridge backend.
@@ -89,8 +88,7 @@ _SEGMENT_REGS = ["cs", "ds", "es", "fs", "gs", "ss"]
 
 
 class X64DbgPanel(AnalysisPanelBase):
-    """
-    Native Qt panel for x64dbg interactive debugging.
+    """Native Qt panel for x64dbg interactive debugging.
 
     Displays disassembly, registers, breakpoints, memory dumps,
     stack traces, and a command console for controlling x64dbg
@@ -108,8 +106,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """
-        Add x64dbg-specific controls to the toolbar.
+        """Add x64dbg-specific controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
@@ -162,8 +159,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
     @override
     def _create_content(self) -> QWidget:
-        """
-        Create the x64dbg debugging content area.
+        """Create the x64dbg debugging content area.
 
         Returns:
             QWidget: Tab widget with native controls and embedded x64dbg window.
@@ -214,8 +210,7 @@ class X64DbgPanel(AnalysisPanelBase):
                     _logger.exception("x64dbg_stop_failed", bridge_type="x64dbg")
 
     def _create_disasm_section(self) -> QWidget:
-        """
-        Create the disassembly display section.
+        """Create the disassembly display section.
 
         Returns:
             QWidget: Disassembly container widget.
@@ -239,8 +234,7 @@ class X64DbgPanel(AnalysisPanelBase):
         return container
 
     def _create_inspect_tabs(self) -> QTabWidget:
-        """
-        Create registers, stack, modules, and threads tabs.
+        """Create registers, stack, modules, and threads tabs.
 
         Returns:
             QTabWidget: Tab widget with inspection views.
@@ -287,8 +281,7 @@ class X64DbgPanel(AnalysisPanelBase):
         return tabs
 
     def _create_bottom_tabs(self) -> QTabWidget:
-        """
-        Create breakpoints, memory, and console tabs.
+        """Create breakpoints, memory, and console tabs.
 
         Returns:
             QTabWidget: Tab widget with bottom-panel views.
@@ -399,8 +392,7 @@ class X64DbgPanel(AnalysisPanelBase):
         return tabs
 
     def set_bridge(self, bridge: X64DbgBridge) -> None:
-        """
-        Set the X64DbgBridge instance for debugging.
+        """Set the X64DbgBridge instance for debugging.
 
         Registers an event callback so breakpoint and watchpoint
         hits automatically refresh the panel state.
@@ -417,8 +409,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._update_controls_state()
 
     def _update_controls_state(self) -> None:
-        """
-        Enable or disable debug buttons based on bridge plugin readiness.
+        """Enable or disable debug buttons based on bridge plugin readiness.
 
         When prerequisites are not met, buttons are disabled and a diagnostic message is shown in the status label and console.
         """
@@ -440,8 +431,7 @@ class X64DbgPanel(AnalysisPanelBase):
                 self._console_output.appendPlainText(f"[!] {diagnostic}")
 
     def get_bridge(self) -> X64DbgBridge | None:
-        """
-        Get the current X64DbgBridge instance.
+        """Get the current X64DbgBridge instance.
 
         Returns:
             X64DbgBridge | None: The attached bridge or None.
@@ -449,8 +439,7 @@ class X64DbgPanel(AnalysisPanelBase):
         return self._bridge
 
     def debug_file(self, file_path: Path) -> bool:
-        """
-        Load a file for debugging (protocol-compatible convenience).
+        """Load a file for debugging (protocol-compatible convenience).
 
         Args:
             file_path: Path to the executable to debug.
@@ -471,8 +460,7 @@ class X64DbgPanel(AnalysisPanelBase):
         return True
 
     def _on_load_success(self, file_path: Path) -> None:
-        """
-        Handle successful file load.
+        """Handle successful file load.
 
         Args:
             file_path: The loaded file path.
@@ -517,8 +505,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_load_error(self, file_path: Path, exc: object) -> None:
-        """
-        Handle file load failure.
+        """Handle file load failure.
 
         Args:
             file_path: The file that failed to load.
@@ -529,8 +516,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._load_btn.setEnabled(True)
 
     def _on_debug_event(self, event_type: str, _message: dict[str, object]) -> None:
-        """
-        Handle debug events from the bridge for auto-refresh.
+        """Handle debug events from the bridge for auto-refresh.
 
         Called from the bridge event thread; schedules a refresh
         on the Qt main thread via ``QTimer.singleShot``.
@@ -581,8 +567,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_attach_success(self, pid: int) -> None:
-        """
-        Handle successful attach.
+        """Handle successful attach.
 
         Args:
             pid: The attached process ID.
@@ -596,8 +581,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_state()
 
     def _on_attach_error(self, exc: object) -> None:
-        """
-        Handle attach failure.
+        """Handle attach failure.
 
         Args:
             exc: The exception that occurred.
@@ -625,8 +609,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._run_btn.setEnabled(True)
 
     def _on_run_error(self, exc: object) -> None:
-        """
-        Handle run failure.
+        """Handle run failure.
 
         Args:
             exc: The exception that occurred.
@@ -655,8 +638,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_state()
 
     def _on_pause_error(self, exc: object) -> None:
-        """
-        Handle pause failure.
+        """Handle pause failure.
 
         Args:
             exc: The exception that occurred.
@@ -684,8 +666,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._stop_btn.setEnabled(True)
 
     def _on_stop_error(self, exc: object) -> None:
-        """
-        Handle stop failure.
+        """Handle stop failure.
 
         Args:
             exc: The exception that occurred.
@@ -731,8 +712,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_step_success(self, direction: str, result: object) -> None:
-        """
-        Handle successful step operation.
+        """Handle successful step operation.
 
         Args:
             direction: Step direction ("into", "over", or "out").
@@ -746,8 +726,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_state()
 
     def _on_step_error(self, direction: str, exc: object) -> None:
-        """
-        Handle step failure.
+        """Handle step failure.
 
         Args:
             direction: Step direction that failed.
@@ -770,8 +749,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._64bit_toggle.blockSignals(b=False)
 
     def _on_toggle_64bit(self, *, checked: bool) -> None:
-        """
-        Handle 64-bit toggle.
+        """Handle 64-bit toggle.
 
         Args:
             checked: Whether 64-bit mode is selected.
@@ -803,8 +781,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_bp_added(self, address: int, result: object) -> None:
-        """
-        Handle successful breakpoint addition.
+        """Handle successful breakpoint addition.
 
         Args:
             address: The breakpoint address.
@@ -816,8 +793,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_breakpoints()
 
     def _on_bp_add_error(self, exc: object) -> None:
-        """
-        Handle breakpoint addition failure.
+        """Handle breakpoint addition failure.
 
         Args:
             exc: The exception that occurred.
@@ -853,8 +829,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_bp_removed(self, address: int) -> None:
-        """
-        Handle successful breakpoint removal.
+        """Handle successful breakpoint removal.
 
         Args:
             address: The removed breakpoint address.
@@ -865,8 +840,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_breakpoints()
 
     def _on_bp_remove_error(self, exc: object) -> None:
-        """
-        Handle breakpoint removal failure.
+        """Handle breakpoint removal failure.
 
         Args:
             exc: The exception that occurred.
@@ -876,8 +850,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._remove_bp_btn.setEnabled(True)
 
     def _on_register_edited(self, row: int, column: int) -> None:
-        """
-        Handle register value edit in table.
+        """Handle register value edit in table.
 
         Args:
             row: Table row index.
@@ -909,8 +882,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_reg_set_success(self, reg_name: str, value: int) -> None:
-        """
-        Handle successful register set.
+        """Handle successful register set.
 
         Args:
             reg_name: The register name.
@@ -920,8 +892,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._reg_table.setEnabled(True)
 
     def _on_reg_set_error(self, reg_name: str, exc: object) -> None:
-        """
-        Handle register set failure.
+        """Handle register set failure.
 
         Args:
             reg_name: The register that failed to set.
@@ -964,8 +935,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_mem_read_success(self, address: int, result: object) -> None:
-        """
-        Handle successful memory read.
+        """Handle successful memory read.
 
         Args:
             address: The read address.
@@ -976,8 +946,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._mem_read_btn.setEnabled(True)
 
     def _on_mem_read_error(self, exc: object) -> None:
-        """
-        Handle memory read failure.
+        """Handle memory read failure.
 
         Args:
             exc: The exception that occurred.
@@ -1006,8 +975,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _on_command_result(self, result: object) -> None:
-        """
-        Handle command execution result.
+        """Handle command execution result.
 
         Args:
             result: The command output string.
@@ -1016,8 +984,7 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(str(result))
 
     def _on_command_error(self, exc: object) -> None:
-        """
-        Handle command execution failure.
+        """Handle command execution failure.
 
         Args:
             exc: The exception that occurred.
@@ -1045,8 +1012,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _apply_registers(self, result: object) -> None:
-        """
-        Apply register data to the table.
+        """Apply register data to the table.
 
         Args:
             result: Register state from the bridge.
@@ -1078,8 +1044,7 @@ class X64DbgPanel(AnalysisPanelBase):
             self._refresh_disassembly(rip)
 
     def _refresh_disassembly(self, address: int) -> None:
-        """
-        Refresh disassembly view at the given address.
+        """Refresh disassembly view at the given address.
 
         Args:
             address: Start address for disassembly.
@@ -1094,8 +1059,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _apply_disassembly(self, result: object) -> None:
-        """
-        Apply disassembly data to the view.
+        """Apply disassembly data to the view.
 
         Args:
             result: Disassembly lines from the bridge.
@@ -1127,8 +1091,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _apply_breakpoints(self, result: object) -> None:
-        """
-        Apply breakpoint data to the table.
+        """Apply breakpoint data to the table.
 
         Args:
             result: Breakpoint list from the bridge.
@@ -1157,8 +1120,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _apply_stack(self, result: object) -> None:
-        """
-        Apply stack trace data to the table.
+        """Apply stack trace data to the table.
 
         Args:
             result: Stack frame list from the bridge.
@@ -1192,8 +1154,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _apply_modules(self, result: object) -> None:
-        """
-        Apply module data to the table.
+        """Apply module data to the table.
 
         Args:
             result: Module list from the bridge.
@@ -1221,8 +1182,7 @@ class X64DbgPanel(AnalysisPanelBase):
         )
 
     def _apply_threads(self, result: object) -> None:
-        """
-        Apply thread data to the table.
+        """Apply thread data to the table.
 
         Args:
             result: Thread list from the bridge.
@@ -1239,8 +1199,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
     @staticmethod
     def _format_hex_dump(address: int, data: bytes) -> str:
-        """
-        Format raw bytes as a hex dump string.
+        """Format raw bytes as a hex dump string.
 
         Args:
             address: Starting address of the data.

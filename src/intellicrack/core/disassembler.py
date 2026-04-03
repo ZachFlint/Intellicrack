@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Multi-architecture disassembler module for the hex editor.
+"""Multi-architecture disassembler module for the hex editor.
 
 Wraps the capstone disassembly engine to provide instruction-level analysis across all architectures supported by capstone, with automatic
 binary-header detection for PE, ELF, and Mach-O targets.
@@ -68,8 +67,7 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class DisasmInstruction:
-    """
-    A single decoded machine instruction.
+    """A single decoded machine instruction.
 
     Attributes:
         address: Virtual address of the instruction.
@@ -87,8 +85,7 @@ class DisasmInstruction:
 
 
 def _to_disassembly_line(insn: DisasmInstruction) -> DisassemblyLine:
-    """
-    Convert a :class:`DisasmInstruction` to a :class:`DisassemblyLine`.
+    """Convert a :class:`DisasmInstruction` to a :class:`DisassemblyLine`.
 
     Args:
         insn: Source instruction produced by :class:`HexDisassembler`.
@@ -107,8 +104,7 @@ def _to_disassembly_line(insn: DisasmInstruction) -> DisassemblyLine:
 
 
 class HexDisassembler:
-    """
-    Multi-architecture disassembler using capstone.
+    """Multi-architecture disassembler using capstone.
 
     Wraps the capstone engine with a unified interface for all supported
     architectures.  The class handles optional availability of capstone
@@ -123,8 +119,7 @@ class HexDisassembler:
 
     @property
     def available(self) -> bool:
-        """
-        Whether capstone was successfully imported.
+        """Whether capstone was successfully imported.
 
         Returns:
             bool: ``True`` when capstone is available for disassembly.
@@ -136,8 +131,7 @@ class HexDisassembler:
     # ------------------------------------------------------------------
 
     def _resolve_arch_mode(self, arch: str, mode: str) -> tuple[int, int]:
-        """
-        Map architecture and mode strings to capstone integer constants.
+        """Map architecture and mode strings to capstone integer constants.
 
         Args:
             arch: Architecture name (case-insensitive).
@@ -204,8 +198,7 @@ class HexDisassembler:
         mode: str = "64",
         count: int = 100,
     ) -> list[DisasmInstruction]:
-        """
-        Disassemble bytes into a list of instructions.
+        """Disassemble bytes into a list of instructions.
 
         Args:
             data: Raw bytes to disassemble.
@@ -267,8 +260,7 @@ class HexDisassembler:
         mode: str = "64",
         count: int = 100,
     ) -> list[DisassemblyLine]:
-        """
-        Disassemble bytes and return bridge-compatible DisassemblyLine objects.
+        """Disassemble bytes and return bridge-compatible DisassemblyLine objects.
 
         Args:
             data: Raw bytes to disassemble.
@@ -285,8 +277,7 @@ class HexDisassembler:
 
     @staticmethod
     def auto_detect_arch(data: bytes) -> tuple[str, str]:
-        """
-        Detect architecture from PE, ELF, or Mach-O binary headers.
+        """Detect architecture from PE, ELF, or Mach-O binary headers.
 
         Inspects the first bytes of *data* to identify common binary
         format magic values and reads the machine / CPU-type fields to
@@ -362,8 +353,7 @@ class HexDisassembler:
         return ("x86", "64")
 
     def get_supported_architectures(self) -> list[dict[str, str]]:
-        """
-        Return metadata for every architecture supported at runtime.
+        """Return metadata for every architecture supported at runtime.
 
         The list reflects which capstone architecture constants are actually
         present in the installed capstone build, so RISCV or other optional
@@ -423,8 +413,7 @@ _singleton: dict[str, HexDisassembler] = {}
 
 
 def get_disassembler() -> HexDisassembler:
-    """
-    Return the module-level singleton :class:`HexDisassembler` instance.
+    """Return the module-level singleton :class:`HexDisassembler` instance.
 
     Returns:
         HexDisassembler: Shared disassembler instance, created on first call.

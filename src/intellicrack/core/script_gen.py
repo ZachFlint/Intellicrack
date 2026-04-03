@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Script infrastructure for Intellicrack.
+"""Script infrastructure for Intellicrack.
 
 This module provides data structures and utilities for AI-generated scripts.
 The actual script content is written dynamically by the AI based on analysis
@@ -45,8 +44,7 @@ _ApiRefGetter = Callable[[], dict[str, str]]
 
 
 def _empty_str_list() -> list[str]:
-    """
-    Typed factory for empty string lists (dataclass default).
+    """Typed factory for empty string lists (dataclass default).
 
     Returns:
         list[str]: An empty string list.
@@ -55,8 +53,7 @@ def _empty_str_list() -> list[str]:
 
 
 def _empty_int_list() -> list[int]:
-    """
-    Typed factory for empty int lists (dataclass default).
+    """Typed factory for empty int lists (dataclass default).
 
     Returns:
         list[int]: An empty integer list.
@@ -65,8 +62,7 @@ def _empty_int_list() -> list[int]:
 
 
 def _empty_dict_list() -> list[dict[str, Any]]:
-    """
-    Typed factory for empty dict lists (dataclass default).
+    """Typed factory for empty dict lists (dataclass default).
 
     Returns:
         list[dict[str, Any]]: An empty list of string-Any dictionaries.
@@ -75,8 +71,7 @@ def _empty_dict_list() -> list[dict[str, Any]]:
 
 
 def _empty_str_any_dict() -> dict[str, Any]:
-    """
-    Typed factory for empty string-Any dicts (dataclass default).
+    """Typed factory for empty string-Any dicts (dataclass default).
 
     Returns:
         dict[str, Any]: An empty string-keyed dictionary.
@@ -95,8 +90,7 @@ class ScriptLanguage(Enum):
 
 
 class BypassStrategy(Enum):
-    """
-    Bypass strategy types for license protections.
+    """Bypass strategy types for license protections.
 
     These are hints for the AI when writing scripts, not template selectors.
 
@@ -128,8 +122,7 @@ class BypassStrategy(Enum):
 
     @property
     def description(self) -> str:
-        """
-        Get human-readable description of the strategy.
+        """Get human-readable description of the strategy.
 
         Returns:
             str: Description text for this bypass strategy.
@@ -152,8 +145,7 @@ class BypassStrategy(Enum):
 
 @dataclass
 class ScriptContext:
-    """
-    Context information for AI script generation.
+    """Context information for AI script generation.
 
     Provides the AI with all necessary information to write an effective script.
 
@@ -191,8 +183,7 @@ class ScriptContext:
     }
 
     def to_prompt_context(self, language: ScriptLanguage | None = None) -> str:
-        """
-        Convert context to a string suitable for AI prompts.
+        """Convert context to a string suitable for AI prompts.
 
         Args:
             language: Target script language (optional) to include API reference.
@@ -239,8 +230,7 @@ class ScriptContext:
         return "\n".join(lines)
 
     def _format_target_functions(self, lines: list[str]) -> None:
-        """
-        Format target function entries and append them to lines.
+        """Format target function entries and append them to lines.
 
         Args:
             lines: List of output lines to append to.
@@ -264,8 +254,7 @@ class ScriptContext:
             lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
 
     def _format_api_reference(self, language: ScriptLanguage, lines: list[str]) -> None:
-        """
-        Look up and format the API reference section for a language.
+        """Look up and format the API reference section for a language.
 
         Args:
             language: The script language to get API reference for.
@@ -292,8 +281,7 @@ class ScriptContext:
 
 @dataclass
 class Script:
-    """
-    A script ready for execution.
+    """A script ready for execution.
 
     Attributes:
         name: Script name identifier.
@@ -320,8 +308,7 @@ class Script:
     execution_results: dict[str, Any] = field(default_factory=_empty_str_any_dict)
 
     def add_execution_result(self, tool_name: str, result: object) -> None:
-        """
-        Add or update an execution result record.
+        """Add or update an execution result record.
 
         Args:
             tool_name: Name of the tool that executed the script.
@@ -331,8 +318,7 @@ class Script:
         self.execution_results["last_run"] = datetime.now(tz=UTC).isoformat()
 
     def save(self, path: Path) -> None:
-        """
-        Save script to file.
+        """Save script to file.
 
         Args:
             path: File path to save to.
@@ -343,8 +329,7 @@ class Script:
         _logger.info("script_saved", path=str(path), size=len(self.content))
 
     def get_extension(self) -> str:
-        """
-        Get the appropriate file extension for this script type.
+        """Get the appropriate file extension for this script type.
 
         Returns:
             str: File extension including the dot.
@@ -364,8 +349,7 @@ class ScriptValidator:
 
     @staticmethod
     def validate_python(content: str) -> tuple[bool, str | None]:
-        """
-        Validate Python script syntax.
+        """Validate Python script syntax.
 
         Args:
             content: Python script content.
@@ -383,8 +367,7 @@ class ScriptValidator:
 
     @staticmethod
     def validate_javascript(content: str) -> tuple[bool, str | None]:
-        """
-        Validate JavaScript syntax using node if available.
+        """Validate JavaScript syntax using node if available.
 
         Args:
             content: JavaScript script content.
@@ -433,8 +416,7 @@ class ScriptValidator:
 
     @staticmethod
     def validate_java(content: str) -> tuple[bool, str | None]:
-        """
-        Validate Java/Ghidra script structure.
+        """Validate Java/Ghidra script structure.
 
         Args:
             content: Java script content.
@@ -457,8 +439,7 @@ class ScriptValidator:
         return True, None
 
     def validate(self, script: Script) -> tuple[bool, str | None]:
-        """
-        Validate a script based on its language.
+        """Validate a script based on its language.
 
         Args:
             script: Script to validate.
@@ -485,8 +466,7 @@ class ScriptValidator:
 
 
 class ScriptManager:
-    """
-    Manages script storage and retrieval.
+    """Manages script storage and retrieval.
 
     Args:
         scripts_dir: Directory for storing scripts.
@@ -505,8 +485,7 @@ class ScriptManager:
         self._validator = ScriptValidator()
 
     def add_script(self, script: Script, *, validate: bool = True) -> bool:
-        """
-        Add a script to the manager.
+        """Add a script to the manager.
 
         Args:
             script: Script to add.
@@ -526,8 +505,7 @@ class ScriptManager:
         return True
 
     def get_script(self, name: str) -> Script | None:
-        """
-        Get a script by name.
+        """Get a script by name.
 
         Args:
             name: Script name.
@@ -538,8 +516,7 @@ class ScriptManager:
         return self.scripts.get(name)
 
     def delete_script(self, name: str) -> bool:
-        """
-        Delete a script by name.
+        """Delete a script by name.
 
         Args:
             name: Script name to delete.
@@ -554,8 +531,7 @@ class ScriptManager:
         return True
 
     def list_scripts(self, script_type: ScriptType | None = None) -> list[str]:
-        """
-        List available scripts.
+        """List available scripts.
 
         Args:
             script_type: Optional filter by script type.
@@ -568,8 +544,7 @@ class ScriptManager:
         return [name for name, script in self.scripts.items() if script.script_type == script_type]
 
     def save_script(self, name: str, subdir: str | None = None) -> Path | None:
-        """
-        Save a script to disk.
+        """Save a script to disk.
 
         Args:
             name: Script name.
@@ -595,8 +570,7 @@ class ScriptManager:
         return path
 
     def load_script(self, path: Path) -> Script | None:
-        """
-        Load a script from disk.
+        """Load a script from disk.
 
         Args:
             path: Path to script file.
@@ -646,8 +620,7 @@ class ScriptManager:
         return script
 
     def ensure_script_saved(self, name: str) -> bool:
-        """
-        Ensure a script is saved to disk.
+        """Ensure a script is saved to disk.
 
         Args:
             name: Script name.
@@ -658,8 +631,7 @@ class ScriptManager:
         return self.save_script(name) is not None if name in self.scripts else False
 
     def reload_script(self, name: str) -> bool:
-        """
-        Reload a script from disk (if it exists).
+        """Reload a script from disk (if it exists).
 
         Args:
             name: Script name.
@@ -691,8 +663,7 @@ class ScriptManager:
         return False
 
     def record_execution(self, script_name: str, tool_name: str, result: object) -> bool:
-        """
-        Record an execution result for a script.
+        """Record an execution result for a script.
 
         Forwards to the script's ``add_execution_result`` method to
         persist tool execution metadata.
@@ -722,8 +693,7 @@ class ScriptManager:
 
 
 def get_frida_api_reference() -> dict[str, str]:
-    """
-    Get Frida API reference for AI context.
+    """Get Frida API reference for AI context.
 
     Returns:
         dict[str, str]: Dictionary mapping API categories to usage examples.
@@ -739,8 +709,7 @@ def get_frida_api_reference() -> dict[str, str]:
 
 
 def get_ghidra_api_reference() -> dict[str, str]:
-    """
-    Get Ghidra API reference for AI context.
+    """Get Ghidra API reference for AI context.
 
     Returns:
         dict[str, str]: Dictionary mapping API categories to usage examples.
@@ -755,8 +724,7 @@ def get_ghidra_api_reference() -> dict[str, str]:
 
 
 def get_cutter_reference() -> dict[str, str]:
-    """
-    Get Cutter/Rizin command reference for AI context.
+    """Get Cutter/Rizin command reference for AI context.
 
     Returns:
         dict[str, str]: Dictionary mapping command categories to examples.
@@ -772,8 +740,7 @@ def get_cutter_reference() -> dict[str, str]:
 
 
 def get_x64dbg_reference() -> dict[str, str]:
-    """
-    Get x64dbg command reference for AI context.
+    """Get x64dbg command reference for AI context.
 
     Returns:
         dict[str, str]: Dictionary mapping command categories to examples.
@@ -795,8 +762,7 @@ class ScriptGenerator:
 
     @staticmethod
     def prepare_ai_prompt(context: ScriptContext, language: ScriptLanguage) -> str:
-        """
-        Prepare a detailed prompt for AI script generation.
+        """Prepare a detailed prompt for AI script generation.
 
         Args:
             context: Analysis context.

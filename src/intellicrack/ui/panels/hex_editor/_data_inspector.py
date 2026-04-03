@@ -21,8 +21,7 @@ class DataInspectorMixin:
     document: Any | None
 
     def _update_data_inspector(self, offset: int) -> None:
-        """
-        Update the data inspector tree for the given offset.
+        """Update the data inspector tree for the given offset.
 
         Args:
             offset: Byte offset to inspect.

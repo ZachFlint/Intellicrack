@@ -542,7 +542,7 @@ count = true
 [tool.docformatter]
 wrap-summaries = 140
 wrap-descriptions = 140
-pre-summary-newline = true
+pre-summary-newline = false
 close-quotes-on-newline = true
 recursive = true
 exclude = [

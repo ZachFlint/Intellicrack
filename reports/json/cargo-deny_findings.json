@@ -1,6 +1,6 @@
 {
   "tool": "cargo-deny",
-  "generated": "2026-03-31T03:23:29.833288+00:00",
+  "generated": "2026-04-01T02:38:14.105696+00:00",
   "total_findings": 1,
   "total_files": 2,
   "files": [

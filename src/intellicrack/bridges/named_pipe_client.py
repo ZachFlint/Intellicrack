@@ -31,8 +31,7 @@ EventHandler = Callable[[dict[str, Any]], None]
 
 @dataclass
 class PipeConfig:
-    """
-    Configuration for named pipe client.
+    """Configuration for named pipe client.
 
     Attributes:
         pipe_name: Named pipe path.
@@ -48,8 +47,7 @@ class PipeConfig:
 
 
 class NamedPipeClient:
-    """
-    Async named pipe client for x64dbg plugin IPC.
+    """Async named pipe client for x64dbg plugin IPC.
 
     Args:
         config: Pipe configuration.
@@ -68,8 +66,7 @@ class NamedPipeClient:
 
     @property
     def is_connected(self) -> bool:
-        """
-        Check connection status.
+        """Check connection status.
 
         Returns:
             bool: True if connected to the pipe.
@@ -77,8 +74,7 @@ class NamedPipeClient:
         return self._handle is not None
 
     def set_event_handler(self, handler: EventHandler | None) -> None:
-        """
-        Set the event handler callback.
+        """Set the event handler callback.
 
         Args:
             handler: Event handler to set.
@@ -86,8 +82,7 @@ class NamedPipeClient:
         self._event_handler = handler
 
     async def connect(self) -> None:
-        """
-        Connect to the named pipe.
+        """Connect to the named pipe.
 
         Raises:
             ToolError: If connection fails.
@@ -131,8 +126,7 @@ class NamedPipeClient:
         command: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """
-        Send a command and wait for response.
+        """Send a command and wait for response.
 
         Args:
             command: Command name.
@@ -165,8 +159,7 @@ class NamedPipeClient:
                     return message
 
     async def _send_message(self, payload: dict[str, Any]) -> None:
-        """
-        Send a JSON message over the pipe.
+        """Send a JSON message over the pipe.
 
         Args:
             payload: Message payload.
@@ -183,8 +176,7 @@ class NamedPipeClient:
         await self._write_bytes(length_prefix + data)
 
     async def _read_message(self) -> dict[str, Any]:
-        """
-        Read a JSON message from the pipe.
+        """Read a JSON message from the pipe.
 
         Returns:
             dict[str, Any]: Parsed JSON payload.
@@ -216,8 +208,7 @@ class NamedPipeClient:
         return cast("dict[str, Any]", payload)
 
     async def _read_exact(self, size: int) -> bytes:
-        """
-        Read an exact number of bytes from the pipe.
+        """Read an exact number of bytes from the pipe.
 
         Args:
             size: Number of bytes to read.
@@ -244,8 +235,7 @@ class NamedPipeClient:
             raise ToolError(error_message) from exc
 
     async def _write_bytes(self, data: bytes) -> None:
-        """
-        Write bytes to the pipe.
+        """Write bytes to the pipe.
 
         Args:
             data: Bytes to write.

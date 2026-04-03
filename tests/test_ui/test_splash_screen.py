@@ -439,7 +439,7 @@ class TestFadeAnimation:
         """show_animated targets opacity 1.0."""
         splash_screen.show_animated()
         assert splash_screen.fade_animation is not None
-        assert splash_screen.fade_animation.endValue() == pytest.approx(1.0)
+        assert float(splash_screen.fade_animation.endValue()) == 1.0
 
     @staticmethod
     def test_show_animated_correct_duration(splash_screen: SplashScreen) -> None:
@@ -465,7 +465,7 @@ class TestFadeAnimation:
         target = QWidget()
         splash_screen.finish_animated(target)
         assert splash_screen.fade_animation is not None
-        assert splash_screen.fade_animation.endValue() == pytest.approx(0.0)
+        assert float(splash_screen.fade_animation.endValue()) == 0.0
         target.close()
 
 
@@ -551,19 +551,13 @@ class TestDpiScaling:
     @staticmethod
     def test_default_dpi_scale_constant() -> None:
         """DEFAULT_DPI_SCALE constant is 1.0."""
-        assert pytest.approx(1.0) == DEFAULT_DPI_SCALE
+        assert float(DEFAULT_DPI_SCALE) == 1.0
 
 
 _STATE_PENDING: int = 0
 _STATE_ACTIVE: int = 1
 _STATE_COMPLETE: int = 2
 _STATE_FAILED: int = 3
-_GLITCH_MIN_SUBS: int = 2
-_GLITCH_MAX_SUBS: int = 3
-_GLITCH_MIN_SLICES: int = 4
-_GLITCH_MAX_SLICES: int = 6
-_GLITCH_MIN_SCANLINES: int = 2
-_GLITCH_MAX_SCANLINES: int = 4
 
 
 class TestAnimatedGradient:
@@ -598,62 +592,6 @@ class TestAnimatedGradient:
         tick_fn = getattr(splash_screen, "_on_animation_tick")
         tick_fn()
         assert getattr(splash_screen, "_gradient_time") > initial
-
-
-class TestGlitchEffect:
-    """Tests for glitch text effect."""
-
-    @staticmethod
-    def test_glitch_initially_inactive(splash_screen: SplashScreen) -> None:
-        """Glitch effect is initially inactive."""
-        assert getattr(splash_screen, "_glitch_active") is False
-
-    @staticmethod
-    def test_trigger_glitch_activates(splash_screen: SplashScreen) -> None:
-        """_trigger_glitch activates the glitch effect."""
-        trigger = getattr(splash_screen, "_trigger_glitch")
-        trigger()
-        assert getattr(splash_screen, "_glitch_active") is True
-
-    @staticmethod
-    def test_glitch_generates_char_substitutions(splash_screen: SplashScreen) -> None:
-        """Glitch generates hex character substitutions."""
-        trigger = getattr(splash_screen, "_trigger_glitch")
-        trigger()
-        chars: list[object] = getattr(splash_screen, "_glitch_chars")
-        assert _GLITCH_MIN_SUBS <= len(chars) <= _GLITCH_MAX_SUBS
-
-    @staticmethod
-    def test_glitch_generates_slices(splash_screen: SplashScreen) -> None:
-        """Glitch generates horizontal displacement slices."""
-        trigger = getattr(splash_screen, "_trigger_glitch")
-        trigger()
-        slices: list[object] = getattr(splash_screen, "_glitch_slices")
-        assert _GLITCH_MIN_SLICES <= len(slices) <= _GLITCH_MAX_SLICES
-
-    @staticmethod
-    def test_glitch_generates_scanlines(splash_screen: SplashScreen) -> None:
-        """Glitch generates scanline artifacts."""
-        trigger = getattr(splash_screen, "_trigger_glitch")
-        trigger()
-        scanlines: list[object] = getattr(splash_screen, "_glitch_scanlines")
-        assert _GLITCH_MIN_SCANLINES <= len(scanlines) <= _GLITCH_MAX_SCANLINES
-
-    @staticmethod
-    def test_glitch_intensity_zero_when_inactive(splash_screen: SplashScreen) -> None:
-        """Glitch intensity is zero when not active."""
-        compute = getattr(splash_screen, "_compute_glitch_intensity")
-        assert compute() == 0.0
-
-    @staticmethod
-    def test_glitch_title_text_modified(splash_screen: SplashScreen) -> None:
-        """Glitch title text contains hex substitutions."""
-        trigger = getattr(splash_screen, "_trigger_glitch")
-        trigger()
-        get_text = getattr(splash_screen, "_get_glitch_title_text")
-        glitch_text: str = get_text()
-        assert len(glitch_text) == len("INTELLICRACK")
-        assert glitch_text != "INTELLICRACK"
 
 
 class TestPipelineIndicator:
@@ -749,17 +687,6 @@ class TestPaintEventRendering:
         splash.close()
 
     @staticmethod
-    def test_paint_with_glitch_active(qapp: QApplication) -> None:
-        """Paint event works with glitch effect active."""
-        del qapp
-        splash = SplashScreen()
-        trigger = getattr(splash, "_trigger_glitch")
-        trigger()
-        splash.show()
-        splash.repaint()
-        splash.close()
-
-    @staticmethod
     def test_paint_full_pipeline(qapp: QApplication) -> None:
         """Paint event works with all pipeline stages complete."""
         del qapp
@@ -804,3 +731,261 @@ class TestSplashImageCompositing:
         """Overlay widget is hidden (painting done in paintEvent)."""
         overlay = getattr(splash_screen, "_overlay")
         assert not overlay.isVisible()
+
+
+_REAL_PROGRESS_SEQUENCE: list[tuple[int, str]] = [
+    (5, "Loading configuration..."),
+    (10, "Loading credentials..."),
+    (20, "Initializing providers..."),
+    (50, "Initializing tools..."),
+    (70, "Initializing session manager..."),
+    (85, "Creating orchestrator..."),
+    (90, "Initializing script engine..."),
+    (93, "Initializing model discovery..."),
+    (95, "Initializing UI..."),
+    (100, "Ready"),
+]
+
+
+class TestEndToEndLifecycle:
+    """End-to-end tests exercising the full splash lifecycle as main() would."""
+
+    @staticmethod
+    def test_full_startup_sequence(qapp: QApplication) -> None:
+        """Replicate the exact progress sequence from _run_application."""
+        del qapp
+        splash = SplashScreen(version="1.0.0")
+        splash.show_animated()
+
+        for progress_val, message in _REAL_PROGRESS_SEQUENCE:
+            splash.set_progress(progress_val, message)
+            splash.repaint()
+
+        assert splash.progress == _PROGRESS_100
+        assert splash.status == "Ready"
+
+        stages: list[int] = getattr(splash, "_stage_states")
+        assert all(int(s) == _STATE_COMPLETE for s in stages)
+
+        target = QWidget()
+        splash.finish_animated(target)
+        assert splash.fade_animation is not None
+        assert float(splash.fade_animation.endValue()) == 0.0
+        target.close()
+        splash.close()
+
+    @staticmethod
+    def test_pipeline_stages_advance_with_real_progress(qapp: QApplication) -> None:
+        """Pipeline stages transition PENDING->ACTIVE->COMPLETE matching real thresholds."""
+        del qapp
+        splash = SplashScreen(version="1.0.0")
+        splash.show_animated()
+
+        splash.set_progress(5, "Loading configuration...")
+        stages: list[int] = getattr(splash, "_stage_states")
+        assert int(stages[0]) == _STATE_ACTIVE
+        for i in range(1, 8):
+            assert int(stages[i]) == _STATE_PENDING
+
+        splash.set_progress(10, "Loading credentials...")
+        stages = getattr(splash, "_stage_states")
+        assert int(stages[0]) == _STATE_COMPLETE
+        assert int(stages[1]) == _STATE_ACTIVE
+
+        splash.set_progress(20, "Initializing providers...")
+        stages = getattr(splash, "_stage_states")
+        assert int(stages[0]) == _STATE_COMPLETE
+        assert int(stages[1]) == _STATE_COMPLETE
+        assert int(stages[2]) == _STATE_ACTIVE
+
+        splash.set_progress(50, "Initializing tools...")
+        stages = getattr(splash, "_stage_states")
+        for i in range(3):
+            assert int(stages[i]) == _STATE_COMPLETE
+        assert int(stages[3]) == _STATE_ACTIVE
+
+        splash.set_progress(70, "Initializing session manager...")
+        stages = getattr(splash, "_stage_states")
+        for i in range(4):
+            assert int(stages[i]) == _STATE_COMPLETE
+        assert int(stages[4]) == _STATE_ACTIVE
+
+        splash.set_progress(85, "Creating orchestrator...")
+        stages = getattr(splash, "_stage_states")
+        for i in range(5):
+            assert int(stages[i]) == _STATE_COMPLETE
+        assert int(stages[5]) == _STATE_ACTIVE
+
+        splash.set_progress(90, "Initializing script engine...")
+        stages = getattr(splash, "_stage_states")
+        for i in range(6):
+            assert int(stages[i]) == _STATE_COMPLETE
+        assert int(stages[6]) == _STATE_ACTIVE
+
+        splash.set_progress(93, "Initializing model discovery...")
+        stages = getattr(splash, "_stage_states")
+        for i in range(7):
+            assert int(stages[i]) == _STATE_COMPLETE
+        assert int(stages[7]) == _STATE_ACTIVE
+
+        splash.set_progress(100, "Ready")
+        stages = getattr(splash, "_stage_states")
+        assert all(int(s) == _STATE_COMPLETE for s in stages)
+        splash.close()
+
+    @staticmethod
+    def test_animation_timer_lifecycle(qapp: QApplication) -> None:
+        """Animation timer starts on show_animated and stops on finish_animated."""
+        del qapp
+        splash = SplashScreen(version="1.0.0")
+        timer = getattr(splash, "_animation_timer")
+        assert not timer.isActive()
+
+        splash.show_animated()
+        assert timer.isActive()
+
+        target = QWidget()
+        splash.finish_animated(target)
+        assert splash.fade_animation is not None
+        splash.fade_animation.setCurrentTime(splash.fade_animation.duration())
+        assert not timer.isActive()
+        target.close()
+        splash.close()
+
+    @staticmethod
+    def test_rendering_at_every_progress_step(qapp: QApplication) -> None:
+        """All 5 render layers execute without error at every real progress value."""
+        del qapp
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QPainter, QPixmap
+
+        splash = SplashScreen(version="1.0.0")
+
+        for progress_val, message in _REAL_PROGRESS_SEQUENCE:
+            splash.set_progress(progress_val, message)
+
+            pm = QPixmap(600, 400)
+            p = QPainter(pm)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+            rect = QRectF(0.0, 0.0, 600.0, 400.0)
+
+            draw_bg = getattr(splash, "_draw_gradient_background")
+            draw_img = getattr(splash, "_draw_splash_image")
+            draw_title = getattr(splash, "_draw_title")
+            draw_pipe = getattr(splash, "_draw_pipeline")
+            draw_status = getattr(splash, "_draw_status_and_version")
+
+            draw_bg(p, rect)
+            draw_img(p, rect)
+            draw_title(p, rect)
+            draw_pipe(p, rect)
+            draw_status(p, rect)
+
+            p.end()
+
+        splash.close()
+
+    @staticmethod
+    def test_failed_stage_renders_through_full_sequence(qapp: QApplication) -> None:
+        """A failed stage renders correctly through the entire progress sequence."""
+        del qapp
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QPainter, QPixmap
+
+        splash = SplashScreen(version="1.0.0")
+        splash.mark_stage_failed(2)
+
+        for progress_val, message in _REAL_PROGRESS_SEQUENCE:
+            splash.set_progress(progress_val, message)
+
+        stages: list[int] = getattr(splash, "_stage_states")
+        assert int(stages[2]) == _STATE_FAILED
+        assert int(stages[0]) == _STATE_COMPLETE
+        assert int(stages[7]) == _STATE_COMPLETE
+
+        pm = QPixmap(600, 400)
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = QRectF(0.0, 0.0, 600.0, 400.0)
+        draw_pipe = getattr(splash, "_draw_pipeline")
+        draw_pipe(p, rect)
+        p.end()
+
+        splash.close()
+
+    @staticmethod
+    def test_show_animated_fade_in_properties(qapp: QApplication) -> None:
+        """show_animated creates correct fade-in animation targeting full opacity."""
+        del qapp
+        splash = SplashScreen(version="1.0.0")
+        splash.show_animated()
+
+        assert splash.fade_animation is not None
+        assert isinstance(splash.fade_animation, QPropertyAnimation)
+        assert float(splash.fade_animation.endValue()) == 1.0
+        assert splash.fade_animation.duration() == FADE_DURATION_MS
+        splash.close()
+
+    @staticmethod
+    def test_finish_animated_fade_out_properties(qapp: QApplication) -> None:
+        """finish_animated creates correct fade-out animation targeting zero opacity."""
+        del qapp
+        splash = SplashScreen(version="1.0.0")
+        splash.show_animated()
+
+        for progress_val, message in _REAL_PROGRESS_SEQUENCE:
+            splash.set_progress(progress_val, message)
+
+        target = QWidget()
+        splash.finish_animated(target)
+        assert splash.fade_animation is not None
+        assert float(splash.fade_animation.endValue()) == 0.0
+        assert splash.fade_animation.duration() == FADE_DURATION_MS
+        target.close()
+        splash.close()
+
+    @staticmethod
+    def test_gradient_time_advances_across_ticks(qapp: QApplication) -> None:
+        """Gradient animation time accumulates correctly across multiple ticks."""
+        del qapp
+        splash = SplashScreen(version="1.0.0")
+        tick_fn = getattr(splash, "_on_animation_tick")
+
+        for _ in range(30):
+            tick_fn()
+
+        gradient_time: float = getattr(splash, "_gradient_time")
+        expected_time = 30 * 0.033
+        assert abs(gradient_time - expected_time) < 0.01
+
+        pulse_time: float = getattr(splash, "_active_pulse_time")
+        assert abs(pulse_time - expected_time) < 0.01
+        splash.close()
+
+    @staticmethod
+    def test_version_renders_in_paint(qapp: QApplication) -> None:
+        """Version text is rendered during paintEvent when version is set."""
+        del qapp
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QPainter, QPixmap
+
+        splash_with = SplashScreen(version="3.5.1")
+        splash_without = SplashScreen()
+
+        for s in (splash_with, splash_without):
+            pm = QPixmap(600, 400)
+            p = QPainter(pm)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            rect = QRectF(0.0, 0.0, 600.0, 400.0)
+            draw_status = getattr(s, "_draw_status_and_version")
+            draw_status(p, rect)
+            p.end()
+
+        assert splash_with.version == "3.5.1"
+        assert splash_with.version_label is not None
+        assert splash_without.version == ""
+        assert splash_without.version_label is None
+        splash_with.close()
+        splash_without.close()
+

@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-YARA rule scanning module for Intellicrack.
+"""YARA rule scanning module for Intellicrack.
 
 Provides synchronous and asynchronous YARA rule scanning against binary data and files, with version-transparent match object conversion.
 """
@@ -40,8 +39,7 @@ except ImportError:
 
 @dataclass(frozen=True, slots=True)
 class YaraMatchString:
-    """
-    A single string match within a YARA rule match.
+    """A single string match within a YARA rule match.
 
     Attributes:
         offset: Byte offset where the string was found.
@@ -56,8 +54,7 @@ class YaraMatchString:
 
 @dataclass(frozen=True, slots=True)
 class YaraMatch:
-    """
-    A single YARA rule match result.
+    """A single YARA rule match result.
 
     Attributes:
         rule_name: Name of the matched YARA rule.
@@ -75,8 +72,7 @@ class YaraMatch:
 
 
 class YaraScanner:
-    """
-    Thread-safe YARA rule scanner with async support.
+    """Thread-safe YARA rule scanner with async support.
 
     Compilation is not thread-safe; scanning compiled rules objects is.
     Use separate ``YaraScanner`` instances or external locking when compiling
@@ -94,8 +90,7 @@ class YaraScanner:
 
     @property
     def available(self) -> bool:
-        """
-        Whether the yara-python library is importable.
+        """Whether the yara-python library is importable.
 
         Returns:
             bool: ``True`` when yara-python was successfully imported, ``False``
@@ -105,8 +100,7 @@ class YaraScanner:
 
     @staticmethod
     def compile_rules(paths: list[str | Path]) -> CompiledYaraRules:
-        """
-        Compile YARA rules from one or more rule files.
+        """Compile YARA rules from one or more rule files.
 
         Each file is compiled under a namespace derived from its stem so that
         rule names remain unambiguous across files.
@@ -141,8 +135,7 @@ class YaraScanner:
 
     @staticmethod
     def compile_source(source: str, namespace: str = "default") -> CompiledYaraRules:
-        """
-        Compile YARA rules from a source string.
+        """Compile YARA rules from a source string.
 
         Args:
             source: Raw YARA rule source text.
@@ -168,8 +161,7 @@ class YaraScanner:
             return compiled
 
     def scan_data(self, data: bytes, rules: CompiledYaraRules) -> list[YaraMatch]:
-        """
-        Scan bytes in memory against compiled YARA rules.
+        """Scan bytes in memory against compiled YARA rules.
 
         Args:
             data: The binary payload to scan.
@@ -190,8 +182,7 @@ class YaraScanner:
         return self._convert_matches(raw_matches)
 
     def scan_file(self, path: str | Path, rules: CompiledYaraRules) -> list[YaraMatch]:
-        """
-        Scan a file on disk against compiled YARA rules.
+        """Scan a file on disk against compiled YARA rules.
 
         Args:
             path: Path to the file to scan.
@@ -213,8 +204,7 @@ class YaraScanner:
         return self._convert_matches(raw_matches)
 
     async def scan_data_async(self, data: bytes, rules: CompiledYaraRules) -> list[YaraMatch]:
-        """
-        Asynchronously scan bytes in memory against compiled YARA rules.
+        """Asynchronously scan bytes in memory against compiled YARA rules.
 
         Delegates to :meth:`scan_data` via :func:`asyncio.to_thread` so that
         the event loop is not blocked during the scan.
@@ -229,8 +219,7 @@ class YaraScanner:
         return await asyncio.to_thread(self.scan_data, data, rules)
 
     async def scan_file_async(self, path: str | Path, rules: CompiledYaraRules) -> list[YaraMatch]:
-        """
-        Asynchronously scan a file on disk against compiled YARA rules.
+        """Asynchronously scan a file on disk against compiled YARA rules.
 
         Delegates to :meth:`scan_file` via :func:`asyncio.to_thread` so that
         the event loop is not blocked during the scan.
@@ -246,8 +235,7 @@ class YaraScanner:
 
     @staticmethod
     def _convert_matches(raw_matches: list[Any]) -> list[YaraMatch]:
-        """
-        Convert raw yara-python match objects to :class:`YaraMatch` instances.
+        """Convert raw yara-python match objects to :class:`YaraMatch` instances.
 
         Handles both the legacy tuple format ``(offset, identifier, data)``
         used in yara-python <4.x and the newer ``StringMatch`` /

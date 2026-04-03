@@ -30,8 +30,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class _StatisticsResult:
-    """
-    Container for statistics computed on a background thread.
+    """Container for statistics computed on a background thread.
 
     Attributes:
         byte_stats: List of (byte_value, count) tuples from the document.
@@ -57,8 +56,7 @@ class _StatisticsResult:
 
 
 class StatisticsWorker(QThread):
-    """
-    Background worker for computing hex editor statistics.
+    """Background worker for computing hex editor statistics.
 
     Performs entropy calculation, byte distribution, byte type
     distribution, and content classification on a background thread
@@ -99,8 +97,7 @@ class StatisticsWorker(QThread):
             self.stats_error.emit(exc)
 
     def _compute(self) -> _StatisticsResult:
-        """
-        Perform the actual statistics computation.
+        """Perform the actual statistics computation.
 
         Returns:
             _StatisticsResult: Computed statistics data.
@@ -128,8 +125,7 @@ class StatisticsWorker(QThread):
         )
 
     def _compute_entropy_map(self) -> list[float] | None:
-        """
-        Compute per-block entropy values from the document.
+        """Compute per-block entropy values from the document.
 
         Returns:
             list[float] | None: Per-block entropy values, or None if unavailable.
@@ -145,8 +141,7 @@ class StatisticsWorker(QThread):
             return None
 
     def _compute_byte_distribution(self) -> list[int] | None:
-        """
-        Compute the 256-element byte frequency distribution.
+        """Compute the 256-element byte frequency distribution.
 
         Returns:
             list[int] | None: Byte frequency counts, or None if unavailable.
@@ -162,8 +157,7 @@ class StatisticsWorker(QThread):
             return None
 
     def _compute_type_distribution(self) -> tuple[int, ...] | None:
-        """
-        Compute byte type distribution counts.
+        """Compute byte type distribution counts.
 
         Returns:
             tuple[int, ...] | None: Byte type counts, or None if unavailable.
@@ -179,8 +173,7 @@ class StatisticsWorker(QThread):
             return None
 
     def _compute_classification(self) -> list[int] | None:
-        """
-        Compute per-block content classification.
+        """Compute per-block content classification.
 
         Returns:
             list[int] | None: Classification values per block, or None if unavailable.
@@ -213,8 +206,7 @@ class StatisticsMixin:
     _statistics_worker: StatisticsWorker | None
 
     def _update_statistics(self) -> None:
-        """
-        Update the statistics tab with entropy graph, histogram, and byte tree.
+        """Update the statistics tab with entropy graph, histogram, and byte tree.
 
         Launches a background worker to compute entropy, byte distribution,
         byte type distribution, and content classification without blocking
@@ -261,8 +253,7 @@ class StatisticsMixin:
             self._classification_label.setText(computing_text)
 
     def _on_statistics_computed(self, result: object) -> None:
-        """
-        Apply computed statistics results to the UI widgets.
+        """Apply computed statistics results to the UI widgets.
 
         Called on the main thread when the background worker completes
         successfully.
@@ -285,8 +276,7 @@ class StatisticsMixin:
         self._apply_content_classification(result)
 
     def _on_statistics_error(self, exc: object) -> None:
-        """
-        Handle a statistics worker failure.
+        """Handle a statistics worker failure.
 
         Called on the main thread when the background worker encounters
         an error.
@@ -326,8 +316,7 @@ class StatisticsMixin:
             self._classification_label.setText(dash)
 
     def _apply_byte_tree(self, result: _StatisticsResult) -> None:
-        """
-        Populate the statistics tree widget with byte frequency data.
+        """Populate the statistics tree widget with byte frequency data.
 
         Args:
             result: The computed statistics result.
@@ -343,8 +332,7 @@ class StatisticsMixin:
                 self._statistics_tree.addTopLevelItem(item)
 
     def _apply_entropy_label(self, result: _StatisticsResult) -> None:
-        """
-        Set the entropy summary label text.
+        """Set the entropy summary label text.
 
         Args:
             result: The computed statistics result.
@@ -353,8 +341,7 @@ class StatisticsMixin:
             self._entropy_label.setText(f"{result.entropy:.4f} bits/byte")
 
     def _apply_entropy_graph(self, result: _StatisticsResult) -> None:
-        """
-        Update the entropy graph widget with per-block data.
+        """Update the entropy graph widget with per-block data.
 
         Args:
             result: The computed statistics result.
@@ -363,8 +350,7 @@ class StatisticsMixin:
             self._entropy_graph.set_data(result.entropy_values, result.entropy_block_size)
 
     def _apply_byte_distribution(self, result: _StatisticsResult) -> None:
-        """
-        Update the byte distribution histogram widget.
+        """Update the byte distribution histogram widget.
 
         Args:
             result: The computed statistics result.
@@ -373,8 +359,7 @@ class StatisticsMixin:
             self._byte_dist_widget.set_data(result.dist_counts)
 
     def _apply_byte_type_distribution(self, result: _StatisticsResult) -> None:
-        """
-        Apply byte type distribution percentages to labels.
+        """Apply byte type distribution percentages to labels.
 
         Args:
             result: The computed statistics result.
@@ -398,8 +383,7 @@ class StatisticsMixin:
             self._high_pct_label.setText(f"{high_c / total_b * 100:.1f}% ({high_c})")
 
     def _apply_content_classification(self, result: _StatisticsResult) -> None:
-        """
-        Apply content classification summary to the label.
+        """Apply content classification summary to the label.
 
         Args:
             result: The computed statistics result.

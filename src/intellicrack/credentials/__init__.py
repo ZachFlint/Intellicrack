@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Credential management for Intellicrack.
+"""Credential management for Intellicrack.
 
 This module handles loading and validating API credentials from multiple sources:
 - .env files (via CredentialLoader)

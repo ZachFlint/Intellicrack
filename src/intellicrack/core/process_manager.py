@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Centralized process management for Intellicrack.
+"""Centralized process management for Intellicrack.
 
 This module provides a singleton ProcessManager that tracks all spawned processes and ensures proper cleanup on application exit, signal
 handling, or exceptions.
@@ -74,8 +73,7 @@ class TrackedProcess:
 
     @property
     def pid(self) -> int | None:
-        """
-        Get process ID if available.
+        """Get process ID if available.
 
         Returns:
             int | None: The process ID, or None if not available.
@@ -84,8 +82,7 @@ class TrackedProcess:
 
     @property
     def is_running(self) -> bool:
-        """
-        Check if process is still running.
+        """Check if process is still running.
 
         Returns:
             bool: True if the process is still running, False otherwise.
@@ -95,8 +92,7 @@ class TrackedProcess:
         return self.process.returncode is None
 
     def check_running(self) -> bool:
-        """
-        Check if process is still running (non-cached version).
+        """Check if process is still running (non-cached version).
 
         This method exists to avoid mypy's type narrowing on property access.
         Use this when checking running state after an operation that may have
@@ -111,8 +107,7 @@ class TrackedProcess:
 
 
 class ProcessManager:
-    """
-    Centralized manager for all spawned processes.
+    """Centralized manager for all spawned processes.
 
     This singleton class tracks all processes spawned by Intellicrack and ensures
     proper cleanup on application exit. It handles:
@@ -136,8 +131,7 @@ class ProcessManager:
     _SignalHandler = Callable[[int, FrameType | None], Any] | int | None
 
     def __new__(cls) -> Self:
-        """
-        Create or return the singleton instance.
+        """Create or return the singleton instance.
 
         Returns:
             Self: The singleton ProcessManager instance.
@@ -167,8 +161,7 @@ class ProcessManager:
 
     @classmethod
     def get_instance(cls) -> ProcessManager:
-        """
-        Get the singleton instance.
+        """Get the singleton instance.
 
         Returns:
             ProcessManager: The singleton ProcessManager instance.
@@ -192,8 +185,7 @@ class ProcessManager:
 
     @staticmethod
     def _get_logger() -> structlog.stdlib.BoundLogger:
-        """
-        Get the module logger.
+        """Get the module logger.
 
         Returns:
             structlog.stdlib.BoundLogger: The module logger instance.
@@ -201,8 +193,7 @@ class ProcessManager:
         return _module_logger
 
     def install_handlers(self) -> None:
-        """
-        Install signal handlers and atexit hook for cleanup.
+        """Install signal handlers and atexit hook for cleanup.
 
         This should be called once during application startup, typically in main.py before any processes are spawned.
         """
@@ -251,8 +242,7 @@ class ProcessManager:
         ProcessManager._get_logger().debug("handlers_uninstalled")
 
     def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
-        """
-        Handle termination signals by triggering cleanup.
+        """Handle termination signals by triggering cleanup.
 
         Args:
             signum: The signal number received.
@@ -357,8 +347,7 @@ class ProcessManager:
     def _terminate_process_sync(
         process: Popen[bytes] | asyncio.subprocess.Process,
     ) -> None:
-        """
-        Terminate a process synchronously.
+        """Terminate a process synchronously.
 
         Args:
             process: The process to terminate.
@@ -375,8 +364,7 @@ class ProcessManager:
         graceful_timeout: float = DEFAULT_GRACEFUL_TIMEOUT,
         force_timeout: float = DEFAULT_FORCE_TIMEOUT,
     ) -> None:
-        """
-        Terminate a process tree using psutil.
+        """Terminate a process tree using psutil.
 
         Kills the root process and all its descendants. First sends
         SIGTERM and waits for graceful_timeout, then sends SIGKILL
@@ -395,8 +383,7 @@ class ProcessManager:
         graceful_timeout: float,
         force_timeout: float,
     ) -> None:
-        """
-        Terminate a process tree using psutil (internal).
+        """Terminate a process tree using psutil (internal).
 
         Args:
             pid: Root process ID.
@@ -432,8 +419,7 @@ class ProcessManager:
         metadata: dict[str, Any] | None = None,
         cleanup_callback: Callable[[], Coroutine[Any, Any, None]] | None = None,
     ) -> int:
-        """
-        Register a process for tracking.
+        """Register a process for tracking.
 
         Args:
             process: The process to track.
@@ -468,8 +454,7 @@ class ProcessManager:
         return pid
 
     def unregister(self, pid: int) -> TrackedProcess | None:
-        """
-        Unregister a process from tracking.
+        """Unregister a process from tracking.
 
         Args:
             pid: The process ID to unregister.
@@ -490,8 +475,7 @@ class ProcessManager:
         return tracked
 
     def get_tracked(self, pid: int) -> TrackedProcess | None:
-        """
-        Get tracked process information.
+        """Get tracked process information.
 
         Args:
             pid: The process ID to look up.
@@ -503,8 +487,7 @@ class ProcessManager:
             return self._processes.get(pid)
 
     def get_all_tracked(self) -> list[TrackedProcess]:
-        """
-        Get all tracked processes.
+        """Get all tracked processes.
 
         Returns:
             list[TrackedProcess]: List of all tracked processes.
@@ -513,8 +496,7 @@ class ProcessManager:
             return list(self._processes.values())
 
     def get_running_processes(self) -> list[TrackedProcess]:
-        """
-        Get all currently running tracked processes.
+        """Get all currently running tracked processes.
 
         Returns:
             list[TrackedProcess]: List of tracked processes that are still running.
@@ -528,8 +510,7 @@ class ProcessManager:
         graceful_timeout: float | None = None,
         force_timeout: float | None = None,
     ) -> bool:
-        """
-        Terminate a specific process.
+        """Terminate a specific process.
 
         Args:
             pid: The process ID to terminate.
@@ -581,8 +562,7 @@ class ProcessManager:
         graceful_timeout: float,
         force_timeout: float,
     ) -> None:
-        """
-        Terminate a Popen process.
+        """Terminate a Popen process.
 
         Args:
             process: The subprocess to terminate.
@@ -618,8 +598,7 @@ class ProcessManager:
         graceful_timeout: float,
         force_timeout: float,
     ) -> None:
-        """
-        Terminate an asyncio subprocess.
+        """Terminate an asyncio subprocess.
 
         Args:
             process: The async subprocess to terminate.
@@ -653,8 +632,7 @@ class ProcessManager:
         graceful_timeout: float | None = None,
         force_timeout: float | None = None,
     ) -> None:
-        """
-        Cleanup all tracked processes asynchronously.
+        """Cleanup all tracked processes asynchronously.
 
         Args:
             graceful_timeout: Timeout for graceful termination per process.
@@ -698,8 +676,7 @@ class ProcessManager:
         logger.info("async_cleanup_complete")
 
     def is_shutdown_requested(self) -> bool:
-        """
-        Check if shutdown has been requested via signal.
+        """Check if shutdown has been requested via signal.
 
         Returns:
             bool: True if a shutdown signal has been received, False otherwise.
@@ -718,8 +695,7 @@ class ProcessManager:
 
     @property
     def process_count(self) -> int:
-        """
-        Get the number of tracked processes.
+        """Get the number of tracked processes.
 
         Returns:
             int: The total count of tracked processes.
@@ -729,8 +705,7 @@ class ProcessManager:
 
     @property
     def running_count(self) -> int:
-        """
-        Get the number of running tracked processes.
+        """Get the number of running tracked processes.
 
         Returns:
             int: The count of currently running tracked processes.
@@ -739,8 +714,7 @@ class ProcessManager:
             return sum(bool(p.is_running) for p in self._processes.values())
 
     def __repr__(self) -> str:
-        """
-        Return string representation.
+        """Return string representation.
 
         Returns:
             str: A string representation of the ProcessManager state.
@@ -760,8 +734,7 @@ class ProcessManager:
         check: bool = False,
         creationflags: int = 0,
     ) -> CompletedProcess[Any]:
-        """
-        Execute a subprocess with ProcessManager tracking.
+        """Execute a subprocess with ProcessManager tracking.
 
         This method wraps subprocess execution to ensure the process is tracked
         and will be terminated during application shutdown.
@@ -857,8 +830,7 @@ class ProcessManager:
         check: bool = False,
         creationflags: int = 0,
     ) -> CompletedProcess[Any]:
-        """
-        Execute a subprocess asynchronously with ProcessManager tracking.
+        """Execute a subprocess asynchronously with ProcessManager tracking.
 
         This method wraps subprocess execution to ensure the process is tracked
         and will be terminated during application shutdown. It delegates to
@@ -898,8 +870,7 @@ class ProcessManager:
         process_type: ProcessType = ProcessType.EXTERNAL_TOOL,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """
-        Register an external process by PID for cleanup tracking.
+        """Register an external process by PID for cleanup tracking.
 
         Use this for processes not directly spawned by subprocess (e.g., daemonized
         processes) that should be terminated when the application exits.
@@ -932,8 +903,7 @@ class ProcessManager:
         )
 
     def unregister_external_pid(self, pid: int) -> bool:
-        """
-        Unregister an external process from tracking.
+        """Unregister an external process from tracking.
 
         Args:
             pid: The process ID to unregister.
@@ -949,8 +919,7 @@ class ProcessManager:
         return False
 
     def terminate_external_pid(self, pid: int, *, force: bool = False) -> bool:
-        """
-        Terminate an external process by PID using psutil (tree kill).
+        """Terminate an external process by PID using psutil (tree kill).
 
         Args:
             pid: The process ID to terminate.

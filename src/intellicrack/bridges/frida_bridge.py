@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Frida instrumentation bridge for dynamic analysis.
+"""Frida instrumentation bridge for dynamic analysis.
 
 This module provides runtime instrumentation capabilities using Frida for function hooking, memory manipulation, and process control.
 """
@@ -457,8 +456,7 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
 
 
 class FridaBridge(InstrumentationBridge):
-    """
-    Bridge for Frida dynamic instrumentation.
+    """Bridge for Frida dynamic instrumentation.
 
     Provides function hooking, memory manipulation, and script execution capabilities using the Frida framework.
     """
@@ -491,8 +489,7 @@ class FridaBridge(InstrumentationBridge):
 
     @property
     def name(self) -> ToolName:
-        """
-        Get the tool's name.
+        """Get the tool's name.
 
         Returns:
             ToolName: ToolName.FRIDA
@@ -501,8 +498,7 @@ class FridaBridge(InstrumentationBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """
-        Get tool definition for LLM function calling.
+        """Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -514,8 +510,7 @@ class FridaBridge(InstrumentationBridge):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """
-        Initialize the Frida bridge.
+        """Initialize the Frida bridge.
 
         Args:
             tool_path: Not used for Frida (uses frida-python).
@@ -605,8 +600,7 @@ class FridaBridge(InstrumentationBridge):
 
     @override
     async def is_available(self) -> bool:
-        """
-        Check if Frida is available.
+        """Check if Frida is available.
 
         Returns:
             bool: True if Frida is installed and working.
@@ -620,8 +614,7 @@ class FridaBridge(InstrumentationBridge):
             return True
 
     async def attach(self, pid: int) -> None:
-        """
-        Attach to a running process.
+        """Attach to a running process.
 
         Args:
             pid: Process ID to attach to.
@@ -656,8 +649,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
     async def attach_by_name(self, name: str) -> None:
-        """
-        Attach to a process by name.
+        """Attach to a process by name.
 
         Args:
             name: Process name to attach to.
@@ -707,8 +699,7 @@ class FridaBridge(InstrumentationBridge):
         path: Path,
         args: Sequence[str] | None = None,
     ) -> int:
-        """
-        Spawn a new process with Frida instrumentation.
+        """Spawn a new process with Frida instrumentation.
 
         Args:
             path: Path to executable.
@@ -778,8 +769,7 @@ class FridaBridge(InstrumentationBridge):
             return pid
 
     async def resume(self) -> None:
-        """
-        Resume a spawned process.
+        """Resume a spawned process.
 
         Raises:
             ToolError: If resume fails.
@@ -795,8 +785,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_NOT_ATTACHED) from e
 
     async def detach(self, *, kill_spawned: bool = True) -> None:
-        """
-        Detach from the current process.
+        """Detach from the current process.
 
         Args:
             kill_spawned: If True and process was spawned by us, kill it.
@@ -839,8 +828,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_NOT_ATTACHED) from e
 
     async def read_memory(self, address: int, size: int) -> bytes:
-        """
-        Read memory from the target process.
+        """Read memory from the target process.
 
         Args:
             address: Memory address.
@@ -876,8 +864,7 @@ class FridaBridge(InstrumentationBridge):
         raise ToolError(_ERR_READ_FAILED)
 
     async def write_memory(self, address: int, data: bytes) -> int:
-        """
-        Write memory in the target process.
+        """Write memory in the target process.
 
         Args:
             address: Memory address.
@@ -908,8 +895,7 @@ class FridaBridge(InstrumentationBridge):
         return len(data)
 
     async def get_memory_regions(self, protection: str = "---") -> list[MemoryRegion]:
-        """
-        Get process memory map.
+        """Get process memory map.
 
         Args:
             protection: Memory protection filter (e.g., 'r-x', '---' for all).
@@ -969,8 +955,7 @@ class FridaBridge(InstrumentationBridge):
         return regions
 
     async def scan_memory(self, pattern: bytes) -> list[MemorySearchResult]:
-        """
-        Scan process memory for a pattern.
+        """Scan process memory for a pattern.
 
         Args:
             pattern: Byte pattern to search for.
@@ -1031,8 +1016,7 @@ class FridaBridge(InstrumentationBridge):
         return matches
 
     async def enumerate_modules(self) -> list[ModuleInfo]:
-        """
-        List all loaded modules in the process.
+        """List all loaded modules in the process.
 
         Returns:
             list[ModuleInfo]: List of module information.
@@ -1087,8 +1071,7 @@ class FridaBridge(InstrumentationBridge):
         return modules
 
     async def enumerate_exports(self, module_name: str) -> list[ExportInfo]:
-        """
-        List exports of a module.
+        """List exports of a module.
 
         Args:
             module_name: Name of the module.
@@ -1151,8 +1134,7 @@ class FridaBridge(InstrumentationBridge):
         on_enter: str | None = None,
         on_leave: str | None = None,
     ) -> HookInfo:
-        """
-        Attach a hook to a function by name or address.
+        """Attach a hook to a function by name or address.
 
         Args:
             target: Function name (module!func) or hex address.
@@ -1233,8 +1215,7 @@ class FridaBridge(InstrumentationBridge):
         return hook_info
 
     async def remove_hook(self, hook_id: str) -> bool:
-        """
-        Remove a previously installed hook.
+        """Remove a previously installed hook.
 
         Args:
             hook_id: ID of the hook to remove.
@@ -1253,8 +1234,7 @@ class FridaBridge(InstrumentationBridge):
         return True
 
     async def get_hooks(self) -> list[HookInfo]:
-        """
-        Get all active hooks.
+        """Get all active hooks.
 
         Returns:
             list[HookInfo]: List of hook information.
@@ -1263,8 +1243,7 @@ class FridaBridge(InstrumentationBridge):
         return list(self._hooks.values())
 
     async def execute_script(self, script: str) -> str:
-        """
-        Execute custom Frida JavaScript code.
+        """Execute custom Frida JavaScript code.
 
         Args:
             script: JavaScript code to execute.
@@ -1287,8 +1266,7 @@ class FridaBridge(InstrumentationBridge):
         return str(result)
 
     async def execute_persistent_script(self, script_code: str) -> str:
-        """
-        Execute a Frida script that persists until explicitly unloaded.
+        """Execute a Frida script that persists until explicitly unloaded.
 
         Unlike execute_script which runs and immediately unloads,
         this keeps the script active for persistent hooks like
@@ -1324,8 +1302,7 @@ class FridaBridge(InstrumentationBridge):
         return script_id
 
     async def unload_script(self, script_id: str) -> bool:
-        """
-        Unload a specific script by ID.
+        """Unload a specific script by ID.
 
         Args:
             script_id: Script ID returned by execute_persistent_script.
@@ -1342,8 +1319,7 @@ class FridaBridge(InstrumentationBridge):
         return True
 
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
-        """
-        Intercept a function and replace its return value.
+        """Intercept a function and replace its return value.
 
         Args:
             target: Function to hook.
@@ -1364,8 +1340,7 @@ class FridaBridge(InstrumentationBridge):
         address: int,
         args: Sequence[int] | None = None,
     ) -> int:
-        """
-        Call a function in the target process.
+        """Call a function in the target process.
 
         Args:
             address: Function address.
@@ -1405,8 +1380,7 @@ class FridaBridge(InstrumentationBridge):
         script_code: str,
         max_wait: float = 5.0,
     ) -> dict[str, Any]:
-        """
-        Execute a script and wait for result.
+        """Execute a script and wait for result.
 
         Args:
             script_code: JavaScript code to execute.
@@ -1450,8 +1424,7 @@ class FridaBridge(InstrumentationBridge):
         return result
 
     async def _unload_script(self, script_id: str) -> None:
-        """
-        Unload a script.
+        """Unload a script.
 
         Args:
             script_id: Script ID to unload.
@@ -1474,8 +1447,7 @@ class FridaBridge(InstrumentationBridge):
         self,
         handler: Callable[[dict[str, object]], None],
     ) -> None:
-        """
-        Set handler for script messages.
+        """Set handler for script messages.
 
         Args:
             handler: Callback function for messages.
@@ -1485,8 +1457,7 @@ class FridaBridge(InstrumentationBridge):
 
     @override
     async def enumerate_imports(self, module_name: str) -> list[ImportInfo]:
-        """
-        List imports of a module.
+        """List imports of a module.
 
         Args:
             module_name: Name of the module.
@@ -1548,8 +1519,7 @@ class FridaBridge(InstrumentationBridge):
 
     @override
     async def enumerate_threads(self) -> list[ThreadInfo]:
-        """
-        List all threads in the attached process.
+        """List all threads in the attached process.
 
         Returns:
             list[ThreadInfo]: List of thread information.
@@ -1601,8 +1571,7 @@ class FridaBridge(InstrumentationBridge):
         return threads
 
     async def allocate_memory(self, size: int) -> int:
-        """
-        Allocate memory in the target process.
+        """Allocate memory in the target process.
 
         Uses a persistent script to prevent garbage collection of the
         allocated memory block.
@@ -1664,8 +1633,7 @@ class FridaBridge(InstrumentationBridge):
         return addr
 
     async def protect_memory(self, address: int, size: int, protection: str) -> bool:
-        """
-        Change memory protection flags for a region.
+        """Change memory protection flags for a region.
 
         Args:
             address: Start address of the region.
@@ -1714,8 +1682,7 @@ class FridaBridge(InstrumentationBridge):
         return True
 
     async def find_base_address(self, module_name: str) -> int:
-        """
-        Get the base address of a loaded module.
+        """Get the base address of a loaded module.
 
         Args:
             module_name: Name of the module.
@@ -1753,8 +1720,7 @@ class FridaBridge(InstrumentationBridge):
         return base
 
     async def resolve_symbol(self, address: int) -> SymbolInfo:
-        """
-        Resolve debug symbol information from an address.
+        """Resolve debug symbol information from an address.
 
         Args:
             address: Address to resolve.
@@ -1802,8 +1768,7 @@ class FridaBridge(InstrumentationBridge):
         )
 
     async def find_functions_named(self, name: str) -> list[SymbolInfo]:
-        """
-        Find all functions matching a name across all modules.
+        """Find all functions matching a name across all modules.
 
         Args:
             name: Function name to search for.
@@ -1864,8 +1829,7 @@ class FridaBridge(InstrumentationBridge):
         return symbols
 
     async def resolve_api(self, query: str) -> list[ApiResolverMatch]:
-        """
-        Resolve API functions using Frida's ApiResolver.
+        """Resolve API functions using Frida's ApiResolver.
 
         Args:
             query: Query pattern (e.g., 'exports:*!CreateFile*').
@@ -1917,8 +1881,7 @@ class FridaBridge(InstrumentationBridge):
         return matches
 
     async def replace_function(self, target: str, replacement_code: str) -> HookInfo:
-        """
-        Replace a function implementation with custom code.
+        """Replace a function implementation with custom code.
 
         Args:
             target: Function name (module!func) or hex address.
@@ -1987,8 +1950,7 @@ class FridaBridge(InstrumentationBridge):
         return hook_info
 
     async def enumerate_processes(self) -> list[dict[str, object]]:
-        """
-        List all running processes on the device.
+        """List all running processes on the device.
 
         Does not require an active session attachment.
 
@@ -2011,8 +1973,7 @@ class FridaBridge(InstrumentationBridge):
 
     @staticmethod
     def _resolve_target_js(target: str) -> str:
-        """
-        Build a Frida JS expression that resolves a function target to a NativePointer.
+        """Build a Frida JS expression that resolves a function target to a NativePointer.
 
         Accepts hex addresses (``0x...``), ``module!func`` pairs, or bare
         export names.
@@ -2031,8 +1992,7 @@ class FridaBridge(InstrumentationBridge):
         return f"Module.getGlobalExportByName('{target}')"
 
     def _parse_stalker_batch(self, tid: int, raw_events: list[object]) -> None:
-        """
-        Parse a batch of raw stalker events and accumulate them.
+        """Parse a batch of raw stalker events and accumulate them.
 
         Called from Frida's callback thread. Thread-safe via
         ``_stalker_traces_lock``.
@@ -2075,8 +2035,7 @@ class FridaBridge(InstrumentationBridge):
         events: str = "call",
         limit: int = 10000,
     ) -> str:
-        """
-        Start Stalker code tracing on a thread.
+        """Start Stalker code tracing on a thread.
 
         Args:
             thread_id: Thread ID to trace. None for current thread.
@@ -2181,8 +2140,7 @@ class FridaBridge(InstrumentationBridge):
         return script_id
 
     async def stalker_unfollow(self, thread_id: int | None = None) -> StalkerTrace:
-        """
-        Stop Stalker tracing and retrieve collected events.
+        """Stop Stalker tracing and retrieve collected events.
 
         Args:
             thread_id: Thread ID to stop tracing. None for current thread.
@@ -2232,8 +2190,7 @@ class FridaBridge(InstrumentationBridge):
         )
 
     async def enable_child_gating(self) -> None:
-        """
-        Enable child process gating to intercept spawned children.
+        """Enable child process gating to intercept spawned children.
 
         Raises:
             ToolError: If child gating cannot be enabled.
@@ -2278,8 +2235,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def disable_child_gating(self) -> None:
-        """
-        Disable child process gating.
+        """Disable child process gating.
 
         Raises:
             ToolError: If child gating cannot be disabled.
@@ -2301,8 +2257,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def get_pending_children(self) -> list[ChildProcessInfo]:
-        """
-        Get list of child processes intercepted by child gating.
+        """Get list of child processes intercepted by child gating.
 
         Returns:
             list[ChildProcessInfo]: List of pending child process information.
@@ -2313,8 +2268,7 @@ class FridaBridge(InstrumentationBridge):
         return result
 
     async def resume_child(self, pid: int) -> None:
-        """
-        Resume a gated child process.
+        """Resume a gated child process.
 
         Args:
             pid: PID of the child process to resume.
@@ -2335,8 +2289,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_CHILD_GATING_FAILED) from e
 
     async def enable_crash_reporting(self) -> None:
-        """
-        Enable crash event monitoring for attached processes.
+        """Enable crash event monitoring for attached processes.
 
         Raises:
             ToolError: If crash reporting cannot be enabled.
@@ -2375,8 +2328,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_CRASH_REPORTING_FAILED) from e
 
     async def get_crashes(self) -> list[CrashInfo]:
-        """
-        Get all collected crash reports.
+        """Get all collected crash reports.
 
         Returns:
             list[CrashInfo]: List of crash information.
@@ -2387,8 +2339,7 @@ class FridaBridge(InstrumentationBridge):
         return result
 
     async def enumerate_devices(self) -> list[FridaDeviceInfo]:
-        """
-        List all available Frida devices.
+        """List all available Frida devices.
 
         Returns:
             list[FridaDeviceInfo]: List of device information.
@@ -2410,8 +2361,7 @@ class FridaBridge(InstrumentationBridge):
         device_type: str,
         host: str | None = None,
     ) -> FridaDeviceInfo:
-        """
-        Switch to a different Frida device.
+        """Switch to a different Frida device.
 
         Args:
             device_type: Device type ('local', 'usb', or 'remote').

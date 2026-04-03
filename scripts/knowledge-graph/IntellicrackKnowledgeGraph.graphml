@@ -29557,8 +29557,8 @@ dialogs.</data>
       <data key="d3">src.intellicrack.ui.dialogs.splash_screen</data>
       <data key="d4">Splash screen for Intellicrack application startup.
 
-Provides a custom splash screen with animated gradient background, glow effects, glitch text animations, and a multi-phase pipeline loading
-indicator during application initialization.</data>
+Provides a custom splash screen with animated gradient background, title glow effects, and a multi-phase pipeline loading indicator during
+application initialization.</data>
     </node>
     <node id="src.intellicrack.ui.dialogs.splash_screen._StageState">
       <data key="d0">class</data>
@@ -29570,7 +29570,7 @@ indicator during application initialization.</data>
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">SplashScreen</data>
-      <data key="d4">Custom splash screen with animated gradient, glow, glitch effects, and pipeline indicator.
+      <data key="d4">Custom splash screen with animated gradient, glow effects, and pipeline indicator.
 
 Displays the Intellicrack splash image during application startup
 with real-time progress updates, animated visual effects, and a
@@ -29724,23 +29724,6 @@ Args:
       <data key="d5">['self']</data>
       <data key="d4">Advance animation state on each timer tick.</data>
     </node>
-    <node id="src.intellicrack.ui.dialogs.splash_screen._trigger_glitch">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_trigger_glitch</data>
-      <data key="d5">['self']</data>
-      <data key="d4">Initialize a new glitch effect cycle with random parameters.</data>
-    </node>
-    <node id="src.intellicrack.ui.dialogs.splash_screen._compute_glitch_intensity">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_compute_glitch_intensity</data>
-      <data key="d5">['self']</data>
-      <data key="d4">Compute current glitch intensity (0.0-1.0, peaks at midpoint).
-
-Returns:
-    float: Glitch intensity factor.</data>
-    </node>
     <node id="src.intellicrack.ui.dialogs.splash_screen._update_stage_states">
       <data key="d0">function</data>
       <data key="d1">python</data>
@@ -29822,7 +29805,28 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_draw_splash_image</data>
       <data key="d5">['self', 'painter', 'rect']</data>
-      <data key="d4">Composite the splash.png image on top of the gradient background.
+      <data key="d4">Composite the full splash.png image as fallback when brain icon is unavailable.
+
+Args:
+    painter: Active QPainter instance.
+    rect: Splash screen bounding rectangle.</data>
+    </node>
+    <node id="src.intellicrack.ui.dialogs.splash_screen._load_brain_icon">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_load_brain_icon</data>
+      <data key="d5">[]</data>
+      <data key="d4">Load the standalone brain icon from splash-icon.png.
+
+Returns:
+    QPixmap | None: Brain icon pixmap, or None if unavailable.</data>
+    </node>
+    <node id="src.intellicrack.ui.dialogs.splash_screen._draw_brain_icon">
+      <data key="d0">function</data>
+      <data key="d1">python</data>
+      <data key="d3">_draw_brain_icon</data>
+      <data key="d5">['self', 'painter', 'rect']</data>
+      <data key="d4">Draw the brain icon centered in the upper portion of the splash.
 
 Args:
     painter: Active QPainter instance.
@@ -29833,7 +29837,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_draw_title</data>
       <data key="d5">['self', 'painter', 'rect']</data>
-      <data key="d4">Render the title with glow effect or glitch when active.
+      <data key="d4">Render the title with multi-layer glow effect below the brain icon.
 
 Args:
     painter: Active QPainter instance.
@@ -29850,29 +29854,6 @@ Args:
     painter: Active QPainter instance.
     title_rect: Rectangle for title text positioning.
     title: Title text string to render.</data>
-    </node>
-    <node id="src.intellicrack.ui.dialogs.splash_screen._draw_glitch_title">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_draw_glitch_title</data>
-      <data key="d5">['self', 'painter', 'rect', 'title_rect', 'title_font']</data>
-      <data key="d4">Render title with RGB separation, slice displacement, and scanline artifacts.
-
-Args:
-    painter: Active QPainter instance.
-    rect: Full splash screen rectangle.
-    title_rect: Rectangle for title text positioning.
-    title_font: QFont used for the title text.</data>
-    </node>
-    <node id="src.intellicrack.ui.dialogs.splash_screen._get_glitch_title_text">
-      <data key="d0">function</data>
-      <data key="d1">python</data>
-      <data key="d3">_get_glitch_title_text</data>
-      <data key="d5">['self']</data>
-      <data key="d4">Get title text with hex character substitutions applied.
-
-Returns:
-    str: Modified title text with hex replacements during glitch.</data>
     </node>
     <node id="src.intellicrack.ui.dialogs.splash_screen._draw_pipeline">
       <data key="d0">function</data>
@@ -41257,11 +41238,6 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\README.md</data>
       <data key="d3">README.md</data>
-    </node>
-    <node id="ruff_results.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\ruff_results.json</data>
-      <data key="d3">ruff_results.json</data>
     </node>
     <node id="SECURITY.md">
       <data key="d0">documentation</data>
@@ -155308,9 +155284,6 @@ This package provides asset loading, icon management, font handling, and theme m
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="math">
       <data key="d6">imports</data>
     </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="random">
-      <data key="d6">imports</data>
-    </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="typing">
       <data key="d6">imports</data>
     </edge>
@@ -155377,12 +155350,6 @@ This package provides asset loading, icon management, font handling, and theme m
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._on_animation_tick">
       <data key="d6">defines</data>
     </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._trigger_glitch">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._compute_glitch_intensity">
-      <data key="d6">defines</data>
-    </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._update_stage_states">
       <data key="d6">defines</data>
     </edge>
@@ -155407,16 +155374,16 @@ This package provides asset loading, icon management, font handling, and theme m
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._draw_splash_image">
       <data key="d6">defines</data>
     </edge>
+    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._load_brain_icon">
+      <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._draw_brain_icon">
+      <data key="d6">defines</data>
+    </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._draw_title">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._draw_glow_title">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._draw_glitch_title">
-      <data key="d6">defines</data>
-    </edge>
-    <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._get_glitch_title_text">
       <data key="d6">defines</data>
     </edge>
     <edge source="src.intellicrack.ui.dialogs.splash_screen" target="src.intellicrack.ui.dialogs.splash_screen._draw_pipeline">

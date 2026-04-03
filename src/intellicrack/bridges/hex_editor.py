@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Hex editor bridge wrapping the Rust-powered intellicrack_hexcore.
+"""Hex editor bridge wrapping the Rust-powered intellicrack_hexcore.
 
 Provides hex editing, search, hash, template, and diff operations via the native Rust HexDocument backed by a piece table with memory-mapped
 I/O for large file support.
@@ -117,8 +116,7 @@ _DEFAULT_POINTER_SIZE = 4
 
 
 class HexEditorBridge(ToolBridgeBase):
-    """
-    Bridge for the built-in hex editor powered by Rust.
+    """Bridge for the built-in hex editor powered by Rust.
 
     Wraps the ``intellicrack_hexcore.HexDocument`` class to provide
     hex editing, searching, hashing, data inspection, template
@@ -149,8 +147,7 @@ class HexEditorBridge(ToolBridgeBase):
         )
 
     def set_state_holder(self, state_holder: HexDocumentState) -> None:
-        """
-        Attach a shared state holder for bridge-GUI synchronization.
+        """Attach a shared state holder for bridge-GUI synchronization.
 
         Args:
             state_holder: The shared HexDocumentState instance.
@@ -158,8 +155,7 @@ class HexEditorBridge(ToolBridgeBase):
         self.state_holder = state_holder
 
     def set_tool_registry(self, registry: ToolRegistry) -> None:
-        """
-        Set the tool registry for cross-bridge access.
+        """Set the tool registry for cross-bridge access.
 
         Args:
             registry: The ToolRegistry providing access to other bridges.
@@ -168,8 +164,7 @@ class HexEditorBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """
-        Get the tool name.
+        """Get the tool name.
 
         Returns:
             ToolName: ToolName.HEX_EDITOR enum value.
@@ -178,8 +173,7 @@ class HexEditorBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """
-        Get tool definition for LLM function calling.
+        """Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all hex editor functions.
@@ -910,8 +904,7 @@ class HexEditorBridge(ToolBridgeBase):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """
-        Initialize the hex editor bridge.
+        """Initialize the hex editor bridge.
 
         Args:
             tool_path: Unused for this bridge.
@@ -935,8 +928,7 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.warning("hex_editor_backend_unavailable", backend="intellicrack_hexcore")
 
     async def is_available(self) -> bool:
-        """
-        Check if the Rust hex core is available.
+        """Check if the Rust hex core is available.
 
         Returns:
             bool: True if intellicrack_hexcore is importable.
@@ -953,8 +945,7 @@ class HexEditorBridge(ToolBridgeBase):
         await super().shutdown()
 
     async def open_file(self, path: str) -> dict[str, Any]:
-        """
-        Open a binary file in the hex editor.
+        """Open a binary file in the hex editor.
 
         Args:
             path: Filesystem path to the file.
@@ -991,8 +982,7 @@ class HexEditorBridge(ToolBridgeBase):
         }
 
     async def close_file(self) -> bool:
-        """
-        Close the currently open file.
+        """Close the currently open file.
 
         Returns:
             bool: True if a file was closed.
@@ -1011,8 +1001,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def read_bytes(self, offset: int, length: int) -> str:
-        """
-        Read bytes from the document as a hex string.
+        """Read bytes from the document as a hex string.
 
         Args:
             offset: Byte offset to read from.
@@ -1033,8 +1022,7 @@ class HexEditorBridge(ToolBridgeBase):
         return " ".join(f"{b:02X}" for b in raw)
 
     async def write_bytes(self, offset: int, data_hex: str) -> bool:
-        """
-        Overwrite bytes at offset.
+        """Overwrite bytes at offset.
 
         Args:
             offset: Byte offset to write at.
@@ -1058,8 +1046,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def insert_bytes(self, offset: int, data_hex: str) -> bool:
-        """
-        Insert bytes at offset.
+        """Insert bytes at offset.
 
         Args:
             offset: Byte offset for insertion.
@@ -1083,8 +1070,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def delete_bytes(self, offset: int, length: int) -> bool:
-        """
-        Delete bytes at offset.
+        """Delete bytes at offset.
 
         Args:
             offset: Start offset.
@@ -1107,8 +1093,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def goto_offset(self, offset: int) -> bool:
-        """
-        Set the logical cursor position.
+        """Set the logical cursor position.
 
         Args:
             offset: Target byte offset.
@@ -1123,8 +1108,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def get_cursor_position(self) -> int:
-        """
-        Get the current cursor position.
+        """Get the current cursor position.
 
         Returns:
             int: Current byte offset of the cursor.
@@ -1132,8 +1116,7 @@ class HexEditorBridge(ToolBridgeBase):
         return self._cursor_offset
 
     async def select_range(self, start: int, end: int) -> bool:
-        """
-        Set the selection range.
+        """Set the selection range.
 
         Args:
             start: Selection start offset.
@@ -1149,8 +1132,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def get_selection(self) -> tuple[int, int] | None:
-        """
-        Get the current selection range.
+        """Get the current selection range.
 
         Returns:
             tuple[int, int] | None: Tuple of (start, end) offsets, or None if no selection.
@@ -1158,8 +1140,7 @@ class HexEditorBridge(ToolBridgeBase):
         return self._selection
 
     async def search_hex(self, pattern: str, max_results: int = 100) -> list[dict[str, int]]:
-        """
-        Search for a hex pattern with optional wildcards.
+        """Search for a hex pattern with optional wildcards.
 
         Args:
             pattern: Hex pattern string (e.g. "4D 5A ?? 00").
@@ -1180,8 +1161,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"offset": r[0], "length": r[1]} for r in results]
 
     async def search_bytes(self, pattern_hex: str, max_results: int = 100) -> list[dict[str, int]]:
-        """
-        Search for a raw byte pattern in the document.
+        """Search for a raw byte pattern in the document.
 
         Args:
             pattern_hex: Hex string of bytes to find (e.g. '4D5A9000').
@@ -1210,8 +1190,7 @@ class HexEditorBridge(ToolBridgeBase):
         *,
         case_sensitive: bool = True,
     ) -> list[dict[str, int]]:
-        """
-        Search for text with encoding support.
+        """Search for text with encoding support.
 
         Args:
             text: Text string to search for.
@@ -1237,8 +1216,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"offset": r[0], "length": r[1]} for r in results]
 
     async def search_regex(self, pattern: str, max_results: int = 100) -> list[dict[str, int]]:
-        """
-        Search using a regular expression.
+        """Search using a regular expression.
 
         Args:
             pattern: Regex pattern string.
@@ -1259,8 +1237,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"offset": r[0], "length": r[1]} for r in results]
 
     async def replace_bytes(self, pattern_hex: str, replacement_hex: str) -> int:
-        """
-        Find and replace all occurrences of a byte pattern.
+        """Find and replace all occurrences of a byte pattern.
 
         Args:
             pattern_hex: Hex string pattern to find (e.g. "4D 5A").
@@ -1286,8 +1263,7 @@ class HexEditorBridge(ToolBridgeBase):
         return count
 
     async def undo(self) -> bool:
-        """
-        Undo the last edit operation.
+        """Undo the last edit operation.
 
         Returns:
             bool: True if an operation was undone.
@@ -1302,8 +1278,7 @@ class HexEditorBridge(ToolBridgeBase):
         return result
 
     async def redo(self) -> bool:
-        """
-        Redo the last undone operation.
+        """Redo the last undone operation.
 
         Returns:
             bool: True if an operation was redone.
@@ -1318,8 +1293,7 @@ class HexEditorBridge(ToolBridgeBase):
         return result
 
     async def inspect_data_at(self, offset: int) -> dict[str, str]:
-        """
-        Inspect data at offset as multiple type interpretations.
+        """Inspect data at offset as multiple type interpretations.
 
         Args:
             offset: Byte offset to inspect.
@@ -1342,8 +1316,7 @@ class HexEditorBridge(ToolBridgeBase):
         return {k: str(v) for k, v in typed.items()}
 
     async def calculate_hash(self, algorithm: str = "sha256") -> str:
-        """
-        Calculate a hash of the entire document.
+        """Calculate a hash of the entire document.
 
         Args:
             algorithm: Hash algorithm (md5, sha1, sha256, sha512, crc32).
@@ -1363,8 +1336,7 @@ class HexEditorBridge(ToolBridgeBase):
         return digest
 
     async def get_byte_statistics(self) -> list[dict[str, int]]:
-        """
-        Get byte frequency statistics for the document.
+        """Get byte frequency statistics for the document.
 
         Returns:
             list[dict[str, int]]: List of dicts with byte value and count.
@@ -1381,8 +1353,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"byte": s[0], "count": s[1]} for s in stats]
 
     async def apply_template(self, template_name: str, offset: int = 0) -> list[dict[str, Any]]:
-        """
-        Apply a struct template at a byte offset.
+        """Apply a struct template at a byte offset.
 
         Args:
             template_name: Name of the template (e.g. IMAGE_DOS_HEADER).
@@ -1406,8 +1377,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [cast("dict[str, Any]", entry) for entry in typed_list if isinstance(entry, dict)]
 
     async def list_templates(self) -> list[dict[str, str]]:
-        """
-        List all available struct templates.
+        """List all available struct templates.
 
         Returns:
             list[dict[str, str]]: List of dicts with name and description.
@@ -1428,8 +1398,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"name": t[0], "description": t[1]} for t in templates]
 
     async def register_template(self, json_str: str) -> str:
-        """
-        Register a JSON template definition at runtime.
+        """Register a JSON template definition at runtime.
 
         Args:
             json_str: JSON template definition string.
@@ -1451,8 +1420,7 @@ class HexEditorBridge(ToolBridgeBase):
         return name
 
     async def remove_template(self, template_name: str) -> bool:
-        """
-        Remove a registered template by name.
+        """Remove a registered template by name.
 
         Args:
             template_name: Name of the template to remove.
@@ -1471,8 +1439,7 @@ class HexEditorBridge(ToolBridgeBase):
         return removed
 
     async def compile_pattern(self, source: str) -> str:
-        """
-        Compile HexPat DSL source code into a JSON template.
+        """Compile HexPat DSL source code into a JSON template.
 
         Args:
             source: HexPat DSL source code.
@@ -1495,8 +1462,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise ValueError(msg) from exc
 
     def _get_interpreter(self) -> HexPatInterpreter:
-        """
-        Get or create the HexPat interpreter instance.
+        """Get or create the HexPat interpreter instance.
 
         Returns:
             HexPatInterpreter: A HexPatInterpreter instance.
@@ -1513,8 +1479,7 @@ class HexEditorBridge(ToolBridgeBase):
         return cast("HexPatInterpreter", self._interpreter)
 
     def _get_pattern_registry(self) -> PatternRegistry:
-        """
-        Get or create the pattern registry instance.
+        """Get or create the pattern registry instance.
 
         Returns:
             PatternRegistry: A PatternRegistry instance.
@@ -1540,8 +1505,7 @@ class HexEditorBridge(ToolBridgeBase):
         source: str,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
-        """
-        Execute .hexpat pattern source against the open document.
+        """Execute .hexpat pattern source against the open document.
 
         Args:
             source: HexPat source code string.
@@ -1570,8 +1534,7 @@ class HexEditorBridge(ToolBridgeBase):
         pattern_path: str,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
-        """
-        Execute a .hexpat pattern file against the open document.
+        """Execute a .hexpat pattern file against the open document.
 
         Args:
             pattern_path: Filesystem path to the .hexpat file.
@@ -1606,8 +1569,7 @@ class HexEditorBridge(ToolBridgeBase):
         return fields
 
     async def list_hexpat_patterns(self) -> list[dict[str, str]]:
-        """
-        List all available .hexpat community patterns.
+        """List all available .hexpat community patterns.
 
         Returns:
             list[dict[str, str]]: List of dicts with name, description, and category.
@@ -1629,8 +1591,7 @@ class HexEditorBridge(ToolBridgeBase):
         ]
 
     async def auto_detect_pattern(self) -> list[dict[str, str]]:
-        """
-        Auto-detect .hexpat patterns matching the open file by magic bytes.
+        """Auto-detect .hexpat patterns matching the open file by magic bytes.
 
         Returns:
             list[dict[str, str]]: List of matching pattern dicts sorted by specificity.
@@ -1663,8 +1624,7 @@ class HexEditorBridge(ToolBridgeBase):
         ]
 
     async def export_template(self, template_name: str) -> str:
-        """
-        Export a registered template as JSON.
+        """Export a registered template as JSON.
 
         Args:
             template_name: Name of the template to export.
@@ -1684,8 +1644,7 @@ class HexEditorBridge(ToolBridgeBase):
         return result
 
     async def list_templates_detailed(self) -> list[dict[str, Any]]:
-        """
-        List all templates with detailed metadata.
+        """List all templates with detailed metadata.
 
         Returns:
             list[dict[str, Any]]: List of dicts with name, description, category, field_count.
@@ -1714,8 +1673,7 @@ class HexEditorBridge(ToolBridgeBase):
         ]
 
     async def compare_files(self, path_a: str, path_b: str) -> dict[str, Any]:
-        """
-        Compare two files byte-by-byte.
+        """Compare two files byte-by-byte.
 
         Args:
             path_a: Path to the first file.
@@ -1738,8 +1696,7 @@ class HexEditorBridge(ToolBridgeBase):
         return {"regions": [], "total_differences": 0, "files_identical": True}
 
     async def copy_as(self, fmt: str = "hex") -> str:
-        """
-        Format bytes at the cursor position or selection.
+        """Format bytes at the cursor position or selection.
 
         Args:
             fmt: Output format - "hex", "c_array", "python", "base64",
@@ -1827,8 +1784,7 @@ class HexEditorBridge(ToolBridgeBase):
         label: str = "Bookmark",
         color: str = "#FFFF00",
     ) -> int:
-        """
-        Add a bookmark at an offset.
+        """Add a bookmark at an offset.
 
         Args:
             offset: Byte offset.
@@ -1851,8 +1807,7 @@ class HexEditorBridge(ToolBridgeBase):
         return idx
 
     async def remove_bookmark(self, index: int) -> bool:
-        """
-        Remove a bookmark by index.
+        """Remove a bookmark by index.
 
         Args:
             index: Bookmark index.
@@ -1872,8 +1827,7 @@ class HexEditorBridge(ToolBridgeBase):
         return removed
 
     async def list_bookmarks(self) -> list[dict[str, Any]]:
-        """
-        List all bookmarks.
+        """List all bookmarks.
 
         Returns:
             list[dict[str, Any]]: List of dicts with offset, length, label, color.
@@ -1886,8 +1840,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in bookmarks]
 
     async def save(self, path: str | None = None) -> bool:
-        """
-        Save the document.
+        """Save the document.
 
         Args:
             path: Save path. Uses original path if None.
@@ -1920,8 +1873,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def save_as(self, path: str) -> bool:
-        """
-        Save the document to a new path.
+        """Save the document to a new path.
 
         Args:
             path: New file path.
@@ -1937,8 +1889,7 @@ class HexEditorBridge(ToolBridgeBase):
         end: int,
         algorithm: str = "sha256",
     ) -> str:
-        """
-        Calculate a hash of a byte range within the document.
+        """Calculate a hash of a byte range within the document.
 
         Args:
             start: Start byte offset.
@@ -1960,8 +1911,7 @@ class HexEditorBridge(ToolBridgeBase):
         return digest
 
     async def get_document_info(self) -> dict[str, Any]:
-        """
-        Get information about the currently open document.
+        """Get information about the currently open document.
 
         Returns:
             dict[str, Any]: Dict with file_path, size, modified, cursor, and selection.
@@ -1985,8 +1935,7 @@ class HexEditorBridge(ToolBridgeBase):
         }
 
     async def get_context_for_ai(self, include_bytes: int = 256) -> dict[str, Any]:
-        """
-        Get hex editor context suitable for AI analysis.
+        """Get hex editor context suitable for AI analysis.
 
         Collects document metadata, bytes around the cursor, data
         inspection at the cursor, selected bytes, and bookmarks into
@@ -2042,8 +1991,7 @@ class HexEditorBridge(ToolBridgeBase):
         dest_path: str,
         sandbox_type: str = "docker",
     ) -> dict[str, Any]:
-        """
-        Save the current document into a sandbox environment.
+        """Save the current document into a sandbox environment.
 
         Writes the document to a temporary file, then uses the sandbox
         bridge to copy it into the sandbox at the given destination path.
@@ -2102,8 +2050,7 @@ class HexEditorBridge(ToolBridgeBase):
         sandbox_type: str = "docker",
         max_wait: int = 30,
     ) -> dict[str, Any]:
-        """
-        Save to sandbox, execute the binary, and return the report.
+        """Save to sandbox, execute the binary, and return the report.
 
         Args:
             args: Command-line arguments for the binary.
@@ -2158,8 +2105,7 @@ class HexEditorBridge(ToolBridgeBase):
         return {"exit_code": -1, "stdout": "", "stderr": str(result)}
 
     async def get_entropy(self) -> float:
-        """
-        Get Shannon entropy of the entire document.
+        """Get Shannon entropy of the entire document.
 
         Returns:
             float: Entropy value between 0.0 and 8.0.
@@ -2176,8 +2122,7 @@ class HexEditorBridge(ToolBridgeBase):
         return result
 
     async def get_entropy_map(self, block_size: int = 4096) -> list[float]:
-        """
-        Get per-block entropy values across the document.
+        """Get per-block entropy values across the document.
 
         Args:
             block_size: Block size in bytes for entropy calculation.
@@ -2197,8 +2142,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [float(v) for v in result]
 
     async def get_byte_distribution(self) -> list[int]:
-        """
-        Get the 256-element byte frequency distribution.
+        """Get the 256-element byte frequency distribution.
 
         Returns:
             list[int]: List of 256 integer counts, one per byte value.
@@ -2215,8 +2159,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [int(v) for v in result]
 
     async def get_byte_type_distribution(self) -> dict[str, int]:
-        """
-        Get byte type counts across the document.
+        """Get byte type counts across the document.
 
         Returns:
             dict[str, int]: Dict with null_count, printable_count, control_count, high_count.
@@ -2241,8 +2184,7 @@ class HexEditorBridge(ToolBridgeBase):
         }
 
     async def get_digram_matrix(self) -> list[int]:
-        """
-        Get the 256x256 byte-pair frequency matrix.
+        """Get the 256x256 byte-pair frequency matrix.
 
         Returns:
             list[int]: List of 65536 integer frequencies in row-major order.
@@ -2259,8 +2201,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [int(v) for v in result]
 
     async def get_content_classification(self, block_size: int = 4096) -> list[int]:
-        """
-        Classify document blocks by content type.
+        """Classify document blocks by content type.
 
         Args:
             block_size: Block size in bytes for classification.
@@ -2287,8 +2228,7 @@ class HexEditorBridge(ToolBridgeBase):
         arch: str = "auto",
         mode: str = "64",
     ) -> list[dict[str, Any]]:
-        """
-        Disassemble instructions at a byte offset.
+        """Disassemble instructions at a byte offset.
 
         Args:
             offset: Byte offset in the document to disassemble from.
@@ -2342,8 +2282,7 @@ class HexEditorBridge(ToolBridgeBase):
         ]
 
     async def yara_scan(self, rule_source: str) -> list[dict[str, Any]]:
-        """
-        Scan the document with a YARA rule given as source code.
+        """Scan the document with a YARA rule given as source code.
 
         Args:
             rule_source: YARA rule source code string.
@@ -2386,8 +2325,7 @@ class HexEditorBridge(ToolBridgeBase):
         ]
 
     async def yara_scan_files(self, rule_paths: str) -> list[dict[str, Any]]:
-        """
-        Scan the document with YARA rules loaded from files.
+        """Scan the document with YARA rules loaded from files.
 
         Args:
             rule_paths: Comma-separated paths to .yar rule files.
@@ -2437,8 +2375,7 @@ class HexEditorBridge(ToolBridgeBase):
         length: int,
         params_json: str = "{}",
     ) -> str:
-        """
-        Apply a data transform to a byte range.
+        """Apply a data transform to a byte range.
 
         Args:
             name: Transform name (e.g. xor_single, base64_encode).
@@ -2486,8 +2423,7 @@ class HexEditorBridge(ToolBridgeBase):
         offset: int,
         length: int,
     ) -> str:
-        """
-        Apply a transform pipeline to a byte range.
+        """Apply a transform pipeline to a byte range.
 
         Args:
             pipeline_json: JSON array of {name, params} step dicts.
@@ -2531,8 +2467,7 @@ class HexEditorBridge(ToolBridgeBase):
         return result.hex()
 
     async def list_transforms(self) -> list[dict[str, str]]:
-        """
-        List all available data transforms.
+        """List all available data transforms.
 
         Returns:
             list[dict[str, str]]: List of dicts with name, category, description.
@@ -2545,8 +2480,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"name": n.name, "category": n.category, "description": n.description} for n in nodes]
 
     async def decode_text(self, offset: int, length: int, encoding: str = "utf-8") -> str:
-        """
-        Decode bytes at an offset as text in the specified encoding.
+        """Decode bytes at an offset as text in the specified encoding.
 
         Args:
             offset: Start offset in the document.
@@ -2581,8 +2515,7 @@ class HexEditorBridge(ToolBridgeBase):
         return decoded
 
     async def encode_text(self, text: str, encoding: str = "utf-8") -> str:
-        """
-        Encode text into bytes using the specified encoding.
+        """Encode text into bytes using the specified encoding.
 
         Args:
             text: Text string to encode.
@@ -2609,8 +2542,7 @@ class HexEditorBridge(ToolBridgeBase):
         return encoded.hex()
 
     async def list_encodings(self) -> list[dict[str, str]]:
-        """
-        List all supported text encodings.
+        """List all supported text encodings.
 
         Returns:
             list[dict[str, str]]: List of dicts with name and label.
@@ -2651,8 +2583,7 @@ class HexEditorBridge(ToolBridgeBase):
         refout: bool = False,
         xorout: int = 0,
     ) -> str:
-        """
-        Calculate a CRC with fully custom parameters over a byte range.
+        """Calculate a CRC with fully custom parameters over a byte range.
 
         Args:
             start: Start byte offset (inclusive).
@@ -2721,8 +2652,7 @@ class HexEditorBridge(ToolBridgeBase):
         return f"{crc:0{hex_width}X}"
 
     async def export_patches(self, patch_format: str = "ips") -> str:
-        """
-        Export document patches as IPS or IPS32 format.
+        """Export document patches as IPS or IPS32 format.
 
         Args:
             patch_format: Patch format, either "ips" or "ips32".
@@ -2753,8 +2683,7 @@ class HexEditorBridge(ToolBridgeBase):
         return base64.b64encode(raw).decode("ascii")
 
     async def import_patches(self, data_b64: str) -> int:
-        """
-        Import and apply IPS/IPS32 patches from base64-encoded data.
+        """Import and apply IPS/IPS32 patches from base64-encoded data.
 
         Args:
             data_b64: Base64-encoded IPS or IPS32 patch data.
@@ -2787,8 +2716,7 @@ class HexEditorBridge(ToolBridgeBase):
         *,
         ips32: bool = False,
     ) -> bytes:
-        """
-        Build IPS or IPS32 binary data from a list of patch tuples.
+        """Build IPS or IPS32 binary data from a list of patch tuples.
 
         Args:
             patches: List of (offset, data) tuples.
@@ -2816,8 +2744,7 @@ class HexEditorBridge(ToolBridgeBase):
         return b"".join(parts)
 
     def _apply_ips_patches(self, raw: bytes) -> int:
-        """
-        Parse and apply IPS/IPS32 patches to the current document.
+        """Parse and apply IPS/IPS32 patches to the current document.
 
         Args:
             raw: Raw IPS or IPS32 binary data.
@@ -2873,8 +2800,7 @@ class HexEditorBridge(ToolBridgeBase):
         alignment: int = 1,
         max_results: int = 100,
     ) -> list[dict[str, int]]:
-        """
-        Search for a numeric value in the document.
+        """Search for a numeric value in the document.
 
         Args:
             value: Integer value to search for.
@@ -2940,8 +2866,7 @@ class HexEditorBridge(ToolBridgeBase):
         alignment: int = 1,
         max_results: int = 100,
     ) -> list[dict[str, int]]:
-        """
-        Search for numeric values within a min/max range.
+        """Search for numeric values within a min/max range.
 
         Args:
             min_val: Minimum value (inclusive).
@@ -3000,8 +2925,7 @@ class HexEditorBridge(ToolBridgeBase):
 
     @staticmethod
     def _build_numeric_format(size: int, value_type: str, *, big_endian: bool) -> str:
-        """
-        Build a struct format string for numeric search.
+        """Build a struct format string for numeric search.
 
         Args:
             size: Byte width: 1, 2, 4, or 8.
@@ -3024,8 +2948,7 @@ class HexEditorBridge(ToolBridgeBase):
 
     @staticmethod
     def _pack_numeric_needle(value: int, size: int, value_type: str, *, big_endian: bool) -> bytes:
-        """
-        Pack a numeric value into bytes for use as a search needle.
+        """Pack a numeric value into bytes for use as a search needle.
 
         Args:
             value: Numeric value to pack.
@@ -3060,8 +2983,7 @@ class HexEditorBridge(ToolBridgeBase):
         condition_params: str,
         color: str = "#FFFF00",
     ) -> str:
-        """
-        Add a byte highlighting rule.
+        """Add a byte highlighting rule.
 
         Args:
             condition_type: Condition type: "byte_value", "byte_range", or "pattern".
@@ -3087,8 +3009,7 @@ class HexEditorBridge(ToolBridgeBase):
         return rule_id
 
     async def remove_highlight_rule(self, rule_id: str) -> bool:
-        """
-        Remove a highlighting rule by ID.
+        """Remove a highlighting rule by ID.
 
         Args:
             rule_id: The rule ID returned from add_highlight_rule.
@@ -3106,8 +3027,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def list_highlight_rules(self) -> list[dict[str, Any]]:
-        """
-        List all active highlighting rules.
+        """List all active highlighting rules.
 
         Returns:
             list[dict[str, Any]]: List of rule dicts with id, condition_type,
@@ -3118,8 +3038,7 @@ class HexEditorBridge(ToolBridgeBase):
         return rules
 
     async def set_display_mode(self, mode: str) -> bool:
-        """
-        Set the hex display mode.
+        """Set the hex display mode.
 
         Args:
             mode: Display mode string (e.g. "hex8", "hex16_le", "float32").
@@ -3135,8 +3054,7 @@ class HexEditorBridge(ToolBridgeBase):
         return True
 
     async def get_display_mode(self) -> str:
-        """
-        Get the current hex display mode.
+        """Get the current hex display mode.
 
         Returns:
             str: Current display mode string.
@@ -3144,8 +3062,7 @@ class HexEditorBridge(ToolBridgeBase):
         return self._display_mode
 
     async def list_process_regions(self, pid: int) -> list[dict[str, int]]:
-        """
-        List memory regions of a process by PID (Windows only).
+        """List memory regions of a process by PID (Windows only).
 
         Args:
             pid: Process ID to inspect.
@@ -3165,8 +3082,7 @@ class HexEditorBridge(ToolBridgeBase):
         return [{"base_address": r[0], "size": r[1], "protection": r[2], "state": r[3]} for r in regions]
 
     async def open_process_memory(self, pid: int, address: int, size: int) -> dict[str, Any]:
-        """
-        Open a process memory region as a hex document (Windows only).
+        """Open a process memory region as a hex document (Windows only).
 
         Args:
             pid: Process ID to read from.

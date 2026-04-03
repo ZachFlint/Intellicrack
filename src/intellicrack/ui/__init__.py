@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-User interface components for Intellicrack.
+"""User interface components for Intellicrack.
 
 This package provides PyQt6-based UI components including the main application window, chat panel, tool output display, and configuration
 dialogs.

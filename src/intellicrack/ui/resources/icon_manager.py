@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Icon management for Intellicrack UI.
+"""Icon management for Intellicrack UI.
 
 Provides centralized icon loading with caching and fallback support.
 """
@@ -191,8 +190,7 @@ UNICODE_FALLBACK: Final[dict[str, str]] = {
 
 
 class IconManager:
-    """
-    Singleton icon manager with caching and fallback support.
+    """Singleton icon manager with caching and fallback support.
 
     Provides centralized icon loading for the Intellicrack UI with performance optimization through caching and graceful degradation when
     icon files are not available.
@@ -207,8 +205,7 @@ class IconManager:
 
     @classmethod
     def get_instance(cls) -> IconManager:
-        """
-        Get the singleton instance of IconManager.
+        """Get the singleton instance of IconManager.
 
         Returns:
             IconManager: The IconManager singleton instance.
@@ -224,8 +221,7 @@ class IconManager:
 
     @staticmethod
     def _check_icons_available() -> bool:
-        """
-        Check if the icons directory is available.
+        """Check if the icons directory is available.
 
         Returns:
             bool: True if icons directory exists and contains files.
@@ -241,8 +237,7 @@ class IconManager:
             return available
 
     def get_icon(self, name: str, size: int = 24) -> QIcon:
-        """
-        Get an icon by name with caching.
+        """Get an icon by name with caching.
 
         Args:
             name: Icon name (key in ICON_MAP or filename without extension).
@@ -262,8 +257,7 @@ class IconManager:
         return icon
 
     def _load_icon(self, name: str, size: int) -> QIcon:
-        """
-        Load an icon from file or generate fallback.
+        """Load an icon from file or generate fallback.
 
         Args:
             name: Icon name.
@@ -290,8 +284,7 @@ class IconManager:
 
     @staticmethod
     def _create_fallback_icon(name: str, size: int) -> QIcon:
-        """
-        Create a fallback icon using Unicode characters.
+        """Create a fallback icon using Unicode characters.
 
         Args:
             name: Icon name for fallback lookup.
@@ -312,8 +305,7 @@ class IconManager:
         size: int,
         color: QColor | None = None,
     ) -> QIcon:
-        """
-        Render a text character as an icon.
+        """Render a text character as an icon.
 
         Args:
             text: Character or text to render.
@@ -348,8 +340,7 @@ class IconManager:
         return QIcon(pixmap)
 
     def get_pixmap(self, name: str, size: int = 24) -> QPixmap:
-        """
-        Get a pixmap by icon name.
+        """Get a pixmap by icon name.
 
         Args:
             name: Icon name.
@@ -370,8 +361,7 @@ class IconManager:
         return pixmap
 
     def get_app_icon(self) -> QIcon:
-        """
-        Get the main application icon.
+        """Get the main application icon.
 
         Returns:
             QIcon: QIcon for the application window and taskbar.
@@ -398,8 +388,7 @@ class IconManager:
         return fallback
 
     def get_status_icon(self, *, success: bool) -> QIcon:
-        """
-        Get a status icon indicating success or failure.
+        """Get a status icon indicating success or failure.
 
         Args:
             success: True for success icon, False for error icon.
@@ -411,8 +400,7 @@ class IconManager:
         return self.get_icon(name)
 
     def get_status_pixmap(self, *, success: bool, size: int = 16) -> QPixmap:
-        """
-        Get a status pixmap indicating success or failure.
+        """Get a status pixmap indicating success or failure.
 
         Args:
             success: True for success, False for error.
@@ -437,8 +425,7 @@ class IconManager:
         )
 
     def preload_icons(self, names: list[str] | None = None) -> None:
-        """
-        Preload icons into cache for faster access.
+        """Preload icons into cache for faster access.
 
         Args:
             names: List of icon names to preload. If None, preloads common icons.
@@ -461,8 +448,7 @@ class IconManager:
 
     @staticmethod
     def list_available_icons() -> list[str]:
-        """
-        List all available icon names.
+        """List all available icon names.
 
         Returns:
             list[str]: List of icon names from ICON_MAP.
@@ -470,8 +456,7 @@ class IconManager:
         return list(ICON_MAP.keys())
 
     def icon_exists(self, name: str) -> bool:
-        """
-        Check if an icon file exists.
+        """Check if an icon file exists.
 
         Args:
             name: Icon name to check.

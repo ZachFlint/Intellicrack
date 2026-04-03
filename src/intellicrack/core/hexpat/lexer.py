@@ -12,8 +12,7 @@ from intellicrack.core.hexpat.tokens import KEYWORDS, Token, TokenType
 
 
 class HexPatLexer:
-    """
-    Tokenizer for the HexPat pattern language.
+    """Tokenizer for the HexPat pattern language.
 
     Converts raw source text into a flat list of Token objects.  The final
     token in the returned list is always an EOF token.
@@ -32,8 +31,7 @@ class HexPatLexer:
         self._tokens: list[Token] = []
 
     def tokenize(self) -> list[Token]:
-        """
-        Tokenize the source into a list of Tokens.
+        """Tokenize the source into a list of Tokens.
 
         Returns:
             list[Token]: A list of Token objects ending with an EOF token.
@@ -44,8 +42,7 @@ class HexPatLexer:
         return self._tokens
 
     def _peek(self, offset: int = 0) -> str:
-        """
-        Return the character at pos+offset without consuming it.
+        """Return the character at pos+offset without consuming it.
 
         Args:
             offset: How many characters ahead to look.
@@ -57,8 +54,7 @@ class HexPatLexer:
         return self._source[idx] if idx < len(self._source) else ""
 
     def _advance(self) -> str:
-        """
-        Consume and return the current character, updating position tracking.
+        """Consume and return the current character, updating position tracking.
 
         Returns:
             str: The consumed character.
@@ -73,8 +69,7 @@ class HexPatLexer:
         return ch
 
     def _match(self, expected: str) -> bool:
-        """
-        Consume the next character if it matches expected.
+        """Consume the next character if it matches expected.
 
         Args:
             expected: The single character to match.
@@ -88,8 +83,7 @@ class HexPatLexer:
         return False
 
     def _add(self, ttype: TokenType, value: str, line: int, column: int) -> None:
-        """
-        Append a Token to the internal token list.
+        """Append a Token to the internal token list.
 
         Args:
             ttype: The token type.
@@ -100,8 +94,7 @@ class HexPatLexer:
         self._tokens.append(Token(ttype, value, line, column))
 
     def _skip_whitespace(self) -> bool:
-        """
-        Skip whitespace characters.
+        """Skip whitespace characters.
 
         Returns:
             bool: True if any whitespace was skipped.
@@ -113,8 +106,7 @@ class HexPatLexer:
         return False
 
     def _skip_line_comment(self) -> bool:
-        """
-        Skip a single-line comment starting with //.
+        """Skip a single-line comment starting with //.
 
         Returns:
             bool: True if a line comment was skipped.
@@ -126,8 +118,7 @@ class HexPatLexer:
         return False
 
     def _skip_block_comment(self) -> bool:
-        """
-        Skip a block comment delimited by /* and */, supporting nesting.
+        """Skip a block comment delimited by /* and */, supporting nesting.
 
         Returns:
             bool: True if a block comment was skipped.
@@ -159,8 +150,7 @@ class HexPatLexer:
         raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_string(self, line: int, col: int) -> None:
-        """
-        Scan a double-quoted string literal and emit a STRING_LITERAL token.
+        """Scan a double-quoted string literal and emit a STRING_LITERAL token.
 
         Args:
             line: The 1-based line number where the string started.
@@ -190,8 +180,7 @@ class HexPatLexer:
         raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_char(self, line: int, col: int) -> None:
-        """
-        Scan a single-quoted character literal and emit a CHAR_LITERAL token.
+        """Scan a single-quoted character literal and emit a CHAR_LITERAL token.
 
         Args:
             line: The 1-based line number where the literal started.
@@ -221,8 +210,7 @@ class HexPatLexer:
         self._add(TokenType.CHAR_LITERAL, value, line, col)
 
     def _scan_escape(self, line: int, col: int) -> str:
-        """
-        Scan a single escape sequence (after the backslash has been consumed).
+        """Scan a single escape sequence (after the backslash has been consumed).
 
         Args:
             line: The 1-based line number where the escape started.
@@ -264,8 +252,7 @@ class HexPatLexer:
         raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_number(self, line: int, col: int) -> None:
-        """
-        Scan an integer or float literal and emit a NUMBER or FLOAT_LITERAL token.
+        """Scan an integer or float literal and emit a NUMBER or FLOAT_LITERAL token.
 
         Handles decimal, hexadecimal (0x/0X), binary (0b/0B), octal (0o/0O)
         integers and decimal floating-point numbers with optional exponents.
@@ -348,8 +335,7 @@ class HexPatLexer:
             self._add(TokenType.NUMBER, str(int(raw, 10)), line, col)
 
     def _scan_identifier(self, line: int, col: int) -> None:
-        """
-        Scan an identifier or keyword and emit the appropriate token.
+        """Scan an identifier or keyword and emit the appropriate token.
 
         Args:
             line: The 1-based line number where the identifier started.
@@ -363,8 +349,7 @@ class HexPatLexer:
         self._add(ttype, text, line, col)
 
     def _scan_operator(self, ch: str, line: int, col: int) -> None:
-        """
-        Emit a token for an operator or multi-character punctuation.
+        """Emit a token for an operator or multi-character punctuation.
 
         Args:
             ch: The first character of the operator, already consumed.

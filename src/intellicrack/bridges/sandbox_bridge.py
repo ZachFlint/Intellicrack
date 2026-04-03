@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Sandbox bridge for isolated binary execution environments.
+"""Sandbox bridge for isolated binary execution environments.
 
 This module provides a tool bridge that wraps the SandboxManager to expose sandbox operations to the AI orchestrator.
 """
@@ -56,8 +55,7 @@ _ERR_MESSAGES_FAILED = "Failed to retrieve pending messages"
 
 
 class SandboxBridge(ToolBridgeBase):
-    """
-    Bridge for sandbox operations.
+    """Bridge for sandbox operations.
 
     Provides AI-accessible interface to the SandboxManager for creating isolated execution environments and running binaries.
     """
@@ -74,8 +72,7 @@ class SandboxBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """
-        Get the tool's name.
+        """Get the tool's name.
 
         Returns:
             ToolName: ToolName.SANDBOX.
@@ -84,8 +81,7 @@ class SandboxBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """
-        Get tool definition for LLM function calling.
+        """Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all sandbox functions.
@@ -389,8 +385,7 @@ class SandboxBridge(ToolBridgeBase):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """
-        Initialize the sandbox bridge.
+        """Initialize the sandbox bridge.
 
         Args:
             tool_path: Not used for sandbox (ignored).
@@ -421,8 +416,7 @@ class SandboxBridge(ToolBridgeBase):
         _logger.info("sandbox_bridge_shutdown", bridge="sandbox")
 
     async def is_available(self) -> bool:
-        """
-        Check if sandbox functionality is available.
+        """Check if sandbox functionality is available.
 
         Returns:
             bool: True if at least one sandbox type is available.
@@ -434,8 +428,7 @@ class SandboxBridge(ToolBridgeBase):
         return len(available_types) > 0
 
     def _ensure_manager(self) -> SandboxManager:
-        """
-        Ensure manager is initialized.
+        """Ensure manager is initialized.
 
         Returns:
             SandboxManager: The SandboxManager instance.
@@ -452,8 +445,7 @@ class SandboxBridge(ToolBridgeBase):
         network_enabled: bool = False,
         memory_limit_mb: int = 2048,
     ) -> dict[str, Any]:
-        """
-        Create a new sandbox instance.
+        """Create a new sandbox instance.
 
         Args:
             sandbox_type: Type of sandbox ('windows' or 'qemu').
@@ -498,8 +490,7 @@ class SandboxBridge(ToolBridgeBase):
             raise ToolError(msg) from e
 
     async def destroy(self, instance_id: str) -> dict[str, Any]:
-        """
-        Destroy a sandbox instance.
+        """Destroy a sandbox instance.
 
         Args:
             instance_id: ID of the instance to destroy.
@@ -531,8 +522,7 @@ class SandboxBridge(ToolBridgeBase):
         *,
         monitor: bool = True,
     ) -> dict[str, Any]:
-        """
-        Execute a binary in a sandbox with monitoring.
+        """Execute a binary in a sandbox with monitoring.
 
         Args:
             binary_path: Path to the binary to execute.
@@ -579,8 +569,7 @@ class SandboxBridge(ToolBridgeBase):
         max_wait: int | None = None,
         working_directory: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Execute a command in an existing sandbox.
+        """Execute a command in an existing sandbox.
 
         Args:
             instance_id: ID of the sandbox instance.
@@ -627,8 +616,7 @@ class SandboxBridge(ToolBridgeBase):
         source: str,
         dest: str,
     ) -> dict[str, Any]:
-        """
-        Copy a file into a sandbox.
+        """Copy a file into a sandbox.
 
         Args:
             instance_id: ID of the sandbox instance.
@@ -675,8 +663,7 @@ class SandboxBridge(ToolBridgeBase):
         source: str,
         dest: str,
     ) -> dict[str, Any]:
-        """
-        Copy a file from a sandbox.
+        """Copy a file from a sandbox.
 
         Args:
             instance_id: ID of the sandbox instance.
@@ -715,8 +702,7 @@ class SandboxBridge(ToolBridgeBase):
             }
 
     async def status(self) -> dict[str, Any]:
-        """
-        Get sandbox manager status.
+        """Get sandbox manager status.
 
         Returns:
             dict[str, Any]: Status dictionary with available types and instance info.
@@ -725,8 +711,7 @@ class SandboxBridge(ToolBridgeBase):
         return dict(await manager.get_status())
 
     async def list(self) -> list[dict[str, Any]]:
-        """
-        List all active sandbox instances.
+        """List all active sandbox instances.
 
         Returns:
             list[dict[str, Any]]: List of instance information dictionaries.
@@ -750,8 +735,7 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         name: str,
     ) -> dict[str, Any]:
-        """
-        Create a snapshot of a QEMU sandbox.
+        """Create a snapshot of a QEMU sandbox.
 
         Args:
             instance_id: ID of the QEMU sandbox instance.
@@ -793,8 +777,7 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         snapshot_id: str,
     ) -> dict[str, Any]:
-        """
-        Restore a QEMU sandbox to a snapshot.
+        """Restore a QEMU sandbox to a snapshot.
 
         Args:
             instance_id: ID of the QEMU sandbox instance.
@@ -835,8 +818,7 @@ class SandboxBridge(ToolBridgeBase):
         self,
         instance_id: str,
     ) -> dict[str, Any]:
-        """
-        List available snapshots for a QEMU sandbox.
+        """List available snapshots for a QEMU sandbox.
 
         Args:
             instance_id: ID of the QEMU sandbox instance.
@@ -880,8 +862,7 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         name: str,
     ) -> dict[str, Any]:
-        """
-        Delete a snapshot from a QEMU sandbox.
+        """Delete a snapshot from a QEMU sandbox.
 
         Args:
             instance_id: ID of the QEMU sandbox instance.
@@ -926,8 +907,7 @@ class SandboxBridge(ToolBridgeBase):
         self,
         instance_id: str,
     ) -> dict[str, Any]:
-        """
-        Resume execution of a paused QEMU sandbox VM.
+        """Resume execution of a paused QEMU sandbox VM.
 
         Args:
             instance_id: ID of the QEMU sandbox instance.
@@ -972,8 +952,7 @@ class SandboxBridge(ToolBridgeBase):
         self,
         instance_id: str,
     ) -> dict[str, Any]:
-        """
-        Get pending messages from the QEMU guest agent.
+        """Get pending messages from the QEMU guest agent.
 
         Args:
             instance_id: ID of the QEMU sandbox instance.
@@ -1025,8 +1004,7 @@ class SandboxBridge(ToolBridgeBase):
         report: ExecutionReport,
         instance_id: str,
     ) -> dict[str, Any]:
-        """
-        Convert ExecutionReport to dictionary.
+        """Convert ExecutionReport to dictionary.
 
         Args:
             report: The execution report.

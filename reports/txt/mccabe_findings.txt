@@ -70,13 +70,13 @@ src/intellicrack/ui\tools.py:1647:5: C901 'ToolOutputPanel.close_embedded_tools'
 
 4 findings in src/intellicrack/ui\panels\hex_editor\_pattern_editor.py
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:174:5: C901 'PatternEditorMixin._on_pattern_compile' is too complex (15)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:173:5: C901 'PatternEditorMixin._on_pattern_compile' is too complex (15)
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:224:5: C901 'PatternEditorMixin._on_pattern_apply' is too complex (15)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:223:5: C901 'PatternEditorMixin._on_pattern_apply' is too complex (15)
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:277:5: C901 'PatternEditorMixin._apply_via_interpreter' is too complex (12)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:276:5: C901 'PatternEditorMixin._apply_via_interpreter' is too complex (12)
 
-src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:468:5: C901 'PatternEditorMixin._populate_pattern_library' is too complex (11)
+src/intellicrack/ui\panels\hex_editor\_pattern_editor.py:467:5: C901 'PatternEditorMixin._populate_pattern_library' is too complex (11)
 
 
 3 findings in src/intellicrack/bridges\frida_bridge.py
@@ -90,11 +90,11 @@ src/intellicrack/bridges\frida_bridge.py:2072:5: C901 'FridaBridge.stalker_follo
 
 3 findings in src/intellicrack/bridges\hex_editor.py
 
-src/intellicrack/bridges\hex_editor.py:1741:5: C901 'HexEditorBridge.copy_as' is too complex (21)
+src/intellicrack/bridges\hex_editor.py:1740:5: C901 'HexEditorBridge.copy_as' is too complex (21)
 
-src/intellicrack/bridges\hex_editor.py:2643:5: C901 'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)
+src/intellicrack/bridges\hex_editor.py:2642:5: C901 'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)
 
-src/intellicrack/bridges\hex_editor.py:2868:5: C901 'HexEditorBridge.search_numeric' is too complex (11)
+src/intellicrack/bridges\hex_editor.py:2867:5: C901 'HexEditorBridge.search_numeric' is too complex (11)
 
 
 3 findings in src/intellicrack/core\hexpat\lexer.py
@@ -201,9 +201,9 @@ src/intellicrack/core\orchestrator.py:1711:5: C901 'Orchestrator.shutdown' is to
 
 2 findings in src/intellicrack/providers\google.py
 
-src/intellicrack/providers\google.py:344:5: C901 'GoogleProvider.chat_stream' is too complex (13)
+src/intellicrack/providers\google.py:343:5: C901 'GoogleProvider.chat_stream' is too complex (13)
 
-src/intellicrack/providers\google.py:586:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)
+src/intellicrack/providers\google.py:585:5: C901 'GoogleProvider._convert_messages_to_provider_format' is too complex (11)
 
 
 2 findings in src/intellicrack/sandbox\qemu.py
@@ -243,9 +243,9 @@ src/intellicrack/ui\panels\hex_tools_panel.py:1070:5: C901 'HexToolsPanel._on_ba
 
 2 findings in src/intellicrack/ui\tool_config.py
 
-src/intellicrack/ui\tool_config.py:132:5: C901 'ToolInstallWorker._install_tool' is too complex (12)
+src/intellicrack/ui\tool_config.py:131:5: C901 'ToolInstallWorker._install_tool' is too complex (12)
 
-src/intellicrack/ui\tool_config.py:509:5: C901 'ToolStatusCheckWorker._check_cutter' is too complex (11)
+src/intellicrack/ui\tool_config.py:508:5: C901 'ToolStatusCheckWorker._check_cutter' is too complex (11)
 
 
 1 findings in src/intellicrack/bridges\binary.py
@@ -295,17 +295,17 @@ src/intellicrack/main.py:633:1: C901 '_run_application' is too complex (13)
 
 1 findings in src/intellicrack/providers\anthropic.py
 
-src/intellicrack/providers\anthropic.py:432:5: C901 'AnthropicProvider.chat_stream' is too complex (13)
+src/intellicrack/providers\anthropic.py:431:5: C901 'AnthropicProvider.chat_stream' is too complex (13)
 
 
 1 findings in src/intellicrack/providers\grok.py
 
-src/intellicrack/providers\grok.py:425:5: C901 'GrokProvider.chat_stream' is too complex (19)
+src/intellicrack/providers\grok.py:424:5: C901 'GrokProvider.chat_stream' is too complex (19)
 
 
 1 findings in src/intellicrack/providers\huggingface.py
 
-src/intellicrack/providers\huggingface.py:448:5: C901 'HuggingFaceProvider.chat_stream' is too complex (20)
+src/intellicrack/providers\huggingface.py:447:5: C901 'HuggingFaceProvider.chat_stream' is too complex (20)
 
 
 1 findings in src/intellicrack/providers\model_loader.py
@@ -315,12 +315,12 @@ src/intellicrack/providers\model_loader.py:465:1: C901 'load_model_for_xpu' is t
 
 1 findings in src/intellicrack/providers\ollama.py
 
-src/intellicrack/providers\ollama.py:584:5: C901 'OllamaProvider.chat_stream' is too complex (18)
+src/intellicrack/providers\ollama.py:583:5: C901 'OllamaProvider.chat_stream' is too complex (18)
 
 
 1 findings in src/intellicrack/providers\openai.py
 
-src/intellicrack/providers\openai.py:467:5: C901 'OpenAIProvider.chat_stream' is too complex (18)
+src/intellicrack/providers\openai.py:466:5: C901 'OpenAIProvider.chat_stream' is too complex (18)
 
 
 1 findings in src/intellicrack/providers\xpu_utils.py
@@ -335,7 +335,7 @@ src/intellicrack/ui\panels\hex_editor\_disassembly.py:119:5: C901 'DisassemblyMi
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_sections.py
 
-src/intellicrack/ui\panels\hex_editor\_sections.py:224:5: C901 'SectionsMixin._auto_detect_file_type' is too complex (12)
+src/intellicrack/ui\panels\hex_editor\_sections.py:223:5: C901 'SectionsMixin._auto_detect_file_type' is too complex (12)
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_yara.py
@@ -345,4 +345,4 @@ src/intellicrack/ui\panels\hex_editor\_yara.py:118:5: C901 'YaraMixin._on_yara_s
 
 1 findings in src/intellicrack/ui\panels\hex_editor\panel.py
 
-src/intellicrack/ui\panels\hex_editor\panel.py:712:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)
+src/intellicrack/ui\panels\hex_editor\panel.py:711:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)

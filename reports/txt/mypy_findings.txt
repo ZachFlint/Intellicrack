@@ -89,79 +89,79 @@ tests\test_hexcore_e2e\test_bridge_transforms_deep.py:466: error: Incompatible t
 
 37 findings in src\intellicrack\bridges\cutter.py
 
-src\intellicrack\bridges\cutter.py:177: error: Redundant cast to "list[Any]"  [redundant-cast]
+src\intellicrack\bridges\cutter.py:176: error: Redundant cast to "list[Any]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:189: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+src\intellicrack\bridges\cutter.py:188: error: Function "r2pipe.open" is not valid as a type  [valid-type]
 
-src\intellicrack\bridges\cutter.py:189: note: Perhaps you need "Callable[...]" or a callback protocol?
+src\intellicrack\bridges\cutter.py:188: note: Perhaps you need "Callable[...]" or a callback protocol?
 
-src\intellicrack\bridges\cutter.py:205: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+src\intellicrack\bridges\cutter.py:204: error: Function "r2pipe.open" is not valid as a type  [valid-type]
 
-src\intellicrack\bridges\cutter.py:205: note: Perhaps you need "Callable[...]" or a callback protocol?
+src\intellicrack\bridges\cutter.py:204: note: Perhaps you need "Callable[...]" or a callback protocol?
 
-src\intellicrack\bridges\cutter.py:215: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+src\intellicrack\bridges\cutter.py:214: error: Function "r2pipe.open" is not valid as a type  [valid-type]
 
-src\intellicrack\bridges\cutter.py:215: note: Perhaps you need "Callable[...]" or a callback protocol?
+src\intellicrack\bridges\cutter.py:214: note: Perhaps you need "Callable[...]" or a callback protocol?
 
-src\intellicrack\bridges\cutter.py:254: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:253: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:624: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:623: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:648: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+src\intellicrack\bridges\cutter.py:647: error: Function "r2pipe.open" is not valid as a type  [valid-type]
 
-src\intellicrack\bridges\cutter.py:648: note: Perhaps you need "Callable[...]" or a callback protocol?
+src\intellicrack\bridges\cutter.py:647: note: Perhaps you need "Callable[...]" or a callback protocol?
 
-src\intellicrack\bridges\cutter.py:650: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+src\intellicrack\bridges\cutter.py:649: error: Function does not return a value (it only ever returns None)  [func-returns-value]
 
-src\intellicrack\bridges\cutter.py:650: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+src\intellicrack\bridges\cutter.py:649: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:651: error: "None" has no attribute "cmd"  [attr-defined]
+src\intellicrack\bridges\cutter.py:650: error: "None" has no attribute "cmd"  [attr-defined]
 
-src\intellicrack\bridges\cutter.py:659: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:658: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:667: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:666: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:764: error: Function does not return a value (it only ever returns None)  [func-returns-value]
+src\intellicrack\bridges\cutter.py:763: error: Function does not return a value (it only ever returns None)  [func-returns-value]
 
-src\intellicrack\bridges\cutter.py:764: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
+src\intellicrack\bridges\cutter.py:763: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
 
-src\intellicrack\bridges\cutter.py:817: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:816: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:847: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:846: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:892: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:891: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:967: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:966: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1002: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1001: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1043: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1042: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1087: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1086: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1131: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1130: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1180: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1179: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1205: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1204: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1226: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1225: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1251: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1250: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1274: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1273: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1335: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1334: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1365: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1364: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1387: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1386: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1408: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1407: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1448: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1447: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\bridges\cutter.py:1492: error: Statement is unreachable  [unreachable]
+src\intellicrack\bridges\cutter.py:1491: error: Statement is unreachable  [unreachable]
 
 
 31 findings in tests\test_hexcore_e2e\test_bridge_new_capabilities.py
@@ -466,47 +466,6 @@ tests\test_ui\test_sandbox_panel_fixes.py:170: error: "SandboxPanel" has no attr
 tests\test_ui\test_sandbox_panel_fixes.py:172: error: "SandboxPanel" has no attribute "status_indicator"; maybe "_status_indicator"?  [attr-defined]
 
 
-19 findings in tests\test_hexcore_e2e\test_bridge_document_info.py
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:55: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:64: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:73: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:82: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:91: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:100: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:115: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:126: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:137: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:149: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:161: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:173: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:184: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:201: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:217: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:231: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:233: error: Value of type "object" is not indexable  [index]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:234: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
-
-tests\test_hexcore_e2e\test_bridge_document_info.py:236: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
-
-
 19 findings in src\intellicrack\ui\provider_config.py
 
 src\intellicrack\ui\provider_config.py:68: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
@@ -546,6 +505,47 @@ src\intellicrack\ui\provider_config.py:2348: error: Statement is unreachable  [u
 src\intellicrack\ui\provider_config.py:2369: error: Statement is unreachable  [unreachable]
 
 src\intellicrack\ui\provider_config.py:2397: error: Statement is unreachable  [unreachable]
+
+
+19 findings in tests\test_hexcore_e2e\test_bridge_document_info.py
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:55: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:64: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:73: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:82: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:91: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:100: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:115: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:126: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:137: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:149: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:161: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:173: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:184: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:201: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:217: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:231: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:233: error: Value of type "object" is not indexable  [index]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:234: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_hexcore_e2e\test_bridge_document_info.py:236: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
 
 19 findings in tests\test_ui\test_tools_logic.py
@@ -855,29 +855,29 @@ tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py:270: error: Incompatib
 
 12 findings in src\intellicrack\ui\xpu_status.py
 
-src\intellicrack\ui\xpu_status.py:48: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
+src\intellicrack\ui\xpu_status.py:47: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:49: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+src\intellicrack\ui\xpu_status.py:48: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:50: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
+src\intellicrack\ui\xpu_status.py:49: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:51: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
+src\intellicrack\ui\xpu_status.py:50: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:52: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
+src\intellicrack\ui\xpu_status.py:51: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:58: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
+src\intellicrack\ui\xpu_status.py:57: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:234: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:233: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:265: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:264: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:292: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:291: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:309: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:308: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:346: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:345: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:376: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:375: error: Statement is unreachable  [unreachable]
 
 
 12 findings in tests\test_hexcore_e2e\test_bridge_copy_as_complete.py
@@ -1217,17 +1217,6 @@ tests\test_providers\test_model_discovery.py:157: error: Argument 1 to "connect"
 tests\test_providers\test_model_discovery.py:167: error: Argument 1 to "connect" of "AnthropicProvider" has incompatible type "ProviderCredentials | None"; expected "ProviderCredentials"  [arg-type]
 
 
-4 findings in tests\test_ui\test_graph_view.py
-
-tests\test_ui\test_graph_view.py:256: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
-
-tests\test_ui\test_graph_view.py:270: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
-
-tests\test_ui\test_graph_view.py:280: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
-
-tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
-
-
 4 findings in src\intellicrack\ui\panels\binary_panel.py
 
 src\intellicrack\ui\panels\binary_panel.py:46: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
@@ -1237,6 +1226,17 @@ src\intellicrack\ui\panels\binary_panel.py:646: error: Statement is unreachable 
 src\intellicrack\ui\panels\binary_panel.py:828: error: Statement is unreachable  [unreachable]
 
 src\intellicrack\ui\panels\binary_panel.py:882: error: Statement is unreachable  [unreachable]
+
+
+4 findings in tests\test_ui\test_graph_view.py
+
+tests\test_ui\test_graph_view.py:256: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+
+tests\test_ui\test_graph_view.py:270: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+
+tests\test_ui\test_graph_view.py:280: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+
+tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
 
 
 4 findings in tests\test_providers\test_local_transformers_provider.py
@@ -1324,13 +1324,6 @@ tests\test_hexcore_e2e\test_data_inspector.py:173: error: Returning Any from fun
 tests\test_hexcore_e2e\test_data_inspector.py:299: error: Redundant cast to "dict[str, str]"  [redundant-cast]
 
 
-2 findings in tests\test_ui\test_font_manager.py
-
-tests\test_ui\test_font_manager.py:146: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-tests\test_ui\test_font_manager.py:187: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-
 2 findings in src\intellicrack\core\process_manager.py
 
 src\intellicrack\core\process_manager.py:154: error: Cannot determine type of "_initialized"  [has-type]
@@ -1352,11 +1345,11 @@ src\intellicrack\providers\xpu_utils.py:29: error: Incompatible types in assignm
 src\intellicrack\providers\xpu_utils.py:75: error: Statement is unreachable  [unreachable]
 
 
-2 findings in tests\test_bridges\test_x64dbg.py
+2 findings in tests\test_ui\test_font_manager.py
 
-tests\test_bridges\test_x64dbg.py:174: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
+tests\test_ui\test_font_manager.py:146: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
-tests\test_bridges\test_x64dbg.py:184: error: Value of type "WatchpointInfo" is not indexable  [index]
+tests\test_ui\test_font_manager.py:187: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 
 2 findings in src\intellicrack\core\template_manager.py
@@ -1366,21 +1359,28 @@ src\intellicrack\core\template_manager.py:329: error: Returning Any from functio
 src\intellicrack\core\template_manager.py:341: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
 
 
+2 findings in tests\test_bridges\test_x64dbg.py
+
+tests\test_bridges\test_x64dbg.py:174: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
+
+tests\test_bridges\test_x64dbg.py:184: error: Value of type "WatchpointInfo" is not indexable  [index]
+
+
 2 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:1777: error: Name "data" already defined on line 1771  [no-redef]
+src\intellicrack\bridges\hex_editor.py:1776: error: Name "data" already defined on line 1770  [no-redef]
 
-src\intellicrack\bridges\hex_editor.py:2100: note: "test_in_sandbox" of "HexEditorBridge" defined here
-
-
-1 findings in tests\test_core\test_config.py
-
-tests\test_core\test_config.py:166: error: "Config" has no attribute "to_dict"; maybe "_to_dict"?  [attr-defined]
+src\intellicrack\bridges\hex_editor.py:2099: note: "test_in_sandbox" of "HexEditorBridge" defined here
 
 
 1 findings in src\intellicrack\core\hexpat\evaluator.py
 
 src\intellicrack\core\hexpat\evaluator.py:1512: error: Right operand of "or" is never evaluated  [unreachable]
+
+
+1 findings in tests\test_core\test_config.py
+
+tests\test_core\test_config.py:166: error: "Config" has no attribute "to_dict"; maybe "_to_dict"?  [attr-defined]
 
 
 1 findings in src\intellicrack\ui\win32_embed.py
@@ -1403,9 +1403,9 @@ tests\test_core\test_main.py:63: error: "SessionStore" has no attribute "connect
 tests\core\test_process_manager_leaks.py:110: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
 
 
-1 findings in tests\test_ui\test_icon_manager.py
+1 findings in src\intellicrack\sandbox\qemu.py
 
-tests\test_ui\test_icon_manager.py:264: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
+src\intellicrack\sandbox\qemu.py:211: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py
@@ -1438,11 +1438,6 @@ tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.
 tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in src\intellicrack\sandbox\qemu.py
-
-src\intellicrack\sandbox\qemu.py:211: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
-
-
 1 findings in src\intellicrack\providers\model_loader.py
 
 src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
@@ -1453,19 +1448,24 @@ src\intellicrack\providers\model_loader.py:28: error: Incompatible types in assi
 tests\test_hexpat\test_interpreter.py:267: error: Argument 2 to "execute_bytes" of "HexPatInterpreter" has incompatible type "bytearray"; expected "bytes"  [arg-type]
 
 
+1 findings in tests\test_ui\test_icon_manager.py
+
+tests\test_ui\test_icon_manager.py:264: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
+
+
 1 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py:65: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
-1 findings in tests\test_hexcore_e2e\test_bridge_error_handling.py
-
-tests\test_hexcore_e2e\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
-
-
 1 findings in tests\test_ui\test_xpu_status.py
 
 tests\test_ui\test_xpu_status.py:193: error: "XPUStatusDialog" has no attribute "status_label"; maybe "_status_label"?  [attr-defined]
+
+
+1 findings in tests\test_hexcore_e2e\test_bridge_error_handling.py
+
+tests\test_hexcore_e2e\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
 
 
 1 findings in tests\test_ui\test_panel_dock.py

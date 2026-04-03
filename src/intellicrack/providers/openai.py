@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-OpenAI API provider implementation.
+"""OpenAI API provider implementation.
 
 This module provides integration with OpenAI's GPT models for chat completion and tool/function calling.
 """
@@ -79,8 +78,7 @@ class OpenAIMessage(TypedDict, total=False):
 
 
 class OpenAIProvider(LLMProviderBase):
-    """
-    OpenAI GPT API provider implementation.
+    """OpenAI GPT API provider implementation.
 
     Provides integration with OpenAI's GPT models including support for tool/function calling and streaming responses.
     """
@@ -93,8 +91,7 @@ class OpenAIProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """
-        Get the provider's name.
+        """Get the provider's name.
 
         Returns:
             ProviderName: ProviderName.OPENAI
@@ -102,8 +99,7 @@ class OpenAIProvider(LLMProviderBase):
         return ProviderName.OPENAI
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """
-        Connect to OpenAI API.
+        """Connect to OpenAI API.
 
         Args:
             credentials: Must contain api_key.
@@ -157,8 +153,7 @@ class OpenAIProvider(LLMProviderBase):
 
     @staticmethod
     def _is_chat_model(model_id: str) -> bool:
-        """
-        Determine if a model ID corresponds to a chat-capable model.
+        """Determine if a model ID corresponds to a chat-capable model.
 
         Args:
             model_id: OpenAI model identifier.
@@ -187,8 +182,7 @@ class OpenAIProvider(LLMProviderBase):
 
     @staticmethod
     def _infer_context_window(model_id: str) -> int:
-        """
-        Infer context window size from model ID prefix patterns.
+        """Infer context window size from model ID prefix patterns.
 
         Args:
             model_id: OpenAI model identifier.
@@ -206,8 +200,7 @@ class OpenAIProvider(LLMProviderBase):
 
     @staticmethod
     def _infer_supports_vision(model_id: str) -> bool:
-        """
-        Infer vision support from model ID prefix patterns.
+        """Infer vision support from model ID prefix patterns.
 
         Args:
             model_id: OpenAI model identifier.
@@ -220,8 +213,7 @@ class OpenAIProvider(LLMProviderBase):
         return "vision" in model_id
 
     async def list_models(self) -> list[ModelInfo]:
-        """
-        Dynamically fetch available models from OpenAI.
+        """Dynamically fetch available models from OpenAI.
 
         Returns:
             list[ModelInfo]: List of available GPT models.
@@ -280,8 +272,7 @@ class OpenAIProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Send a chat completion request to OpenAI.
+        """Send a chat completion request to OpenAI.
 
         Args:
             messages: Conversation history.
@@ -362,8 +353,7 @@ class OpenAIProvider(LLMProviderBase):
         tools: list[ChatCompletionToolParam] | None,
         tool_choice: ChatCompletionToolChoiceOptionParam | None = None,
     ) -> ChatCompletion:
-        """
-        Execute the OpenAI API chat completion call with error handling.
+        """Execute the OpenAI API chat completion call with error handling.
 
         Args:
             model: Model ID to use.
@@ -434,8 +424,7 @@ class OpenAIProvider(LLMProviderBase):
         self,
         response_message: ChatCompletionMessage,
     ) -> list[ToolCall]:
-        """
-        Parse tool calls from an OpenAI API response message.
+        """Parse tool calls from an OpenAI API response message.
 
         Args:
             response_message: The message from the OpenAI API response.
@@ -475,8 +464,7 @@ class OpenAIProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """
-        Stream a chat completion response from OpenAI.
+        """Stream a chat completion response from OpenAI.
 
         Args:
             messages: Conversation history.
@@ -606,8 +594,7 @@ class OpenAIProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal messages to OpenAI format.
+        """Convert internal messages to OpenAI format.
 
         Args:
             messages: List of Message objects.
@@ -622,8 +609,7 @@ class OpenAIProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal tools to OpenAI format.
+        """Convert internal tools to OpenAI format.
 
         Args:
             tools: List of ToolDefinition objects.

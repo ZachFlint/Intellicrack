@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Base sandbox protocol and types.
+"""Base sandbox protocol and types.
 
 This module defines the base class for sandbox implementations that provide isolated execution environments for binary analysis.
 """
@@ -43,8 +42,7 @@ ProcessOperation = Literal["created", "terminated"]
 
 
 def validate_file_operation(op: str) -> FileOperation:
-    """
-    Validate and convert a string to a FileOperation.
+    """Validate and convert a string to a FileOperation.
 
     Args:
         op: The operation string to validate.
@@ -63,8 +61,7 @@ def validate_file_operation(op: str) -> FileOperation:
 
 
 def validate_registry_operation(op: str) -> RegistryOperation:
-    """
-    Validate and convert a string to a RegistryOperation.
+    """Validate and convert a string to a RegistryOperation.
 
     Args:
         op: The operation string to validate.
@@ -83,8 +80,7 @@ def validate_registry_operation(op: str) -> RegistryOperation:
 
 
 def validate_process_operation(op: str) -> ProcessOperation:
-    """
-    Validate and convert a string to a ProcessOperation.
+    """Validate and convert a string to a ProcessOperation.
 
     Args:
         op: The operation string to validate.
@@ -157,8 +153,7 @@ class ProcessActivity(TypedDict):
 
 @dataclass
 class SandboxConfig:
-    """
-    Configuration for sandbox execution.
+    """Configuration for sandbox execution.
 
     Attributes:
         timeout_seconds: Maximum execution time.
@@ -187,8 +182,7 @@ class SandboxConfig:
 
 @dataclass
 class SandboxState:
-    """
-    Current state of the sandbox.
+    """Current state of the sandbox.
 
     Attributes:
         status: Current sandbox status.
@@ -205,8 +199,7 @@ class SandboxState:
 
 @dataclass
 class ExecutionReport:
-    """
-    Report of a binary execution in the sandbox.
+    """Report of a binary execution in the sandbox.
 
     Attributes:
         result: Outcome of the execution.
@@ -232,8 +225,7 @@ class ExecutionReport:
 
 
 class SandboxBase:
-    """
-    Base class for sandbox implementations.
+    """Base class for sandbox implementations.
 
     Provides common functionality for all sandbox types.
     Subclasses should override methods to provide actual sandbox functionality.
@@ -248,8 +240,7 @@ class SandboxBase:
 
     @property
     def state(self) -> SandboxState:
-        """
-        Get current sandbox state.
+        """Get current sandbox state.
 
         Returns:
             SandboxState: Current SandboxState.
@@ -258,8 +249,7 @@ class SandboxBase:
 
     @property
     def config(self) -> SandboxConfig:
-        """
-        Get sandbox configuration.
+        """Get sandbox configuration.
 
         Returns:
             SandboxConfig: Current SandboxConfig.
@@ -268,8 +258,7 @@ class SandboxBase:
 
     @property
     def vnc_port(self) -> int | None:
-        """
-        Get the VNC port if available.
+        """Get the VNC port if available.
 
         Returns:
             int | None: VNC port number, or None if not supported.
@@ -277,8 +266,7 @@ class SandboxBase:
         return None
 
     async def is_available(self) -> bool:
-        """
-        Check if this sandbox type is available.
+        """Check if this sandbox type is available.
 
         Returns:
             bool: True if sandbox can be used.
@@ -287,8 +275,7 @@ class SandboxBase:
         return False
 
     async def start(self) -> None:
-        """
-        Start the sandbox environment.
+        """Start the sandbox environment.
 
         Raises:
             SandboxError: If sandbox cannot be started.
@@ -300,8 +287,7 @@ class SandboxBase:
         )
 
     async def stop(self) -> None:
-        """
-        Stop the sandbox environment.
+        """Stop the sandbox environment.
 
         Raises:
             SandboxError: If sandbox cannot be stopped.
@@ -326,8 +312,7 @@ class SandboxBase:
         time_limit: int | None = None,
         working_directory: str | None = None,
     ) -> tuple[int, str, str]:
-        """
-        Execute a command in the sandbox.
+        """Execute a command in the sandbox.
 
         Args:
             command: Command to execute.
@@ -356,8 +341,7 @@ class SandboxBase:
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
-        """
-        Run a binary in the sandbox with monitoring.
+        """Run a binary in the sandbox with monitoring.
 
         Args:
             binary_path: Path to the binary to run.
@@ -380,8 +364,7 @@ class SandboxBase:
         )
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
-        """
-        Copy a file into the sandbox.
+        """Copy a file into the sandbox.
 
         Args:
             source: Local source path.
@@ -402,8 +385,7 @@ class SandboxBase:
         )
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
-        """
-        Copy a file from the sandbox.
+        """Copy a file from the sandbox.
 
         Args:
             source: Source path in sandbox.
@@ -424,8 +406,7 @@ class SandboxBase:
         )
 
     async def take_snapshot(self, name: str) -> str:
-        """
-        Take a snapshot of the sandbox state.
+        """Take a snapshot of the sandbox state.
 
         Args:
             name: Snapshot name.
@@ -441,8 +422,7 @@ class SandboxBase:
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
     async def restore_snapshot(self, snapshot_id: str) -> None:
-        """
-        Restore a sandbox snapshot.
+        """Restore a sandbox snapshot.
 
         Args:
             snapshot_id: Snapshot identifier.
@@ -458,8 +438,7 @@ class SandboxBase:
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
     async def list_snapshots(self) -> list[str]:
-        """
-        List available snapshots.
+        """List available snapshots.
 
         Raises:
             SandboxError: If not supported.
@@ -471,8 +450,7 @@ class SandboxBase:
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
 
     async def delete_snapshot(self, name: str) -> None:
-        """
-        Delete a snapshot.
+        """Delete a snapshot.
 
         Args:
             name: Snapshot name to delete.
