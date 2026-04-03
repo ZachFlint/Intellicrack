@@ -2,25 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Splash screen for Intellicrack application startup.
+"""Splash screen for Intellicrack application startup.
 
-Provides a custom splash screen with animated gradient background, glow effects, glitch text animations, and a multi-phase pipeline loading
-indicator during application initialization.
+Provides a custom splash screen with animated gradient background, title glow effects, and a multi-phase pipeline loading indicator during
+application initialization.
 """
 
 from __future__ import annotations
 
 import enum
 import math
-import random
 from typing import Final, final, override
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
-    QFont,
     QLinearGradient,
     QPainter,
     QPainterPath,
@@ -85,22 +82,6 @@ _GLOW_LAYERS: Final[list[tuple[int, int]]] = [
 _GLOW_ACCENT_COLOR: Final[str] = "#007acc"
 _GLOW_DIRECTIONS: Final[int] = 8
 
-_GLITCH_MIN_COUNTDOWN: Final[float] = 2.0
-_GLITCH_MAX_COUNTDOWN: Final[float] = 3.0
-_GLITCH_MIN_DURATION: Final[float] = 0.1
-_GLITCH_MAX_DURATION: Final[float] = 0.2
-_GLITCH_RGB_MAX_OFFSET: Final[int] = 3
-_GLITCH_MAX_SLICE_OFFSET: Final[int] = 15
-_GLITCH_MIN_SLICES: Final[int] = 4
-_GLITCH_MAX_SLICES: Final[int] = 6
-_GLITCH_MIN_SCANLINES: Final[int] = 2
-_GLITCH_MAX_SCANLINES: Final[int] = 4
-_GLITCH_SCANLINE_MIN_ALPHA: Final[float] = 30.0
-_GLITCH_SCANLINE_MAX_ALPHA: Final[float] = 80.0
-_GLITCH_HEX_CHARS: Final[str] = "0123456789ABCDEF"
-_GLITCH_MIN_SUBS: Final[int] = 2
-_GLITCH_MAX_SUBS: Final[int] = 3
-
 _PIPELINE_CIRCLE_DIAMETER: Final[int] = 20
 _PIPELINE_LABEL_FONT_SIZE: Final[int] = 7
 _PIPELINE_MARGIN_H: Final[int] = 40
@@ -130,7 +111,10 @@ _STAGE_LABELS: Final[list[str]] = [
 _STAGE_PENDING_COLOR: Final[str] = "#555555"
 _STAGE_ERROR_COLOR: Final[str] = "#cc3333"
 
-_TITLE_Y_FRACTION: Final[float] = 0.30
+_BRAIN_ICON_NAME: Final[str] = "splash-icon.png"
+_BRAIN_DISPLAY_HEIGHT: Final[float] = 0.30
+_BRAIN_Y_FRACTION: Final[float] = 0.24
+_TITLE_Y_FRACTION: Final[float] = 0.50
 _TITLE_HEIGHT_FACTOR: Final[int] = 60
 _STATUS_Y_OFFSET_FROM_PIPELINE: Final[int] = 25
 _STATUS_TEXT_HEIGHT: Final[int] = 20
@@ -164,8 +148,7 @@ class _StageState(enum.IntEnum):
 
 @final
 class SplashScreen(QSplashScreen):
-    """
-    Custom splash screen with animated gradient, glow, glitch effects, and pipeline indicator.
+    """Custom splash screen with animated gradient, glow effects, and pipeline indicator.
 
     Displays the Intellicrack splash image during application startup
     with real-time progress updates, animated visual effects, and a
@@ -203,22 +186,16 @@ class SplashScreen(QSplashScreen):
         self.progress_animation: QPropertyAnimation | None = None
         self._finish_target: QWidget | None = None
 
-        self._splash_image: QPixmap | None = self._load_splash_image(scaled_w, scaled_h)
+        self._brain_icon: QPixmap | None = self._load_brain_icon()
+        self._splash_image: QPixmap | None = (
+            self._load_splash_image(scaled_w, scaled_h) if self._brain_icon is None else None
+        )
 
         self._gradient_time: float = 0.0
         self._active_pulse_time: float = 0.0
         self._animation_timer: QTimer = QTimer(self)
         self._animation_timer.setInterval(_ANIMATION_INTERVAL_MS)
         self._animation_timer.timeout.connect(self._on_animation_tick)
-
-        self._glitch_active: bool = False
-        self._glitch_countdown: float = 2.5
-        self._glitch_duration: float = 0.0
-        self._glitch_elapsed: float = 0.0
-        self._glitch_chars: list[tuple[int, str]] = []
-        self._glitch_slices: list[tuple[int, int, int]] = []
-        self._glitch_scanlines: list[tuple[int, float]] = []
-        self._glitch_rng: random.Random = random.Random()  # noqa: S311
 
         self._stage_states: list[_StageState] = [_StageState.PENDING] * _STAGE_COUNT
 
@@ -229,8 +206,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _load_splash_image(width: int, height: int) -> QPixmap | None:
-        """
-        Load the splash.png image for compositing in paintEvent.
+        """Load the splash.png image for compositing in paintEvent.
 
         Args:
             width: Target width.
@@ -256,8 +232,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _compute_dpi_scale() -> float:
-        """
-        Compute DPI scale factor from the primary screen.
+        """Compute DPI scale factor from the primary screen.
 
         Returns:
             float: DPI scale factor (defaults to 1.0 if unavailable).
@@ -272,8 +247,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _load_splash_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
-        """
-        Load the splash screen image or create fallback.
+        """Load the splash screen image or create fallback.
 
         Args:
             width: Target pixmap width.
@@ -302,8 +276,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def _create_fallback_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
-        """
-        Create a fallback splash screen pixmap.
+        """Create a fallback splash screen pixmap.
 
         Args:
             width: Pixmap width.
@@ -346,8 +319,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def compute_dpi_scale() -> float:
-        """
-        Compute DPI scale factor from the primary screen.
+        """Compute DPI scale factor from the primary screen.
 
         Returns:
             float: DPI scale factor (defaults to 1.0 if unavailable).
@@ -356,8 +328,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def load_splash_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
-        """
-        Load the splash screen image or create fallback.
+        """Load the splash screen image or create fallback.
 
         Args:
             width: Target pixmap width.
@@ -371,8 +342,7 @@ class SplashScreen(QSplashScreen):
 
     @staticmethod
     def create_fallback_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
-        """
-        Create a fallback splash screen pixmap.
+        """Create a fallback splash screen pixmap.
 
         Args:
             width: Pixmap width.
@@ -385,8 +355,7 @@ class SplashScreen(QSplashScreen):
         return SplashScreen._create_fallback_pixmap(width, height, dpi_scale)
 
     def _setup_overlay(self) -> None:
-        """
-        Set up the progress bar and status label overlay widgets.
+        """Set up the progress bar and status label overlay widgets.
 
         These widgets are hidden but retained for backward compatibility with code that accesses them directly.
         """
@@ -460,8 +429,7 @@ class SplashScreen(QSplashScreen):
         self._animation_timer.start()
 
     def finish_animated(self, window: QWidget) -> None:
-        """
-        Finish the splash screen with a fade-out animation.
+        """Finish the splash screen with a fade-out animation.
 
         Args:
             window: Main window to show after fade-out completes.
@@ -488,70 +456,10 @@ class SplashScreen(QSplashScreen):
         dt = _ANIMATION_INTERVAL_MS / 1000.0
         self._gradient_time += dt
         self._active_pulse_time += dt
-
-        if self._glitch_active:
-            self._glitch_elapsed += dt
-            if self._glitch_elapsed >= self._glitch_duration:
-                self._glitch_active = False
-                self._glitch_countdown = self._glitch_rng.uniform(
-                    _GLITCH_MIN_COUNTDOWN,
-                    _GLITCH_MAX_COUNTDOWN,
-                )
-        else:
-            self._glitch_countdown -= dt
-            if self._glitch_countdown <= 0:
-                self._trigger_glitch()
-
         self.update()
 
-    def _trigger_glitch(self) -> None:
-        """Initialize a new glitch effect cycle with random parameters."""
-        self._glitch_active = True
-        self._glitch_elapsed = 0.0
-        self._glitch_duration = self._glitch_rng.uniform(
-            _GLITCH_MIN_DURATION,
-            _GLITCH_MAX_DURATION,
-        )
-
-        title_len = len(_TITLE_TEXT)
-        num_subs = self._glitch_rng.randint(_GLITCH_MIN_SUBS, _GLITCH_MAX_SUBS)
-        indices = self._glitch_rng.sample(range(title_len), min(num_subs, title_len))
-        self._glitch_chars = [(idx, self._glitch_rng.choice(_GLITCH_HEX_CHARS)) for idx in indices]
-
-        num_slices = self._glitch_rng.randint(_GLITCH_MIN_SLICES, _GLITCH_MAX_SLICES)
-        title_h = int(_TITLE_HEIGHT_FACTOR * self._dpi_scale)
-        band_h = max(1, title_h // num_slices)
-        self._glitch_slices = []
-        for i in range(num_slices):
-            y = i * band_h
-            h = band_h if i < num_slices - 1 else max(1, title_h - y)
-            offset = self._glitch_rng.randint(-_GLITCH_MAX_SLICE_OFFSET, _GLITCH_MAX_SLICE_OFFSET)
-            self._glitch_slices.append((y, h, offset))
-
-        num_scanlines = self._glitch_rng.randint(_GLITCH_MIN_SCANLINES, _GLITCH_MAX_SCANLINES)
-        self._glitch_scanlines = [
-            (
-                self._glitch_rng.randint(0, self.scaled_height),
-                self._glitch_rng.uniform(_GLITCH_SCANLINE_MIN_ALPHA, _GLITCH_SCANLINE_MAX_ALPHA),
-            )
-            for _ in range(num_scanlines)
-        ]
-
-    def _compute_glitch_intensity(self) -> float:
-        """
-        Compute current glitch intensity (0.0-1.0, peaks at midpoint).
-
-        Returns:
-            float: Glitch intensity factor.
-        """
-        if not self._glitch_active or self._glitch_duration <= 0.0:
-            return 0.0
-        progress = self._glitch_elapsed / self._glitch_duration
-        return math.sin(min(progress, 1.0) * math.pi)
-
     def _update_stage_states(self, progress: int) -> None:
-        """
-        Update pipeline stage states based on current progress value.
+        """Update pipeline stage states based on current progress value.
 
         Args:
             progress: Current progress value (0-100).
@@ -567,8 +475,7 @@ class SplashScreen(QSplashScreen):
                 self._stage_states[i] = _StageState.PENDING
 
     def mark_stage_failed(self, stage_index: int) -> None:
-        """
-        Mark a pipeline stage as failed.
+        """Mark a pipeline stage as failed.
 
         Args:
             stage_index: Index of the stage to mark (0-7).
@@ -577,8 +484,7 @@ class SplashScreen(QSplashScreen):
             self._stage_states[stage_index] = _StageState.FAILED
 
     def set_progress(self, value: int, message: str = "") -> None:
-        """
-        Update the progress bar and status message.
+        """Update the progress bar and status message.
 
         Args:
             value: Progress value (0-100).
@@ -613,8 +519,7 @@ class SplashScreen(QSplashScreen):
             app.processEvents()
 
     def _on_progress_updated(self, value: int, message: str) -> None:
-        """
-        Handle progress update signal.
+        """Handle progress update signal.
 
         Args:
             value: Progress value.
@@ -624,8 +529,7 @@ class SplashScreen(QSplashScreen):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """
-        Render all splash screen visual layers.
+        """Render all splash screen visual layers.
 
         Args:
             a0: Paint event from Qt.
@@ -640,16 +544,20 @@ class SplashScreen(QSplashScreen):
                 return
 
             self._draw_gradient_background(painter, rect)
-            self._draw_splash_image(painter, rect)
-            self._draw_title(painter, rect)
+            if self._brain_icon is not None:
+                self._draw_brain_icon(painter, rect)
+                self._draw_title(painter, rect)
+            elif self._splash_image is not None:
+                self._draw_splash_image(painter, rect)
+            else:
+                self._draw_title(painter, rect)
             self._draw_pipeline(painter, rect)
             self._draw_status_and_version(painter, rect)
         finally:
             painter.end()
 
     def _draw_gradient_background(self, painter: QPainter, rect: QRectF) -> None:
-        """
-        Render the animated rotating gradient background.
+        """Render the animated rotating gradient background.
 
         Args:
             painter: Active QPainter instance.
@@ -670,8 +578,7 @@ class SplashScreen(QSplashScreen):
         painter.fillRect(rect, QBrush(gradient))
 
     def _compute_gradient_stop_color(self, stop_index: int) -> QColor:
-        """
-        Compute a gradient color stop using sin-based palette cycling.
+        """Compute a gradient color stop using sin-based palette cycling.
 
         Args:
             stop_index: Gradient stop index (0, 1, or 2).
@@ -695,8 +602,7 @@ class SplashScreen(QSplashScreen):
         )
 
     def _draw_splash_image(self, painter: QPainter, rect: QRectF) -> None:
-        """
-        Composite the splash.png image on top of the gradient background.
+        """Composite the full splash.png image as fallback when brain icon is unavailable.
 
         Args:
             painter: Active QPainter instance.
@@ -714,9 +620,48 @@ class SplashScreen(QSplashScreen):
         painter.drawPixmap(int(x), int(y), self._splash_image)
         painter.setOpacity(1.0)
 
-    def _draw_title(self, painter: QPainter, rect: QRectF) -> None:
+    @staticmethod
+    def _load_brain_icon() -> QPixmap | None:
+        """Load the standalone brain icon from splash-icon.png.
+
+        Returns:
+            QPixmap | None: Brain icon pixmap, or None if unavailable.
         """
-        Render the title with glow effect or glitch when active.
+        try:
+            icon_path = get_assets_path() / _BRAIN_ICON_NAME
+            if icon_path.exists():
+                pixmap = QPixmap(str(icon_path))
+                if not pixmap.isNull():
+                    return pixmap
+        except (FileNotFoundError, OSError):
+            _logger.debug("brain_icon_not_found")
+        return None
+
+    def _draw_brain_icon(self, painter: QPainter, rect: QRectF) -> None:
+        """Draw the brain icon centered in the upper portion of the splash.
+
+        Args:
+            painter: Active QPainter instance.
+            rect: Splash screen bounding rectangle.
+        """
+        if self._brain_icon is None:
+            return
+
+        display_h = int(rect.height() * _BRAIN_DISPLAY_HEIGHT)
+        scaled = self._brain_icon.scaled(
+            display_h,
+            display_h,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+        x = (rect.width() - scaled.width()) / 2.0
+        y = rect.height() * _BRAIN_Y_FRACTION - scaled.height() / 2.0
+
+        painter.drawPixmap(int(x), int(y), scaled)
+
+    def _draw_title(self, painter: QPainter, rect: QRectF) -> None:
+        """Render the title with multi-layer glow effect below the brain icon.
 
         Args:
             painter: Active QPainter instance.
@@ -731,14 +676,10 @@ class SplashScreen(QSplashScreen):
         title_h = float(_TITLE_HEIGHT_FACTOR * self._dpi_scale)
         title_rect = QRectF(rect.left(), title_y - title_h / 2.0, rect.width(), title_h)
 
-        if self._glitch_active:
-            self._draw_glitch_title(painter, rect, title_rect, title_font)
-        else:
-            self._draw_glow_title(painter, title_rect, _TITLE_TEXT)
+        self._draw_glow_title(painter, title_rect, _TITLE_TEXT)
 
     def _draw_glow_title(self, painter: QPainter, title_rect: QRectF, title: str) -> None:
-        """
-        Render title text with multi-layer glow effect.
+        """Render title text with multi-layer glow effect.
 
         Args:
             painter: Active QPainter instance.
@@ -762,101 +703,8 @@ class SplashScreen(QSplashScreen):
         painter.setPen(QColor(FALLBACK_TEXT_COLOR))
         painter.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, title)
 
-    def _draw_glitch_title(
-        self,
-        painter: QPainter,
-        rect: QRectF,
-        title_rect: QRectF,
-        title_font: QFont,
-    ) -> None:
-        """
-        Render title with RGB separation, slice displacement, and scanline artifacts.
-
-        Args:
-            painter: Active QPainter instance.
-            rect: Full splash screen rectangle.
-            title_rect: Rectangle for title text positioning.
-            title_font: QFont used for the title text.
-        """
-        intensity = self._compute_glitch_intensity()
-        glitch_title = self._get_glitch_title_text()
-
-        temp_w = int(rect.width())
-        temp_h = int(title_rect.height())
-        if temp_w <= 0 or temp_h <= 0:
-            return
-
-        temp = QPixmap(temp_w, temp_h)
-        temp.fill(QColor(0, 0, 0, 0))
-
-        temp_painter = QPainter(temp)
-        temp_painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        temp_painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        temp_painter.setFont(title_font)
-
-        temp_rect = QRectF(0, 0, float(temp_w), float(temp_h))
-        rgb_offset = int(_GLITCH_RGB_MAX_OFFSET * intensity * self._dpi_scale)
-
-        temp_painter.setPen(QColor(255, 0, 0, 120))
-        temp_painter.drawText(
-            temp_rect.translated(float(-rgb_offset), 0.0),
-            Qt.AlignmentFlag.AlignCenter,
-            glitch_title,
-        )
-
-        temp_painter.setPen(QColor(0, 100, 255, 120))
-        temp_painter.drawText(
-            temp_rect.translated(float(rgb_offset), 0.0),
-            Qt.AlignmentFlag.AlignCenter,
-            glitch_title,
-        )
-
-        temp_painter.setPen(QColor(255, 255, 255))
-        temp_painter.drawText(temp_rect, Qt.AlignmentFlag.AlignCenter, glitch_title)
-        temp_painter.end()
-
-        base_y = int(title_rect.top())
-        if self._glitch_slices:
-            for slice_y, slice_h, x_offset in self._glitch_slices:
-                effective_offset = int(x_offset * intensity)
-                actual_h = min(slice_h, temp_h - slice_y)
-                if actual_h <= 0 or slice_y >= temp_h:
-                    continue
-                painter.drawPixmap(
-                    effective_offset,
-                    base_y + slice_y,
-                    temp,
-                    0,
-                    slice_y,
-                    temp_w,
-                    actual_h,
-                )
-        else:
-            painter.drawPixmap(0, base_y, temp)
-
-        for scan_y, alpha in self._glitch_scanlines:
-            scan_alpha = int(alpha * intensity)
-            if scan_alpha <= 0:
-                continue
-            painter.setPen(QPen(QColor(255, 255, 255, scan_alpha)))
-            painter.drawLine(0, scan_y, int(rect.width()), scan_y)
-
-    def _get_glitch_title_text(self) -> str:
-        """
-        Get title text with hex character substitutions applied.
-
-        Returns:
-            str: Modified title text with hex replacements during glitch.
-        """
-        chars = list(_TITLE_TEXT)
-        for idx, replacement in self._glitch_chars:
-            if idx < len(chars):
-                chars[idx] = replacement
-        return "".join(chars)
-
     def _draw_pipeline(self, painter: QPainter, rect: QRectF) -> None:
-        """
-        Render the multi-phase pipeline indicator with stage circles and labels.
+        """Render the multi-phase pipeline indicator with stage circles and labels.
 
         Args:
             painter: Active QPainter instance.
@@ -915,8 +763,7 @@ class SplashScreen(QSplashScreen):
         pending_color: QColor,
         error_color: QColor,
     ) -> None:
-        """
-        Render a single pipeline stage circle with state-dependent appearance.
+        """Render a single pipeline stage circle with state-dependent appearance.
 
         Args:
             painter: Active QPainter instance.
@@ -988,8 +835,7 @@ class SplashScreen(QSplashScreen):
             )
 
     def _draw_status_and_version(self, painter: QPainter, rect: QRectF) -> None:
-        """
-        Render the status message text and version string.
+        """Render the status message text and version string.
 
         Args:
             painter: Active QPainter instance.
@@ -1025,8 +871,7 @@ class SplashScreen(QSplashScreen):
 
     @override
     def resizeEvent(self, a0: QResizeEvent | None) -> None:
-        """
-        Handle resize events to adjust the overlay geometry.
+        """Handle resize events to adjust the overlay geometry.
 
         Args:
             a0: Resize event from Qt.
@@ -1037,8 +882,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def progress(self) -> int:
-        """
-        Get current progress value.
+        """Get current progress value.
 
         Returns:
             int: Current progress (0-100).
@@ -1047,8 +891,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def status(self) -> str:
-        """
-        Get current status message.
+        """Get current status message.
 
         Returns:
             str: Current status message.
@@ -1057,8 +900,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def status_label(self) -> QLabel:
-        """
-        Get the status label widget.
+        """Get the status label widget.
 
         Returns:
             QLabel: The hidden status label widget (retained for backward compatibility).
@@ -1067,8 +909,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def dpi_scale(self) -> float:
-        """
-        Get the DPI scale factor.
+        """Get the DPI scale factor.
 
         Returns:
             float: DPI scale factor used for this splash screen.
@@ -1077,8 +918,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def version(self) -> str:
-        """
-        Get the version string.
+        """Get the version string.
 
         Returns:
             str: Version string displayed on the splash screen.

@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-OpenRouter API provider implementation.
+"""OpenRouter API provider implementation.
 
 This module provides integration with OpenRouter which provides access to many different LLM providers through a unified API.
 """
@@ -55,8 +54,7 @@ HTTP_RATE_LIMITED = 429
 
 
 class OpenRouterProvider(LLMProviderBase):
-    """
-    OpenRouter API provider implementation.
+    """OpenRouter API provider implementation.
 
     Provides access to many different LLM models through OpenRouter's
     unified API interface.
@@ -75,8 +73,7 @@ class OpenRouterProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """
-        Get the provider's name.
+        """Get the provider's name.
 
         Returns:
             ProviderName: ProviderName.OPENROUTER
@@ -84,8 +81,7 @@ class OpenRouterProvider(LLMProviderBase):
         return ProviderName.OPENROUTER
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """
-        Connect to OpenRouter API.
+        """Connect to OpenRouter API.
 
         Args:
             credentials: Must contain api_key.
@@ -143,8 +139,7 @@ class OpenRouterProvider(LLMProviderBase):
             self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
-        """
-        Dynamically fetch available models from OpenRouter.
+        """Dynamically fetch available models from OpenRouter.
 
         Returns:
             list[ModelInfo]: List of available models.
@@ -232,8 +227,7 @@ class OpenRouterProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Send a chat completion request through OpenRouter.
+        """Send a chat completion request through OpenRouter.
 
         Args:
             messages: Conversation history.
@@ -363,8 +357,7 @@ class OpenRouterProvider(LLMProviderBase):
         self,
         response_message: dict[str, Any],
     ) -> list[ToolCall]:
-        """
-        Parse tool calls from an OpenRouter response message.
+        """Parse tool calls from an OpenRouter response message.
 
         Args:
             response_message: The message dict from the API response.
@@ -400,8 +393,7 @@ class OpenRouterProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """
-        Stream a chat completion response from OpenRouter.
+        """Stream a chat completion response from OpenRouter.
 
         Args:
             messages: Conversation history.
@@ -522,8 +514,7 @@ class OpenRouterProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal messages to OpenRouter format.
+        """Convert internal messages to OpenRouter format.
 
         Uses OpenAI-compatible format.
 
@@ -540,8 +531,7 @@ class OpenRouterProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal tools to OpenRouter format.
+        """Convert internal tools to OpenRouter format.
 
         Uses OpenAI-compatible format.
 
@@ -558,8 +548,7 @@ class OpenRouterProvider(LLMProviderBase):
         return openrouter_tools
 
     async def get_generation(self, generation_id: str) -> dict[str, object]:
-        """
-        Get details about a specific generation.
+        """Get details about a specific generation.
 
         Args:
             generation_id: The generation ID from a previous response.

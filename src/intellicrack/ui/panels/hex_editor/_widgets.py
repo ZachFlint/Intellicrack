@@ -43,8 +43,7 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 def _get_widget_colors() -> dict[str, QColor]:
-    """
-    Return theme-appropriate colors for hex editor graph widgets.
+    """Return theme-appropriate colors for hex editor graph widgets.
 
     Returns:
         dict[str, QColor]: Mapping of color role names to QColor instances.
@@ -77,8 +76,7 @@ def _get_widget_colors() -> dict[str, QColor]:
 
 
 class EntropyGraphWidget(QWidget):
-    """
-    Line-chart widget visualising per-block Shannon entropy.
+    """Line-chart widget visualising per-block Shannon entropy.
 
     Renders a polyline where the X axis maps to block offset and the
     Y axis maps to entropy in [0, 8] bits/byte.  Colour bands show
@@ -103,8 +101,7 @@ class EntropyGraphWidget(QWidget):
         self.setMouseTracking(enable=True)
 
     def set_data(self, entropy_values: list[float], block_size: int) -> None:
-        """
-        Load new entropy data and trigger a repaint.
+        """Load new entropy data and trigger a repaint.
 
         Args:
             entropy_values: Per-block entropy values in [0, 8].
@@ -116,8 +113,7 @@ class EntropyGraphWidget(QWidget):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """
-        Render the entropy line chart.
+        """Render the entropy line chart.
 
         Args:
             a0: The paint event.
@@ -175,8 +171,7 @@ class EntropyGraphWidget(QWidget):
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        """
-        Navigate to the clicked block offset.
+        """Navigate to the clicked block offset.
 
         Args:
             a0: The mouse press event.
@@ -193,8 +188,7 @@ class EntropyGraphWidget(QWidget):
 
 
 class ByteDistributionWidget(QWidget):
-    """
-    Histogram widget showing the frequency of each of the 256 byte values.
+    """Histogram widget showing the frequency of each of the 256 byte values.
 
     Renders 256 vertical bars, one per byte value.  Supports optional
     logarithmic scale.  Hovering over a bar shows a tooltip with the
@@ -213,8 +207,7 @@ class ByteDistributionWidget(QWidget):
         self.setMouseTracking(enable=True)
 
     def set_data(self, counts: list[int]) -> None:
-        """
-        Load byte frequency data and repaint.
+        """Load byte frequency data and repaint.
 
         Args:
             counts: List of 256 integers, one per byte value.
@@ -229,8 +222,7 @@ class ByteDistributionWidget(QWidget):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """
-        Render the 256-bar histogram.
+        """Render the 256-bar histogram.
 
         Args:
             a0: The paint event.
@@ -270,8 +262,7 @@ class ByteDistributionWidget(QWidget):
 
     @override
     def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        """
-        Update tooltip and hover highlight on mouse movement.
+        """Update tooltip and hover highlight on mouse movement.
 
         Args:
             a0: The mouse move event.
@@ -295,8 +286,7 @@ class ByteDistributionWidget(QWidget):
 
 
 class CustomCrcDialog(QDialog):
-    """
-    Dialog for computing a custom parametric CRC.
+    """Dialog for computing a custom parametric CRC.
 
     Provides input fields for width, polynomial, initial value,
     reflection options, and XOR-out value, then computes the CRC

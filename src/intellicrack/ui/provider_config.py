@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Provider configuration dialog for Intellicrack.
+"""Provider configuration dialog for Intellicrack.
 
 This module provides the UI for configuring LLM providers, including API key management, model selection, and connection settings.
 """
@@ -124,8 +123,7 @@ _MODEL_COMBO_MIN_WIDTH: Final[int] = 250
 
 
 def _get_source_colors() -> dict[str, QColor]:
-    """
-    Get theme-aware colors for credential source indicators.
+    """Get theme-aware colors for credential source indicators.
 
     Returns:
         dict[str, QColor]: Mapping of source names to QColor values.
@@ -184,8 +182,7 @@ class CredentialSource:
 
 
 class CredentialSourceDetector:
-    """
-    Detects where credentials were loaded from.
+    """Detects where credentials were loaded from.
 
     Identifies whether API credentials came from a .env file, environment
     variables, manual configuration, or are not configured at all.
@@ -229,8 +226,7 @@ class CredentialSourceDetector:
                 continue
 
     def detect_source(self, provider_id: str, current_key: str) -> str:
-        """
-        Detect the source of credentials for a provider.
+        """Detect the source of credentials for a provider.
 
         Args:
             provider_id: The provider identifier.
@@ -266,8 +262,7 @@ class CredentialSourceDetector:
 
     @staticmethod
     def get_source_color(source: str) -> QColor:
-        """
-        Get the display color for a credential source.
+        """Get the display color for a credential source.
 
         Args:
             source: The credential source string.
@@ -287,8 +282,7 @@ class CredentialSourceDetector:
 
 
 class ConnectionTestWorker(QThread):
-    """
-    Worker thread for testing provider connections.
+    """Worker thread for testing provider connections.
 
     Runs connection tests in a separate thread to avoid blocking the UI.
 
@@ -327,8 +321,7 @@ class ConnectionTestWorker(QThread):
             self.test_finished.emit(success, f"Connection error: {e}")
 
     def _test_provider_connection(self) -> tuple[bool, str]:
-        """
-        Test the connection to the provider.
+        """Test the connection to the provider.
 
         Returns:
             tuple[bool, str]: Tuple of (success, message).
@@ -350,8 +343,7 @@ class ConnectionTestWorker(QThread):
         return False, f"Unknown provider: {self.provider_id}"
 
     def _test_anthropic(self, timeout: httpx.Timeout) -> tuple[bool, str]:
-        """
-        Test Anthropic API connection.
+        """Test Anthropic API connection.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -382,8 +374,7 @@ class ConnectionTestWorker(QThread):
             return False, str(e)
 
     def _test_openai(self, timeout: httpx.Timeout) -> tuple[bool, str]:
-        """
-        Test OpenAI API connection.
+        """Test OpenAI API connection.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -411,8 +402,7 @@ class ConnectionTestWorker(QThread):
             return False, str(e)
 
     def _test_google(self, timeout: httpx.Timeout) -> tuple[bool, str]:
-        """
-        Test Google Gemini API connection.
+        """Test Google Gemini API connection.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -439,8 +429,7 @@ class ConnectionTestWorker(QThread):
             return False, str(e)
 
     def _test_ollama(self, timeout: httpx.Timeout) -> tuple[bool, str]:
-        """
-        Test Ollama connection.
+        """Test Ollama connection.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -463,8 +452,7 @@ class ConnectionTestWorker(QThread):
             return False, str(e)
 
     def _test_openrouter(self, timeout: httpx.Timeout) -> tuple[bool, str]:
-        """
-        Test OpenRouter API connection.
+        """Test OpenRouter API connection.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -492,8 +480,7 @@ class ConnectionTestWorker(QThread):
             return False, str(e)
 
     def _test_huggingface(self, timeout: httpx.Timeout) -> tuple[bool, str]:
-        """
-        Test HuggingFace Inference API connection.
+        """Test HuggingFace Inference API connection.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -522,8 +509,7 @@ class ConnectionTestWorker(QThread):
 
 
 class ModelRefreshWorker(QThread):
-    """
-    Worker thread for refreshing model lists from provider APIs.
+    """Worker thread for refreshing model lists from provider APIs.
 
     Args:
         provider_id: The provider identifier.
@@ -563,8 +549,7 @@ class ModelRefreshWorker(QThread):
             self.refresh_finished.emit(success, [], f"Error fetching models: {e}")
 
     def _fetch_models(self) -> tuple[bool, list[str], str]:
-        """
-        Fetch available models from the provider API.
+        """Fetch available models from the provider API.
 
         Returns:
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
@@ -598,8 +583,7 @@ class ModelRefreshWorker(QThread):
         return False, [], f"Unknown provider: {self.provider_id}"
 
     def _fetch_anthropic_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
-        """
-        Fetch Anthropic models from the /v1/models API with pagination.
+        """Fetch Anthropic models from the /v1/models API with pagination.
 
         Args:
             timeout: HTTP request timeout configuration.
@@ -655,8 +639,7 @@ class ModelRefreshWorker(QThread):
             return False, [], "No models returned"
 
     def _fetch_openai_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
-        """
-        Fetch OpenAI models from API.
+        """Fetch OpenAI models from API.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -699,8 +682,7 @@ class ModelRefreshWorker(QThread):
             return False, [], str(e)
 
     def _fetch_google_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
-        """
-        Fetch Google Gemini models from API.
+        """Fetch Google Gemini models from API.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -728,8 +710,7 @@ class ModelRefreshWorker(QThread):
             return False, [], str(e)
 
     def _fetch_ollama_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
-        """
-        Fetch installed Ollama models.
+        """Fetch installed Ollama models.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -751,8 +732,7 @@ class ModelRefreshWorker(QThread):
             return False, [], str(e)
 
     def _fetch_openrouter_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
-        """
-        Fetch OpenRouter models from API.
+        """Fetch OpenRouter models from API.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -781,8 +761,7 @@ class ModelRefreshWorker(QThread):
         self,
         timeout: httpx.Timeout,
     ) -> tuple[bool, list[str], str]:
-        """
-        Fetch HuggingFace text-generation models from Hub API.
+        """Fetch HuggingFace text-generation models from Hub API.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -817,8 +796,7 @@ class ModelRefreshWorker(QThread):
 
 
 class ProviderConfigDialog(QDialog):
-    """
-    Dialog for configuring LLM providers.
+    """Dialog for configuring LLM providers.
 
     Allows users to:
     - Enter API keys for each provider
@@ -1044,8 +1022,7 @@ class ProviderConfigDialog(QDialog):
         is_connected: bool,
         model_count: int,
     ) -> None:
-        """
-        Update the display text and styling for a provider list item.
+        """Update the display text and styling for a provider list item.
 
         Args:
             item: The list widget item to update.
@@ -1071,8 +1048,7 @@ class ProviderConfigDialog(QDialog):
             item.setForeground(colors["unconfigured"])
 
     def _get_active_provider_name(self) -> str | None:
-        """
-        Get the name of the currently active provider.
+        """Get the name of the currently active provider.
 
         Returns:
             str | None: Provider ID of the active provider or None.
@@ -1088,8 +1064,7 @@ class ProviderConfigDialog(QDialog):
             return active.value if active is not None else None
 
     def _is_provider_connected(self, provider_id: str) -> bool:
-        """
-        Check if a provider is connected.
+        """Check if a provider is connected.
 
         Args:
             provider_id: The provider identifier.
@@ -1108,8 +1083,7 @@ class ProviderConfigDialog(QDialog):
             return False
 
     def _get_model_count(self, provider_id: str) -> int:
-        """
-        Get the number of available models for a provider.
+        """Get the number of available models for a provider.
 
         Args:
             provider_id: The provider identifier.
@@ -1185,8 +1159,7 @@ class ProviderConfigDialog(QDialog):
             )
 
     def _on_widget_connection_tested(self, *, success: bool, _message: str) -> None:
-        """
-        Handle connection test completion from a widget.
+        """Handle connection test completion from a widget.
 
         Args:
             success: Whether the connection test succeeded.
@@ -1196,8 +1169,7 @@ class ProviderConfigDialog(QDialog):
             self._refresh_provider_status()
 
     def _on_provider_selected(self, index: int) -> None:
-        """
-        Handle provider selection change.
+        """Handle provider selection change.
 
         Args:
             index: The selected provider index.
@@ -1223,8 +1195,7 @@ class ProviderConfigDialog(QDialog):
             self.provider_updated.emit(provider_id)
 
     def get_settings(self) -> dict[str, dict[str, Any]]:
-        """
-        Get all provider settings.
+        """Get all provider settings.
 
         Returns:
             dict[str, dict[str, Any]]: Dictionary mapping provider IDs to their settings.
@@ -1290,8 +1261,7 @@ class ProviderConfigDialog(QDialog):
         self._load_credential_overview()
 
     def discover_single_provider(self, provider_name: str) -> None:
-        """
-        Discover models for a specific provider.
+        """Discover models for a specific provider.
 
         Args:
             provider_name: Name of the provider to discover models for.
@@ -1324,8 +1294,7 @@ class ProviderConfigDialog(QDialog):
             )
 
     def start_oauth_flow(self, provider_id: str) -> None:
-        """
-        Start an OAuth authorization flow for a provider.
+        """Start an OAuth authorization flow for a provider.
 
         Args:
             provider_id: The provider to authorize.
@@ -1359,8 +1328,7 @@ class ProviderConfigDialog(QDialog):
         self._load_credential_overview()
 
     def revoke_oauth_token(self, provider_id: str) -> None:
-        """
-        Revoke an OAuth token for a provider.
+        """Revoke an OAuth token for a provider.
 
         Args:
             provider_id: The provider whose token to revoke.
@@ -1380,8 +1348,7 @@ class ProviderConfigDialog(QDialog):
 
 
 class ProviderSettingsWidget(QFrame):
-    """
-    Widget for configuring a single provider.
+    """Widget for configuring a single provider.
 
     Displays API key input, model selection, connection settings,
     and credential source information for a specific LLM provider.
@@ -1544,8 +1511,7 @@ class ProviderSettingsWidget(QFrame):
         layout.addStretch()
 
     def _setup_provider_specific_ui(self, layout: QVBoxLayout) -> None:
-        """
-        Add provider-specific UI elements.
+        """Add provider-specific UI elements.
 
         Args:
             layout: Parent layout to add widgets to.
@@ -1592,8 +1558,7 @@ class ProviderSettingsWidget(QFrame):
             self.pull_ollama_model(model_name)
 
     def _setup_xpu_settings(self, layout: QVBoxLayout) -> None:
-        """
-        Build the XPU / Device Settings group box for Local Transformers.
+        """Build the XPU / Device Settings group box for Local Transformers.
 
         Args:
             layout: Parent layout to add the group box to.
@@ -1830,8 +1795,7 @@ class ProviderSettingsWidget(QFrame):
             )
 
     def _get_display_name(self) -> str:
-        """
-        Get the display name for the provider.
+        """Get the display name for the provider.
 
         Returns:
             str: Human-readable provider name.
@@ -1839,8 +1803,7 @@ class ProviderSettingsWidget(QFrame):
         return _PROVIDER_DISPLAY_NAMES.get(self.provider_id, self.provider_id.title())
 
     def _toggle_key_visibility(self, *, show: bool) -> None:
-        """
-        Toggle API key visibility.
+        """Toggle API key visibility.
 
         Args:
             show: Whether to show the key in plain text.
@@ -1853,8 +1816,7 @@ class ProviderSettingsWidget(QFrame):
             self._show_key_btn.setText("Show")
 
     def _on_api_key_changed(self, text: str) -> None:
-        """
-        Handle API key text changes.
+        """Handle API key text changes.
 
         Args:
             text: The current API key text.
@@ -1862,8 +1824,7 @@ class ProviderSettingsWidget(QFrame):
         self._update_credential_source_display(text)
 
     def _update_credential_source_display(self, api_key: str) -> None:
-        """
-        Update the credential source label based on current key.
+        """Update the credential source label based on current key.
 
         Args:
             api_key: The current API key value.
@@ -1962,8 +1923,7 @@ class ProviderSettingsWidget(QFrame):
             QTimer.singleShot(200, self._auto_refresh_models)
 
     def _load_from_config(self) -> dict[str, Any]:
-        """
-        Load settings from the config file.
+        """Load settings from the config file.
 
         Returns:
             dict[str, Any]: Dictionary of saved settings for this provider.
@@ -1981,8 +1941,7 @@ class ProviderSettingsWidget(QFrame):
             return {}
 
     def _load_xpu_settings(self, saved_settings: dict[str, Any]) -> None:
-        """
-        Restore XPU-specific settings from saved configuration.
+        """Restore XPU-specific settings from saved configuration.
 
         Args:
             saved_settings: Dictionary of saved settings for this provider.
@@ -2073,8 +2032,7 @@ class ProviderSettingsWidget(QFrame):
         self._refresh_models()
 
     def _on_models_refreshed(self, *, success: bool, models: list[str], message: str) -> None:
-        """
-        Handle model refresh completion.
+        """Handle model refresh completion.
 
         Args:
             success: Whether refresh was successful.
@@ -2143,8 +2101,7 @@ class ProviderSettingsWidget(QFrame):
         self._test_worker.start()
 
     def _on_connection_tested(self, *, success: bool, message: str) -> None:
-        """
-        Handle connection test completion.
+        """Handle connection test completion.
 
         Args:
             success: Whether connection was successful.
@@ -2174,8 +2131,7 @@ class ProviderSettingsWidget(QFrame):
         self.connection_tested.emit(success, message)
 
     def set_api_key(self, api_key: str) -> None:
-        """
-        Set the API key input text.
+        """Set the API key input text.
 
         Args:
             api_key: The API key value to set.
@@ -2183,8 +2139,7 @@ class ProviderSettingsWidget(QFrame):
         self._api_key_input.setText(api_key)
 
     def _get_selected_model(self) -> str:
-        """
-        Return the selected model, or empty string if only status text is shown.
+        """Return the selected model, or empty string if only status text is shown.
 
         Returns:
             str: Model ID string, or empty string if no real model is selected.
@@ -2193,8 +2148,7 @@ class ProviderSettingsWidget(QFrame):
         return "" if text.startswith(("Loading models", "No ")) else text
 
     def get_settings(self) -> dict[str, Any]:
-        """
-        Get current settings as a dictionary.
+        """Get current settings as a dictionary.
 
         Returns:
             dict[str, Any]: Dictionary of current settings.
@@ -2302,8 +2256,7 @@ class ProviderSettingsWidget(QFrame):
             )
 
     def get_provider_device_info(self) -> dict[str, Any] | None:
-        """
-        Get device info for local transformer providers.
+        """Get device info for local transformer providers.
 
         Attempts to use the registered provider instance from the registry
         before falling back to creating a new provider.
@@ -2336,8 +2289,7 @@ class ProviderSettingsWidget(QFrame):
             return None
 
     def pull_ollama_model(self, model_name: str) -> None:
-        """
-        Pull an Ollama model.
+        """Pull an Ollama model.
 
         Args:
             model_name: Name of the model to pull.
@@ -2354,8 +2306,7 @@ class ProviderSettingsWidget(QFrame):
             _logger.debug("ollama_pull_failed", model=model_name)
 
     def get_openrouter_generation(self, generation_id: str) -> dict[str, Any] | None:
-        """
-        Get OpenRouter generation info for cost tracking.
+        """Get OpenRouter generation info for cost tracking.
 
         Args:
             generation_id: The generation ID to look up.
@@ -2387,8 +2338,7 @@ class ProviderSettingsWidget(QFrame):
             return None
 
     def get_xpu_optimal_dtype(self) -> str | None:
-        """
-        Get optimal dtype for XPU inference.
+        """Get optimal dtype for XPU inference.
 
         Returns:
             str | None: Optimal dtype string or None.
@@ -2406,8 +2356,7 @@ class ProviderSettingsWidget(QFrame):
 
 
 class ModelSelectionDialog(QDialog):
-    """
-    Dialog for selecting a specific model from a provider.
+    """Dialog for selecting a specific model from a provider.
 
     Displays available models with their capabilities and allows
     the user to select one.
@@ -2512,8 +2461,7 @@ class ModelSelectionDialog(QDialog):
             self._discovery_status_label.setText(f"Last discovery: {ts} — Failed: {error}")
 
     def _on_model_selected(self, index: int) -> None:
-        """
-        Handle model selection change.
+        """Handle model selection change.
 
         Args:
             index: Selected model index.
@@ -2533,8 +2481,7 @@ class ModelSelectionDialog(QDialog):
             self._info_label.setText("<br>".join(info_parts))
 
     def _on_item_double_clicked(self, _item: QListWidgetItem) -> None:
-        """
-        Handle double-click on model item.
+        """Handle double-click on model item.
 
         Args:
             _item: The double-clicked item (unused, current selection used).
@@ -2549,8 +2496,7 @@ class ModelSelectionDialog(QDialog):
             self.accept()
 
     def get_selected_model(self) -> str | None:
-        """
-        Get the selected model ID.
+        """Get the selected model ID.
 
         Returns:
             str | None: Selected model ID or None if nothing selected.

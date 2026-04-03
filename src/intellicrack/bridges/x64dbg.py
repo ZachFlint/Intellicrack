@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-X64dbg bridge for Windows debugging.
+"""X64dbg bridge for Windows debugging.
 
 This module provides integration with x64dbg for dynamic analysis, debugging, and memory manipulation on Windows systems.
 """
@@ -82,8 +81,7 @@ except ImportError:
 
 
 def get_capstone() -> ModuleType | None:
-    """
-    Get the capstone module if available.
+    """Get the capstone module if available.
 
     Returns:
         ModuleType | None: The capstone module, or None if not installed.
@@ -92,8 +90,7 @@ def get_capstone() -> ModuleType | None:
 
 
 def get_keystone() -> ModuleType | None:
-    """
-    Get the keystone module if available.
+    """Get the keystone module if available.
 
     Returns:
         ModuleType | None: The keystone module, or None if not installed.
@@ -163,8 +160,7 @@ PipeCommandResult = str | int | float | bool | dict[str, object] | list[object] 
 
 
 def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:
-    """
-    Narrow an object to dict[str, object].
+    """Narrow an object to dict[str, object].
 
     Args:
         data: Object to check.
@@ -180,8 +176,7 @@ def _read_process_memory_block(
     address: int,
     size: int,
 ) -> bytes | None:
-    """
-    Read a block of memory from a process.
+    """Read a block of memory from a process.
 
     Args:
         handle: Process handle with VM_READ access.
@@ -209,8 +204,7 @@ def _read_process_memory_block(
 
 
 def _read_process_command_line(pid: int) -> str | None:
-    """
-    Read process command line using Windows API.
+    """Read process command line using Windows API.
 
     Args:
         pid: Process ID to read command line from.
@@ -243,8 +237,7 @@ def _read_process_command_line(pid: int) -> str | None:
 
 
 def _extract_command_line_from_peb(handle: int) -> str | None:
-    """
-    Extract command line from process PEB.
+    """Extract command line from process PEB.
 
     Args:
         handle: Process handle with VM_READ access.
@@ -287,8 +280,7 @@ def _extract_command_line_from_peb(handle: int) -> str | None:
 
 
 def _get_process_pointer_size(handle: int) -> int:
-    """
-    Get pointer size for the target process.
+    """Get pointer size for the target process.
 
     Args:
         handle: Process handle.
@@ -308,8 +300,7 @@ def _get_process_pointer_size(handle: int) -> int:
 
 
 def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: int) -> str | None:
-    """
-    Read UNICODE_STRING command line from process parameters.
+    """Read UNICODE_STRING command line from process parameters.
 
     Args:
         handle: Process handle.
@@ -344,8 +335,7 @@ def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: in
 
 
 class X64DbgBridge(DebuggerBridge):
-    """
-    Bridge for x64dbg Windows debugger.
+    """Bridge for x64dbg Windows debugger.
 
     Provides debugging capabilities including breakpoints, stepping,
     register/memory manipulation, and process control.
@@ -384,8 +374,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def attached_pid(self) -> int | None:
-        """
-        Get the currently attached process ID.
+        """Get the currently attached process ID.
 
         Returns:
             int | None: The PID of the attached process, or None if not attached.
@@ -394,8 +383,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @attached_pid.setter
     def attached_pid(self, value: int | None) -> None:
-        """
-        Set the currently attached process ID.
+        """Set the currently attached process ID.
 
         Args:
             value: The PID to set, or None to clear.
@@ -404,8 +392,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def binary_path(self) -> Path | None:
-        """
-        Get the path to the loaded binary.
+        """Get the path to the loaded binary.
 
         Returns:
             Path | None: The binary file path, or None if no binary is loaded.
@@ -414,8 +401,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @binary_path.setter
     def binary_path(self, value: Path | None) -> None:
-        """
-        Set the path to the loaded binary.
+        """Set the path to the loaded binary.
 
         Args:
             value: The binary file path, or None to clear.
@@ -424,8 +410,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def is_64bit(self) -> bool:
-        """
-        Get whether the bridge is in 64-bit mode.
+        """Get whether the bridge is in 64-bit mode.
 
         Returns:
             bool: True if operating in 64-bit mode.
@@ -434,8 +419,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @is_64bit.setter
     def is_64bit(self, value: bool) -> None:
-        """
-        Set whether the bridge is in 64-bit mode.
+        """Set whether the bridge is in 64-bit mode.
 
         Args:
             value: True for 64-bit mode, False for 32-bit.
@@ -444,8 +428,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def plugin_status(self) -> dict[str, object]:
-        """
-        Get diagnostic information about plugin deployment readiness.
+        """Get diagnostic information about plugin deployment readiness.
 
         Returns:
             dict[str, object]: Dictionary with keys ``plugin_deployed``, ``x64dbg_found``,
@@ -483,8 +466,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def breakpoints(self) -> dict[int, BreakpointInfo]:
-        """
-        Get the breakpoints dictionary.
+        """Get the breakpoints dictionary.
 
         Returns:
             dict[int, BreakpointInfo]: Mapping of breakpoint IDs to their info.
@@ -493,8 +475,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def next_bp_id(self) -> int:
-        """
-        Get the next breakpoint ID.
+        """Get the next breakpoint ID.
 
         Returns:
             int: The next breakpoint ID to be assigned.
@@ -503,8 +484,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @next_bp_id.setter
     def next_bp_id(self, value: int) -> None:
-        """
-        Set the next breakpoint ID.
+        """Set the next breakpoint ID.
 
         Args:
             value: The next breakpoint ID value.
@@ -513,8 +493,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def watchpoints(self) -> dict[int, WatchpointInfo]:
-        """
-        Get the watchpoints dictionary.
+        """Get the watchpoints dictionary.
 
         Returns:
             dict[int, WatchpointInfo]: Mapping of watchpoint IDs to their info.
@@ -523,8 +502,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def next_wp_id(self) -> int:
-        """
-        Get the next watchpoint ID.
+        """Get the next watchpoint ID.
 
         Returns:
             int: The next watchpoint ID to be assigned.
@@ -533,8 +511,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @next_wp_id.setter
     def next_wp_id(self, value: int) -> None:
-        """
-        Set the next watchpoint ID.
+        """Set the next watchpoint ID.
 
         Args:
             value: The next watchpoint ID value.
@@ -543,8 +520,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def x64dbg_path(self) -> Path | None:
-        """
-        Get the path to the x64dbg installation.
+        """Get the path to the x64dbg installation.
 
         Returns:
             Path | None: The x64dbg installation path, or None if not found.
@@ -553,8 +529,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @x64dbg_path.setter
     def x64dbg_path(self, value: Path | None) -> None:
-        """
-        Set the path to the x64dbg installation.
+        """Set the path to the x64dbg installation.
 
         Args:
             value: The x64dbg installation path, or None to clear.
@@ -563,8 +538,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def debugger_pid(self) -> int | None:
-        """
-        Get the PID of the running debugger process.
+        """Get the PID of the running debugger process.
 
         Returns:
             int | None: Process ID of the debugger, or None if not running.
@@ -573,8 +547,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def name(self) -> ToolName:
-        """
-        Get the tool's name.
+        """Get the tool's name.
 
         Returns:
             ToolName: ToolName.X64DBG
@@ -583,8 +556,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """
-        Get tool definition for LLM function calling.
+        """Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -1112,8 +1084,7 @@ class X64DbgBridge(DebuggerBridge):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """
-        Initialize the x64dbg bridge.
+        """Initialize the x64dbg bridge.
 
         Args:
             tool_path: Path to x64dbg installation.
@@ -1193,8 +1164,7 @@ class X64DbgBridge(DebuggerBridge):
         _logger.info("x64dbg_bridge_shutdown", bridge="x64dbg")
 
     async def is_available(self) -> bool:
-        """
-        Check if x64dbg is available.
+        """Check if x64dbg is available.
 
         Returns:
             bool: True if x64dbg can be used.
@@ -1208,8 +1178,7 @@ class X64DbgBridge(DebuggerBridge):
         return await asyncio.to_thread(x64_exe.exists) or await asyncio.to_thread(x32_exe.exists)
 
     async def _start_debugger(self, *, is_64bit: bool = True) -> None:
-        """
-        Start the x64dbg debugger process.
+        """Start the x64dbg debugger process.
 
         Args:
             is_64bit: Whether to use 64-bit debugger.
@@ -1259,8 +1228,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
 
     async def _connect(self) -> None:
-        """
-        Connect to x64dbg via named pipe.
+        """Connect to x64dbg via named pipe.
 
         Raises:
             ToolError: If connection fails.
@@ -1298,8 +1266,7 @@ class X64DbgBridge(DebuggerBridge):
         self,
         callback: Callable[[str, dict[str, Any]], None],
     ) -> None:
-        """
-        Register a callback for debug events.
+        """Register a callback for debug events.
 
         The callback receives ``(event_type, message)`` and is
         invoked synchronously from the event-handling thread.
@@ -1313,8 +1280,7 @@ class X64DbgBridge(DebuggerBridge):
         self,
         callback: Callable[[str, dict[str, Any]], None],
     ) -> None:
-        """
-        Remove a previously registered event callback.
+        """Remove a previously registered event callback.
 
         Args:
             callback: The callback to remove.
@@ -1325,8 +1291,7 @@ class X64DbgBridge(DebuggerBridge):
             _logger.debug("event_callback_not_found_for_removal", callback=str(callback))
 
     def _handle_event(self, message: dict[str, Any]) -> None:
-        """
-        Handle asynchronous debug events from x64dbg.
+        """Handle asynchronous debug events from x64dbg.
 
         Args:
             message: Event payload.
@@ -1355,8 +1320,7 @@ class X64DbgBridge(DebuggerBridge):
         command: str,
         params: dict[str, Any] | None = None,
     ) -> PipeCommandResult:
-        """
-        Send a command through the named pipe.
+        """Send a command through the named pipe.
 
         Args:
             command: Command name.
@@ -1398,8 +1362,7 @@ class X64DbgBridge(DebuggerBridge):
         return data
 
     async def _send_command(self, command: str) -> str:
-        """
-        Send command to x64dbg and get response.
+        """Send command to x64dbg and get response.
 
         Args:
             command: Command to execute.
@@ -1423,8 +1386,7 @@ class X64DbgBridge(DebuggerBridge):
         return ""
 
     async def load(self, path: Path, args: str | None = None) -> None:
-        """
-        Load an executable into x64dbg.
+        """Load an executable into x64dbg.
 
         Args:
             path: Path to executable.
@@ -1459,8 +1421,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @staticmethod
     def _detect_architecture(path: Path) -> bool:
-        """
-        Detect if binary is 64-bit.
+        """Detect if binary is 64-bit.
 
         Args:
             path: Path to binary.
@@ -1493,8 +1454,7 @@ class X64DbgBridge(DebuggerBridge):
         return False if machine == PE32_MACHINE else machine == PE64_MACHINE
 
     async def attach(self, pid: int) -> None:
-        """
-        Attach to a running process.
+        """Attach to a running process.
 
         Detects the target process architecture and starts the
         matching debugger variant (x64dbg or x32dbg).
@@ -1519,8 +1479,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @staticmethod
     def _detect_process_arch(pid: int) -> bool:
-        """
-        Detect whether a process is 64-bit.
+        """Detect whether a process is 64-bit.
 
         Args:
             pid: Process ID.
@@ -1578,8 +1537,7 @@ class X64DbgBridge(DebuggerBridge):
         _logger.info("debugging_stopped", bridge="x64dbg")
 
     async def step_into(self) -> int:
-        """
-        Single step into.
+        """Single step into.
 
         Returns:
             int: New instruction pointer.
@@ -1591,8 +1549,7 @@ class X64DbgBridge(DebuggerBridge):
         return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
     async def step_over(self) -> int:
-        """
-        Single step over.
+        """Single step over.
 
         Returns:
             int: New instruction pointer.
@@ -1604,8 +1561,7 @@ class X64DbgBridge(DebuggerBridge):
         return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
 
     async def step_out(self) -> int:
-        """
-        Step out of current function.
+        """Step out of current function.
 
         Returns:
             int: New instruction pointer.
@@ -1622,8 +1578,7 @@ class X64DbgBridge(DebuggerBridge):
         bp_type: BreakpointType = "software",
         condition: str | None = None,
     ) -> int:
-        """
-        Set a breakpoint.
+        """Set a breakpoint.
 
         Args:
             address: Breakpoint address.
@@ -1658,8 +1613,7 @@ class X64DbgBridge(DebuggerBridge):
         return bp_id
 
     async def remove_breakpoint(self, address: int) -> bool:
-        """
-        Remove a breakpoint.
+        """Remove a breakpoint.
 
         Args:
             address: Breakpoint address.
@@ -1676,8 +1630,7 @@ class X64DbgBridge(DebuggerBridge):
         return True
 
     async def get_breakpoints(self) -> list[BreakpointInfo]:
-        """
-        Get all breakpoints including those set in the x64dbg GUI.
+        """Get all breakpoints including those set in the x64dbg GUI.
 
         Returns:
             list[BreakpointInfo]: List of breakpoints from both local tracking and x64dbg.
@@ -1725,8 +1678,7 @@ class X64DbgBridge(DebuggerBridge):
         size: int,
         watch_type: MemoryProtection,
     ) -> int:
-        """
-        Set a memory watchpoint.
+        """Set a memory watchpoint.
 
         Args:
             address: Memory address.
@@ -1763,8 +1715,7 @@ class X64DbgBridge(DebuggerBridge):
         return wp_id
 
     async def remove_watchpoint(self, watchpoint_id: int) -> bool:
-        """
-        Remove a watchpoint.
+        """Remove a watchpoint.
 
         Args:
             watchpoint_id: Watchpoint ID.
@@ -1786,8 +1737,7 @@ class X64DbgBridge(DebuggerBridge):
         return True
 
     async def get_watchpoints(self) -> list[WatchpointInfo]:
-        """
-        Get all watchpoints including those set in the x64dbg GUI.
+        """Get all watchpoints including those set in the x64dbg GUI.
 
         Returns:
             list[WatchpointInfo]: List of watchpoints from both local tracking and x64dbg.
@@ -1824,8 +1774,7 @@ class X64DbgBridge(DebuggerBridge):
         return list(merged.values())
 
     async def get_registers(self) -> RegisterState:
-        """
-        Get all register values.
+        """Get all register values.
 
         Returns:
             RegisterState: Current register state.
@@ -1892,8 +1841,7 @@ class X64DbgBridge(DebuggerBridge):
         return state
 
     async def set_register(self, register: str, value: int) -> bool:
-        """
-        Set a register value.
+        """Set a register value.
 
         Args:
             register: Register name.
@@ -1910,8 +1858,7 @@ class X64DbgBridge(DebuggerBridge):
         return True
 
     async def read_memory(self, address: int, size: int) -> bytes:
-        """
-        Read process memory.
+        """Read process memory.
 
         Args:
             address: Memory address.
@@ -1966,8 +1913,7 @@ class X64DbgBridge(DebuggerBridge):
             kernel32.CloseHandle(handle)
 
     async def write_memory(self, address: int, data: bytes) -> int:
-        """
-        Write to process memory.
+        """Write to process memory.
 
         Args:
             address: Memory address.
@@ -2021,8 +1967,7 @@ class X64DbgBridge(DebuggerBridge):
             kernel32.CloseHandle(handle)
 
     async def allocate_memory(self, size: int, protection: str = "rwx") -> int:
-        """
-        Allocate memory in target process.
+        """Allocate memory in target process.
 
         Args:
             size: Size to allocate.
@@ -2090,8 +2035,7 @@ class X64DbgBridge(DebuggerBridge):
             kernel32.CloseHandle(handle)
 
     async def free_memory(self, address: int) -> bool:
-        """
-        Free memory in target process.
+        """Free memory in target process.
 
         Args:
             address: Address to free.
@@ -2131,8 +2075,7 @@ class X64DbgBridge(DebuggerBridge):
             kernel32.CloseHandle(handle)
 
     async def get_memory_regions(self) -> list[MemoryRegion]:
-        """
-        Get memory map of target process.
+        """Get memory map of target process.
 
         Returns:
             list[MemoryRegion]: List of memory regions.
@@ -2226,8 +2169,7 @@ class X64DbgBridge(DebuggerBridge):
         address: int,
         count: int = 10,
     ) -> list[DisassemblyLine]:
-        """
-        Disassemble at address.
+        """Disassemble at address.
 
         Args:
             address: Start address.
@@ -2272,8 +2214,7 @@ class X64DbgBridge(DebuggerBridge):
             return lines
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
-        """
-        Assemble instruction at address.
+        """Assemble instruction at address.
 
         Args:
             address: Target address.
@@ -2303,8 +2244,7 @@ class X64DbgBridge(DebuggerBridge):
         return bytes(encoding)
 
     async def get_stack_trace(self) -> list[StackFrame]:
-        """
-        Get current stack trace.
+        """Get current stack trace.
 
         Returns:
             list[StackFrame]: List of stack frames.
@@ -2369,8 +2309,7 @@ class X64DbgBridge(DebuggerBridge):
         return frames
 
     async def scan_memory(self, pattern: str | bytes) -> list[MemorySearchResult]:
-        """
-        Scan process memory for a pattern.
+        """Scan process memory for a pattern.
 
         Args:
             pattern: Byte pattern to search for. Accepts bytes or hex string
@@ -2420,8 +2359,7 @@ class X64DbgBridge(DebuggerBridge):
         return matches
 
     async def run_command(self, command: str) -> str:
-        """
-        Execute x64dbg command.
+        """Execute x64dbg command.
 
         Args:
             command: Command to execute.
@@ -2433,8 +2371,7 @@ class X64DbgBridge(DebuggerBridge):
         return await self._send_command(command)
 
     async def spawn(self, path: Path, args: Sequence[str] | None = None) -> int:
-        """
-        Spawn a process for debugging.
+        """Spawn a process for debugging.
 
         Args:
             path: Path to executable.
@@ -2449,8 +2386,7 @@ class X64DbgBridge(DebuggerBridge):
         return self._attached_pid or 0
 
     async def _get_threads(self) -> list[ThreadInfo]:
-        """
-        Get thread information for the attached process.
+        """Get thread information for the attached process.
 
         Uses Windows Toolhelp API (CreateToolhelp32Snapshot with TH32CS_SNAPTHREAD)
         to enumerate all threads belonging to the attached process.
@@ -2519,8 +2455,7 @@ class X64DbgBridge(DebuggerBridge):
         return threads
 
     async def _get_modules(self) -> list[ModuleInfo]:
-        """
-        Get loaded modules for the attached process.
+        """Get loaded modules for the attached process.
 
         Uses Windows Toolhelp API (CreateToolhelp32Snapshot with TH32CS_SNAPMODULE)
         to enumerate all loaded DLLs and the main executable.
@@ -2596,8 +2531,7 @@ class X64DbgBridge(DebuggerBridge):
         return modules
 
     async def get_modules(self) -> list[ModuleInfo]:
-        """
-        Get loaded modules for the attached process.
+        """Get loaded modules for the attached process.
 
         Returns:
             list[ModuleInfo]: List of loaded module information.
@@ -2605,8 +2539,7 @@ class X64DbgBridge(DebuggerBridge):
         return await self._get_modules()
 
     async def get_threads(self) -> list[ThreadInfo]:
-        """
-        Get thread information for the attached process.
+        """Get thread information for the attached process.
 
         Returns:
             list[ThreadInfo]: List of thread information.
@@ -2614,8 +2547,7 @@ class X64DbgBridge(DebuggerBridge):
         return await self.get_threads()
 
     async def get_process_info(self) -> ProcessInfo | None:
-        """
-        Get complete process information including threads and modules.
+        """Get complete process information including threads and modules.
 
         Aggregates thread and module information along with process details
         using Windows APIs.
@@ -2643,8 +2575,7 @@ class X64DbgBridge(DebuggerBridge):
         )
 
     async def find_pattern(self, pattern: str) -> list[dict[str, Any]]:
-        """
-        Search memory for a hex pattern with optional wildcards.
+        """Search memory for a hex pattern with optional wildcards.
 
         Args:
             pattern: Hex pattern string with optional '??' wildcards
@@ -2697,8 +2628,7 @@ class X64DbgBridge(DebuggerBridge):
         return matches
 
     async def run_to(self, address: int) -> dict[str, Any]:
-        """
-        Run execution until a specific address is reached.
+        """Run execution until a specific address is reached.
 
         Args:
             address: Target address to run to.
@@ -2711,8 +2641,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "target": hex(address)}
 
     async def execute_til_return(self) -> dict[str, Any]:
-        """
-        Execute until the current function returns.
+        """Execute until the current function returns.
 
         Returns:
             dict[str, Any]: Dict with success status.
@@ -2722,8 +2651,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True}
 
     async def skip_instruction(self) -> dict[str, Any]:
-        """
-        Skip the current instruction by advancing the instruction pointer.
+        """Skip the current instruction by advancing the instruction pointer.
 
         Returns:
             dict[str, Any]: Dict with old IP, new IP, and skipped byte count.
@@ -2755,8 +2683,7 @@ class X64DbgBridge(DebuggerBridge):
         }
 
     async def set_ip(self, address: int) -> dict[str, Any]:
-        """
-        Set the instruction pointer to a specific address.
+        """Set the instruction pointer to a specific address.
 
         Args:
             address: New instruction pointer value.
@@ -2770,8 +2697,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "instruction_pointer": hex(address)}
 
     async def set_label(self, address: int, text: str) -> dict[str, Any]:
-        """
-        Set a debug label at an address.
+        """Set a debug label at an address.
 
         Args:
             address: Address for the label.
@@ -2785,8 +2711,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"address": hex(address), "text": text, "success": True}
 
     async def get_labels(self, start: int, end: int) -> list[dict[str, Any]]:
-        """
-        Get debug labels in an address range.
+        """Get debug labels in an address range.
 
         Args:
             start: Start address.
@@ -2815,8 +2740,7 @@ class X64DbgBridge(DebuggerBridge):
         return labels
 
     async def set_comment(self, address: int, text: str) -> dict[str, Any]:
-        """
-        Set a debug comment at an address.
+        """Set a debug comment at an address.
 
         Args:
             address: Address for the comment.
@@ -2830,8 +2754,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"address": hex(address), "text": text, "success": True}
 
     async def get_comments(self, start: int, end: int) -> list[dict[str, Any]]:
-        """
-        Get debug comments in an address range.
+        """Get debug comments in an address range.
 
         Args:
             start: Start address.
@@ -2860,8 +2783,7 @@ class X64DbgBridge(DebuggerBridge):
         return comments
 
     async def enable_breakpoint(self, address: int) -> dict[str, Any]:
-        """
-        Enable a breakpoint at an address.
+        """Enable a breakpoint at an address.
 
         Args:
             address: Breakpoint address.
@@ -2884,8 +2806,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"address": hex(address), "success": True}
 
     async def disable_breakpoint(self, address: int) -> dict[str, Any]:
-        """
-        Disable a breakpoint at an address.
+        """Disable a breakpoint at an address.
 
         Args:
             address: Breakpoint address.
@@ -2908,8 +2829,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"address": hex(address), "success": True}
 
     async def set_breakpoint_on_api(self, module: str, function: str) -> dict[str, Any]:
-        """
-        Set a breakpoint on an imported API function.
+        """Set a breakpoint on an imported API function.
 
         Args:
             module: Module name (e.g. 'kernel32').
@@ -2924,8 +2844,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "target": target}
 
     async def dump_memory_to_file(self, address: int, size: int, path: str) -> dict[str, Any]:
-        """
-        Dump a memory region to a file on disk.
+        """Dump a memory region to a file on disk.
 
         Args:
             address: Start address.
@@ -2943,8 +2862,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "path": path, "bytes_written": len(data)}
 
     async def _resolve_module_base(self, module_name: str) -> int:
-        """
-        Resolve a module name to its base address.
+        """Resolve a module name to its base address.
 
         Args:
             module_name: Module name (e.g. 'ntdll.dll').
@@ -2964,8 +2882,7 @@ class X64DbgBridge(DebuggerBridge):
         raise ToolError(msg)
 
     async def _read_pe_header(self, base_address: int, module_name: str, size: int = 256) -> tuple[int, bytes]:
-        """
-        Read and validate PE header from a module's base address.
+        """Read and validate PE header from a module's base address.
 
         Args:
             base_address: Module base address.
@@ -2995,8 +2912,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @staticmethod
     def _parse_section_entry(sec_data: bytes, sec_offset: int, base_address: int) -> dict[str, Any]:
-        """
-        Parse a single PE section header entry.
+        """Parse a single PE section header entry.
 
         Args:
             sec_data: Buffer containing the section header.
@@ -3025,8 +2941,7 @@ class X64DbgBridge(DebuggerBridge):
         }
 
     async def get_module_sections(self, module_name: str) -> list[dict[str, Any]]:
-        """
-        Get PE section info of a loaded module by parsing its in-memory header.
+        """Get PE section info of a loaded module by parsing its in-memory header.
 
         Args:
             module_name: Module name (e.g. 'ntdll.dll').
@@ -3055,8 +2970,7 @@ class X64DbgBridge(DebuggerBridge):
         return sections
 
     async def _read_export_tables(self, base_address: int, pe_header: bytes) -> tuple[bytes, bytes, bytes, int, int, int]:
-        """
-        Read PE export address, name pointer, and ordinal tables.
+        """Read PE export address, name pointer, and ordinal tables.
 
         Args:
             base_address: Module base address.
@@ -3098,8 +3012,7 @@ class X64DbgBridge(DebuggerBridge):
         return addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, num_functions
 
     async def get_module_exports(self, module_name: str) -> list[dict[str, Any]]:
-        """
-        Get exports of a loaded module by parsing its in-memory PE export table.
+        """Get exports of a loaded module by parsing its in-memory PE export table.
 
         Args:
             module_name: Module name (e.g. 'kernel32.dll').
@@ -3144,8 +3057,7 @@ class X64DbgBridge(DebuggerBridge):
         condition: str | None = None,
         log_text: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Start conditional trace recording in x64dbg.
+        """Start conditional trace recording in x64dbg.
 
         Args:
             address: Address to start tracing at.
@@ -3163,8 +3075,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True}
 
     async def trace_stop(self) -> dict[str, Any]:
-        """
-        Stop trace recording.
+        """Stop trace recording.
 
         Returns:
             dict[str, Any]: Dict with success status.
@@ -3174,8 +3085,7 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True}
 
     async def set_exception_config(self, code: int, handling: str) -> dict[str, Any]:
-        """
-        Configure how x64dbg handles a specific exception code.
+        """Configure how x64dbg handles a specific exception code.
 
         Args:
             code: Exception code (e.g. 0xC0000005 for access violation).
@@ -3193,8 +3103,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @staticmethod
     def _get_parent_pid(pid: int) -> int:
-        """
-        Get parent process ID using Windows Toolhelp API.
+        """Get parent process ID using Windows Toolhelp API.
 
         Args:
             pid: Process ID to get parent for.
@@ -3255,8 +3164,7 @@ class X64DbgBridge(DebuggerBridge):
 
     @staticmethod
     def _get_command_line(pid: int) -> str | None:
-        """
-        Get process command line using Windows API.
+        """Get process command line using Windows API.
 
         Args:
             pid: Process ID to get command line for.

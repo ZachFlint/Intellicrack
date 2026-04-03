@@ -1,6 +1,6 @@
 {
   "tool": "darglint",
-  "generated": "2026-03-31T03:08:16.080664+00:00",
+  "generated": "2026-04-01T02:40:51.806101+00:00",
   "total_findings": 55,
   "total_files": 2,
   "files": [
@@ -9,396 +9,396 @@
       "count": 49,
       "findings": [
         {
-          "line": 266,
+          "line": 254,
           "column": null,
           "function": "name",
           "code": "DAR202",
           "message": "[name] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:name:266: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:name:254: DAR202: + return"
         },
         {
-          "line": 310,
+          "line": 294,
           "column": null,
           "function": "tool_definition",
           "code": "DAR202",
           "message": "[tool_definition] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:tool_definition:310: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:tool_definition:294: DAR202: + return"
         },
         {
-          "line": 341,
+          "line": 323,
           "column": null,
           "function": "is_available",
           "code": "DAR202",
           "message": "[is_available] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:is_available:341: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:is_available:323: DAR202: + return"
         },
         {
-          "line": 374,
+          "line": 354,
           "column": null,
           "function": "load_binary",
           "code": "DAR202",
           "message": "[load_binary] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:load_binary:374: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:load_binary:354: DAR202: + return"
         },
         {
-          "line": 402,
+          "line": 380,
           "column": null,
           "function": "get_functions",
           "code": "DAR202",
           "message": "[get_functions] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_functions:402: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_functions:380: DAR202: + return"
         },
         {
-          "line": 419,
+          "line": 396,
           "column": null,
           "function": "get_function",
           "code": "DAR202",
           "message": "[get_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_function:419: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_function:396: DAR202: + return"
         },
         {
-          "line": 435,
+          "line": 411,
           "column": null,
           "function": "decompile",
           "code": "DAR202",
           "message": "[decompile] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:decompile:435: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:decompile:411: DAR202: + return"
         },
         {
-          "line": 455,
+          "line": 430,
           "column": null,
           "function": "disassemble",
           "code": "DAR202",
           "message": "[disassemble] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:disassemble:455: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:disassemble:430: DAR202: + return"
         },
         {
-          "line": 472,
+          "line": 446,
           "column": null,
           "function": "get_xrefs_to",
           "code": "DAR202",
           "message": "[get_xrefs_to] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_to:472: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_to:446: DAR202: + return"
         },
         {
-          "line": 488,
+          "line": 461,
           "column": null,
           "function": "get_xrefs_from",
           "code": "DAR202",
           "message": "[get_xrefs_from] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_from:488: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_xrefs_from:461: DAR202: + return"
         },
         {
-          "line": 504,
+          "line": 476,
           "column": null,
           "function": "search_strings",
           "code": "DAR202",
           "message": "[search_strings] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:search_strings:504: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:search_strings:476: DAR202: + return"
         },
         {
-          "line": 520,
+          "line": 491,
           "column": null,
           "function": "search_bytes",
           "code": "DAR202",
           "message": "[search_bytes] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:search_bytes:520: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:search_bytes:491: DAR202: + return"
         },
         {
-          "line": 533,
+          "line": 503,
           "column": null,
           "function": "get_imports",
           "code": "DAR202",
           "message": "[get_imports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_imports:533: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_imports:503: DAR202: + return"
         },
         {
-          "line": 546,
+          "line": 515,
           "column": null,
           "function": "get_exports",
           "code": "DAR202",
           "message": "[get_exports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_exports:546: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_exports:515: DAR202: + return"
         },
         {
-          "line": 563,
+          "line": 531,
           "column": null,
           "function": "rename_function",
           "code": "DAR202",
           "message": "[rename_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:rename_function:563: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:rename_function:531: DAR202: + return"
         },
         {
-          "line": 585,
+          "line": 552,
           "column": null,
           "function": "add_comment",
           "code": "DAR202",
           "message": "[add_comment] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:add_comment:585: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:add_comment:552: DAR202: + return"
         },
         {
-          "line": 637,
+          "line": 601,
           "column": null,
           "function": "spawn",
           "code": "DAR202",
           "message": "[spawn] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:spawn:637: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:spawn:601: DAR202: + return"
         },
         {
-          "line": 665,
+          "line": 627,
           "column": null,
           "function": "read_memory",
           "code": "DAR202",
           "message": "[read_memory] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:read_memory:665: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:read_memory:627: DAR202: + return"
         },
         {
-          "line": 682,
+          "line": 643,
           "column": null,
           "function": "write_memory",
           "code": "DAR202",
           "message": "[write_memory] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:write_memory:682: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:write_memory:643: DAR202: + return"
         },
         {
-          "line": 695,
+          "line": 655,
           "column": null,
           "function": "get_memory_regions",
           "code": "DAR202",
           "message": "[get_memory_regions] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_memory_regions:695: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_memory_regions:655: DAR202: + return"
         },
         {
-          "line": 711,
+          "line": 670,
           "column": null,
           "function": "scan_memory",
           "code": "DAR202",
           "message": "[scan_memory] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:scan_memory:711: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:scan_memory:670: DAR202: + return"
         },
         {
-          "line": 766,
+          "line": 720,
           "column": null,
           "function": "step_into",
           "code": "DAR202",
           "message": "[step_into] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:step_into:766: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:step_into:720: DAR202: + return"
         },
         {
-          "line": 779,
+          "line": 732,
           "column": null,
           "function": "step_over",
           "code": "DAR202",
           "message": "[step_over] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:step_over:779: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:step_over:732: DAR202: + return"
         },
         {
-          "line": 792,
+          "line": 744,
           "column": null,
           "function": "step_out",
           "code": "DAR202",
           "message": "[step_out] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:step_out:792: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:step_out:744: DAR202: + return"
         },
         {
-          "line": 814,
+          "line": 765,
           "column": null,
           "function": "set_breakpoint",
           "code": "DAR202",
           "message": "[set_breakpoint] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:set_breakpoint:814: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:set_breakpoint:765: DAR202: + return"
         },
         {
-          "line": 831,
+          "line": 781,
           "column": null,
           "function": "remove_breakpoint",
           "code": "DAR202",
           "message": "[remove_breakpoint] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:remove_breakpoint:831: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:remove_breakpoint:781: DAR202: + return"
         },
         {
-          "line": 844,
+          "line": 793,
           "column": null,
           "function": "get_breakpoints",
           "code": "DAR202",
           "message": "[get_breakpoints] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_breakpoints:844: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_breakpoints:793: DAR202: + return"
         },
         {
-          "line": 857,
+          "line": 805,
           "column": null,
           "function": "get_registers",
           "code": "DAR202",
           "message": "[get_registers] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_registers:857: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_registers:805: DAR202: + return"
         },
         {
-          "line": 874,
+          "line": 821,
           "column": null,
           "function": "set_register",
           "code": "DAR202",
           "message": "[set_register] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:set_register:874: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:set_register:821: DAR202: + return"
         },
         {
-          "line": 887,
+          "line": 833,
           "column": null,
           "function": "get_stack_trace",
           "code": "DAR202",
           "message": "[get_stack_trace] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_stack_trace:887: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_stack_trace:833: DAR202: + return"
         },
         {
-          "line": 907,
+          "line": 852,
           "column": null,
           "function": "disassemble_at",
           "code": "DAR202",
           "message": "[disassemble_at] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:disassemble_at:907: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:disassemble_at:852: DAR202: + return"
         },
         {
-          "line": 925,
+          "line": 869,
           "column": null,
           "function": "assemble_at",
           "code": "DAR202",
           "message": "[assemble_at] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:assemble_at:925: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:assemble_at:869: DAR202: + return"
         },
         {
-          "line": 950,
+          "line": 892,
           "column": null,
           "function": "enumerate_modules",
           "code": "DAR202",
           "message": "[enumerate_modules] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_modules:950: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_modules:892: DAR202: + return"
         },
         {
-          "line": 966,
+          "line": 907,
           "column": null,
           "function": "enumerate_exports",
           "code": "DAR202",
           "message": "[enumerate_exports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_exports:966: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_exports:907: DAR202: + return"
         },
         {
-          "line": 988,
+          "line": 928,
           "column": null,
           "function": "hook_function",
           "code": "DAR202",
           "message": "[hook_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:hook_function:988: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:hook_function:928: DAR202: + return"
         },
         {
-          "line": 1005,
+          "line": 944,
           "column": null,
           "function": "remove_hook",
           "code": "DAR202",
           "message": "[remove_hook] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:remove_hook:1005: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:remove_hook:944: DAR202: + return"
         },
         {
-          "line": 1018,
+          "line": 956,
           "column": null,
           "function": "get_hooks",
           "code": "DAR202",
           "message": "[get_hooks] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:get_hooks:1018: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:get_hooks:956: DAR202: + return"
         },
         {
-          "line": 1034,
+          "line": 971,
           "column": null,
           "function": "execute_script",
           "code": "DAR202",
           "message": "[execute_script] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:execute_script:1034: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:execute_script:971: DAR202: + return"
         },
         {
-          "line": 1051,
+          "line": 987,
           "column": null,
           "function": "intercept_return",
           "code": "DAR202",
           "message": "[intercept_return] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:intercept_return:1051: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:intercept_return:987: DAR202: + return"
         },
         {
-          "line": 1071,
+          "line": 1006,
           "column": null,
           "function": "call_function",
           "code": "DAR202",
           "message": "[call_function] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:call_function:1071: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:call_function:1006: DAR202: + return"
         },
         {
-          "line": 1088,
+          "line": 1022,
           "column": null,
           "function": "enumerate_imports",
           "code": "DAR202",
           "message": "[enumerate_imports] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_imports:1088: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_imports:1022: DAR202: + return"
         },
         {
-          "line": 1101,
+          "line": 1034,
           "column": null,
           "function": "enumerate_threads",
           "code": "DAR202",
           "message": "[enumerate_threads] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_threads:1101: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:enumerate_threads:1034: DAR202: + return"
         },
         {
-          "line": 1134,
+          "line": 1065,
           "column": null,
           "function": "load_file",
           "code": "DAR202",
           "message": "[load_file] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:load_file:1134: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:load_file:1065: DAR202: + return"
         },
         {
-          "line": 1151,
+          "line": 1081,
           "column": null,
           "function": "read_bytes",
           "code": "DAR202",
           "message": "[read_bytes] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:read_bytes:1151: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:read_bytes:1081: DAR202: + return"
         },
         {
-          "line": 1181,
+          "line": 1109,
           "column": null,
           "function": "apply_patch",
           "code": "DAR202",
           "message": "[apply_patch] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:apply_patch:1181: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:apply_patch:1109: DAR202: + return"
         },
         {
-          "line": 1197,
+          "line": 1124,
           "column": null,
           "function": "revert_patch",
           "code": "DAR202",
           "message": "[revert_patch] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:revert_patch:1197: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:revert_patch:1124: DAR202: + return"
         },
         {
-          "line": 1213,
+          "line": 1139,
           "column": null,
           "function": "save",
           "code": "DAR202",
           "message": "[save] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:save:1213: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:save:1139: DAR202: + return"
         },
         {
-          "line": 1235,
+          "line": 1160,
           "column": null,
           "function": "search_pattern",
           "code": "DAR202",
           "message": "[search_pattern] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:search_pattern:1235: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:search_pattern:1160: DAR202: + return"
         },
         {
-          "line": 1254,
+          "line": 1178,
           "column": null,
           "function": "calculate_checksum",
           "code": "DAR202",
           "message": "[calculate_checksum] + return",
-          "raw": "src\\intellicrack\\bridges\\base.py:calculate_checksum:1254: DAR202: + return"
+          "raw": "src\\intellicrack\\bridges\\base.py:calculate_checksum:1178: DAR202: + return"
         }
       ]
     },
@@ -407,52 +407,52 @@
       "count": 6,
       "findings": [
         {
-          "line": 430,
+          "line": 415,
           "column": null,
           "function": "_run_agent_loop",
           "code": "DAR401",
           "message": "[_run_agent_loop] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:430: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:415: DAR401: -r CancelledError"
         },
         {
-          "line": 435,
+          "line": 420,
           "column": null,
           "function": "_run_agent_loop",
           "code": "DAR402",
           "message": "[_run_agent_loop] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:435: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:420: DAR402: +r asyncio.CancelledError"
         },
         {
-          "line": 920,
+          "line": 896,
           "column": null,
           "function": "_stream_response",
           "code": "DAR401",
           "message": "[_stream_response] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:920: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:896: DAR401: -r CancelledError"
         },
         {
-          "line": 940,
+          "line": 916,
           "column": null,
           "function": "_stream_response",
           "code": "DAR402",
           "message": "[_stream_response] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:940: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:916: DAR402: +r asyncio.CancelledError"
         },
         {
-          "line": 1039,
+          "line": 1013,
           "column": null,
           "function": "_execute_tool_calls",
           "code": "DAR401",
           "message": "[_execute_tool_calls] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1039: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1013: DAR401: -r CancelledError"
         },
         {
-          "line": 1049,
+          "line": 1023,
           "column": null,
           "function": "_execute_tool_calls",
           "code": "DAR402",
           "message": "[_execute_tool_calls] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1049: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1023: DAR402: +r asyncio.CancelledError"
         }
       ]
     }

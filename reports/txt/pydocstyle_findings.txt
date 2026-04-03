@@ -1,99 +1,99 @@
 11 findings in src/intellicrack/core\types.py
 
-src/intellicrack/core\types.py:1293: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1228: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1327: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1261: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1368: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1301: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1406: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1338: D107: in public method `__init__`: - Missing docstring in __init__
+
+src/intellicrack/core\types.py:1375: D107: in public method `__init__`: - Missing docstring in __init__
+
+src/intellicrack/core\types.py:1409: D107: in public method `__init__`: - Missing docstring in __init__
 
 src/intellicrack/core\types.py:1444: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1479: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1484: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1515: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1520: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1556: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1550: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\types.py:1593: D107: in public method `__init__`: - Missing docstring in __init__
-
-src/intellicrack/core\types.py:1624: D107: in public method `__init__`: - Missing docstring in __init__
-
-src/intellicrack/core\types.py:1659: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\types.py:1584: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 6 findings in src/intellicrack/bridges\base.py
 
-src/intellicrack/bridges\base.py:254: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:242: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:357: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:337: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:602: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:567: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:727: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:684: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:941: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:883: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:1117: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:1048: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 6 findings in src/intellicrack/ui\highlighter.py
 
-src/intellicrack/ui\highlighter.py:46: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\highlighter.py:44: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\highlighter.py:155: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\highlighter.py:152: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\highlighter.py:510: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\highlighter.py:504: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\highlighter.py:717: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\highlighter.py:708: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\highlighter.py:960: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\highlighter.py:947: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\highlighter.py:1139: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\highlighter.py:1123: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 6 findings in src/intellicrack/ui\provider_config.py
 
-src/intellicrack/ui\provider_config.py:202: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\provider_config.py:199: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\provider_config.py:307: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\provider_config.py:301: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\provider_config.py:541: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\provider_config.py:527: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\provider_config.py:844: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\provider_config.py:822: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\provider_config.py:1403: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\provider_config.py:1370: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\provider_config.py:2428: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\provider_config.py:2377: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 6 findings in src/intellicrack/ui\tool_config.py
 
-src/intellicrack/ui\tool_config.py:113: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\tool_config.py:110: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\tool_config.py:375: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\tool_config.py:369: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\tool_config.py:572: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\tool_config.py:560: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\tool_config.py:710: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\tool_config.py:695: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\tool_config.py:1025: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\tool_config.py:1005: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\tool_config.py:1200: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\tool_config.py:1178: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 5 findings in src/intellicrack/ui\preferences.py
 
-src/intellicrack/ui\preferences.py:107: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\preferences.py:102: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\preferences.py:218: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\preferences.py:211: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\preferences.py:315: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\preferences.py:306: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\preferences.py:383: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\preferences.py:372: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\preferences.py:483: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\preferences.py:470: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 5 findings in src/intellicrack/ui\tools.py
@@ -111,46 +111,46 @@ src/intellicrack/ui\tools.py:735: D107: in public method `__init__`: - Missing d
 
 4 findings in src/intellicrack/core\hexpat_compiler.py
 
-src/intellicrack/core\hexpat_compiler.py:34: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat_compiler.py:33: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\hexpat_compiler.py:484: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat_compiler.py:464: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\hexpat_compiler.py:709: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat_compiler.py:683: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\hexpat_compiler.py:1212: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat_compiler.py:1162: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 4 findings in src/intellicrack/core\transform_pipeline.py
 
-src/intellicrack/core\transform_pipeline.py:46: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:45: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\transform_pipeline.py:53: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:52: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\transform_pipeline.py:256: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:248: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\transform_pipeline.py:759: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:720: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 4 findings in src/intellicrack/ui\panels\graph_view.py
 
-src/intellicrack/ui\panels\graph_view.py:138: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\graph_view.py:135: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\graph_view.py:239: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\graph_view.py:234: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\graph_view.py:312: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\graph_view.py:305: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\graph_view.py:511: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\graph_view.py:498: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 4 findings in src/intellicrack/ui\panels\stack_viewer.py
 
-src/intellicrack/ui\panels\stack_viewer.py:150: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\stack_viewer.py:142: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\stack_viewer.py:226: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\stack_viewer.py:213: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\stack_viewer.py:319: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\stack_viewer.py:301: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\stack_viewer.py:451: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\stack_viewer.py:429: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 4 findings in tests/test_ui\conftest.py
@@ -166,230 +166,230 @@ tests/test_ui\conftest.py:122: D107: in public method `__init__`: - Missing docs
 
 3 findings in src/intellicrack/sandbox\qemu.py
 
-src/intellicrack/sandbox\qemu.py:186: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/sandbox\qemu.py:181: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/sandbox\qemu.py:390: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/sandbox\qemu.py:374: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/sandbox\qemu.py:598: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/sandbox\qemu.py:577: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 3 findings in src/intellicrack/ui\chat.py
 
-src/intellicrack/ui\chat.py:65: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\chat.py:63: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\chat.py:230: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\chat.py:224: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\chat.py:377: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\chat.py:369: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 3 findings in src/intellicrack/ui\sandbox_config.py
 
-src/intellicrack/ui\sandbox_config.py:83: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\sandbox_config.py:81: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\sandbox_config.py:284: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\sandbox_config.py:280: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\sandbox_config.py:760: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\sandbox_config.py:749: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 3 findings in src/intellicrack/ui\panels\script_manager.py
 
-src/intellicrack/ui\panels\script_manager.py:317: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\script_manager.py:308: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\script_manager.py:410: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\script_manager.py:395: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\script_manager.py:469: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\script_manager.py:450: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 3 findings in src/intellicrack/ui\panels\hex_editor\_widgets.py
 
-src/intellicrack/ui\panels\hex_editor\_widgets.py:98: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_widgets.py:96: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\hex_editor\_widgets.py:207: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_widgets.py:201: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\hex_editor\_widgets.py:310: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_widgets.py:300: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/core\logging.py
 
-src/intellicrack/core\logging.py:284: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\logging.py:277: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\logging.py:624: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\logging.py:603: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/core\script_gen.py
 
-src/intellicrack/core\script_gen.py:502: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\script_gen.py:482: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\script_gen.py:793: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\script_gen.py:760: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/core\session.py
 
-src/intellicrack/core\session.py:223: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\session.py:212: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\session.py:813: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\session.py:784: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/core\hexpat\errors.py
 
-src/intellicrack/core\hexpat\errors.py:21: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\errors.py:20: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\hexpat\errors.py:67: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\errors.py:65: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/core\hexpat\evaluator.py
 
-src/intellicrack/core\hexpat\evaluator.py:145: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\evaluator.py:141: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\hexpat\evaluator.py:271: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\evaluator.py:261: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/credentials\oauth.py
 
-src/intellicrack/credentials\oauth.py:372: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/credentials\oauth.py:359: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/credentials\oauth.py:457: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/credentials\oauth.py:442: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/providers\base.py
 
-src/intellicrack/providers\base.py:157: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\base.py:153: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/providers\base.py:606: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\base.py:582: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/providers\discovery.py
 
-src/intellicrack/providers\discovery.py:102: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\discovery.py:98: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/providers\discovery.py:315: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\discovery.py:303: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/sandbox\manager.py
 
-src/intellicrack/sandbox\manager.py:49: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/sandbox\manager.py:47: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/sandbox\manager.py:94: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/sandbox\manager.py:90: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/ui\app.py
 
-src/intellicrack/ui\app.py:131: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\app.py:128: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\app.py:183: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\app.py:179: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/ui\session_manager.py
 
-src/intellicrack/ui\session_manager.py:86: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\session_manager.py:84: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\session_manager.py:841: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\session_manager.py:825: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/ui\panels\hex_editor_widget.py
 
-src/intellicrack/ui\panels\hex_editor_widget.py:152: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor_widget.py:148: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\hex_editor_widget.py:381: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor_widget.py:368: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/ui\panels\vnc_widget.py
 
-src/intellicrack/ui\panels\vnc_widget.py:64: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\vnc_widget.py:62: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\vnc_widget.py:499: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\vnc_widget.py:483: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 2 findings in src/intellicrack/ui\panels\hex_editor\_search.py
 
-src/intellicrack/ui\panels\hex_editor\_search.py:75: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_search.py:73: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/ui\panels\hex_editor\_search.py:163: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_search.py:159: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\binary.py
 
-src/intellicrack/bridges\binary.py:93: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\binary.py:90: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\cutter.py
 
-src/intellicrack/bridges\cutter.py:187: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\cutter.py:177: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\frida_bridge.py
 
-src/intellicrack/bridges\frida_bridge.py:466: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\frida_bridge.py:464: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\ghidra.py
 
-src/intellicrack/bridges\ghidra.py:91: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\ghidra.py:88: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\hex_editor.py
 
-src/intellicrack/bridges\hex_editor.py:129: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\hex_editor.py:126: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\hex_state.py
 
-src/intellicrack/bridges\hex_state.py:92: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\hex_state.py:87: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\installer.py
 
-src/intellicrack/bridges\installer.py:213: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\installer.py:206: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\named_pipe_client.py
 
-src/intellicrack/bridges\named_pipe_client.py:59: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\named_pipe_client.py:57: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\process.py
 
-src/intellicrack/bridges\process.py:185: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\process.py:183: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\sandbox_bridge.py
 
-src/intellicrack/bridges\sandbox_bridge.py:65: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\sandbox_bridge.py:63: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\schemas.py
 
-src/intellicrack/bridges\schemas.py:152: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\schemas.py:149: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:361: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\x64dbg.py:351: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\analysis_aggregator.py
 
-src/intellicrack/core\analysis_aggregator.py:47: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\analysis_aggregator.py:45: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\disassembler.py
 
-src/intellicrack/core\disassembler.py:118: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\disassembler.py:114: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\orchestrator.py
 
-src/intellicrack/core\orchestrator.py:185: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\orchestrator.py:179: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\process_manager.py
 
-src/intellicrack/core\process_manager.py:153: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\process_manager.py:147: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\template_manager.py
 
-src/intellicrack/core\template_manager.py:76: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\template_manager.py:73: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\tools.py
@@ -399,37 +399,37 @@ src/intellicrack/core\tools.py:84: D107: in public method `__init__`: - Missing 
 
 1 findings in src/intellicrack/core\yara_scanner.py
 
-src/intellicrack/core\yara_scanner.py:90: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\yara_scanner.py:86: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\data_reader.py
 
-src/intellicrack/core\hexpat\data_reader.py:34: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\data_reader.py:33: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\interpreter.py
 
-src/intellicrack/core\hexpat\interpreter.py:59: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\interpreter.py:57: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\lexer.py
 
-src/intellicrack/core\hexpat\lexer.py:26: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\lexer.py:25: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\parser.py
 
-src/intellicrack/core\hexpat\parser.py:129: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\parser.py:128: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\pattern_registry.py
 
-src/intellicrack/core\hexpat\pattern_registry.py:60: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\pattern_registry.py:58: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\preprocessor.py
 
-src/intellicrack/core\hexpat\preprocessor.py:76: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\preprocessor.py:73: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\stdlib.py
@@ -439,127 +439,127 @@ src/intellicrack/core\hexpat\stdlib.py:43: D107: in public method `__init__`: - 
 
 1 findings in src/intellicrack/core\hexpat\type_system.py
 
-src/intellicrack/core\hexpat\type_system.py:159: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\type_system.py:151: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/credentials\env_loader.py
 
-src/intellicrack/credentials\env_loader.py:156: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/credentials\env_loader.py:151: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/credentials\store.py
 
-src/intellicrack/credentials\store.py:102: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/credentials\store.py:99: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\anthropic.py
 
-src/intellicrack/providers\anthropic.py:67: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\anthropic.py:64: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\google.py
 
-src/intellicrack/providers\google.py:68: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\google.py:65: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\grok.py
 
-src/intellicrack/providers\grok.py:88: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\grok.py:85: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\huggingface.py
 
-src/intellicrack/providers\huggingface.py:73: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\huggingface.py:70: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\local_transformers.py
 
-src/intellicrack/providers\local_transformers.py:169: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\local_transformers.py:165: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\model_loader.py
 
-src/intellicrack/providers\model_loader.py:124: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\model_loader.py:121: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\ollama.py
 
-src/intellicrack/providers\ollama.py:74: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\ollama.py:71: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\openai.py
 
-src/intellicrack/providers\openai.py:89: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\openai.py:86: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\openrouter.py
 
-src/intellicrack/providers\openrouter.py:70: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\openrouter.py:68: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/providers\registry.py
 
-src/intellicrack/providers\registry.py:41: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/providers\registry.py:39: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/sandbox\windows.py
 
-src/intellicrack/sandbox\windows.py:103: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/sandbox\windows.py:101: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\confirmation_dialog.py
 
-src/intellicrack/ui\confirmation_dialog.py:49: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\confirmation_dialog.py:47: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panel_dock.py
 
-src/intellicrack/ui\panel_dock.py:59: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panel_dock.py:57: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\xpu_status.py
 
-src/intellicrack/ui\xpu_status.py:96: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\xpu_status.py:92: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\dialogs\splash_screen.py
 
-src/intellicrack/ui\dialogs\splash_screen.py:183: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\dialogs\splash_screen.py:181: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\analysis_panel.py
 
-src/intellicrack/ui\panels\analysis_panel.py:63: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\analysis_panel.py:61: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\async_bridge.py
 
-src/intellicrack/ui\panels\async_bridge.py:117: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\async_bridge.py:112: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\base_panel.py
 
-src/intellicrack/ui\panels\base_panel.py:67: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\base_panel.py:65: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\binary_panel.py
 
-src/intellicrack/ui\panels\binary_panel.py:174: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\binary_panel.py:169: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\cutter_panel.py
 
-src/intellicrack/ui\panels\cutter_panel.py:89: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\cutter_panel.py:86: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\frida_panel.py
 
-src/intellicrack/ui\panels\frida_panel.py:95: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\frida_panel.py:92: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\ghidra_panel.py
 
-src/intellicrack/ui\panels\ghidra_panel.py:84: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\ghidra_panel.py:82: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hex_tools_panel.py
@@ -569,27 +569,27 @@ src/intellicrack/ui\panels\hex_tools_panel.py:409: D107: in public method `__ini
 
 1 findings in src/intellicrack/ui\panels\hxd_panel.py
 
-src/intellicrack/ui\panels\hxd_panel.py:122: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hxd_panel.py:118: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\process_panel.py
 
-src/intellicrack/ui\panels\process_panel.py:430: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\process_panel.py:421: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\sandbox_panel.py
 
-src/intellicrack/ui\panels\sandbox_panel.py:77: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\sandbox_panel.py:75: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\x64dbg_panel.py
 
-src/intellicrack/ui\panels\x64dbg_panel.py:103: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\x64dbg_panel.py:101: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\panel.py
 
-src/intellicrack/ui\panels\hex_editor\panel.py:115: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\panel.py:113: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_disassembly.py
@@ -599,34 +599,34 @@ src/intellicrack/ui\panels\hex_editor\_disassembly.py:49: D102: in public method
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_sections.py
 
-src/intellicrack/ui\panels\hex_editor\_sections.py:46: D102: in public method `goto_offset`: - Missing docstring in public method
+src/intellicrack/ui\panels\hex_editor\_sections.py:45: D102: in public method `goto_offset`: - Missing docstring in public method
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_statistics.py
 
-src/intellicrack/ui\panels\hex_editor\_statistics.py:80: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_statistics.py:78: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_yara.py
 
-src/intellicrack/ui\panels\hex_editor\_yara.py:60: D102: in public method `goto_offset`: - Missing docstring in public method
+src/intellicrack/ui\panels\hex_editor\_yara.py:59: D102: in public method `goto_offset`: - Missing docstring in public method
 
 
 1 findings in src/intellicrack/ui\resources\font_manager.py
 
-src/intellicrack/ui\resources\font_manager.py:62: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\resources\font_manager.py:60: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\resources\icon_manager.py
 
-src/intellicrack/ui\resources\icon_manager.py:203: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\resources\icon_manager.py:201: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\resources\resource_helper.py
 
-src/intellicrack/ui\resources\resource_helper.py:40: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\resources\resource_helper.py:38: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\resources\theme_manager.py
 
-src/intellicrack/ui\resources\theme_manager.py:1128: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\resources\theme_manager.py:1125: D107: in public method `__init__`: - Missing docstring in __init__

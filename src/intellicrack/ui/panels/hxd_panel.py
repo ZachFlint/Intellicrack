@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-HxD hex editor panel for Intellicrack.
+"""HxD hex editor panel for Intellicrack.
 
 Provides HxD executable detection, process-based embedding into a Qt panel, file loading, and lifecycle management for the HxD hex editor on
 Windows.
@@ -52,8 +51,7 @@ _PROCESS_TERM_TIMEOUT_MS: Final[int] = 3000
 
 
 def _find_hxd_executable() -> Path | None:
-    """
-    Locate the HxD executable on the system.
+    """Locate the HxD executable on the system.
 
     Checks Windows registry entries first, then common installation
     directories, and finally PATH environment variable.
@@ -89,8 +87,7 @@ def _find_hxd_executable() -> Path | None:
 
 
 def find_hxd_executable() -> Path | None:
-    """
-    Locate the HxD executable on the system.
+    """Locate the HxD executable on the system.
 
     Checks Windows registry entries first, then common installation
     directories, and finally PATH environment variable.
@@ -102,8 +99,7 @@ def find_hxd_executable() -> Path | None:
 
 
 class HxDPanel(QWidget):
-    """
-    Panel that embeds the HxD hex editor into Intellicrack.
+    """Panel that embeds the HxD hex editor into Intellicrack.
 
     Detects HxD installation, launches HxD as a subprocess, and
     provides file loading and lifecycle management.
@@ -163,8 +159,7 @@ class HxDPanel(QWidget):
 
     @property
     def embed_host(self) -> QWidget:
-        """
-        Get the embed host widget.
+        """Get the embed host widget.
 
         Returns:
             QWidget: The widget used to embed HxD.
@@ -190,8 +185,7 @@ class HxDPanel(QWidget):
             self.load_file(file_path)
 
     def load_file(self, path: str | Path) -> bool:
-        """
-        Load a file in HxD.
+        """Load a file in HxD.
 
         Args:
             path: Path to the file to open.
@@ -233,8 +227,7 @@ class HxDPanel(QWidget):
             return True
 
     def start_tool(self) -> bool:
-        """
-        Start HxD without a specific file.
+        """Start HxD without a specific file.
 
         Returns:
             bool: True if HxD started successfully.
@@ -264,8 +257,7 @@ class HxDPanel(QWidget):
             return True
 
     def stop_tool(self) -> bool:
-        """
-        Stop HxD and clean up.
+        """Stop HxD and clean up.
 
         Returns:
             bool: True always (idempotent).

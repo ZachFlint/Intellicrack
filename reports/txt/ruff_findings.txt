@@ -187,173 +187,173 @@ D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:3258:9: D212 Multi-line docst
 
 84 findings in D:\Intellicrack\src\intellicrack\bridges\hex_editor.py
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:121:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:120:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:153:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:152:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:162:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:161:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:172:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:171:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:182:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:181:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:914:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:913:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:939:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:938:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:957:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:956:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:995:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:994:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1015:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1014:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1037:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1036:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1062:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1061:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1087:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1086:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1111:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1110:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1127:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1126:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1136:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1135:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1153:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1152:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1162:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1161:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1184:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1183:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1214:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1213:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1241:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1240:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1263:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1262:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1290:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1289:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1306:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1305:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1322:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1321:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1346:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1345:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1367:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1366:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1385:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1384:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1410:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1409:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1432:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1431:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1455:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1454:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1475:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1474:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1499:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1498:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1517:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1516:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1544:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1543:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1574:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1573:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1610:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1609:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1633:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1632:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1667:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1666:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1688:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1687:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1718:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1717:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1742:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1741:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1831:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1830:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1855:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1854:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1876:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1875:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1890:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1889:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1924:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1923:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1941:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1940:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1964:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1963:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1989:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:1988:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2046:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2045:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2106:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2105:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2162:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2161:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2180:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2179:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2201:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2200:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2219:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2218:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2245:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2244:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2263:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2262:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2291:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2290:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2346:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2345:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2390:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2389:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2441:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2440:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2490:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2489:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2535:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2534:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2549:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2548:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2585:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2584:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2613:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2612:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2655:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2654:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2725:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2724:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2757:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2756:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2791:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2790:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2820:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2819:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2877:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2876:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2944:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:2943:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3004:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3003:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3028:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3027:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3064:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3063:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3091:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3090:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3110:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3109:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3122:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3121:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3139:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3138:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3148:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3147:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3169:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:3168:9: D212 Multi-line docstring summary should start at the first line
 
 
 77 findings in D:\Intellicrack\src\intellicrack\bridges\base.py
@@ -1277,111 +1277,111 @@ D:\Intellicrack\src\intellicrack\ui\provider_config.py:2552:9: D212 Multi-line d
 
 53 findings in D:\Intellicrack\src\intellicrack\bridges\ghidra.py
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:79:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:78:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:110:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:109:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:120:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:119:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:130:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:129:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:140:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:139:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:150:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:149:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:581:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:580:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:678:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:677:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:693:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:692:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:776:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:775:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:824:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:823:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:850:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:849:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:860:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:859:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:869:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:868:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:936:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:935:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1084:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1083:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1104:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1103:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1136:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1135:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1158:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1157:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1219:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1218:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1309:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1308:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1357:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1356:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1414:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1413:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1462:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1461:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1510:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1509:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1560:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1559:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1602:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1601:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1643:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1642:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1688:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1687:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1732:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1731:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1775:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1774:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1842:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1841:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1888:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1887:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1902:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1901:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1929:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1928:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1969:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1968:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1995:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:1994:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2035:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2034:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2073:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2072:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2110:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2109:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2178:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2177:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2227:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2226:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2284:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2283:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2323:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2322:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2372:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2371:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2408:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2407:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2487:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2486:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2526:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2525:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2565:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2564:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2600:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2599:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2626:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2625:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2652:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:2651:9: D212 Multi-line docstring summary should start at the first line
 
 
 50 findings in D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py
@@ -1691,97 +1691,97 @@ D:\Intellicrack\src\intellicrack\core\hexpat\ast_nodes.py:891:5: D212 Multi-line
 
 46 findings in D:\Intellicrack\src\intellicrack\bridges\cutter.py
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:73:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:72:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:89:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:88:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:105:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:104:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:121:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:120:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:136:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:135:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:151:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:150:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:166:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:165:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:181:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:180:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:206:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:205:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:216:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:215:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:225:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:224:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:240:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:239:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:275:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:274:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:285:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:284:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:603:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:602:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:642:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:641:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:675:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:674:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:703:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:702:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:722:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:721:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:743:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:742:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:805:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:804:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:833:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:832:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:878:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:877:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:953:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:952:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:987:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:986:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1029:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1028:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1073:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1072:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1117:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1116:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1166:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1165:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1191:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1190:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1216:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1215:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1241:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1240:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1264:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1263:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1287:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1286:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1298:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1297:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1309:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1308:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1320:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1319:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1348:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1347:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1374:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1373:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1392:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1391:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1422:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1421:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1435:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1434:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1464:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1463:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1477:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1476:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\cutter.py:1504:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:1503:9: D212 Multi-line docstring summary should start at the first line
 
 
 46 findings in D:\Intellicrack\src\intellicrack\core\transform_pipeline.py
@@ -2223,79 +2223,79 @@ D:\Intellicrack\src\intellicrack\core\hexpat\parser.py:1379:9: D212 Multi-line d
 
 37 findings in D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:77:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:76:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:104:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:103:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:141:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:140:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:186:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:185:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:216:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:215:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:252:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:251:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:265:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:264:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:305:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:304:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:339:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:338:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:406:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:405:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:417:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:416:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:426:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:425:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:435:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:434:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:484:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:483:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:499:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:498:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:513:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:512:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:549:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:548:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:584:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:583:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:599:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:598:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:635:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:634:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:680:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:679:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:719:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:718:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:752:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:751:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:767:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:766:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:786:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:785:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:807:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:806:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:845:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:844:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:867:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:866:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:905:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:904:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:930:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:929:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:941:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:940:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:985:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:984:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:996:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:995:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:1027:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:1026:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:1051:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:1050:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:1074:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:1073:9: D212 Multi-line docstring summary should start at the first line
 
 
 34 findings in D:\Intellicrack\src\intellicrack\core\script_gen.py
@@ -2371,73 +2371,73 @@ D:\Intellicrack\src\intellicrack\core\script_gen.py:798:9: D212 Multi-line docst
 
 34 findings in D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:77:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:76:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:96:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:95:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:113:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:112:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:152:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:151:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:192:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:191:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:222:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:221:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:293:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:292:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:331:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:330:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:341:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:340:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:350:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:349:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:383:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:382:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:410:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:409:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:421:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:420:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:433:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:432:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:487:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:486:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:512:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:511:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:543:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:542:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:552:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:551:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:620:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:619:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:633:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:632:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:643:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:642:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:661:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:660:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:683:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:682:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:711:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:710:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:739:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:738:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:779:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:778:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:796:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:795:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:815:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:814:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:830:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:829:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:854:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:853:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:874:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:873:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:914:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:913:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:925:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:924:9: D212 Multi-line docstring summary should start at the first line
 
 
 33 findings in D:\Intellicrack\src\intellicrack\ui\dialogs\splash_screen.py
@@ -2897,63 +2897,63 @@ D:\Intellicrack\src\intellicrack\providers\base.py:782:5: D212 Multi-line docstr
 
 29 findings in D:\Intellicrack\src\intellicrack\bridges\hex_state.py
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:35:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:34:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:72:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:71:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:85:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:84:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:105:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:104:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:115:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:114:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:125:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:124:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:135:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:134:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:144:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:143:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:168:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:167:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:182:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:181:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:198:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:197:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:224:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:223:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:245:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:244:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:261:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:260:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:275:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:274:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:285:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:284:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:296:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:295:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:312:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:311:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:321:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:320:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:339:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:338:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:354:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:353:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:373:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:372:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:392:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:391:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:411:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:410:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:430:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:429:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:449:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:448:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:469:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:468:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\bridges\hex_state.py:490:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:489:9: D212 Multi-line docstring summary should start at the first line
 
 
 28 findings in D:\Intellicrack\src\intellicrack\bridges\binary.py
@@ -3565,53 +3565,53 @@ D:\Intellicrack\src\intellicrack\providers\local_transformers.py:1014:9: D212 Mu
 
 24 findings in D:\Intellicrack\src\intellicrack\ui\tool_config.py
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:79:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:78:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:211:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:210:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:340:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:339:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:361:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:360:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:398:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:397:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:424:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:423:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:441:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:440:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:482:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:481:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:510:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:509:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:551:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:550:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:651:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:650:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:678:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:677:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:689:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:688:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:850:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:849:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:897:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:896:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:960:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:959:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:977:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:976:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:1018:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1017:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:1082:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1081:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:1117:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1116:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:1262:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1261:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:1293:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1292:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\tool_config.py:1344:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1343:9: D212 Multi-line docstring summary should start at the first line
 
 
 23 findings in D:\Intellicrack\src\intellicrack\bridges\process.py
@@ -3994,43 +3994,43 @@ D:\Intellicrack\src\intellicrack\bridges\schemas.py:655:5: D212 Multi-line docst
 
 19 findings in D:\Intellicrack\src\intellicrack\providers\anthropic.py
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:61:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:60:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:75:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:74:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:84:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:83:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:129:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:128:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:157:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:156:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:184:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:183:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:224:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:223:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:282:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:281:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:316:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:315:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:349:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:348:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:444:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:443:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:540:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:539:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:558:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:557:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:577:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:576:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:590:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:589:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:616:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:615:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:643:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:642:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\anthropic.py:660:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:659:9: D212 Multi-line docstring summary should start at the first line
 
 
 19 findings in D:\Intellicrack\src\intellicrack\providers\xpu_utils.py
@@ -4156,41 +4156,41 @@ D:\Intellicrack\src\intellicrack\credentials\env_loader.py:508:5: D212 Multi-lin
 
 18 findings in D:\Intellicrack\src\intellicrack\providers\ollama.py
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:59:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:58:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:87:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:86:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:97:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:96:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:107:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:106:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:116:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:115:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:222:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:221:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:250:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:249:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:296:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:295:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:341:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:340:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:376:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:375:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:434:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:433:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:514:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:513:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:543:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:542:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:596:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:595:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:697:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:696:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:717:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:716:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\ollama.py:733:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\ollama.py:732:9: D212 Multi-line docstring summary should start at the first line
 
 
 18 findings in D:\Intellicrack\src\intellicrack\ui\session_manager.py
@@ -4514,35 +4514,35 @@ D:\Intellicrack\src\intellicrack\core\hexpat\type_system.py:274:9: D212 Multi-li
 
 15 findings in D:\Intellicrack\src\intellicrack\providers\google.py
 
-D:\Intellicrack\src\intellicrack\providers\google.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:62:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:61:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:76:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:75:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:85:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:84:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:132:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:131:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:147:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:146:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:226:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:225:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:356:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:355:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:466:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:465:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:484:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:483:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:504:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:503:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:551:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:550:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:590:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:589:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:664:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:663:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\google.py:695:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\google.py:694:9: D212 Multi-line docstring summary should start at the first line
 
 
 15 findings in D:\Intellicrack\src\intellicrack\providers\registry.py
@@ -4743,64 +4743,64 @@ D:\Intellicrack\src\intellicrack\core\template_manager.py:367:9: D212 Multi-line
 
 14 findings in D:\Intellicrack\src\intellicrack\providers\grok.py
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:75:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:74:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:96:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:95:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:105:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:104:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:155:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:154:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:173:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:172:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:190:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:189:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:202:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:201:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:253:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:252:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:336:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:335:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:395:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:394:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:437:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:436:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:553:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:552:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\grok.py:569:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\grok.py:568:9: D212 Multi-line docstring summary should start at the first line
 
 
 14 findings in D:\Intellicrack\src\intellicrack\providers\openai.py
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:83:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:82:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:97:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:96:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:106:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:105:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:161:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:160:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:191:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:190:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:210:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:209:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:224:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:223:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:284:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:283:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:366:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:365:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:438:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:437:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:479:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:478:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:610:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:609:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\openai.py:626:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\openai.py:625:9: D212 Multi-line docstring summary should start at the first line
 
 
 13 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_search.py
@@ -4834,31 +4834,31 @@ D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_search.py:612:9: D212 Mul
 
 13 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:99:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:98:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:207:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:206:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:267:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:266:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:479:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:478:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:495:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:494:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:615:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:614:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:627:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:626:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:646:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:645:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:713:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:712:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:760:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:759:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:776:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:775:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:791:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:790:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:803:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:802:9: D212 Multi-line docstring summary should start at the first line
 
 
 13 findings in D:\Intellicrack\src\intellicrack\ui\sandbox_config.py
@@ -4919,29 +4919,29 @@ D:\Intellicrack\src\intellicrack\core\yara_scanner.py:249:9: D212 Multi-line doc
 
 12 findings in D:\Intellicrack\src\intellicrack\providers\huggingface.py
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:59:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:58:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:82:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:81:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:91:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:90:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:167:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:166:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:267:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:266:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:351:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:350:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:417:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:416:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:460:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:459:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:581:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:580:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:603:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:602:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\providers\huggingface.py:621:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:620:9: D212 Multi-line docstring summary should start at the first line
 
 
 12 findings in D:\Intellicrack\src\intellicrack\ui\chat.py
@@ -4973,29 +4973,29 @@ D:\Intellicrack\src\intellicrack\ui\chat.py:525:9: D212 Multi-line docstring sum
 
 12 findings in D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1120:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1119:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1135:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1134:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1152:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1151:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1169:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1168:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1195:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1194:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1214:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1213:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1244:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1243:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1258:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1257:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1267:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1266:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1276:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1275:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1360:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1359:9: D212 Multi-line docstring summary should start at the first line
 
 
 11 findings in D:\Intellicrack\src\intellicrack\core\disassembler.py
@@ -5096,25 +5096,25 @@ D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_widgets.py:298:5: D212 Mu
 
 10 findings in D:\Intellicrack\src\intellicrack\ui\xpu_status.py
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:6:1: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:5:1: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:72:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:71:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:85:5: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:84:5: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:119:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:118:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:147:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:146:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:168:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:167:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:187:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:186:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:205:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:204:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:370:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:369:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\xpu_status.py:402:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:401:9: D212 Multi-line docstring summary should start at the first line
 
 
 9 findings in D:\Intellicrack\src\intellicrack\core\hexpat\pattern_registry.py
@@ -5305,15 +5305,15 @@ D:\Intellicrack\src\intellicrack\ui\panel_dock.py:127:9: D212 Multi-line docstri
 
 5 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:75:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:74:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:225:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:224:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:278:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:277:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:406:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:405:9: D212 Multi-line docstring summary should start at the first line
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:445:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:444:9: D212 Multi-line docstring summary should start at the first line
 
 
 5 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py
@@ -5476,7 +5476,7 @@ D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py:80:9: D212 Mul
 
 1 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py
 
-D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:208:9: D212 Multi-line docstring summary should start at the first line
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py:207:9: D212 Multi-line docstring summary should start at the first line
 
 
 1 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor_panel.py

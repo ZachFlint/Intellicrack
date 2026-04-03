@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Process control bridge for Windows process manipulation.
+"""Process control bridge for Windows process manipulation.
 
 This module provides direct process control capabilities including memory access, thread manipulation, and module enumeration using Windows
 API.
@@ -129,8 +128,7 @@ MEMORY_BASIC_INFORMATION = MemoryBasicInformation
 
 
 class ProcessBridge(ToolBridgeBase):
-    """
-    Bridge for Windows process control.
+    """Bridge for Windows process control.
 
     Provides direct process manipulation including memory access,
     thread control, and module enumeration.
@@ -197,8 +195,7 @@ class ProcessBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """
-        Get the tool's name.
+        """Get the tool's name.
 
         Returns:
             ToolName: ToolName.PROCESS
@@ -207,8 +204,7 @@ class ProcessBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """
-        Get tool definition for LLM function calling.
+        """Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -467,8 +463,7 @@ class ProcessBridge(ToolBridgeBase):
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
-        """
-        Initialize the process bridge.
+        """Initialize the process bridge.
 
         Args:
             tool_path: Not used for process bridge.
@@ -509,8 +504,7 @@ class ProcessBridge(ToolBridgeBase):
 
     @override
     async def is_available(self) -> bool:
-        """
-        Check if process bridge is available.
+        """Check if process bridge is available.
 
         Returns:
             bool: True on Windows systems.
@@ -527,8 +521,7 @@ class ProcessBridge(ToolBridgeBase):
         self,
         filter_name: str | None = None,
     ) -> list[ProcessInfo]:
-        """
-        List all running processes.
+        """List all running processes.
 
         Args:
             filter_name: Optional name filter.
@@ -586,8 +579,7 @@ class ProcessBridge(ToolBridgeBase):
         pid: int,
         access: ProcessAccessRights = "all",
     ) -> bool:
-        """
-        Open a process handle.
+        """Open a process handle.
 
         Args:
             pid: Process ID.
@@ -633,8 +625,7 @@ class ProcessBridge(ToolBridgeBase):
         return True
 
     async def close(self) -> bool:
-        """
-        Close the current process handle.
+        """Close the current process handle.
 
         Returns:
             bool: True if closed.
@@ -653,8 +644,7 @@ class ProcessBridge(ToolBridgeBase):
         return True
 
     async def terminate(self, pid: int | None = None) -> bool:
-        """
-        Terminate a process.
+        """Terminate a process.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -695,8 +685,7 @@ class ProcessBridge(ToolBridgeBase):
                 await self.close()
 
     async def suspend(self, pid: int | None = None) -> bool:
-        """
-        Suspend all threads of a process.
+        """Suspend all threads of a process.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -726,8 +715,7 @@ class ProcessBridge(ToolBridgeBase):
         return True
 
     async def resume(self, pid: int | None = None) -> bool:
-        """
-        Resume all threads of a process.
+        """Resume all threads of a process.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -757,8 +745,7 @@ class ProcessBridge(ToolBridgeBase):
         return True
 
     async def read_memory(self, address: int, size: int) -> bytes:
-        """
-        Read memory from process.
+        """Read memory from process.
 
         Args:
             address: Memory address.
@@ -791,8 +778,7 @@ class ProcessBridge(ToolBridgeBase):
         raise ToolError(_ERR_READ_FAILED)
 
     async def write_memory(self, address: int, data: bytes) -> int:
-        """
-        Write memory to process.
+        """Write memory to process.
 
         Args:
             address: Memory address.
@@ -831,8 +817,7 @@ class ProcessBridge(ToolBridgeBase):
         size: int,
         protection: str = "rwx",
     ) -> int:
-        """
-        Allocate memory in process.
+        """Allocate memory in process.
 
         Args:
             size: Size to allocate.
@@ -878,8 +863,7 @@ class ProcessBridge(ToolBridgeBase):
         return address
 
     async def free(self, address: int) -> bool:
-        """
-        Free allocated memory.
+        """Free allocated memory.
 
         Args:
             address: Address to free.
@@ -915,8 +899,7 @@ class ProcessBridge(ToolBridgeBase):
         size: int,
         protection: str,
     ) -> str:
-        """
-        Change memory protection.
+        """Change memory protection.
 
         Args:
             address: Memory address.
@@ -964,8 +947,7 @@ class ProcessBridge(ToolBridgeBase):
         return old_prot_str
 
     async def get_modules(self, pid: int | None = None) -> list[ModuleInfo]:
-        """
-        Get loaded modules.
+        """Get loaded modules.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -1027,8 +1009,7 @@ class ProcessBridge(ToolBridgeBase):
         return modules
 
     async def get_threads(self, pid: int | None = None) -> list[ThreadInfo]:
-        """
-        Get process threads.
+        """Get process threads.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -1082,8 +1063,7 @@ class ProcessBridge(ToolBridgeBase):
         return threads
 
     async def get_memory_map(self) -> list[MemoryRegion]:
-        """
-        Get process memory map.
+        """Get process memory map.
 
         Returns:
             list[MemoryRegion]: List of memory regions.
@@ -1159,8 +1139,7 @@ class ProcessBridge(ToolBridgeBase):
         start_address: int | None = None,
         end_address: int | None = None,
     ) -> list[int]:
-        """
-        Search for byte pattern in memory.
+        """Search for byte pattern in memory.
 
         Args:
             pattern: Hex pattern with wildcards (e.g., "48 8B ?? ??").
@@ -1207,8 +1186,7 @@ class ProcessBridge(ToolBridgeBase):
         return matches
 
     async def inject_dll(self, dll_path: str) -> bool:
-        """
-        Inject a DLL into the process.
+        """Inject a DLL into the process.
 
         Args:
             dll_path: Path to DLL file.
@@ -1271,8 +1249,7 @@ class ProcessBridge(ToolBridgeBase):
             await self.free(remote_mem)
 
     async def get_process_info(self, pid: int | None = None) -> ProcessInfo | None:
-        """
-        Get detailed process information.
+        """Get detailed process information.
 
         Args:
             pid: Process ID (uses current if not specified).

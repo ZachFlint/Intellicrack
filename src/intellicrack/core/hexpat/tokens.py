@@ -139,8 +139,7 @@ class TokenType(enum.Enum):
 
 @dataclass(frozen=True)
 class Token:
-    """
-    A single lexer token.
+    """A single lexer token.
 
     Attributes:
         type: The token type.

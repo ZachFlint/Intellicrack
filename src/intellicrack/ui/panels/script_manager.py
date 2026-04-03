@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Script manager panel for creating and managing analysis scripts.
+"""Script manager panel for creating and managing analysis scripts.
 
 Provides a comprehensive UI for script editing, validation, and execution with support for Frida, Ghidra, Cutter, x64dbg, and Python
 scripts.
@@ -52,8 +51,7 @@ _SPLITTER_RIGHT_SIZE: Final[int] = 600
 
 
 def _restyle(widget: QWidget) -> None:
-    """
-    Force a QSS re-evaluation after a dynamic property change.
+    """Force a QSS re-evaluation after a dynamic property change.
 
     Args:
         widget: The widget whose style should be refreshed.
@@ -65,8 +63,7 @@ def _restyle(widget: QWidget) -> None:
 
 
 class ScriptTypeInfo:
-    """
-    Information about a script type including templates and extensions.
+    """Information about a script type including templates and extensions.
 
     Attributes:
         TYPES: Mapping of script type identifiers to their configuration dicts.
@@ -232,8 +229,7 @@ if __name__ == "__main__":
 
     @classmethod
     def get_types(cls) -> list[str]:
-        """
-        Get list of available script types.
+        """Get list of available script types.
 
         Returns:
             list[str]: List of script type identifiers.
@@ -242,8 +238,7 @@ if __name__ == "__main__":
 
     @classmethod
     def get_display_name(cls, script_type: str) -> str:
-        """
-        Get display name for a script type.
+        """Get display name for a script type.
 
         Args:
             script_type: Script type identifier.
@@ -256,8 +251,7 @@ if __name__ == "__main__":
 
     @classmethod
     def get_extension(cls, script_type: str) -> str:
-        """
-        Get file extension for a script type.
+        """Get file extension for a script type.
 
         Args:
             script_type: Script type identifier.
@@ -270,8 +264,7 @@ if __name__ == "__main__":
 
     @classmethod
     def get_language(cls, script_type: str) -> str:
-        """
-        Get syntax highlighting language for a script type.
+        """Get syntax highlighting language for a script type.
 
         Args:
             script_type: Script type identifier.
@@ -284,8 +277,7 @@ if __name__ == "__main__":
 
     @classmethod
     def get_template(cls, script_type: str, target: str = "", address: str = "0x0") -> str:
-        """
-        Get a template script for a type.
+        """Get a template script for a type.
 
         Args:
             script_type: Script type identifier.
@@ -301,8 +293,7 @@ if __name__ == "__main__":
 
 
 class ScriptListWidget(QListWidget):
-    """
-    List widget for displaying and filtering scripts.
+    """List widget for displaying and filtering scripts.
 
     Args:
         parent: Parent widget.
@@ -326,8 +317,7 @@ class ScriptListWidget(QListWidget):
         self.itemClicked.connect(self._on_item_clicked)
 
     def _on_item_clicked(self, item: QListWidgetItem) -> None:
-        """
-        Handle item click.
+        """Handle item click.
 
         Args:
             item: Clicked list item.
@@ -336,8 +326,7 @@ class ScriptListWidget(QListWidget):
             self.script_selected.emit(script_id)
 
     def add_script(self, script_id: str, name: str, script_type: str) -> None:
-        """
-        Add a script to the list.
+        """Add a script to the list.
 
         Args:
             script_id: Unique script identifier.
@@ -348,8 +337,7 @@ class ScriptListWidget(QListWidget):
         self._refresh_list()
 
     def remove_script(self, script_id: str) -> None:
-        """
-        Remove a script from the list.
+        """Remove a script from the list.
 
         Args:
             script_id: Script identifier to remove.
@@ -359,8 +347,7 @@ class ScriptListWidget(QListWidget):
             self._refresh_list()
 
     def set_filter(self, script_type: str | None) -> None:
-        """
-        Set the type filter for the list.
+        """Set the type filter for the list.
 
         Args:
             script_type: Script type to filter by, or None for all.
@@ -382,8 +369,7 @@ class ScriptListWidget(QListWidget):
             self.addItem(item)
 
     def get_selected_id(self) -> str | None:
-        """
-        Get the currently selected script ID.
+        """Get the currently selected script ID.
 
         Returns:
             str | None: Selected script ID or None.
@@ -394,8 +380,7 @@ class ScriptListWidget(QListWidget):
 
 
 class ScriptEditor(QPlainTextEdit):
-    """
-    Code editor widget for script editing with basic styling.
+    """Code editor widget for script editing with basic styling.
 
     Args:
         parent: Parent widget.
@@ -422,8 +407,7 @@ class ScriptEditor(QPlainTextEdit):
 
     @staticmethod
     def set_language(language: str) -> None:
-        """
-        Set the syntax highlighting language.
+        """Set the syntax highlighting language.
 
         Args:
             language: Language identifier.
@@ -431,8 +415,7 @@ class ScriptEditor(QPlainTextEdit):
         _ = language
 
     def get_content(self) -> str:
-        """
-        Get the current editor content.
+        """Get the current editor content.
 
         Returns:
             str: Script content string.
@@ -440,8 +423,7 @@ class ScriptEditor(QPlainTextEdit):
         return self.toPlainText()
 
     def set_content(self, content: str) -> None:
-        """
-        Set the editor content.
+        """Set the editor content.
 
         Args:
             content: Script content to display.
@@ -450,8 +432,7 @@ class ScriptEditor(QPlainTextEdit):
 
 
 class ScriptManagerPanel(QWidget):
-    """
-    Main script manager panel for creating, editing, and executing scripts.
+    """Main script manager panel for creating, editing, and executing scripts.
 
     Provides a split view with script list and editor, plus controls
     for script management and execution.
@@ -576,8 +557,7 @@ class ScriptManagerPanel(QWidget):
         layout.addWidget(self._status_bar)
 
     def _on_filter_changed(self, _index: int) -> None:
-        """
-        Handle filter combo change.
+        """Handle filter combo change.
 
         Args:
             _index: Selected index (unused, data retrieved from combo).
@@ -586,8 +566,7 @@ class ScriptManagerPanel(QWidget):
         self._script_list.set_filter(str(script_type_data) if script_type_data else None)
 
     def _on_type_changed(self, _index: int) -> None:
-        """
-        Handle type combo change.
+        """Handle type combo change.
 
         Args:
             _index: Selected index (unused, data retrieved from combo).
@@ -598,8 +577,7 @@ class ScriptManagerPanel(QWidget):
 
     @staticmethod
     def _build_script(name: str, script_type: str, content: str) -> Script:
-        """
-        Build a Script object from panel data.
+        """Build a Script object from panel data.
 
         Args:
             name: Script name.
@@ -629,8 +607,7 @@ class ScriptManagerPanel(QWidget):
         )
 
     def _on_script_selected(self, script_id: str) -> None:
-        """
-        Handle script selection.
+        """Handle script selection.
 
         Args:
             script_id: Selected script ID.
@@ -650,8 +627,7 @@ class ScriptManagerPanel(QWidget):
         self._load_script(script_id)
 
     def _load_script(self, script_id: str) -> None:
-        """
-        Load a script into the editor.
+        """Load a script into the editor.
 
         Refreshes the script from disk before loading to pick up
         any external modifications.
@@ -790,8 +766,7 @@ class ScriptManagerPanel(QWidget):
                 self._status_bar.showMessage(f"Loaded from: {file_path}")
 
     def _set_status_style(self, status: str) -> None:
-        """
-        Set the status bar QSS property and refresh its style.
+        """Set the status bar QSS property and refresh its style.
 
         Args:
             status: One of ``"info"``, ``"error"``, ``"success"``, or ``"idle"``.
@@ -846,8 +821,7 @@ class ScriptManagerPanel(QWidget):
         self.script_execute.emit(name, script_type, content)
 
     def set_backend(self, manager: ScriptManager, validator: ScriptValidator | None = None) -> None:
-        """
-        Set the script manager backend.
+        """Set the script manager backend.
 
         Args:
             manager: The ScriptManager instance.
@@ -863,8 +837,7 @@ class ScriptManagerPanel(QWidget):
         _logger.info("script_manager_backend_attached", script_count=len(manager.list_scripts()))
 
     def get_current_script(self) -> tuple[str, str, str] | None:
-        """
-        Get the current script data.
+        """Get the current script data.
 
         Returns:
             tuple[str, str, str] | None: Tuple of (name, type, content) or None.

@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Custom hex editor widget using QPainter rendering.
+"""Custom hex editor widget using QPainter rendering.
 
 Provides a high-performance hex editor view with virtual scrolling, keyboard editing, mouse selection, and column-based display for offset,
 hex, and ASCII data.
@@ -65,8 +64,7 @@ _ASCII_MAX = 0x7F
 
 
 def _get_hex_editor_colors() -> dict[str, QColor]:
-    """
-    Get theme-aware colors for hex editor rendering.
+    """Get theme-aware colors for hex editor rendering.
 
     Returns:
         dict[str, QColor]: Mapping of semantic color names to QColor values.
@@ -112,8 +110,7 @@ def _get_hex_editor_colors() -> dict[str, QColor]:
 
 @dataclass
 class HighlightRule:
-    """
-    A conditional byte highlighting rule.
+    """A conditional byte highlighting rule.
 
     Attributes:
         rule_id: Unique identifier for the rule.
@@ -131,8 +128,7 @@ class HighlightRule:
 
 
 class EntropyMiniMap(QWidget):
-    """
-    Scaled overview widget showing file entropy by region.
+    """Scaled overview widget showing file entropy by region.
 
     Paints a compact vertical strip colored by Shannon entropy with a
     semi-transparent rectangle indicating the currently visible viewport.
@@ -165,8 +161,7 @@ class EntropyMiniMap(QWidget):
         self.update()
 
     def set_entropy_data(self, values: list[float], total_size: int) -> None:
-        """
-        Load entropy values for a file.
+        """Load entropy values for a file.
 
         Args:
             values: List of per-chunk Shannon entropy values (0.0-8.0).
@@ -177,8 +172,7 @@ class EntropyMiniMap(QWidget):
         self.update()
 
     def set_viewport(self, start: int, end: int) -> None:
-        """
-        Update the visible-region indicator.
+        """Update the visible-region indicator.
 
         Args:
             start: First visible byte offset.
@@ -190,8 +184,7 @@ class EntropyMiniMap(QWidget):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """
-        Paint the entropy overview and viewport indicator.
+        """Paint the entropy overview and viewport indicator.
 
         Args:
             a0: Paint event (unused).
@@ -204,8 +197,7 @@ class EntropyMiniMap(QWidget):
             painter.end()
 
     def _draw_minimap(self, painter: QPainter) -> None:
-        """
-        Render the minimap content.
+        """Render the minimap content.
 
         Args:
             painter: Active QPainter instance.
@@ -232,8 +224,7 @@ class EntropyMiniMap(QWidget):
         count: int,
         colors: dict[str, QColor],
     ) -> None:
-        """
-        Paint per-chunk entropy bars onto the minimap.
+        """Paint per-chunk entropy bars onto the minimap.
 
         Args:
             painter: Active QPainter instance.
@@ -260,8 +251,7 @@ class EntropyMiniMap(QWidget):
         mid_color: QColor,
         high_color: QColor,
     ) -> QColor:
-        """
-        Interpolate an entropy value to a color between low, mid, and high.
+        """Interpolate an entropy value to a color between low, mid, and high.
 
         Args:
             entropy: Shannon entropy value (0.0-8.0).
@@ -293,8 +283,7 @@ class EntropyMiniMap(QWidget):
         h: int,
         colors: dict[str, QColor],
     ) -> None:
-        """
-        Draw the semi-transparent viewport position indicator.
+        """Draw the semi-transparent viewport position indicator.
 
         Args:
             painter: Active QPainter instance.
@@ -312,8 +301,7 @@ class EntropyMiniMap(QWidget):
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        """
-        Navigate to the clicked file position.
+        """Navigate to the clicked file position.
 
         Args:
             a0: Mouse event.
@@ -351,8 +339,7 @@ DISPLAY_MODES: list[str] = list(_MODE_PARAMS.keys())
 
 
 class HexEditorWidget(QAbstractScrollArea):
-    """
-    Custom hex editor widget with QPainter rendering.
+    """Custom hex editor widget with QPainter rendering.
 
     Renders hex data in three columns (offset, hex, ASCII) with
     virtual scrolling for large file support, keyboard editing,
@@ -434,8 +421,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def _get_mode_params(self) -> tuple[int, int]:
-        """
-        Return (group_size, chars_per_group) for the current display mode.
+        """Return (group_size, chars_per_group) for the current display mode.
 
         Returns:
             tuple[int, int]: Bytes per group and character width per group.
@@ -458,8 +444,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self.setMinimumWidth(self._total_width + 20)
 
     def set_display_mode(self, mode: str) -> None:
-        """
-        Change the hex column display format.
+        """Change the hex column display format.
 
         Args:
             mode: One of the supported display mode names from DISPLAY_MODES.
@@ -475,8 +460,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def _visible_row_count(self) -> int:
-        """
-        Calculate the number of rows visible in the viewport.
+        """Calculate the number of rows visible in the viewport.
 
         Returns:
             int: Number of visible rows.
@@ -485,8 +469,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return 1 if vp is None else max(1, vp.height() // self._line_height)
 
     def _doc_length(self) -> int:
-        """
-        Get the document length safely.
+        """Get the document length safely.
 
         Returns:
             int: Document length in bytes, or 0 if no document.
@@ -501,8 +484,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return 0
 
     def _total_rows(self) -> int:
-        """
-        Calculate total number of rows in the document.
+        """Calculate total number of rows in the document.
 
         Returns:
             int: Total row count.
@@ -513,8 +495,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return (doc_len + self._bytes_per_row - 1) // self._bytes_per_row
 
     def set_document(self, document: object) -> None:
-        """
-        Attach a HexDocument to this widget.
+        """Attach a HexDocument to this widget.
 
         Args:
             document: HexDocument instance from the Rust core.
@@ -541,8 +522,7 @@ class HexEditorWidget(QAbstractScrollArea):
         _logger.debug("document_set", doc_length=self._doc_length())
 
     def _on_scroll_changed(self, value: int) -> None:
-        """
-        Update the minimap viewport indicator on scroll.
+        """Update the minimap viewport indicator on scroll.
 
         Args:
             value: New scrollbar row value.
@@ -556,8 +536,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
-        """
-        Render the hex editor display.
+        """Render the hex editor display.
 
         Args:
             a0: Paint event.
@@ -573,8 +552,7 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.end()
 
     def _paint_content(self, painter: QPainter, clip_rect: QRect) -> None:
-        """
-        Paint all hex editor content.
+        """Paint all hex editor content.
 
         Args:
             painter: Active QPainter instance.
@@ -596,8 +574,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._paint_highlight_overlays(painter, first_row, visible_rows)
 
     def _paint_separators(self, painter: QPainter, vp_height: int) -> None:
-        """
-        Draw column separator lines.
+        """Draw column separator lines.
 
         Args:
             painter: Active QPainter instance.
@@ -610,8 +587,7 @@ class HexEditorWidget(QAbstractScrollArea):
         painter.drawLine(sep2_x, 0, sep2_x, vp_height)
 
     def _paint_data_rows(self, painter: QPainter, first_row: int, visible_rows: int) -> None:
-        """
-        Paint offset, hex, and ASCII columns for visible rows.
+        """Paint offset, hex, and ASCII columns for visible rows.
 
         Args:
             painter: Active QPainter instance.
@@ -665,8 +641,7 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """
-        Paint all hex groups for a single row.
+        """Paint all hex groups for a single row.
 
         Args:
             painter: Active QPainter instance.
@@ -702,8 +677,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @staticmethod
     def _read_row_data(read_fn: Callable[[int, int], object] | None, offset: int, length: int) -> bytes:
-        """
-        Read a row of bytes from the document.
+        """Read a row of bytes from the document.
 
         Args:
             read_fn: Document read callable.
@@ -721,8 +695,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return bytes(cast("list[int]", raw)) if isinstance(raw, list) else b""
 
     def _format_group(self, group_bytes: bytes, padded_size: int) -> str:
-        """
-        Format a byte group as a display string for the current mode.
+        """Format a byte group as a display string for the current mode.
 
         Args:
             group_bytes: Actual bytes for this group (may be less than padded_size).
@@ -807,8 +780,7 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """
-        Paint a group of bytes in the hex column.
+        """Paint a group of bytes in the hex column.
 
         Args:
             painter: Active QPainter instance.
@@ -865,8 +837,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @staticmethod
     def _is_group_selected(group_offset: int, actual_size: int, sel_start: int, sel_end: int) -> bool:
-        """
-        Check whether any byte in the group falls within the selection.
+        """Check whether any byte in the group falls within the selection.
 
         Args:
             group_offset: Absolute byte offset of the first byte in the group.
@@ -889,8 +860,7 @@ class HexEditorWidget(QAbstractScrollArea):
         *,
         any_selected: bool,
     ) -> str | None:
-        """
-        Find the first matching highlight color for a byte group.
+        """Find the first matching highlight color for a byte group.
 
         Args:
             group_bytes: Raw bytes for the group.
@@ -920,8 +890,7 @@ class HexEditorWidget(QAbstractScrollArea):
         *,
         any_selected: bool,
     ) -> None:
-        """
-        Paint RGBA, highlight, and selection backgrounds for a hex group.
+        """Paint RGBA, highlight, and selection backgrounds for a hex group.
 
         Args:
             painter: Active QPainter instance.
@@ -955,8 +924,7 @@ class HexEditorWidget(QAbstractScrollArea):
         any_selected: bool,
         any_modified: bool,
     ) -> None:
-        """
-        Set the painter pen color for hex group text.
+        """Set the painter pen color for hex group text.
 
         Args:
             painter: Active QPainter instance.
@@ -985,8 +953,7 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """
-        Paint a single byte in the hex column (hex8 mode only, kept for compatibility).
+        """Paint a single byte in the hex column (hex8 mode only, kept for compatibility).
 
         Args:
             painter: Active QPainter instance.
@@ -1022,8 +989,7 @@ class HexEditorWidget(QAbstractScrollArea):
         sel_start: int,
         sel_end: int,
     ) -> None:
-        """
-        Paint a single byte in the ASCII column.
+        """Paint a single byte in the ASCII column.
 
         Args:
             painter: Active QPainter instance.
@@ -1079,8 +1045,7 @@ class HexEditorWidget(QAbstractScrollArea):
             painter.drawRect(ascii_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
 
     def _paint_highlight_overlays(self, painter: QPainter, first_row: int, visible_rows: int) -> None:
-        """
-        Paint highlight overlays for bookmarks and templates.
+        """Paint highlight overlays for bookmarks and templates.
 
         Args:
             painter: Active QPainter instance.
@@ -1104,8 +1069,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     painter.fillRect(QRect(hx - 1, hy, chars_per_group * self._char_width + 2, self._line_height), h_color)
 
     def _get_highlight_color(self, byte_val: int, offset: int) -> str | None:
-        """
-        Return the background color for a byte based on highlight rules.
+        """Return the background color for a byte based on highlight rules.
 
         Evaluates all active highlight rules in priority order and returns
         the color from the highest-priority matching rule.
@@ -1143,8 +1107,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return best_color
 
     def add_highlight_rule(self, rule: HighlightRule) -> None:
-        """
-        Add a conditional byte highlight rule.
+        """Add a conditional byte highlight rule.
 
         Args:
             rule: The highlight rule to add.
@@ -1154,8 +1117,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def remove_highlight_rule(self, rule_id: str) -> bool:
-        """
-        Remove a highlight rule by its identifier.
+        """Remove a highlight rule by its identifier.
 
         Args:
             rule_id: The unique rule identifier to remove.
@@ -1176,8 +1138,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def get_highlight_rules(self) -> list[HighlightRule]:
-        """
-        Return a copy of the current highlight rule list.
+        """Return a copy of the current highlight rule list.
 
         Returns:
             list[HighlightRule]: Active highlight rules ordered by priority descending.
@@ -1186,8 +1147,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        """
-        Handle keyboard input for editing and navigation.
+        """Handle keyboard input for editing and navigation.
 
         Args:
             a0: Key event.
@@ -1268,8 +1228,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 self._handle_ascii_input(text)
 
     def _move_cursor(self, new_offset: int, *, extend_selection: bool = False) -> None:
-        """
-        Move the cursor to a new offset.
+        """Move the cursor to a new offset.
 
         Args:
             new_offset: Target offset.
@@ -1297,8 +1256,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def _handle_hex_input(self, char: str) -> None:
-        """
-        Process a hex digit input character.
+        """Process a hex digit input character.
 
         Args:
             char: Single hex character (0-9, a-f, A-F).
@@ -1340,8 +1298,7 @@ class HexEditorWidget(QAbstractScrollArea):
             self._move_cursor(self._cursor_offset + 1)
 
     def _handle_ascii_input(self, char: str) -> None:
-        """
-        Process an ASCII character input.
+        """Process an ASCII character input.
 
         Args:
             char: Single printable ASCII character.
@@ -1373,8 +1330,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._move_cursor(self._cursor_offset + 1)
 
     def _do_delete(self, *, backspace: bool) -> None:
-        """
-        Delete byte(s) at cursor or selection.
+        """Delete byte(s) at cursor or selection.
 
         Args:
             backspace: True if backspace key, False if delete key.
@@ -1442,8 +1398,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 clipboard.setText(text)
 
     def _do_paste(self) -> None:
-        """
-        Paste clipboard content at cursor position.
+        """Paste clipboard content at cursor position.
 
         Attempts to parse clipboard text as a hex string first (e.g. "4D 5A 90"). Falls back to encoding the raw text as UTF-8 bytes.
         """
@@ -1497,8 +1452,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
-        """
-        Handle mouse press for cursor positioning.
+        """Handle mouse press for cursor positioning.
 
         Args:
             a0: Mouse event.
@@ -1532,8 +1486,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
-        """
-        Handle mouse drag for selection.
+        """Handle mouse drag for selection.
 
         Args:
             a0: Mouse event.
@@ -1558,8 +1511,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        """
-        Handle mouse release to finalize selection.
+        """Handle mouse release to finalize selection.
 
         Args:
             a0: Mouse event.
@@ -1573,8 +1525,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        """
-        Handle mouse wheel for scrolling.
+        """Handle mouse wheel for scrolling.
 
         Args:
             a0: Wheel event.
@@ -1591,8 +1542,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def resizeEvent(self, a0: QResizeEvent | None) -> None:
-        """
-        Handle widget resize and reposition the minimap.
+        """Handle widget resize and reposition the minimap.
 
         Args:
             a0: Resize event.
@@ -1614,8 +1564,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._minimap.setGeometry(mm_x, mm_y, _MINIMAP_WIDTH, mm_h)
 
     def show_minimap(self, *, visible: bool = True) -> None:
-        """
-        Show or hide the entropy minimap.
+        """Show or hide the entropy minimap.
 
         Args:
             visible: True to show the minimap, False to hide it.
@@ -1636,8 +1585,7 @@ class HexEditorWidget(QAbstractScrollArea):
             vbar.setPageStep(visible)
 
     def _offset_from_point(self, pos: QPoint) -> int | None:
-        """
-        Determine the byte offset from a screen position.
+        """Determine the byte offset from a screen position.
 
         Args:
             pos: Point in viewport coordinates.
@@ -1676,8 +1624,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return offset
 
     def _ensure_visible(self, offset: int) -> None:
-        """
-        Scroll to ensure the given offset is visible.
+        """Scroll to ensure the given offset is visible.
 
         Args:
             offset: Byte offset to make visible.
@@ -1702,8 +1649,7 @@ class HexEditorWidget(QAbstractScrollArea):
             vp.update()
 
     def goto_offset(self, offset: int) -> None:
-        """
-        Navigate to a specific byte offset.
+        """Navigate to a specific byte offset.
 
         Args:
             offset: Target byte offset.
@@ -1711,8 +1657,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._move_cursor(offset, extend_selection=False)
 
     def set_selection_range(self, start: int, end: int) -> None:
-        """
-        Set the selection range programmatically.
+        """Set the selection range programmatically.
 
         Args:
             start: Start byte offset of the selection.
@@ -1722,8 +1667,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._selection_end = end
 
     def get_selection_bytes(self) -> bytes:
-        """
-        Get the bytes in the current selection.
+        """Get the bytes in the current selection.
 
         Returns:
             bytes: Selected bytes, or empty bytes if no selection.
@@ -1745,8 +1689,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return b""
 
     def copy_as(self, fmt: str = "hex") -> str:
-        """
-        Format the current selection as a string.
+        """Format the current selection as a string.
 
         Args:
             fmt: Output format identifier. Supported values are "hex",
@@ -1770,8 +1713,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return self.copy_as_format(fmt, data) if data else ""
 
     def copy_as_format(self, fmt: str, data: bytes | None = None) -> str:
-        """
-        Format bytes as a string in the specified language format.
+        """Format bytes as a string in the specified language format.
 
         Args:
             fmt: Output format identifier. Supported values are "hex",
@@ -1830,8 +1772,7 @@ class HexEditorWidget(QAbstractScrollArea):
         return self._format_markdown_table(data) if fmt == "markdown_table" else ""
 
     def _format_markdown_table(self, data: bytes) -> str:
-        """
-        Format bytes as a Markdown table with Offset, Hex, and ASCII columns.
+        """Format bytes as a Markdown table with Offset, Hex, and ASCII columns.
 
         Args:
             data: Bytes to format.
@@ -1854,8 +1795,7 @@ class HexEditorWidget(QAbstractScrollArea):
 
     @override
     def contextMenuEvent(self, a0: QContextMenuEvent | None) -> None:
-        """
-        Show the right-click context menu.
+        """Show the right-click context menu.
 
         Args:
             a0: Context menu event.
@@ -1940,8 +1880,7 @@ class HexEditorWidget(QAbstractScrollArea):
         menu.exec(a0.globalPos())
 
     def _copy_as_action(self, fmt: str) -> None:
-        """
-        Execute a copy-as action and put the result on the clipboard.
+        """Execute a copy-as action and put the result on the clipboard.
 
         Args:
             fmt: Format key string passed to copy_as_format.
@@ -1956,8 +1895,7 @@ class HexEditorWidget(QAbstractScrollArea):
         highlights: list[tuple[int, int, str]],
         source: str = "default",
     ) -> None:
-        """
-        Set highlight regions for template/bookmark visualization.
+        """Set highlight regions for template/bookmark visualization.
 
         Each source maintains its own set of highlights. The merged result
         of all sources is used for rendering.
@@ -1972,8 +1910,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._update_viewport()
 
     def clear_highlights(self, source: str) -> None:
-        """
-        Remove all highlights from a specific source.
+        """Remove all highlights from a specific source.
 
         Args:
             source: The source identifier whose highlights should be cleared.
@@ -1991,8 +1928,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._highlights = merged
 
     def set_encoding(self, encoding: str) -> None:
-        """
-        Set the text encoding used for the ASCII column display.
+        """Set the text encoding used for the ASCII column display.
 
         Args:
             encoding: Encoding name (e.g. "ascii", "utf-8", "latin-1").

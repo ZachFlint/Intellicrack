@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Binary analysis panel for Intellicrack.
+"""Binary analysis panel for Intellicrack.
 
 Provides a hex viewer, section navigator, and patching controls for direct binary inspection and modification.
 """
@@ -78,8 +77,7 @@ _PE32_IMPORT_DIR_OFFSET = 104
 
 
 def _lief_parse(parser: object, data: list[int]) -> object:
-    """
-    Parse binary data using a lief parser module.
+    """Parse binary data using a lief parser module.
 
     Args:
         parser: The lief sub-module (e.g. lief.ELF, lief.MachO).
@@ -96,8 +94,7 @@ def _lief_parse(parser: object, data: list[int]) -> object:
 
 
 def _lief_call(obj: object, method: str, *args: object) -> object:
-    """
-    Call a method on a lief object by name.
+    """Call a method on a lief object by name.
 
     Args:
         obj: The lief object.
@@ -115,8 +112,7 @@ def _lief_call(obj: object, method: str, *args: object) -> object:
 
 
 def _lief_attr_list(obj: object, attr: str) -> list[object]:
-    """
-    Get a list attribute from a lief object.
+    """Get a list attribute from a lief object.
 
     Args:
         obj: The lief object.
@@ -150,8 +146,7 @@ LARGE_FILE_THRESHOLD: int = _LARGE_FILE_THRESHOLD
 
 
 class BinaryPanel(QWidget):
-    """
-    Panel for binary hex viewing, section inspection, and patching.
+    """Panel for binary hex viewing, section inspection, and patching.
 
     Provides a hex viewer with offset navigation, section/import/export
     listings, and binary patching capabilities with undo support.
@@ -338,8 +333,7 @@ class BinaryPanel(QWidget):
         layout.addWidget(main_splitter)
 
     def load_file(self, file_path: Path | str) -> bool:
-        """
-        Load a binary file for hex viewing and analysis.
+        """Load a binary file for hex viewing and analysis.
 
         Args:
             file_path: Path to the binary file to load.
@@ -391,8 +385,7 @@ class BinaryPanel(QWidget):
         return True
 
     def _populate_hex_view(self, start_offset: int) -> None:
-        """
-        Populate the hex table starting from a given offset.
+        """Populate the hex table starting from a given offset.
 
         Args:
             start_offset: Byte offset to start display from.
@@ -436,8 +429,7 @@ class BinaryPanel(QWidget):
         self.offset_changed.emit(start_offset)
 
     def _get_patched_byte_offsets(self) -> set[int]:
-        """
-        Collect all byte offsets that have been modified by patches.
+        """Collect all byte offsets that have been modified by patches.
 
         Returns:
             set[int]: Set of patched byte positions.
@@ -475,8 +467,7 @@ class BinaryPanel(QWidget):
 
     @override
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
-        """
-        Handle scroll wheel for hex navigation.
+        """Handle scroll wheel for hex navigation.
 
         Args:
             a0: The wheel event.
@@ -503,8 +494,7 @@ class BinaryPanel(QWidget):
 
     @override
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
-        """
-        Handle keyboard shortcuts for hex navigation.
+        """Handle keyboard shortcuts for hex navigation.
 
         Args:
             a0: The key event.
@@ -523,8 +513,7 @@ class BinaryPanel(QWidget):
             super().keyPressEvent(a0)
 
     def _on_hex_cell_changed(self, row: int, column: int) -> None:
-        """
-        Validate hex edits and update the ASCII column in real-time.
+        """Validate hex edits and update the ASCII column in real-time.
 
         Args:
             row: Changed cell row.
@@ -564,8 +553,7 @@ class BinaryPanel(QWidget):
             self.hex_table.blockSignals(b=False)
 
     def _parse_sections(self) -> None:
-        """
-        Parse sections from the loaded binary data.
+        """Parse sections from the loaded binary data.
 
         Detects format via magic bytes and dispatches to the appropriate parser (PE, ELF, or Mach-O).
         """
@@ -695,8 +683,7 @@ class BinaryPanel(QWidget):
             _logger.debug("pe_import_struct_parse_error", offset=self.current_offset)
 
     def _build_pe_section_map(self, pe_offset: int) -> list[tuple[int, int, int]]:
-        """
-        Build a section map for RVA-to-offset conversion.
+        """Build a section map for RVA-to-offset conversion.
 
         Args:
             pe_offset: Offset of the PE signature in the file.
@@ -718,8 +705,7 @@ class BinaryPanel(QWidget):
 
     @staticmethod
     def _pe_rva_to_offset(rva: int, sections: list[tuple[int, int, int]]) -> int | None:
-        """
-        Convert an RVA to a file offset using the section map.
+        """Convert an RVA to a file offset using the section map.
 
         Args:
             rva: Relative virtual address.
@@ -740,8 +726,7 @@ class BinaryPanel(QWidget):
         is_pe32_plus: bool,
         sec_info: list[tuple[int, int, int]],
     ) -> None:
-        """
-        Walk the PE Import Directory Table and populate _imports_tree.
+        """Walk the PE Import Directory Table and populate _imports_tree.
 
         Args:
             idt_offset: File offset of the IDT.
@@ -773,7 +758,7 @@ class BinaryPanel(QWidget):
             ilt_off = self._pe_rva_to_offset(ilt_rva, sec_info)
             if ilt_off is not None:
                 self._parse_pe_ilt_entries(
-                    lib_name, ilt_off, is_pe32_plus=is_pe32_plus, rva_to_offset=lambda r: self._pe_rva_to_offset(r, sec_info)
+                    lib_name, ilt_off, is_pe32_plus=is_pe32_plus, rva_to_offset=lambda r: self._pe_rva_to_offset(r, sec_info),
                 )
 
             idx += 1
@@ -786,8 +771,7 @@ class BinaryPanel(QWidget):
         is_pe32_plus: bool,
         rva_to_offset: Callable[[int], int | None],
     ) -> None:
-        """
-        Parse Import Lookup Table entries for a single DLL.
+        """Parse Import Lookup Table entries for a single DLL.
 
         Args:
             lib_name: Name of the importing DLL.
@@ -916,8 +900,7 @@ class BinaryPanel(QWidget):
 
     @staticmethod
     def _macho_protection_flags(segment: object) -> str:
-        """
-        Format Mach-O segment protection flags as a string.
+        """Format Mach-O segment protection flags as a string.
 
         Args:
             segment: A lief MachO segment object.
@@ -936,8 +919,7 @@ class BinaryPanel(QWidget):
         return "".join(parts) if parts else "---"
 
     def _build_macho_segment_item(self, segment: object) -> QTreeWidgetItem:
-        """
-        Build a QTreeWidgetItem for a Mach-O segment.
+        """Build a QTreeWidgetItem for a Mach-O segment.
 
         Args:
             segment: A lief MachO segment object.
@@ -958,8 +940,7 @@ class BinaryPanel(QWidget):
 
     @staticmethod
     def _build_macho_section_item(section: object) -> QTreeWidgetItem:
-        """
-        Build a QTreeWidgetItem for a Mach-O section.
+        """Build a QTreeWidgetItem for a Mach-O section.
 
         Args:
             section: A lief MachO section object.
@@ -978,8 +959,7 @@ class BinaryPanel(QWidget):
         return item
 
     def _extract_strings(self, min_length: int = 4) -> None:
-        """
-        Extract printable ASCII strings from the binary.
+        """Extract printable ASCII strings from the binary.
 
         Args:
             min_length: Minimum string length to include.
@@ -1144,8 +1124,7 @@ class BinaryPanel(QWidget):
             QMessageBox.warning(self, "Save Failed", str(e))
 
     def _on_section_double_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
-        """
-        Navigate to a section's raw file offset in the hex view.
+        """Navigate to a section's raw file offset in the hex view.
 
         Args:
             item: The double-clicked tree item.
@@ -1157,8 +1136,7 @@ class BinaryPanel(QWidget):
             self._offset_input.setText(f"0x{raw_offset:08X}")
 
     def _on_string_double_clicked(self, row: int, _column: int) -> None:
-        """
-        Navigate to a string's offset in the hex view.
+        """Navigate to a string's offset in the hex view.
 
         Args:
             row: Selected row in strings table.
@@ -1182,8 +1160,7 @@ class BinaryPanel(QWidget):
             self._patches_table.setItem(row, 2, QTableWidgetItem(" ".join(f"{b:02X}" for b in patched[:16])))
 
     def get_file_data(self) -> bytearray:
-        """
-        Get the current binary data (with any applied patches).
+        """Get the current binary data (with any applied patches).
 
         Returns:
             bytearray: The binary data as a bytearray.
@@ -1191,8 +1168,7 @@ class BinaryPanel(QWidget):
         return self.file_data
 
     def get_patches(self) -> list[tuple[int, bytes, bytes]]:
-        """
-        Get the list of applied patches.
+        """Get the list of applied patches.
 
         Returns:
             list[tuple[int, bytes, bytes]]: List of (offset, original_bytes, patched_bytes) tuples.
@@ -1200,8 +1176,7 @@ class BinaryPanel(QWidget):
         return list(self._patches)
 
     def start_tool(self) -> bool:
-        """
-        Start the binary panel.
+        """Start the binary panel.
 
         Returns:
             bool: True always since native panels are always ready.
@@ -1210,8 +1185,7 @@ class BinaryPanel(QWidget):
         return True
 
     def stop_tool(self) -> bool:
-        """
-        Stop the binary panel and cleanup.
+        """Stop the binary panel and cleanup.
 
         Returns:
             bool: True if cleanup succeeded.

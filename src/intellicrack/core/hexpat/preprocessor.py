@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Preprocessor for HexPat .hexpat pattern files.
+"""Preprocessor for HexPat .hexpat pattern files.
 
 Handles #include, #define, #ifdef/#ifndef/#endif, and #pragma directives.
 """
@@ -47,8 +46,7 @@ _ERROR_RE = re.compile(r'#error\s+"([^"]*)"')
 
 
 def _parse_int_value(value_str: str) -> int:
-    """
-    Parse an integer from a string, supporting hex prefix.
+    """Parse an integer from a string, supporting hex prefix.
 
     Args:
         value_str: The string to parse, optionally prefixed with 0x.
@@ -62,8 +60,7 @@ def _parse_int_value(value_str: str) -> int:
 
 
 class HexPatPreprocessor:
-    """
-    Preprocesses HexPat .hexpat source files before parsing.
+    """Preprocesses HexPat .hexpat source files before parsing.
 
     Resolves #include directives, expands #define macros, processes
     conditional compilation (#ifdef/#ifndef/#endif), and extracts
@@ -84,8 +81,7 @@ class HexPatPreprocessor:
         source: str,
         file_path: Path | None = None,
     ) -> tuple[str, PragmaInfo]:
-        """
-        Preprocess source code, resolving includes and extracting pragmas.
+        """Preprocess source code, resolving includes and extracting pragmas.
 
         Args:
             source: The .hexpat source code to preprocess.
@@ -201,8 +197,7 @@ class HexPatPreprocessor:
         file_path: Path | None,
         depth: int,
     ) -> str:
-        """
-        Recursively process source, handling includes and conditionals.
+        """Recursively process source, handling includes and conditionals.
 
         Args:
             source: Source code to process.
@@ -292,8 +287,7 @@ class HexPatPreprocessor:
         line: int,
         depth: int,
     ) -> str | None:
-        """
-        Resolve and inline an #include directive.
+        """Resolve and inline an #include directive.
 
         Args:
             include_path: The path string from the include directive.
@@ -343,8 +337,7 @@ class HexPatPreprocessor:
         return ""
 
     def _process_conditionals(self, source: str) -> str:
-        """
-        Process #ifdef/#ifndef/#else/#endif conditional blocks.
+        """Process #ifdef/#ifndef/#else/#endif conditional blocks.
 
         Args:
             source: Source code with conditional directives.
@@ -398,8 +391,7 @@ class HexPatPreprocessor:
         return "\n".join(output_lines)
 
     def _process_defines(self, source: str) -> str:
-        """
-        Expand #define macros in source text.
+        """Expand #define macros in source text.
 
         Args:
             source: Source code with potential macro references.
@@ -415,8 +407,7 @@ class HexPatPreprocessor:
 
 
 def extract_pragmas_fast(source: str) -> PragmaInfo:
-    """
-    Extract pragma metadata from source without full preprocessing.
+    """Extract pragma metadata from source without full preprocessing.
 
     Reads only lines starting with #pragma for fast metadata extraction.
     Used by PatternRegistry for indexing .hexpat files.

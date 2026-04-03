@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Theme management for Intellicrack UI.
+"""Theme management for Intellicrack UI.
 
 Provides centralized theme and stylesheet management with support for dark and light themes.
 """
@@ -1116,8 +1115,7 @@ QPushButton#execute_button {
 
 
 class ThemeManager:
-    """
-    Singleton theme manager for application styling.
+    """Singleton theme manager for application styling.
 
     Manages theme loading, switching, and application-wide stylesheet management.
     """
@@ -1131,8 +1129,7 @@ class ThemeManager:
 
     @classmethod
     def get_instance(cls) -> ThemeManager:
-        """
-        Get the singleton instance of ThemeManager.
+        """Get the singleton instance of ThemeManager.
 
         Returns:
             ThemeManager: The ThemeManager singleton instance.
@@ -1148,8 +1145,7 @@ class ThemeManager:
 
     @staticmethod
     def _check_styles_available() -> bool:
-        """
-        Check if the styles directory is available.
+        """Check if the styles directory is available.
 
         Returns:
             bool: True if styles directory exists.
@@ -1165,8 +1161,7 @@ class ThemeManager:
             return available
 
     def apply_theme(self, theme: str = DEFAULT_THEME) -> bool:
-        r"""
-        Apply a theme to the application.
+        r"""Apply a theme to the application.
 
         Args:
             theme: Theme name ("dark" or "light").
@@ -1191,8 +1186,7 @@ class ThemeManager:
         return False
 
     def get_stylesheet(self, theme: str) -> str:
-        """
-        Get the stylesheet for a theme.
+        """Get the stylesheet for a theme.
 
         Args:
             theme: Theme name.
@@ -1210,8 +1204,7 @@ class ThemeManager:
         return stylesheet
 
     def _load_stylesheet(self, theme: str) -> str:
-        """
-        Load a stylesheet from file or use fallback.
+        """Load a stylesheet from file or use fallback.
 
         Args:
             theme: Theme name.
@@ -1240,8 +1233,7 @@ class ThemeManager:
         return DARK_THEME_FALLBACK if theme == THEME_DARK else LIGHT_THEME_FALLBACK
 
     def toggle_theme(self) -> str:
-        """
-        Toggle between dark and light themes.
+        """Toggle between dark and light themes.
 
         Returns:
             str: The new theme name.
@@ -1254,8 +1246,7 @@ class ThemeManager:
 
     @property
     def current_theme(self) -> str:
-        """
-        Get the current theme name.
+        """Get the current theme name.
 
         Returns:
             str: Current theme name.
@@ -1263,8 +1254,7 @@ class ThemeManager:
         return self._current_theme
 
     def is_dark_theme(self) -> bool:
-        """
-        Check if current theme is dark.
+        """Check if current theme is dark.
 
         Returns:
             bool: True if dark theme is active.
@@ -1272,8 +1262,7 @@ class ThemeManager:
         return self._current_theme == THEME_DARK
 
     def get_analysis_colors(self) -> dict[str, QColor]:
-        """
-        Get theme-aware semantic colors for custom painting and analysis views.
+        """Get theme-aware semantic colors for custom painting and analysis views.
 
         Returns:
             dict[str, QColor]: Mapping of semantic color names to QColor instances.
@@ -1356,8 +1345,7 @@ class ThemeManager:
 
     @staticmethod
     def get_available_themes() -> list[str]:
-        """
-        Get list of available theme names.
+        """Get list of available theme names.
 
         Returns:
             list[str]: List of theme names.

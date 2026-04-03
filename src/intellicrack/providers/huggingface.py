@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-HuggingFace Inference API provider implementation.
+"""HuggingFace Inference API provider implementation.
 
 This module provides integration with HuggingFace's Inference API for accessing various open-source LLM models through the serverless API.
 """
@@ -55,8 +54,7 @@ HTTP_SERVICE_UNAVAILABLE = 503
 
 
 class HuggingFaceProvider(LLMProviderBase):
-    """
-    HuggingFace Inference API provider implementation.
+    """HuggingFace Inference API provider implementation.
 
     Provides access to open-source LLM models through HuggingFace's
     Inference API using the OpenAI-compatible chat completions endpoint.
@@ -78,8 +76,7 @@ class HuggingFaceProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """
-        Get the provider's name.
+        """Get the provider's name.
 
         Returns:
             ProviderName: The provider name enum value.
@@ -87,8 +84,7 @@ class HuggingFaceProvider(LLMProviderBase):
         return ProviderName.HUGGINGFACE
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """
-        Connect to HuggingFace Inference API.
+        """Connect to HuggingFace Inference API.
 
         Args:
             credentials: Must contain api_key (HuggingFace token).
@@ -163,8 +159,7 @@ class HuggingFaceProvider(LLMProviderBase):
             self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
-        """
-        Dynamically fetch available text-generation models from HuggingFace.
+        """Dynamically fetch available text-generation models from HuggingFace.
 
         Fetches models from the HuggingFace Hub API, filtering for
         text-generation and conversational pipeline tags. Also includes
@@ -263,8 +258,7 @@ class HuggingFaceProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Send a chat completion request through HuggingFace Inference API.
+        """Send a chat completion request through HuggingFace Inference API.
 
         Args:
             messages: Conversation history.
@@ -347,8 +341,7 @@ class HuggingFaceProvider(LLMProviderBase):
         model: str,
         request_body: dict[str, object],
     ) -> dict[str, Any]:
-        """
-        Execute the HuggingFace API chat call with error handling.
+        """Execute the HuggingFace API chat call with error handling.
 
         Args:
             model: Model ID for URL construction and logging.
@@ -413,8 +406,7 @@ class HuggingFaceProvider(LLMProviderBase):
         self,
         response_message: dict[str, Any],
     ) -> list[ToolCall]:
-        """
-        Parse tool calls from a HuggingFace API response message.
+        """Parse tool calls from a HuggingFace API response message.
 
         Args:
             response_message: The message dict from the API response.
@@ -456,8 +448,7 @@ class HuggingFaceProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """
-        Stream a chat completion response from HuggingFace.
+        """Stream a chat completion response from HuggingFace.
 
         Args:
             messages: Conversation history.
@@ -577,8 +568,7 @@ class HuggingFaceProvider(LLMProviderBase):
         )
 
     def _check_stream_response_status(self, response: httpx.Response, model: str) -> None:
-        """
-        Check streaming response status and raise appropriate errors.
+        """Check streaming response status and raise appropriate errors.
 
         Args:
             response: The HTTP response from the streaming request.
@@ -599,8 +589,7 @@ class HuggingFaceProvider(LLMProviderBase):
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal messages to HuggingFace format.
+        """Convert internal messages to HuggingFace format.
 
         Uses OpenAI-compatible format for the chat completions endpoint.
 
@@ -617,8 +606,7 @@ class HuggingFaceProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """
-        Convert internal tools to HuggingFace format.
+        """Convert internal tools to HuggingFace format.
 
         Uses OpenAI-compatible function calling format.
 

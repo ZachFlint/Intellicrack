@@ -149,8 +149,7 @@ DEFAULT_DISASM_COUNT: int = 50
 
 
 def format_size(size: int) -> str:
-    """
-    Format a byte size as a human-readable string.
+    """Format a byte size as a human-readable string.
 
     Args:
         size: Size in bytes.
@@ -166,8 +165,7 @@ def format_size(size: int) -> str:
 
 
 def _reflect_bits(value: int, width: int) -> int:
-    """
-    Reflect (reverse) the bit order of an integer.
+    """Reflect (reverse) the bit order of an integer.
 
     Args:
         value: Integer value to reflect.
@@ -193,8 +191,7 @@ def compute_custom_crc(
     ref_out: bool,
     xor_out: int,
 ) -> int:
-    """
-    Compute a parametric CRC checksum.
+    """Compute a parametric CRC checksum.
 
     Args:
         data: Input bytes.
@@ -223,8 +220,7 @@ def compute_custom_crc(
 
 
 def _compute_hash_stdlib(algo: str, data: bytes) -> str | None:
-    """
-    Compute a hash using stdlib hashlib algorithms.
+    """Compute a hash using stdlib hashlib algorithms.
 
     Args:
         algo: Algorithm name string.
@@ -257,8 +253,7 @@ def _compute_hash_stdlib(algo: str, data: bytes) -> str | None:
 
 
 def _compute_hash_xxhash(algo: str, data: bytes) -> str | None:
-    """
-    Compute a hash using the xxhash library.
+    """Compute a hash using the xxhash library.
 
     Args:
         algo: Algorithm name string.
@@ -279,8 +274,7 @@ def _compute_hash_xxhash(algo: str, data: bytes) -> str | None:
 
 
 def _compute_hash_siphash(algo: str, data: bytes) -> str | None:
-    """
-    Compute a SipHash digest.
+    """Compute a SipHash digest.
 
     Args:
         algo: Algorithm name string.
@@ -302,8 +296,7 @@ def _compute_hash_siphash(algo: str, data: bytes) -> str | None:
 
 
 def _compute_hash_checksums(algo: str, data: bytes) -> str | None:
-    """
-    Compute CRC or Adler checksum.
+    """Compute CRC or Adler checksum.
 
     Args:
         algo: Algorithm name string.
@@ -337,8 +330,7 @@ def _compute_hash_checksums(algo: str, data: bytes) -> str | None:
 
 
 def _compute_hash_fnv(algo: str, data: bytes) -> str | None:
-    """
-    Compute an FNV hash.
+    """Compute an FNV hash.
 
     Args:
         algo: Algorithm name string.
@@ -378,8 +370,7 @@ def _compute_hash_fnv(algo: str, data: bytes) -> str | None:
 
 
 def compute_hash(algo: str, data: bytes) -> str:
-    """
-    Compute a hash or checksum of data using the specified algorithm.
+    """Compute a hash or checksum of data using the specified algorithm.
 
     Args:
         algo: Algorithm name string.

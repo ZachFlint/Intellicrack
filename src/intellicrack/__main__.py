@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Package entry point for running Intellicrack as a module.
+"""Package entry point for running Intellicrack as a module.
 
 This enables execution via: python -m intellicrack
 
@@ -25,8 +24,7 @@ _logger = get_logger(__name__)
 
 
 def run() -> None:
-    """
-    Execute the Intellicrack application.
+    """Execute the Intellicrack application.
 
     This function serves as the main entry point when the package is invoked as a module. It imports and calls the main function from the
     main module, handling any import errors gracefully.

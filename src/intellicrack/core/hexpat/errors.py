@@ -8,8 +8,7 @@ from __future__ import annotations
 
 
 class HexPatError(Exception):
-    """
-    Base error for the HexPat interpreter.
+    """Base error for the HexPat interpreter.
 
     Args:
         message: Human-readable error description.
@@ -53,8 +52,7 @@ class HexPatTypeError(HexPatError):
 
 
 class HexPatRuntimeError(HexPatError):
-    """
-    Error during pattern evaluation against binary data.
+    """Error during pattern evaluation against binary data.
 
     Args:
         message: Human-readable error description.

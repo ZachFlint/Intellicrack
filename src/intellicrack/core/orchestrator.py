@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Main AI agent orchestrator for Intellicrack.
+"""Main AI agent orchestrator for Intellicrack.
 
 This module provides the central orchestration layer that coordinates between the user, LLM providers, and tool bridges to execute reverse
 engineering workflows.
@@ -62,8 +61,7 @@ OrchestratorState = Literal["idle", "processing", "waiting_confirmation", "cance
 
 @dataclass
 class OrchestratorConfig:
-    """
-    Configuration for the orchestrator.
+    """Configuration for the orchestrator.
 
     Attributes:
         confirmation_level: When to ask for user confirmation.
@@ -100,8 +98,7 @@ class PendingConfirmation:
 
 @dataclass
 class OrchestratorStats:
-    """
-    Statistics for orchestrator operations.
+    """Statistics for orchestrator operations.
 
     Attributes:
         total_requests: Total user requests processed.
@@ -121,8 +118,7 @@ class OrchestratorStats:
     _response_times: deque[float] = field(default_factory=lambda: deque(maxlen=1000))
 
     def record_response_time(self, time_ms: float) -> None:
-        """
-        Record a response time and update rolling average.
+        """Record a response time and update rolling average.
 
         Maintains a bounded window of the last 1000 response times to
         prevent unbounded memory growth.
@@ -134,8 +130,7 @@ class OrchestratorStats:
         self.average_response_time_ms = sum(self._response_times) / len(self._response_times)
 
     def to_dict(self) -> dict[str, Any]:
-        """
-        Convert statistics to dictionary for reporting.
+        """Convert statistics to dictionary for reporting.
 
         Returns:
             dict[str, Any]: Dictionary containing all statistics.
@@ -151,8 +146,7 @@ class OrchestratorStats:
 
 
 class Orchestrator:
-    """
-    Main AI agent orchestrator.
+    """Main AI agent orchestrator.
 
     Manages the conversation loop between the user, LLM, and tools.
     Coordinates tool execution and handles confirmations.
@@ -213,8 +207,7 @@ class Orchestrator:
 
     @property
     def state(self) -> OrchestratorState:
-        """
-        Get current orchestrator state.
+        """Get current orchestrator state.
 
         Returns:
             OrchestratorState: Current state.
@@ -223,8 +216,7 @@ class Orchestrator:
 
     @property
     def current_session(self) -> Session | None:
-        """
-        Get current session.
+        """Get current session.
 
         Returns:
             Session | None: Current session or None.
@@ -233,8 +225,7 @@ class Orchestrator:
 
     @property
     def stats(self) -> OrchestratorStats:
-        """
-        Get orchestrator statistics.
+        """Get orchestrator statistics.
 
         Returns:
             OrchestratorStats: Statistics instance.
@@ -243,8 +234,7 @@ class Orchestrator:
 
     @property
     def provider_registry(self) -> ProviderRegistry:
-        """
-        Get the provider registry.
+        """Get the provider registry.
 
         Returns:
             ProviderRegistry: The provider registry instance.
@@ -252,8 +242,7 @@ class Orchestrator:
         return self._providers
 
     def set_script_manager(self, manager: ScriptManager) -> None:
-        """
-        Set the script manager for recording tool execution results.
+        """Set the script manager for recording tool execution results.
 
         Args:
             manager: The ScriptManager instance.
@@ -266,8 +255,7 @@ class Orchestrator:
         model: str,
         binary_path: Path | None = None,
     ) -> Session:
-        """
-        Start a new session.
+        """Start a new session.
 
         Args:
             provider: LLM provider to use.
@@ -322,8 +310,7 @@ class Orchestrator:
         return session
 
     async def load_session(self, session_id: str) -> Session:
-        """
-        Load an existing session.
+        """Load an existing session.
 
         Args:
             session_id: ID of session to load.
@@ -352,8 +339,7 @@ class Orchestrator:
         return session
 
     async def _load_binary(self, path: Path) -> BinaryInfo:
-        """
-        Load a binary file for analysis.
+        """Load a binary file for analysis.
 
         Args:
             path: Path to the binary.
@@ -373,8 +359,7 @@ class Orchestrator:
         return info
 
     async def process_user_input(self, text: str) -> None:
-        """
-        Process user input and generate response.
+        """Process user input and generate response.
 
         This is the main agent loop:
         1. Add user message to session
@@ -428,8 +413,7 @@ class Orchestrator:
             await self._sessions.update(self._current_session)
 
     async def _run_agent_loop(self) -> None:
-        """
-        Run the main agent loop until completion or cancellation.
+        """Run the main agent loop until completion or cancellation.
 
         Raises:
             RuntimeError: If provider is not available.
@@ -496,8 +480,7 @@ class Orchestrator:
             _logger.warning("agent_loop_max_iterations", max_iterations=self._config.max_iterations)
 
     def _is_final_response_expected(self) -> bool:
-        """
-        Determine whether a final response is expected.
+        """Determine whether a final response is expected.
 
         Returns:
             bool: True if the next response is likely final.
@@ -509,8 +492,7 @@ class Orchestrator:
         return self._current_session.messages[-1].role == "tool"
 
     def _build_messages(self) -> list[Message]:
-        """
-        Build message list for LLM including system prompt.
+        """Build message list for LLM including system prompt.
 
         Returns:
             list[Message]: List of messages with system prompt prepended.
@@ -534,8 +516,7 @@ class Orchestrator:
         return messages
 
     def _generate_system_prompt(self) -> str:
-        """
-        Generate system prompt for the LLM.
+        """Generate system prompt for the LLM.
 
         Returns:
             str: System prompt describing available tools and capabilities.
@@ -732,8 +713,7 @@ class Orchestrator:
 
     @staticmethod
     def _estimate_tokens(text: str) -> int:
-        """
-        Estimate token count for text.
+        """Estimate token count for text.
 
         Args:
             text: Text to estimate tokens for.
@@ -744,8 +724,7 @@ class Orchestrator:
         return len(text) // 4
 
     async def _get_model_context_window(self, provider: LLMProvider) -> int:
-        """
-        Retrieve the context window for the current model.
+        """Retrieve the context window for the current model.
 
         Queries the provider's model list and finds the matching model ID.
         Falls back to 128000 if the model is not found.
@@ -772,8 +751,7 @@ class Orchestrator:
         messages: list[Message],
         context_window: int,
     ) -> list[Message]:
-        """
-        Remove oldest non-system messages until within context budget.
+        """Remove oldest non-system messages until within context budget.
 
         Keeps 85% of the context window as the token budget to leave
         headroom for the response.
@@ -814,8 +792,7 @@ class Orchestrator:
         *,
         is_final_response: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Call the LLM and handle response.
+        """Call the LLM and handle response.
 
         Args:
             provider: LLM provider to use.
@@ -891,8 +868,7 @@ class Orchestrator:
         tools_available: bool,
         is_final_response: bool,
     ) -> bool:
-        """
-        Decide whether to use streaming mode.
+        """Decide whether to use streaming mode.
 
         Args:
             tools_available: Whether tools are available for this request.
@@ -921,8 +897,7 @@ class Orchestrator:
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Stream a response from the LLM.
+        """Stream a response from the LLM.
 
         After the stream completes, any tool calls accumulated by the
         provider during streaming are retrieved via
@@ -994,8 +969,7 @@ class Orchestrator:
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """
-        Request a non-streaming response from the LLM.
+        """Request a non-streaming response from the LLM.
 
         Args:
             provider: LLM provider to use.
@@ -1038,8 +1012,7 @@ class Orchestrator:
         self,
         tool_calls: list[ToolCall],
     ) -> list[ToolResult]:
-        """
-        Execute a list of tool calls.
+        """Execute a list of tool calls.
 
         Args:
             tool_calls: Tool calls to execute.
@@ -1081,8 +1054,7 @@ class Orchestrator:
         return results
 
     async def _execute_single_tool_call(self, call: ToolCall) -> ToolResult:
-        """
-        Execute a single tool call.
+        """Execute a single tool call.
 
         Args:
             call: The tool call to execute.
@@ -1157,8 +1129,7 @@ class Orchestrator:
         tools: list[ToolDefinition],
         provider: LLMProvider,
     ) -> None:
-        """
-        Validate tool definitions against the provider's schema format.
+        """Validate tool definitions against the provider's schema format.
 
         Logs warnings for any validation errors found. Uses
         ``validate_and_convert`` and ``get_all_schemas_for_provider``
@@ -1197,8 +1168,7 @@ class Orchestrator:
         )
 
     async def _should_confirm(self, call: ToolCall) -> bool:
-        """
-        Check if tool call requires user confirmation.
+        """Check if tool call requires user confirmation.
 
         Args:
             call: The tool call to check.
@@ -1230,8 +1200,7 @@ class Orchestrator:
         return is_destructive
 
     def _is_destructive_operation(self, call: ToolCall) -> bool:
-        """
-        Check if a tool call is destructive.
+        """Check if a tool call is destructive.
 
         Destructive operations include:
         - Writing to memory or files
@@ -1249,8 +1218,7 @@ class Orchestrator:
         return any(pattern in function_lower for pattern in self.DESTRUCTIVE_PATTERNS)
 
     async def _request_confirmation(self, call: ToolCall) -> bool:
-        """
-        Request user confirmation for a tool call.
+        """Request user confirmation for a tool call.
 
         Args:
             call: The tool call requiring confirmation.
@@ -1280,8 +1248,7 @@ class Orchestrator:
         return False
 
     def confirm_pending(self, *, confirmed: bool) -> None:
-        """
-        Confirm or decline a pending operation.
+        """Confirm or decline a pending operation.
 
         Args:
             confirmed: True to confirm, False to decline.
@@ -1313,8 +1280,7 @@ class Orchestrator:
                 _logger.warning("cancel_pending_confirmation_failed", call_id=call_id, error=str(exc))
 
     async def add_binary(self, path: Path, *, run_bridge_analysis: bool = True) -> BinaryInfo:
-        """
-        Add a binary to the current session.
+        """Add a binary to the current session.
 
         Args:
             path: Path to the binary.
@@ -1345,8 +1311,7 @@ class Orchestrator:
         return binary_info
 
     async def _run_bridge_analysis(self, binary_info: BinaryInfo) -> BridgeAnalysisSummary | None:
-        """
-        Run bridge analysis aggregation on a binary.
+        """Run bridge analysis aggregation on a binary.
 
         Args:
             binary_info: Loaded binary metadata.
@@ -1366,8 +1331,7 @@ class Orchestrator:
             return analysis
 
     async def reanalyze_bridge_analysis(self, binary_name: str | None = None) -> BridgeAnalysisSummary | None:
-        """
-        Re-run bridge analysis on the active or specified binary.
+        """Re-run bridge analysis on the active or specified binary.
 
         Args:
             binary_name: Optional binary name; uses active binary if not specified.
@@ -1394,8 +1358,7 @@ class Orchestrator:
         return None
 
     def set_bridge_analysis_callback(self, callback: Callable[[BridgeAnalysisSummary], None] | None) -> None:
-        """
-        Set callback for bridge analysis completion.
+        """Set callback for bridge analysis completion.
 
         Args:
             callback: Function to call with analysis results.
@@ -1403,8 +1366,7 @@ class Orchestrator:
         self._on_bridge_analysis = callback
 
     async def set_active_binary(self, index: int) -> None:
-        """
-        Set the active binary by index.
+        """Set the active binary by index.
 
         Args:
             index: Index of binary to activate.
@@ -1426,8 +1388,7 @@ class Orchestrator:
         await self._sessions.update(self._current_session)
 
     async def add_patch(self, patch: PatchInfo) -> None:
-        """
-        Add a patch to the current session.
+        """Add a patch to the current session.
 
         Args:
             patch: Patch information.
@@ -1444,8 +1405,7 @@ class Orchestrator:
         await self._sessions.update(self._current_session)
 
     def set_message_callback(self, callback: Callable[[Message], None]) -> None:
-        """
-        Set callback for new messages.
+        """Set callback for new messages.
 
         Args:
             callback: Function to call with each new message.
@@ -1453,8 +1413,7 @@ class Orchestrator:
         self._on_message = callback
 
     def set_tool_call_callback(self, callback: Callable[[ToolCall], None]) -> None:
-        """
-        Set callback for tool calls.
+        """Set callback for tool calls.
 
         Args:
             callback: Function to call when tool is called.
@@ -1462,8 +1421,7 @@ class Orchestrator:
         self._on_tool_call = callback
 
     def set_tool_result_callback(self, callback: Callable[[ToolResult], None]) -> None:
-        """
-        Set callback for tool results.
+        """Set callback for tool results.
 
         Args:
             callback: Function to call when tool returns result.
@@ -1471,8 +1429,7 @@ class Orchestrator:
         self._on_tool_result = callback
 
     def set_stream_callback(self, callback: Callable[[str], None]) -> None:
-        """
-        Set callback for streaming response chunks.
+        """Set callback for streaming response chunks.
 
         Args:
             callback: Function to call with each text chunk.
@@ -1483,8 +1440,7 @@ class Orchestrator:
         self,
         callback: Callable[[ToolCall], bool],
     ) -> None:
-        """
-        Set synchronous callback for confirmation requests.
+        """Set synchronous callback for confirmation requests.
 
         Args:
             callback: Function to call for confirmation, returns True to proceed.
@@ -1495,8 +1451,7 @@ class Orchestrator:
         self,
         callback: Callable[[ToolCall], asyncio.Future[bool]],
     ) -> None:
-        """
-        Set async callback for confirmation requests.
+        """Set async callback for confirmation requests.
 
         Args:
             callback: Function returning a Future that resolves to True/False.
@@ -1504,8 +1459,7 @@ class Orchestrator:
         self._async_confirmation_callback = callback
 
     async def get_tool_status(self) -> list[dict[str, Any]]:
-        """
-        Get status of all tools.
+        """Get status of all tools.
 
         Returns:
             list[dict[str, Any]]: List of tool status dictionaries.
@@ -1525,8 +1479,7 @@ class Orchestrator:
         ]
 
     def get_available_tool_names(self) -> list[str]:
-        """
-        Get names of all available tools.
+        """Get names of all available tools.
 
         Returns:
             list[str]: List of available tool name strings.
@@ -1534,8 +1487,7 @@ class Orchestrator:
         return [t.value for t in self._tools.get_available_tools()]
 
     def get_current_bridge_analysis(self, binary_name: str) -> BridgeAnalysisSummary | None:
-        """
-        Get cached bridge analysis for a binary.
+        """Get cached bridge analysis for a binary.
 
         Args:
             binary_name: Name of the binary.
@@ -1548,8 +1500,7 @@ class Orchestrator:
         return self._current_session.get_bridge_analysis(binary_name)
 
     def get_typed_bridge(self, tool_name: str) -> object | None:
-        """
-        Get a typed bridge instance by tool name.
+        """Get a typed bridge instance by tool name.
 
         Uses the ToolRegistry's typed getters for safe bridge access.
 
@@ -1579,8 +1530,7 @@ class Orchestrator:
             return bridge
 
     async def initialize_tool(self, tool_name: str | ToolName) -> bool:
-        """
-        Initialize a specific tool.
+        """Initialize a specific tool.
 
         Args:
             tool_name: Name of the tool to initialize.
@@ -1595,8 +1545,7 @@ class Orchestrator:
         return await self._tools.initialize_tool(tool_name)
 
     async def save_session(self) -> None:
-        """
-        Save the current session.
+        """Save the current session.
 
         Delegates to the session manager to persist the current session state.
         """
@@ -1604,8 +1553,7 @@ class Orchestrator:
         await self._sessions.save()
 
     def set_confirmation_level(self, level: ConfirmationLevel) -> None:
-        """
-        Set the confirmation level for tool calls.
+        """Set the confirmation level for tool calls.
 
         Args:
             level: The desired confirmation level.
@@ -1613,8 +1561,7 @@ class Orchestrator:
         self._config.confirmation_level = level
 
     async def get_system_status(self) -> dict[str, Any]:
-        """
-        Get comprehensive system status report.
+        """Get comprehensive system status report.
 
         Returns:
             dict[str, Any]: Dictionary containing session, metrics, and tool status.
@@ -1632,8 +1579,7 @@ class Orchestrator:
         on_bridge_analysis: Callable[[BridgeAnalysisSummary], None] | None = None,
         on_confirmation: Callable[[ToolCall], bool] | None = None,
     ) -> None:
-        """
-        Configure event hooks.
+        """Configure event hooks.
 
         Args:
             on_bridge_analysis: Callback for bridge analysis completion.
@@ -1656,8 +1602,7 @@ class Orchestrator:
         new_bytes: bytes,
         description: str,
     ) -> None:
-        """
-        Register a manually applied patch.
+        """Register a manually applied patch.
 
         Args:
             address: Patch address.
@@ -1676,8 +1621,7 @@ class Orchestrator:
         await self.add_patch(patch)
 
     def resolve_confirmation(self, *, approved: bool) -> None:
-        """
-        Resolve any pending confirmation request.
+        """Resolve any pending confirmation request.
 
         Args:
             approved: Whether to approve the request.
@@ -1685,8 +1629,7 @@ class Orchestrator:
         self.confirm_pending(confirmed=approved)
 
     async def activate_binary_by_name(self, name: str) -> None:
-        """
-        Activate a binary by name.
+        """Activate a binary by name.
 
         Args:
             name: Name of binary to activate.

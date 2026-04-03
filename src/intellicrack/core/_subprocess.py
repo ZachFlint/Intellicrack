@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Subprocess utilities wrapper.
+"""Subprocess utilities wrapper.
 
 Centralizes subprocess access to a single auditable location. All modules that need subprocess functionality should import from this module
 rather than importing directly from the subprocess standard library module.

@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Font management for Intellicrack UI.
+"""Font management for Intellicrack UI.
 
 Provides custom font loading and application for the Intellicrack interface.
 """
@@ -51,8 +50,7 @@ FALLBACK_UI_FONTS: Final[list[str]] = [
 
 
 class FontManager:
-    """
-    Singleton font manager for custom font loading and management.
+    """Singleton font manager for custom font loading and management.
 
     Handles loading custom fonts from the assets directory and provides font instances for code and UI elements.
     """
@@ -68,8 +66,7 @@ class FontManager:
 
     @classmethod
     def get_instance(cls) -> FontManager:
-        """
-        Get the singleton instance of FontManager.
+        """Get the singleton instance of FontManager.
 
         Returns:
             FontManager: The FontManager singleton instance.
@@ -84,8 +81,7 @@ class FontManager:
         cls._instance = None
 
     def load_fonts(self) -> bool:
-        """
-        Load all custom fonts from the fonts directory.
+        """Load all custom fonts from the fonts directory.
 
         Returns:
             bool: True if at least one font was loaded successfully.
@@ -138,8 +134,7 @@ class FontManager:
             self._font_config = {}
 
     def _load_font_file(self, font_path: Path) -> bool:
-        """
-        Load a single font file.
+        """Load a single font file.
 
         Args:
             font_path: Path to the font file.
@@ -190,8 +185,7 @@ class FontManager:
 
     @staticmethod
     def _find_available_font(candidates: list[str]) -> str:
-        """
-        Find the first available font from a list of candidates.
+        """Find the first available font from a list of candidates.
 
         Args:
             candidates: List of font family names to try.
@@ -212,8 +206,7 @@ class FontManager:
         return candidates[-1] if candidates else "monospace"
 
     def get_code_font(self, size: int = 10) -> QFont:
-        """
-        Get a font suitable for code display.
+        """Get a font suitable for code display.
 
         Args:
             size: Font size in points.
@@ -231,8 +224,7 @@ class FontManager:
         return font
 
     def get_code_font_bold(self, size: int = 10) -> QFont:
-        """
-        Get a bold font suitable for code display.
+        """Get a bold font suitable for code display.
 
         Args:
             size: Font size in points.
@@ -245,8 +237,7 @@ class FontManager:
         return font
 
     def get_ui_font(self, size: int = 9) -> QFont:
-        """
-        Get a font suitable for UI elements.
+        """Get a font suitable for UI elements.
 
         Args:
             size: Font size in points.
@@ -263,8 +254,7 @@ class FontManager:
         return font
 
     def get_ui_font_bold(self, size: int = 9) -> QFont:
-        """
-        Get a bold font suitable for UI elements.
+        """Get a bold font suitable for UI elements.
 
         Args:
             size: Font size in points.
@@ -277,8 +267,7 @@ class FontManager:
         return font
 
     def get_heading_font(self, size: int = 12) -> QFont:
-        """
-        Get a font suitable for headings.
+        """Get a font suitable for headings.
 
         Args:
             size: Font size in points.
@@ -292,8 +281,7 @@ class FontManager:
 
     @property
     def code_font_family(self) -> str:
-        """
-        Get the current code font family name.
+        """Get the current code font family name.
 
         Returns:
             str: Code font family name.
@@ -304,8 +292,7 @@ class FontManager:
 
     @property
     def ui_font_family(self) -> str:
-        """
-        Get the current UI font family name.
+        """Get the current UI font family name.
 
         Returns:
             str: UI font family name.
@@ -316,8 +303,7 @@ class FontManager:
 
     @property
     def loaded_families(self) -> list[str]:
-        """
-        Get list of all loaded font families.
+        """Get list of all loaded font families.
 
         Returns:
             list[str]: List of loaded font family names.
@@ -325,8 +311,7 @@ class FontManager:
         return self._loaded_families.copy()
 
     def is_custom_font_loaded(self) -> bool:
-        """
-        Check if any custom fonts were loaded.
+        """Check if any custom fonts were loaded.
 
         Returns:
             bool: True if custom fonts were loaded successfully.
@@ -334,8 +319,7 @@ class FontManager:
         return bool(self._loaded_families)
 
     def get_font_info(self) -> dict[str, object]:
-        """
-        Get information about loaded fonts.
+        """Get information about loaded fonts.
 
         Returns:
             dict[str, object]: Dictionary with font loading status and details.

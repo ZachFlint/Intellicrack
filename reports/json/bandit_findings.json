@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-03-31T03:10:20.813073+00:00",
+  "generated": "2026-04-01T02:40:50.891862+00:00",
   "total_findings": 1,
   "total_files": 1,
   "files": [
@@ -9,13 +9,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 221,
+          "line": 219,
           "column": null,
           "severity": "Low",
           "confidence": "High",
           "code": "B311:blacklist",
           "message": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
-          "raw": "src/intellicrack/ui\\dialogs\\splash_screen.py:221: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes."
+          "raw": "src/intellicrack/ui\\dialogs\\splash_screen.py:219: [Low] B311:blacklist: Standard pseudo-random generators are not suitable for security/cryptographic purposes."
         }
       ]
     }

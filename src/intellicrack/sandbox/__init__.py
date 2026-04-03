@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Sandbox implementations for isolated binary execution.
+"""Sandbox implementations for isolated binary execution.
 
 This package provides sandbox environments for safe execution and behavioral analysis of potentially malicious binaries.
 """

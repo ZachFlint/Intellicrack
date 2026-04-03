@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Win32 window embedding utilities for Intellicrack.
+"""Win32 window embedding utilities for Intellicrack.
 
 Provides helpers for capturing external application windows by PID and embedding them inside Qt widgets using QWindow.fromWinId and
 QWidget.createWindowContainer.  Windows-only; on other platforms all functions return None / no-op.
@@ -39,8 +38,7 @@ MAX_TITLE_LEN: Final[int] = _MAX_TITLE_LEN
 
 
 def find_window_by_pid(pid: int) -> int | None:
-    """
-    Find the main visible window handle for a given process ID.
+    """Find the main visible window handle for a given process ID.
 
     Enumerates all top-level windows and returns the first visible,
     unowned window belonging to the specified process.
@@ -100,8 +98,7 @@ def find_window_by_pid(pid: int) -> int | None:
 
 
 def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
-    """
-    Embed an external window inside a Qt parent widget.
+    """Embed an external window inside a Qt parent widget.
 
     Uses QWindow.fromWinId to wrap the native window handle and
     QWidget.createWindowContainer to embed it.
@@ -140,8 +137,7 @@ def poll_and_embed(
     max_retries: int = 15,
     interval_ms: int = 500,
 ) -> None:
-    """
-    Poll for a window by PID and embed it when found.
+    """Poll for a window by PID and embed it when found.
 
     Starts a QTimer-based polling loop that searches for the main
     window of the given process.  Once found, embeds it and invokes

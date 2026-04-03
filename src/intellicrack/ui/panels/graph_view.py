@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Control flow graph view for Cutter/Rizin function analysis.
+"""Control flow graph view for Cutter/Rizin function analysis.
 
 Provides QGraphicsView-based rendering of function CFGs parsed from
 Cutter/Rizin ``agj`` JSON output with hierarchical block layout, colored
@@ -55,8 +54,7 @@ _ZOOM_FACTOR: Final[float] = 1.15
 
 
 def _get_graph_colors() -> dict[str, QColor]:
-    """
-    Get theme-aware colors for CFG rendering.
+    """Get theme-aware colors for CFG rendering.
 
     Returns:
         dict[str, QColor]: Mapping of color names to QColor instances.
@@ -126,8 +124,7 @@ _RET_MNEMONICS = frozenset({"ret", "retn", "retf", "iret", "iretd", "iretq"})
 
 
 class BasicBlockItem(QGraphicsRectItem):
-    """
-    Renders a single basic block as a styled rectangle with assembly text.
+    """Renders a single basic block as a styled rectangle with assembly text.
 
     Args:
         block_address: Start address of the block.
@@ -164,8 +161,7 @@ class BasicBlockItem(QGraphicsRectItem):
         option: QStyleOptionGraphicsItem | None,
         widget: QWidget | None = None,
     ) -> None:
-        """
-        Paint the block with header and assembly lines.
+        """Paint the block with header and assembly lines.
 
         Args:
             painter: Qt painter.
@@ -226,8 +222,7 @@ class BasicBlockItem(QGraphicsRectItem):
 
 
 class EdgeItem(QGraphicsPathItem):
-    """
-    Bezier curve edge between basic blocks with directional arrow.
+    """Bezier curve edge between basic blocks with directional arrow.
 
     Args:
         start: Source point (bottom center of source block).
@@ -285,8 +280,7 @@ class EdgeItem(QGraphicsPathItem):
         option: QStyleOptionGraphicsItem | None,
         widget: QWidget | None = None,
     ) -> None:
-        """
-        Paint the edge path and arrowhead.
+        """Paint the edge path and arrowhead.
 
         Args:
             painter: Qt painter.
@@ -302,8 +296,7 @@ class EdgeItem(QGraphicsPathItem):
 
 
 class CFGGraphScene(QGraphicsScene):
-    """
-    Scene that parses r2 agj output and lays out basic blocks hierarchically.
+    """Scene that parses r2 agj output and lays out basic blocks hierarchically.
 
     Args:
         parent: Parent widget.
@@ -314,8 +307,7 @@ class CFGGraphScene(QGraphicsScene):
         self.block_items: dict[int, BasicBlockItem] = {}
 
     def load_graph(self, blocks: list[dict[str, Any]]) -> None:
-        """
-        Parse r2 agj blocks and lay them out hierarchically.
+        """Parse r2 agj blocks and lay them out hierarchically.
 
         Args:
             blocks: List of basic block dicts from r2 ``agj`` output.
@@ -334,8 +326,7 @@ class CFGGraphScene(QGraphicsScene):
         _logger.debug("graph_loaded", blocks=len(self.block_items), layers=len(layers))
 
     def _build_block_map(self, blocks: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
-        """
-        Build a mapping of offsets to blocks and create scene items.
+        """Build a mapping of offsets to blocks and create scene items.
 
         Args:
             blocks: Raw block dicts from r2 ``agj`` output.
@@ -359,8 +350,7 @@ class CFGGraphScene(QGraphicsScene):
         return block_map
 
     def _position_layers(self, layers: dict[int, list[int]]) -> None:
-        """
-        Compute positions for blocks in each layer and apply them.
+        """Compute positions for blocks in each layer and apply them.
 
         Args:
             layers: Mapping of layer index to list of block addresses.
@@ -393,8 +383,7 @@ class CFGGraphScene(QGraphicsScene):
             y_offset += max_height + _LAYER_SPACING_V
 
     def _create_edges(self, block_map: dict[int, dict[str, Any]]) -> None:
-        """
-        Create edge items between blocks based on jump/fail targets.
+        """Create edge items between blocks based on jump/fail targets.
 
         Args:
             block_map: Mapping of block address to block data.
@@ -440,8 +429,7 @@ class CFGGraphScene(QGraphicsScene):
     def _compute_layers(
         block_map: dict[int, dict[str, Any]],
     ) -> dict[int, list[int]]:
-        """
-        Compute hierarchical layers via BFS from the first block.
+        """Compute hierarchical layers via BFS from the first block.
 
         Args:
             block_map: Mapping of block address to block data.
@@ -493,8 +481,7 @@ class CFGGraphScene(QGraphicsScene):
 
 
 class CFGGraphView(QGraphicsView):
-    """
-    Zoomable, pannable graphics view for CFG visualization.
+    """Zoomable, pannable graphics view for CFG visualization.
 
     Emits ``block_clicked`` with the block address when a
     BasicBlockItem is clicked.
@@ -517,8 +504,7 @@ class CFGGraphView(QGraphicsView):
         self.setBackgroundBrush(QBrush(_get_graph_colors()["background"]))
 
     def graph_scene(self) -> CFGGraphScene:
-        """
-        Get the typed CFGGraphScene.
+        """Get the typed CFGGraphScene.
 
         Returns:
             CFGGraphScene: The CFGGraphScene instance.
@@ -540,8 +526,7 @@ class CFGGraphView(QGraphicsView):
 
     @override
     def wheelEvent(self, event: QWheelEvent | None) -> None:
-        """
-        Zoom with mouse wheel.
+        """Zoom with mouse wheel.
 
         Args:
             event: Wheel event.
@@ -555,8 +540,7 @@ class CFGGraphView(QGraphicsView):
 
     @override
     def mousePressEvent(self, event: QMouseEvent | None) -> None:
-        """
-        Handle mouse press and emit block_clicked for block selection.
+        """Handle mouse press and emit block_clicked for block selection.
 
         Args:
             event: Mouse event.

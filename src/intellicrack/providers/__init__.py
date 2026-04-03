@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-LLM Provider implementations for Intellicrack.
+"""LLM Provider implementations for Intellicrack.
 
 This module contains provider implementations for various LLM APIs including Anthropic Claude, OpenAI GPT, Google Gemini, Ollama,
 OpenRouter, and local Transformers with Intel XPU acceleration.

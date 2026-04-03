@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Top-level orchestrator for the .hexpat pattern language interpreter.
+"""Top-level orchestrator for the .hexpat pattern language interpreter.
 
 Chains preprocessor -> lexer -> parser -> evaluator into a single execute() call.
 """
@@ -42,8 +41,7 @@ _PATTERNS_DIR = _IMHEX_PATTERNS_DIR / "patterns"
 
 
 class HexPatInterpreter:
-    """
-    Full .hexpat pattern interpreter.
+    """Full .hexpat pattern interpreter.
 
     Orchestrates the complete pipeline: preprocessor -> lexer -> parser ->
     type registration -> evaluator. Outputs ParsedField-compatible dicts
@@ -79,8 +77,7 @@ class HexPatInterpreter:
         offset: int = 0,
         file_path: Path | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Execute a .hexpat pattern against binary data.
+        """Execute a .hexpat pattern against binary data.
 
         Args:
             source: The .hexpat source code to interpret.
@@ -136,8 +133,7 @@ class HexPatInterpreter:
         document: HexDocumentLike,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
-        """
-        Execute a .hexpat file against binary data.
+        """Execute a .hexpat file against binary data.
 
         Args:
             pattern_path: Path to the .hexpat file to execute.
@@ -157,8 +153,7 @@ class HexPatInterpreter:
         offset: int = 0,
         file_path: Path | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Execute a .hexpat pattern against raw bytes.
+        """Execute a .hexpat pattern against raw bytes.
 
         Convenience method for testing without a HexDocument.
 
@@ -206,8 +201,7 @@ class HexPatInterpreter:
         return evaluator.evaluate(program)
 
     def can_compile_to_json(self, source: str) -> bool:
-        """
-        Check if a pattern can be compiled to JSON for the fast Rust path.
+        """Check if a pattern can be compiled to JSON for the fast Rust path.
 
         A pattern is eligible for JSON compilation if it contains only
         static struct/union/enum/bitfield declarations with no functions,
@@ -233,8 +227,7 @@ class HexPatInterpreter:
 
     @staticmethod
     def compile_to_json(source: str) -> str:
-        """
-        Compile a simple pattern to JSON for the Rust evaluator.
+        """Compile a simple pattern to JSON for the Rust evaluator.
 
         Delegates to the existing HexPatCompiler for patterns that pass
         can_compile_to_json().

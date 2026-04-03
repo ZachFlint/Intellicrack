@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Cutter/Rizin analysis panel for Intellicrack.
+"""Cutter/Rizin analysis panel for Intellicrack.
 
 Provides native Qt views for disassembly, decompilation, function listing, CFG visualization, string search, import/export/section tables,
 cross-references, and a raw r2 command console -- all powered by the CutterBridge headless analysis backend via r2pipe.
@@ -73,8 +72,7 @@ _XREF_COLUMNS = ["Direction", "From/To", "Type", "Function"]
 
 
 class CutterPanel(AnalysisPanelBase):
-    """
-    Native Qt panel for Cutter/Rizin reverse engineering analysis.
+    """Native Qt panel for Cutter/Rizin reverse engineering analysis.
 
     Displays disassembly, decompiled code, CFG graphs, function lists,
     strings, imports, exports, sections, cross-references, and a raw
@@ -92,8 +90,7 @@ class CutterPanel(AnalysisPanelBase):
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
-        """
-        Add Cutter-specific controls to the toolbar.
+        """Add Cutter-specific controls to the toolbar.
 
         Args:
             toolbar: The toolbar to populate.
@@ -109,8 +106,7 @@ class CutterPanel(AnalysisPanelBase):
 
     @override
     def _create_content(self) -> QWidget:
-        """
-        Create the Cutter analysis content area with three vertical zones.
+        """Create the Cutter analysis content area with three vertical zones.
 
         Returns:
             QWidget: Vertical splitter with code zone, data tabs, and console.
@@ -148,8 +144,7 @@ class CutterPanel(AnalysisPanelBase):
         return splitter
 
     def _create_functions_sidebar(self) -> QWidget:
-        """
-        Create the functions list sidebar with filter and refresh.
+        """Create the functions list sidebar with filter and refresh.
 
         Returns:
             QWidget: Functions sidebar widget.
@@ -188,8 +183,7 @@ class CutterPanel(AnalysisPanelBase):
         return container
 
     def _create_code_tabs(self) -> QTabWidget:
-        """
-        Create disassembly, decompiler, and CFG code tabs.
+        """Create disassembly, decompiler, and CFG code tabs.
 
         Returns:
             QTabWidget: Tab widget with code views.
@@ -218,8 +212,7 @@ class CutterPanel(AnalysisPanelBase):
         return tabs
 
     def _create_data_tabs(self) -> QTabWidget:
-        """
-        Create strings, imports, exports, sections, and xrefs tabs.
+        """Create strings, imports, exports, sections, and xrefs tabs.
 
         Returns:
             QTabWidget: Tab widget with data tables.
@@ -289,8 +282,7 @@ class CutterPanel(AnalysisPanelBase):
         return tabs
 
     def _create_console(self) -> QWidget:
-        """
-        Create the raw r2 command console.
+        """Create the raw r2 command console.
 
         Returns:
             QWidget: Console widget with output log and command input.
@@ -327,8 +319,7 @@ class CutterPanel(AnalysisPanelBase):
         return container
 
     def set_bridge(self, bridge: CutterBridge) -> None:
-        """
-        Set the CutterBridge instance for analysis.
+        """Set the CutterBridge instance for analysis.
 
         Args:
             bridge: The CutterBridge to use.
@@ -337,8 +328,7 @@ class CutterPanel(AnalysisPanelBase):
         _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> CutterBridge | None:
-        """
-        Get the current CutterBridge instance.
+        """Get the current CutterBridge instance.
 
         Returns:
             CutterBridge | None: The attached bridge or None.
@@ -346,8 +336,7 @@ class CutterPanel(AnalysisPanelBase):
         return self._bridge
 
     def analyze_binary(self, binary_path: Path) -> bool:
-        """
-        Load and analyze a binary via the CutterBridge.
+        """Load and analyze a binary via the CutterBridge.
 
         Loads the binary via r2pipe and automatically chains into
         full analysis once loading succeeds.
@@ -379,8 +368,7 @@ class CutterPanel(AnalysisPanelBase):
 
     @override
     def start_tool(self) -> bool:
-        """
-        Initialize the CutterBridge and emit tool_started.
+        """Initialize the CutterBridge and emit tool_started.
 
         Returns:
             bool: True if initialization was initiated or bridge is absent.
@@ -406,8 +394,7 @@ class CutterPanel(AnalysisPanelBase):
         _logger.info("cutter_initialized", bridge_type="cutter")
 
     def _on_initialize_error(self, exc: object) -> None:
-        """
-        Handle bridge initialization failure.
+        """Handle bridge initialization failure.
 
         Args:
             exc: The exception that occurred.
@@ -417,8 +404,7 @@ class CutterPanel(AnalysisPanelBase):
         self.tool_started.emit()
 
     def _on_binary_loaded(self, binary_path: Path) -> None:
-        """
-        Handle successful binary load and auto-trigger analysis.
+        """Handle successful binary load and auto-trigger analysis.
 
         Args:
             binary_path: The loaded binary path.
@@ -429,8 +415,7 @@ class CutterPanel(AnalysisPanelBase):
         self._on_analyze()
 
     def _on_binary_load_error(self, binary_path: Path, exc: object) -> None:
-        """
-        Handle binary load failure.
+        """Handle binary load failure.
 
         Args:
             binary_path: The binary that failed to load.
@@ -483,8 +468,7 @@ class CutterPanel(AnalysisPanelBase):
         self._refresh_sections()
 
     def _on_analysis_error(self, exc: object) -> None:
-        """
-        Handle analysis failure.
+        """Handle analysis failure.
 
         Args:
             exc: The exception that occurred.
@@ -508,8 +492,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_functions(self, result: object) -> None:
-        """
-        Apply function data to the tree.
+        """Apply function data to the tree.
 
         Args:
             result: Function list from the bridge.
@@ -539,8 +522,7 @@ class CutterPanel(AnalysisPanelBase):
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
-        """
-        Handle function filter text changes.
+        """Handle function filter text changes.
 
         Args:
             _text: New filter text (unused, read from widget).
@@ -548,8 +530,7 @@ class CutterPanel(AnalysisPanelBase):
         self._on_refresh_functions()
 
     def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
-        """
-        Handle function tree item click to load disassembly, decompilation, and xrefs.
+        """Handle function tree item click to load disassembly, decompilation, and xrefs.
 
         Args:
             item: Clicked tree widget item.
@@ -616,8 +597,7 @@ class CutterPanel(AnalysisPanelBase):
         self._code_tabs.setCurrentIndex(2)
 
     def _get_selected_function_address(self) -> int | None:
-        """
-        Get the address of the currently selected function.
+        """Get the address of the currently selected function.
 
         Returns:
             int | None: The function address or None if nothing is selected.
@@ -629,8 +609,7 @@ class CutterPanel(AnalysisPanelBase):
         return address if isinstance(address, int) else None
 
     def _apply_decompiled(self, result: object) -> None:
-        """
-        Apply decompiled code to the view.
+        """Apply decompiled code to the view.
 
         Args:
             result: Decompiled code string from the bridge.
@@ -639,8 +618,7 @@ class CutterPanel(AnalysisPanelBase):
             self._decompiled_view.setPlainText(str(result))
 
     def _apply_disassembly(self, result: object) -> None:
-        """
-        Apply disassembly data to the view.
+        """Apply disassembly data to the view.
 
         Args:
             result: Disassembly lines from the bridge.
@@ -657,8 +635,7 @@ class CutterPanel(AnalysisPanelBase):
         self._disasm_view.setPlainText("\n".join(text_lines))
 
     def _apply_graph(self, result: object) -> None:
-        """
-        Apply CFG graph data to the graph view.
+        """Apply CFG graph data to the graph view.
 
         Args:
             result: List of basic block dicts from the bridge.
@@ -679,8 +656,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_imports(self, result: object) -> None:
-        """
-        Apply import data to the table.
+        """Apply import data to the table.
 
         Args:
             result: Import list from the bridge.
@@ -707,8 +683,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_exports(self, result: object) -> None:
-        """
-        Apply export data to the table.
+        """Apply export data to the table.
 
         Args:
             result: Export list from the bridge.
@@ -735,8 +710,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_sections(self, result: object) -> None:
-        """
-        Apply section data to the table.
+        """Apply section data to the table.
 
         Args:
             result: Section list from the bridge.
@@ -775,8 +749,7 @@ class CutterPanel(AnalysisPanelBase):
             )
 
     def search_strings(self, pattern: str) -> None:
-        """
-        Search for strings matching pattern and populate table.
+        """Search for strings matching pattern and populate table.
 
         Args:
             pattern: Regex pattern to match.
@@ -792,8 +765,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_strings(self, result: object) -> None:
-        """
-        Apply string search results to the table.
+        """Apply string search results to the table.
 
         Args:
             result: String list from the bridge.
@@ -811,8 +783,7 @@ class CutterPanel(AnalysisPanelBase):
         self._string_search_btn.setEnabled(True)
 
     def _on_string_search_error(self, pattern: str) -> None:
-        """
-        Handle string search failure.
+        """Handle string search failure.
 
         Args:
             pattern: The pattern that failed.
@@ -826,8 +797,7 @@ class CutterPanel(AnalysisPanelBase):
             self.search_strings(pattern)
 
     def _show_xrefs(self, address: int) -> None:
-        """
-        Show cross-references to and from an address.
+        """Show cross-references to and from an address.
 
         Args:
             address: Target address for xref lookup.
@@ -850,8 +820,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
-        """
-        Apply xrefs-to data to the tree.
+        """Apply xrefs-to data to the tree.
 
         Args:
             result: Cross-reference list from the bridge.
@@ -870,8 +839,7 @@ class CutterPanel(AnalysisPanelBase):
             self._xrefs_tree.addTopLevelItem(item)
 
     def _apply_xrefs_from(self, result: object) -> None:
-        """
-        Apply xrefs-from data to the tree.
+        """Apply xrefs-from data to the tree.
 
         Args:
             result: Cross-reference list from the bridge.
@@ -910,8 +878,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
     def _apply_command_result(self, result: object) -> None:
-        """
-        Apply command output to the console.
+        """Apply command output to the console.
 
         Args:
             result: Command output string from the bridge.
@@ -921,8 +888,7 @@ class CutterPanel(AnalysisPanelBase):
         self._console_run_btn.setEnabled(True)
 
     def _on_command_error(self, exc: object) -> None:
-        """
-        Handle command execution failure.
+        """Handle command execution failure.
 
         Args:
             exc: The exception that occurred.

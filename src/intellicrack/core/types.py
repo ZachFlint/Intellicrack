@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Core type definitions for Intellicrack.
+"""Core type definitions for Intellicrack.
 
 This module contains all the fundamental dataclasses, enums, and type definitions used throughout the Intellicrack application.
 """
@@ -25,8 +24,7 @@ class HexDocumentLike(Protocol):
     """Protocol for objects providing hex document read access."""
 
     def read(self, offset: int, length: int) -> list[int]:
-        """
-        Read bytes from the document.
+        """Read bytes from the document.
 
         Args:
             offset: Byte offset to start reading from.
@@ -39,8 +37,7 @@ class HexDocumentLike(Protocol):
         return []
 
     def length(self) -> int:
-        """
-        Get the total length of the document in bytes.
+        """Get the total length of the document in bytes.
 
         Returns:
             int: Document length.
@@ -54,8 +51,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
     """Protocol for full HexDocument with template and write support."""
 
     def write(self, offset: int, data: bytes) -> None:
-        """
-        Write bytes to the document.
+        """Write bytes to the document.
 
         Args:
             offset: Byte offset to write at.
@@ -64,8 +60,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         _ = (self, offset, data)
 
     def list_templates(self) -> list[tuple[str, str]]:
-        """
-        List available templates.
+        """List available templates.
 
         Returns:
             list[tuple[str, str]]: List of (name, description) tuples.
@@ -74,8 +69,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         return []
 
     def list_templates_detailed(self) -> list[object]:
-        """
-        List templates with full detail objects.
+        """List templates with full detail objects.
 
         Returns:
             list[object]: List of template detail objects.
@@ -84,8 +78,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         return []
 
     def register_json_template(self, name: str, json_str: str) -> None:
-        """
-        Register a JSON-defined template.
+        """Register a JSON-defined template.
 
         Args:
             name: Template name.
@@ -94,8 +87,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         _ = (self, name, json_str)
 
     def remove_template(self, name: str) -> None:
-        """
-        Remove a registered template.
+        """Remove a registered template.
 
         Args:
             name: Template name to remove.
@@ -103,8 +95,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         _ = (self, name)
 
     def export_template_json(self, name: str) -> str:
-        """
-        Export a template as a JSON string.
+        """Export a template as a JSON string.
 
         Args:
             name: Template name to export.
@@ -116,8 +107,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         return ""
 
     def inspect_at(self, offset: int) -> dict[str, object]:
-        """
-        Inspect data at the given offset.
+        """Inspect data at the given offset.
 
         Args:
             offset: Byte offset to inspect.
@@ -139,8 +129,7 @@ class CompiledYaraRules(Protocol):
         filepath: str | None = None,
         timeout: int = 60,
     ) -> list[object]:
-        """
-        Match rules against data or a file.
+        """Match rules against data or a file.
 
         Args:
             data: Binary data to scan.
@@ -250,8 +239,7 @@ class ConfirmationLevel(enum.Enum):
 
 
 class ToolChoiceMode(enum.Enum):
-    """
-    How the LLM should decide whether to call a tool.
+    """How the LLM should decide whether to call a tool.
 
     Attributes:
         AUTO: Let the model decide whether to call tools.
@@ -268,8 +256,7 @@ class ToolChoiceMode(enum.Enum):
 
 @dataclass
 class ToolChoice:
-    """
-    Specifies how the LLM should select tools.
+    """Specifies how the LLM should select tools.
 
     Attributes:
         mode: The tool selection mode.
@@ -282,8 +269,7 @@ class ToolChoice:
 
 @dataclass
 class ThinkingConfig:
-    """
-    Configuration for extended thinking (chain-of-thought).
+    """Configuration for extended thinking (chain-of-thought).
 
     Attributes:
         enabled: Whether extended thinking is active.
@@ -296,8 +282,7 @@ class ThinkingConfig:
 
 @dataclass
 class CacheConfig:
-    """
-    Configuration for prompt caching.
+    """Configuration for prompt caching.
 
     Attributes:
         enabled: Whether prompt caching is active.
@@ -310,8 +295,7 @@ class CacheConfig:
 
 @dataclass
 class ToolCall:
-    """
-    Represents a tool/function call request from the LLM.
+    """Represents a tool/function call request from the LLM.
 
     Attributes:
         id: Unique identifier for this tool call.
@@ -328,8 +312,7 @@ class ToolCall:
 
 @dataclass
 class ToolResult:
-    """
-    Result of executing a tool call.
+    """Result of executing a tool call.
 
     Attributes:
         call_id: ID of the corresponding ToolCall.
@@ -348,8 +331,7 @@ class ToolResult:
 
 @dataclass
 class Message:
-    """
-    A single message in the conversation.
+    """A single message in the conversation.
 
     Attributes:
         role: The message sender role.
@@ -370,8 +352,7 @@ class Message:
 
 @dataclass
 class SectionInfo:
-    """
-    PE/ELF section information.
+    """PE/ELF section information.
 
     Attributes:
         name: Section name (e.g., ".text", ".data").
@@ -391,8 +372,7 @@ class SectionInfo:
 
     @property
     def is_executable(self) -> bool:
-        """
-        Check if section is executable.
+        """Check if section is executable.
 
         Returns:
             bool: True if the section has the executable characteristic flag set.
@@ -401,8 +381,7 @@ class SectionInfo:
 
     @property
     def is_readable(self) -> bool:
-        """
-        Check if section is readable.
+        """Check if section is readable.
 
         Returns:
             bool: True if the section has the readable characteristic flag set.
@@ -411,8 +390,7 @@ class SectionInfo:
 
     @property
     def is_writable(self) -> bool:
-        """
-        Check if section is writable.
+        """Check if section is writable.
 
         Returns:
             bool: True if the section has the writable characteristic flag set.
@@ -422,8 +400,7 @@ class SectionInfo:
 
 @dataclass
 class ImportInfo:
-    """
-    Import table entry.
+    """Import table entry.
 
     Attributes:
         dll: Name of the imported DLL/library.
@@ -440,8 +417,7 @@ class ImportInfo:
 
 @dataclass
 class ExportInfo:
-    """
-    Export table entry.
+    """Export table entry.
 
     Attributes:
         name: Name of the exported symbol.
@@ -456,8 +432,7 @@ class ExportInfo:
 
 @dataclass
 class BinaryInfo:
-    """
-    Information about a loaded binary file.
+    """Information about a loaded binary file.
 
     Attributes:
         path: Filesystem path to the binary.
@@ -490,8 +465,7 @@ class BinaryInfo:
 
 @dataclass
 class ParameterInfo:
-    """
-    Function parameter information.
+    """Function parameter information.
 
     Attributes:
         name: Parameter name.
@@ -508,8 +482,7 @@ class ParameterInfo:
 
 @dataclass
 class VariableInfo:
-    """
-    Local variable information.
+    """Local variable information.
 
     Attributes:
         name: Variable name.
@@ -526,8 +499,7 @@ class VariableInfo:
 
 @dataclass
 class DataTypeInfo:
-    """
-    Ghidra data type details for a program address.
+    """Ghidra data type details for a program address.
 
     Attributes:
         address: Address where the data type is defined.
@@ -551,8 +523,7 @@ class DataTypeInfo:
 
     @property
     def display_type(self) -> str:
-        """
-        Get the display string for the data type.
+        """Get the display string for the data type.
 
         Returns:
             str: Formatted type string including pointer or array notation.
@@ -566,8 +537,7 @@ class DataTypeInfo:
 
 @dataclass
 class FunctionInfo:
-    """
-    Analyzed function information.
+    """Analyzed function information.
 
     Attributes:
         name: Function name (may be auto-generated).
@@ -593,8 +563,7 @@ class FunctionInfo:
 
     @property
     def has_code(self) -> bool:
-        """
-        Check if code is available.
+        """Check if code is available.
 
         Returns:
             bool: True if decompiled code or disassembly is present.
@@ -603,8 +572,7 @@ class FunctionInfo:
 
     @property
     def summary(self) -> str:
-        """
-        Get function summary.
+        """Get function summary.
 
         Returns:
             str: Summary string with name, address, convention, and variable count.
@@ -615,8 +583,7 @@ class FunctionInfo:
 
 @dataclass
 class CrossReference:
-    """
-    Cross-reference information.
+    """Cross-reference information.
 
     Attributes:
         from_address: Source address of the reference.
@@ -633,8 +600,7 @@ class CrossReference:
     to_function: str | None
 
     def __str__(self) -> str:
-        """
-        Get string representation of the cross reference.
+        """Get string representation of the cross reference.
 
         Returns:
             str: Formatted cross-reference showing type, source, and destination.
@@ -646,8 +612,7 @@ class CrossReference:
 
 @dataclass
 class StringInfo:
-    """
-    String found in binary.
+    """String found in binary.
 
     Attributes:
         address: Address where string is located.
@@ -664,8 +629,7 @@ class StringInfo:
 
 @dataclass
 class BridgeAnalysisSummary:
-    """
-    Aggregated analysis results from connected bridges.
+    """Aggregated analysis results from connected bridges.
 
     Attributes:
         binary_name: Name of the analyzed binary.
@@ -694,8 +658,7 @@ class BridgeAnalysisSummary:
 
 @dataclass
 class BreakpointInfo:
-    """
-    Debugger breakpoint.
+    """Debugger breakpoint.
 
     Attributes:
         id: Breakpoint ID.
@@ -714,8 +677,7 @@ class BreakpointInfo:
     condition: str | None = None
 
     def __str__(self) -> str:
-        """
-        Get string representation of the breakpoint.
+        """Get string representation of the breakpoint.
 
         Returns:
             str: Formatted breakpoint info with ID, address, type, and hit count.
@@ -726,8 +688,7 @@ class BreakpointInfo:
 
 @dataclass
 class RegisterState:
-    """
-    CPU register state (x64).
+    """CPU register state (x64).
 
     Attributes:
         rax: General purpose register RAX.
@@ -782,8 +743,7 @@ class RegisterState:
     ss: int
 
     def __getitem__(self, key: str) -> int:
-        """
-        Access register by name.
+        """Access register by name.
 
         Args:
             key: Register name.
@@ -801,8 +761,7 @@ class RegisterState:
         raise KeyError(key)
 
     def get_gpr_dict(self) -> dict[str, int]:
-        """
-        Get general purpose registers.
+        """Get general purpose registers.
 
         Returns:
             dict[str, int]: Dictionary of GPR names and values.
@@ -827,8 +786,7 @@ class RegisterState:
         }
 
     def get_segment_registers(self) -> dict[str, int]:
-        """
-        Get segment registers.
+        """Get segment registers.
 
         Returns:
             dict[str, int]: Dictionary of segment register names and values.
@@ -845,8 +803,7 @@ class RegisterState:
 
 @dataclass
 class MemoryRegion:
-    """
-    Process memory region.
+    """Process memory region.
 
     Attributes:
         base_address: Start address of the region.
@@ -867,8 +824,7 @@ class MemoryRegion:
 
 @dataclass
 class ThreadInfo:
-    """
-    Thread information.
+    """Thread information.
 
     Attributes:
         tid: Thread ID.
@@ -883,8 +839,7 @@ class ThreadInfo:
     priority: int
 
     def __str__(self) -> str:
-        """
-        Get string representation of the thread.
+        """Get string representation of the thread.
 
         Returns:
             str: Formatted thread info with TID, state, priority, and address.
@@ -894,8 +849,7 @@ class ThreadInfo:
 
 @dataclass
 class ModuleInfo:
-    """
-    Loaded module information.
+    """Loaded module information.
 
     Attributes:
         name: Module filename.
@@ -914,8 +868,7 @@ class ModuleInfo:
 
 @dataclass
 class ProcessInfo:
-    """
-    Running process information.
+    """Running process information.
 
     Attributes:
         pid: Process ID.
@@ -938,8 +891,7 @@ class ProcessInfo:
 
 @dataclass
 class HookInfo:
-    """
-    Frida hook information.
+    """Frida hook information.
 
     Attributes:
         id: Unique hook identifier.
@@ -958,8 +910,7 @@ class HookInfo:
 
 @dataclass
 class PatchInfo:
-    """
-    Binary patch information.
+    """Binary patch information.
 
     Attributes:
         address: Address where patch is applied.
@@ -978,8 +929,7 @@ class PatchInfo:
 
 @dataclass
 class SymbolInfo:
-    """
-    Debug symbol information resolved from an address.
+    """Debug symbol information resolved from an address.
 
     Attributes:
         name: Symbol name.
@@ -998,8 +948,7 @@ class SymbolInfo:
 
 @dataclass
 class CrashInfo:
-    """
-    Process crash report from Frida.
+    """Process crash report from Frida.
 
     Attributes:
         pid: Process ID that crashed.
@@ -1020,8 +969,7 @@ class CrashInfo:
 
 @dataclass
 class ChildProcessInfo:
-    """
-    Information about a child process intercepted by Frida child gating.
+    """Information about a child process intercepted by Frida child gating.
 
     Attributes:
         pid: Child process ID.
@@ -1042,8 +990,7 @@ class ChildProcessInfo:
 
 @dataclass
 class StalkerEvent:
-    """
-    Single Stalker code tracing event.
+    """Single Stalker code tracing event.
 
     Attributes:
         event_type: Type of event (call, ret, exec, block, compile).
@@ -1060,8 +1007,7 @@ class StalkerEvent:
 
 @dataclass
 class StalkerTrace:
-    """
-    Complete Stalker trace result for a thread.
+    """Complete Stalker trace result for a thread.
 
     Attributes:
         thread_id: Thread that was traced.
@@ -1078,8 +1024,7 @@ class StalkerTrace:
 
 @dataclass
 class FridaDeviceInfo:
-    """
-    Frida device information.
+    """Frida device information.
 
     Attributes:
         id: Device identifier.
@@ -1094,8 +1039,7 @@ class FridaDeviceInfo:
 
 @dataclass
 class ApiResolverMatch:
-    """
-    Result from Frida ApiResolver query.
+    """Result from Frida ApiResolver query.
 
     Attributes:
         name: Fully qualified API name.
@@ -1108,8 +1052,7 @@ class ApiResolverMatch:
 
 @dataclass
 class ToolState:
-    """
-    State of a tool bridge.
+    """State of a tool bridge.
 
     Attributes:
         tool: Which tool this state is for.
@@ -1128,8 +1071,7 @@ class ToolState:
 
 @dataclass
 class Session:
-    """
-    Complete session state.
+    """Complete session state.
 
     Attributes:
         id: Unique session identifier.
@@ -1158,8 +1100,7 @@ class Session:
 
 @dataclass
 class ModelInfo:
-    """
-    LLM model information.
+    """LLM model information.
 
     Attributes:
         id: Model identifier string.
@@ -1186,8 +1127,7 @@ class ModelInfo:
 
 @dataclass
 class ProviderCredentials:
-    """
-    Credentials for an LLM provider.
+    """Credentials for an LLM provider.
 
     Attributes:
         api_key: API key for authentication.
@@ -1206,8 +1146,7 @@ class ProviderCredentials:
 
 @dataclass
 class ToolParameter:
-    """
-    Tool function parameter definition for LLM schema.
+    """Tool function parameter definition for LLM schema.
 
     Attributes:
         name: Parameter name.
@@ -1228,8 +1167,7 @@ class ToolParameter:
 
 @dataclass
 class ToolFunction:
-    """
-    Tool function definition for LLM.
+    """Tool function definition for LLM.
 
     Attributes:
         name: Full function name (e.g., "ghidra.decompile").
@@ -1245,8 +1183,7 @@ class ToolFunction:
 
     @property
     def signature(self) -> str:
-        """
-        Get function signature string.
+        """Get function signature string.
 
         Returns:
             str: Formatted signature with name, parameters, and return type.
@@ -1257,8 +1194,7 @@ class ToolFunction:
 
 @dataclass
 class ToolDefinition:
-    """
-    Complete tool definition for LLM function calling.
+    """Complete tool definition for LLM function calling.
 
     Attributes:
         tool_name: Which tool this definition is for.
@@ -1272,8 +1208,7 @@ class ToolDefinition:
 
 
 class IntellicrackError(Exception):
-    """
-    Base exception for all Intellicrack errors.
+    """Base exception for all Intellicrack errors.
 
     Args:
         message: Human-readable error description.
@@ -1303,8 +1238,7 @@ class IntellicrackError(Exception):
 
 
 class ProviderError(IntellicrackError):
-    """
-    Error related to LLM providers.
+    """Error related to LLM providers.
 
     Args:
         message: Human-readable error description.
@@ -1344,8 +1278,7 @@ class AuthenticationError(ProviderError):
 
 
 class RateLimitError(ProviderError):
-    """
-    Rate limit exceeded.
+    """Rate limit exceeded.
 
     Args:
         message: Human-readable error description.
@@ -1382,8 +1315,7 @@ class RateLimitError(ProviderError):
 
 
 class ModelNotFoundError(ProviderError):
-    """
-    Requested model not found.
+    """Requested model not found.
 
     Args:
         message: Human-readable error description.
@@ -1420,8 +1352,7 @@ class ModelNotFoundError(ProviderError):
 
 
 class ToolError(IntellicrackError):
-    """
-    Error related to tool bridges.
+    """Error related to tool bridges.
 
     Args:
         message: Human-readable error description.
@@ -1457,8 +1388,7 @@ class ToolError(IntellicrackError):
 
 
 class ToolNotFoundError(ToolError):
-    """
-    Tool could not be found or installed.
+    """Tool could not be found or installed.
 
     Args:
         message: Human-readable error description.
@@ -1491,8 +1421,7 @@ class ToolNotFoundError(ToolError):
 
 
 class InitializationError(ToolError):
-    """
-    Tool failed to initialize.
+    """Tool failed to initialize.
 
     Args:
         message: Human-readable error description.
@@ -1529,8 +1458,7 @@ class InitializationError(ToolError):
 
 
 class AttachError(ToolError):
-    """
-    Failed to attach to process.
+    """Failed to attach to process.
 
     Args:
         message: Human-readable error description.
@@ -1572,8 +1500,7 @@ class AttachError(ToolError):
 
 
 class SandboxError(IntellicrackError):
-    """
-    Error related to sandbox operations.
+    """Error related to sandbox operations.
 
     Args:
         message: Human-readable error description.
@@ -1604,8 +1531,7 @@ class SandboxError(IntellicrackError):
 
 
 class SandboxTimeoutError(SandboxError):
-    """
-    Timeout during sandbox command execution.
+    """Timeout during sandbox command execution.
 
     Args:
         message: Human-readable error description.
@@ -1635,8 +1561,7 @@ class SandboxTimeoutError(SandboxError):
 
 
 class ConfigurationError(IntellicrackError):
-    """
-    Configuration error.
+    """Configuration error.
 
     Args:
         message: Human-readable error description.

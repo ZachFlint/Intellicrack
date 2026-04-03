@@ -84,8 +84,7 @@ class _ContinueSignalError(Exception):
 
 
 class _ReturnSignalError(Exception):
-    """
-    Internal control-flow error raised by a return statement.
+    """Internal control-flow error raised by a return statement.
 
     Args:
         value: The PatternValue being returned from the function.
@@ -101,8 +100,7 @@ _PrimValue = int | float | str | bytes | bool | None
 
 @dataclass
 class BuiltinCallable:
-    """
-    Wrapper for a built-in Python callable stored as a PatternValue.
+    """Wrapper for a built-in Python callable stored as a PatternValue.
 
     Attributes:
         fn: The underlying Python callable accepting PatternValue arguments.
@@ -115,8 +113,7 @@ class BuiltinCallable:
 
 @dataclass
 class PatternValue:
-    """
-    A runtime value produced during pattern evaluation.
+    """A runtime value produced during pattern evaluation.
 
     Attributes:
         value: The underlying runtime value — either a primitive, a user-defined
@@ -135,8 +132,7 @@ class PatternValue:
 
 
 class EvalScope:
-    """
-    Lexical scope with parent-chain variable resolution.
+    """Lexical scope with parent-chain variable resolution.
 
     Args:
         parent: The enclosing parent scope, or None for root scope.
@@ -147,8 +143,7 @@ class EvalScope:
         self._parent: EvalScope | None = parent
 
     def get(self, name: str) -> PatternValue | None:
-        """
-        Look up a variable by name, searching parent scopes on miss.
+        """Look up a variable by name, searching parent scopes on miss.
 
         Args:
             name: The variable name to look up.
@@ -161,8 +156,7 @@ class EvalScope:
         return self._parent.get(name) if self._parent is not None else None
 
     def set(self, name: str, value: PatternValue) -> bool:
-        """
-        Update an existing variable in the nearest enclosing scope.
+        """Update an existing variable in the nearest enclosing scope.
 
         Args:
             name: The variable name to update.
@@ -177,8 +171,7 @@ class EvalScope:
         return self._parent.set(name, value) if self._parent is not None else False
 
     def define(self, name: str, value: PatternValue) -> None:
-        """
-        Define a new variable in the current scope level.
+        """Define a new variable in the current scope level.
 
         Args:
             name: The variable name to define.
@@ -188,8 +181,7 @@ class EvalScope:
 
     @property
     def bindings(self) -> dict[str, PatternValue]:
-        """
-        Public read-only view of the current scope's variable bindings.
+        """Public read-only view of the current scope's variable bindings.
 
         Returns:
             dict[str, PatternValue]: The dictionary of variable bindings in this scope level.
@@ -207,8 +199,7 @@ def _make_parsed_field(
     color: str,
     description: str,
 ) -> dict[str, Any]:
-    """
-    Build a standardised parsed-field result dictionary.
+    """Build a standardised parsed-field result dictionary.
 
     Args:
         name: The field name.
@@ -237,8 +228,7 @@ def _make_parsed_field(
 
 
 class HexPatEvaluator:
-    """
-    Tree-walking evaluator for HexPat .hexpat pattern programs.
+    """Tree-walking evaluator for HexPat .hexpat pattern programs.
 
     Walks an AST produced by the parser against binary data supplied via a
     DataReader, producing a list of parsed-field dictionaries suitable for
@@ -291,8 +281,7 @@ class HexPatEvaluator:
 
     @property
     def scope(self) -> EvalScope:
-        """
-        The current top-level evaluation scope.
+        """The current top-level evaluation scope.
 
         Returns:
             EvalScope: The current EvalScope used for variable bindings.
@@ -301,8 +290,7 @@ class HexPatEvaluator:
 
     @staticmethod
     def _normalize_endian(endian: str | None) -> str | None:
-        """
-        Normalize parser endianness tokens to DataReader format.
+        """Normalize parser endianness tokens to DataReader format.
 
         Args:
             endian: Endianness from the parser ("le", "be") or evaluator
@@ -316,8 +304,7 @@ class HexPatEvaluator:
         return "big" if endian == "be" else endian
 
     def evaluate(self, program: list[DeclNode | StmtNode]) -> list[dict[str, Any]]:
-        """
-        Evaluate a top-level program node list against the binary data.
+        """Evaluate a top-level program node list against the binary data.
 
         Iterates through all declarations and statements at the top level,
         collecting placement results.
@@ -339,8 +326,7 @@ class HexPatEvaluator:
         return self._results
 
     def _next_color(self) -> str:
-        """
-        Return the next colour from the rotation and advance the index.
+        """Return the next colour from the rotation and advance the index.
 
         Returns:
             str: A hex colour string such as "#E06C75".
@@ -354,8 +340,7 @@ class HexPatEvaluator:
         value: _PrimValue | FunctionDecl | BuiltinCallable,
         type_info: HexPatType | None,
     ) -> str:
-        """
-        Format a runtime value as a human-readable display string.
+        """Format a runtime value as a human-readable display string.
 
         Args:
             value: The raw Python value to format.
@@ -387,8 +372,7 @@ class HexPatEvaluator:
         return str(value)
 
     def _eval_decl(self, node: DeclNode) -> None:
-        """
-        Register a declaration in the type registry and/or scope.
+        """Register a declaration in the type registry and/or scope.
 
         Args:
             node: The declaration AST node to process.
@@ -414,8 +398,7 @@ class HexPatEvaluator:
             self._register_using(node)
 
     def _register_namespaced(self, name: str) -> None:
-        """
-        Register a namespace-qualified alias for a type when inside a namespace.
+        """Register a namespace-qualified alias for a type when inside a namespace.
 
         Args:
             name: The unqualified type name.
@@ -425,8 +408,7 @@ class HexPatEvaluator:
             self._types.register_alias(qualified, name)
 
     def _register_enum(self, node: EnumDecl) -> None:
-        """
-        Register an enum declaration with resolved member values.
+        """Register an enum declaration with resolved member values.
 
         Args:
             node: The enum AST declaration to register.
@@ -453,8 +435,7 @@ class HexPatEvaluator:
         self._types.register_enum(node, backing, members)
 
     def _register_using(self, node: UsingDecl) -> None:
-        """
-        Register a type alias from a using declaration.
+        """Register a type alias from a using declaration.
 
         Args:
             node: The using declaration AST node.
@@ -474,8 +455,7 @@ class HexPatEvaluator:
             raise HexPatTypeError(msg, node.line, node.column)
 
     def _eval_namespace_decl(self, node: NamespaceDecl) -> None:
-        """
-        Evaluate a namespace declaration, registering its members.
+        """Evaluate a namespace declaration, registering its members.
 
         Args:
             node: The namespace declaration AST node.
@@ -493,8 +473,7 @@ class HexPatEvaluator:
         self._scope.define(node.name, ns_value)
 
     def _eval_stmt(self, node: StmtNode) -> None:
-        """
-        Evaluate a statement node for its effect.
+        """Evaluate a statement node for its effect.
 
         Args:
             node: The statement AST node to evaluate.
@@ -534,8 +513,7 @@ class HexPatEvaluator:
             raise _ContinueSignalError
 
     def _eval_conditional(self, node: ConditionalField) -> None:
-        """
-        Evaluate a conditional field branching construct.
+        """Evaluate a conditional field branching construct.
 
         Args:
             node: The conditional field AST node.
@@ -546,8 +524,7 @@ class HexPatEvaluator:
             self._eval_stmt(stmt)
 
     def _eval_var_decl(self, node: VarDecl) -> None:
-        """
-        Evaluate a variable declaration.
+        """Evaluate a variable declaration.
 
         Args:
             node: The variable declaration AST node.
@@ -556,8 +533,7 @@ class HexPatEvaluator:
         self._scope.define(node.name, value)
 
     def _eval_while(self, node: WhileStmt) -> None:
-        """
-        Evaluate a while loop statement.
+        """Evaluate a while loop statement.
 
         Args:
             node: The while loop AST node.
@@ -575,8 +551,7 @@ class HexPatEvaluator:
                 continue
 
     def _eval_for(self, node: ForStmt) -> None:
-        """
-        Evaluate a C-style for loop statement.
+        """Evaluate a C-style for loop statement.
 
         Args:
             node: The for loop AST node.
@@ -605,8 +580,7 @@ class HexPatEvaluator:
             self._scope = saved_scope
 
     def _eval_match(self, node: MatchStmt) -> None:
-        """
-        Evaluate a match statement by testing value against arms.
+        """Evaluate a match statement by testing value against arms.
 
         Args:
             node: The match statement AST node.
@@ -625,8 +599,7 @@ class HexPatEvaluator:
                     return
 
     def _eval_try(self, node: TryStmt) -> None:
-        """
-        Evaluate a try/catch error-handling block.
+        """Evaluate a try/catch error-handling block.
 
         Args:
             node: The try statement AST node.
@@ -639,8 +612,7 @@ class HexPatEvaluator:
                 self._eval_stmt(stmt)
 
     def _eval_placement(self, node: PlacementStmt) -> None:
-        """
-        Evaluate a top-level placement statement, instantiating a type.
+        """Evaluate a top-level placement statement, instantiating a type.
 
         Args:
             node: The placement statement AST node.
@@ -707,8 +679,7 @@ class HexPatEvaluator:
         description: str,
         endianness: str | None,
     ) -> dict[str, Any] | None:
-        """
-        Instantiate a type node at a given offset, returning a parsed-field dict.
+        """Instantiate a type node at a given offset, returning a parsed-field dict.
 
         Args:
             type_node: The type node to instantiate.
@@ -771,8 +742,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any] | None:
-        """
-        Instantiate a named (user-defined) type at a given offset.
+        """Instantiate a named (user-defined) type at a given offset.
 
         Args:
             type_node: The NamedType AST node to resolve and instantiate.
@@ -813,8 +783,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any]:
-        """
-        Instantiate a struct type at a given offset.
+        """Instantiate a struct type at a given offset.
 
         Args:
             name: The struct type name.
@@ -871,8 +840,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any]:
-        """
-        Instantiate a union type at a given offset.
+        """Instantiate a union type at a given offset.
 
         All members start at the same offset; the union size is the maximum child size.
 
@@ -926,8 +894,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any]:
-        """
-        Instantiate an enum type at a given offset.
+        """Instantiate an enum type at a given offset.
 
         Args:
             _name: The enum type name (unused, kept for uniform signature).
@@ -963,8 +930,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any]:
-        """
-        Instantiate a bitfield type at a given offset.
+        """Instantiate a bitfield type at a given offset.
 
         Args:
             name: The bitfield type name.
@@ -1026,8 +992,7 @@ class HexPatEvaluator:
         description: str,
         endianness: str,
     ) -> dict[str, Any] | None:
-        """
-        Instantiate an array type at a given offset.
+        """Instantiate an array type at a given offset.
 
         Args:
             type_node: The array type AST node.
@@ -1106,8 +1071,7 @@ class HexPatEvaluator:
         node: FieldDecl,
         _parent_offset: int,
     ) -> dict[str, Any] | None:
-        """
-        Evaluate a field declaration within a struct or union body.
+        """Evaluate a field declaration within a struct or union body.
 
         Args:
             node: The field declaration AST node.
@@ -1143,8 +1107,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any]:
-        """
-        Evaluate a pointer field declaration.
+        """Evaluate a pointer field declaration.
 
         Args:
             node: The field declaration AST node.
@@ -1177,8 +1140,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any] | None:
-        """
-        Evaluate an array field declaration.
+        """Evaluate an array field declaration.
 
         Args:
             node: The field declaration AST node.
@@ -1213,8 +1175,7 @@ class HexPatEvaluator:
         color: str,
         description: str,
     ) -> dict[str, Any] | None:
-        """
-        Evaluate a plain (non-pointer, non-array) field declaration.
+        """Evaluate a plain (non-pointer, non-array) field declaration.
 
         Args:
             node: The field declaration AST node.
@@ -1246,8 +1207,7 @@ class HexPatEvaluator:
         stmt: StmtNode,
         children: list[dict[str, Any]],
     ) -> None:
-        """
-        Evaluate a statement and append any produced fields to children.
+        """Evaluate a statement and append any produced fields to children.
 
         Args:
             stmt: The statement AST node to evaluate.
@@ -1295,8 +1255,7 @@ class HexPatEvaluator:
             raise _ContinueSignalError
 
     def _read_primitive(self, type_info: HexPatType, offset: int) -> PatternValue:
-        """
-        Read a primitive typed value from the data source at the given offset.
+        """Read a primitive typed value from the data source at the given offset.
 
         Args:
             type_info: The primitive type descriptor.
@@ -1363,8 +1322,7 @@ class HexPatEvaluator:
         )
 
     def _eval_expr(self, node: ExprNode) -> PatternValue:
-        """
-        Evaluate an expression node to a runtime PatternValue.
+        """Evaluate an expression node to a runtime PatternValue.
 
         Args:
             node: The expression AST node to evaluate.
@@ -1411,8 +1369,7 @@ class HexPatEvaluator:
         return self._eval_cast(node)
 
     def _eval_identifier(self, node: IdentifierExpr) -> PatternValue:
-        """
-        Evaluate an identifier expression by looking up the variable.
+        """Evaluate an identifier expression by looking up the variable.
 
         Args:
             node: The identifier expression AST node.
@@ -1433,8 +1390,7 @@ class HexPatEvaluator:
         return value
 
     def _eval_binary(self, node: BinaryExpr) -> PatternValue:
-        """
-        Evaluate a binary expression.
+        """Evaluate a binary expression.
 
         Args:
             node: The binary expression AST node.
@@ -1483,8 +1439,7 @@ class HexPatEvaluator:
         line: int,
         column: int,
     ) -> int | float | bool:
-        """
-        Apply a binary numeric operator to two numeric values.
+        """Apply a binary numeric operator to two numeric values.
 
         Args:
             op: The operator string.
@@ -1543,8 +1498,7 @@ class HexPatEvaluator:
         raise HexPatRuntimeError(msg, line, column)
 
     def _eval_unary(self, node: UnaryExpr) -> PatternValue:
-        """
-        Evaluate a unary expression.
+        """Evaluate a unary expression.
 
         Args:
             node: The unary expression AST node.
@@ -1569,8 +1523,7 @@ class HexPatEvaluator:
         raise HexPatRuntimeError(msg, node.line, node.column)
 
     def _eval_call(self, node: FunctionCallExpr) -> PatternValue:
-        """
-        Evaluate a function call expression.
+        """Evaluate a function call expression.
 
         Args:
             node: The function call AST node.
@@ -1598,8 +1551,7 @@ class HexPatEvaluator:
         decl: FunctionDecl,
         args: list[PatternValue],
     ) -> PatternValue:
-        """
-        Call a user-defined pattern function.
+        """Call a user-defined pattern function.
 
         Args:
             decl: The function declaration AST node.
@@ -1628,8 +1580,7 @@ class HexPatEvaluator:
         return PatternValue(value=None)
 
     def _eval_member_access(self, node: MemberAccessExpr) -> PatternValue:
-        """
-        Evaluate a member access expression (obj.member).
+        """Evaluate a member access expression (obj.member).
 
         Args:
             node: The member access AST node.
@@ -1672,8 +1623,7 @@ class HexPatEvaluator:
         raise HexPatRuntimeError(msg, node.line, node.column)
 
     def _eval_subscript(self, node: ArraySubscriptExpr) -> PatternValue:
-        """
-        Evaluate an array subscript expression (arr[idx]).
+        """Evaluate an array subscript expression (arr[idx]).
 
         Args:
             node: The array subscript AST node.
@@ -1700,8 +1650,7 @@ class HexPatEvaluator:
         raise HexPatRuntimeError(msg, node.line, node.column)
 
     def _eval_assign(self, node: AssignExpr) -> PatternValue:
-        """
-        Evaluate an assignment expression, updating the target variable or offset.
+        """Evaluate an assignment expression, updating the target variable or offset.
 
         Args:
             node: The assignment expression AST node.
@@ -1752,8 +1701,7 @@ class HexPatEvaluator:
         line: int,
         column: int,
     ) -> PatternValue:
-        """
-        Apply a compound assignment operator to two values.
+        """Apply a compound assignment operator to two values.
 
         Args:
             op: The compound assignment operator string (e.g., "+=", "-=").
@@ -1778,8 +1726,7 @@ class HexPatEvaluator:
         raise HexPatRuntimeError(msg, line, column)
 
     def _eval_sizeof(self, node: SizeofExpr) -> PatternValue:
-        """
-        Evaluate a sizeof expression.
+        """Evaluate a sizeof expression.
 
         Args:
             node: The sizeof expression AST node.
@@ -1795,8 +1742,7 @@ class HexPatEvaluator:
         return PatternValue(value=pv.size)
 
     def _sizeof_type_node(self, type_node: TypeNode) -> int:
-        """
-        Compute the static byte size of a type node.
+        """Compute the static byte size of a type node.
 
         Args:
             type_node: The type node to compute the size of.
@@ -1822,8 +1768,7 @@ class HexPatEvaluator:
         return self._pointer_size if isinstance(type_node, PointerType) else 0
 
     def _sizeof_struct(self, info: StructTypeInfo) -> int:
-        """
-        Compute the total byte size of a struct type.
+        """Compute the total byte size of a struct type.
 
         Args:
             info: The resolved struct type info.
@@ -1834,8 +1779,7 @@ class HexPatEvaluator:
         return sum(self._sizeof_type_node(stmt.type_node) for stmt in info.decl.body if isinstance(stmt, FieldDecl))
 
     def _sizeof_union(self, info: UnionTypeInfo) -> int:
-        """
-        Compute the byte size of a union type (maximum field size).
+        """Compute the byte size of a union type (maximum field size).
 
         Args:
             info: The resolved union type info.
@@ -1851,8 +1795,7 @@ class HexPatEvaluator:
         return max_size
 
     def _sizeof_bitfield(self, info: BitfieldTypeInfo) -> int:
-        """
-        Compute the byte size of a bitfield type.
+        """Compute the byte size of a bitfield type.
 
         Args:
             info: The resolved bitfield type info.
@@ -1868,8 +1811,7 @@ class HexPatEvaluator:
         return (total_bits + 7) // 8
 
     def _eval_cast(self, node: CastExpr) -> PatternValue:
-        """
-        Evaluate a type cast expression.
+        """Evaluate a type cast expression.
 
         Args:
             node: The cast expression AST node.
@@ -1911,8 +1853,7 @@ class HexPatEvaluator:
         return PatternValue(value=raw, type_info=target_prim)
 
     def _resolve_type_node_to_primitive(self, type_node: TypeNode) -> HexPatType | None:
-        """
-        Resolve a type node to a HexPatType primitive if possible.
+        """Resolve a type node to a HexPatType primitive if possible.
 
         Args:
             type_node: The type node to resolve.
@@ -1932,8 +1873,7 @@ class HexPatEvaluator:
         self,
         annotations: tuple[tuple[str, ExprNode | None], ...],
     ) -> str:
-        """
-        Extract a description string from field annotations.
+        """Extract a description string from field annotations.
 
         Args:
             annotations: Tuple of (name, value_expr) annotation pairs.
@@ -1949,8 +1889,7 @@ class HexPatEvaluator:
         return ""
 
     def _build_builtins(self) -> dict[str, BuiltinCallable]:
-        """
-        Construct the built-in function table.
+        """Construct the built-in function table.
 
         Returns:
             dict[str, BuiltinCallable]: A dict mapping function name to a BuiltinCallable wrapper.
@@ -2076,8 +2015,7 @@ class HexPatEvaluator:
 
 
 def _truthy(value: PatternValue) -> bool:
-    """
-    Determine the boolean truthiness of a PatternValue.
+    """Determine the boolean truthiness of a PatternValue.
 
     Args:
         value: The PatternValue to test.
@@ -2096,8 +2034,7 @@ def _truthy(value: PatternValue) -> bool:
 
 
 def _values_equal(a: PatternValue, b: PatternValue) -> bool:
-    """
-    Test whether two PatternValues are equal for match-arm comparison.
+    """Test whether two PatternValues are equal for match-arm comparison.
 
     Args:
         a: The first value to compare.

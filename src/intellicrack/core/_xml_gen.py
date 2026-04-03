@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-XML generation utilities wrapper.
+"""XML generation utilities wrapper.
 
 Centralizes XML element construction to a single auditable location. Only generation functions are exported -- no parsing of untrusted
 input. Uses runtime string construction to avoid B405 bandit finding. Type information is provided by the companion .pyi type definition

@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-XPU status dialog for the Help menu.
+"""XPU status dialog for the Help menu.
 
 Provides a live-updating dialog displaying Intel XPU device status, memory utilization, model cache state, and Windows system requirements.
 """
@@ -68,8 +67,7 @@ _WARNINGS_MAX_HEIGHT: Final[int] = 100
 
 
 def _restyle(widget: QWidget) -> None:
-    """
-    Force QSS re-evaluation after dynamic property change.
+    """Force QSS re-evaluation after dynamic property change.
 
     Args:
         widget: Widget to re-polish.
@@ -81,8 +79,7 @@ def _restyle(widget: QWidget) -> None:
 
 
 class XPUStatusDialog(QDialog):
-    """
-    Live XPU status dialog accessible from the Help menu.
+    """Live XPU status dialog accessible from the Help menu.
 
     Displays device information, memory utilization, model cache state,
     and Windows system requirement checks with periodic auto-refresh
@@ -115,8 +112,7 @@ class XPUStatusDialog(QDialog):
         root.addLayout(self._build_button_row())
 
     def _build_device_group(self) -> QGroupBox:
-        """
-        Build the Device Status group box.
+        """Build the Device Status group box.
 
         Returns:
             QGroupBox: The constructed group box widget.
@@ -143,8 +139,7 @@ class XPUStatusDialog(QDialog):
         return group
 
     def _build_memory_group(self) -> QGroupBox:
-        """
-        Build the Memory Usage group box.
+        """Build the Memory Usage group box.
 
         Returns:
             QGroupBox: The constructed group box widget.
@@ -164,8 +159,7 @@ class XPUStatusDialog(QDialog):
         return group
 
     def _build_cache_group(self) -> QGroupBox:
-        """
-        Build the Model Cache group box.
+        """Build the Model Cache group box.
 
         Returns:
             QGroupBox: The constructed group box widget.
@@ -183,8 +177,7 @@ class XPUStatusDialog(QDialog):
         return group
 
     def _build_requirements_group(self) -> QGroupBox:
-        """
-        Build the System Requirements group box.
+        """Build the System Requirements group box.
 
         Returns:
             QGroupBox: The constructed group box widget.
@@ -201,8 +194,7 @@ class XPUStatusDialog(QDialog):
         return group
 
     def _build_button_row(self) -> QHBoxLayout:
-        """
-        Build the bottom button row.
+        """Build the bottom button row.
 
         Returns:
             QHBoxLayout: Layout containing the action buttons.
@@ -366,8 +358,7 @@ class XPUStatusDialog(QDialog):
             self.cache_limit_label.setText("Error")
 
     def _refresh_requirements(self) -> None:
-        """
-        Run Windows requirements check and display results.
+        """Run Windows requirements check and display results.
 
         This calls PowerShell subprocesses so it is only invoked on dialog open and manual refresh, never on the periodic timer.
         """
@@ -398,8 +389,7 @@ class XPUStatusDialog(QDialog):
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
-        """
-        Stop the refresh timer when the dialog closes.
+        """Stop the refresh timer when the dialog closes.
 
         Args:
             a0: The close event.

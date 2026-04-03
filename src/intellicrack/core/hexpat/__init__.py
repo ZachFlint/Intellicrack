@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-HexPat .hexpat pattern language interpreter package.
+"""HexPat .hexpat pattern language interpreter package.
 
 Provides a full interpreter for HexPat's pattern language that executes .hexpat files against binary data and outputs ParsedField-compatible
 dicts for display in the hex editor template tree.

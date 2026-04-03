@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Main application entry point for Intellicrack.
+"""Main application entry point for Intellicrack.
 
 This module bootstraps the application, initializing configuration, logging, providers, tool bridges, and the GUI.
 """
@@ -65,8 +64,7 @@ class _CLIOptions:
 
 
 def _parse_args() -> tuple[_CLIOptions, list[str]]:
-    """
-    Parse CLI arguments into typed options.
+    """Parse CLI arguments into typed options.
 
     Returns:
         tuple[_CLIOptions, list[str]]: Tuple of parsed CLI options and remaining arguments
@@ -140,8 +138,7 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
 
 
 def _apply_cli_overrides(config: Config, cli: _CLIOptions) -> None:
-    """
-    Apply CLI flag overrides to the loaded config in-place.
+    """Apply CLI flag overrides to the loaded config in-place.
 
     Args:
         config: Config instance whose log sub-config will be mutated.
@@ -156,8 +153,7 @@ def _apply_cli_overrides(config: Config, cli: _CLIOptions) -> None:
 
 
 def _import_config_class() -> type[Config]:
-    """
-    Import the Config class dynamically.
+    """Import the Config class dynamically.
 
     Returns:
         type[Config]: The Config class.
@@ -167,8 +163,7 @@ def _import_config_class() -> type[Config]:
 
 
 def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]:
-    """
-    Import logging functions dynamically.
+    """Import logging functions dynamically.
 
     Returns:
         tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]: Tuple of (get_logger function, setup_logging function).
@@ -181,8 +176,7 @@ def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[Log
 
 
 def _import_process_manager() -> type[ProcessManager]:
-    """
-    Import the ProcessManager class dynamically.
+    """Import the ProcessManager class dynamically.
 
     Returns:
         type[ProcessManager]: The ProcessManager class.
@@ -192,8 +186,7 @@ def _import_process_manager() -> type[ProcessManager]:
 
 
 def _import_qt_app() -> type[QApplication]:
-    """
-    Import QApplication dynamically.
+    """Import QApplication dynamically.
 
     Returns:
         type[QApplication]: The QApplication class.
@@ -203,8 +196,7 @@ def _import_qt_app() -> type[QApplication]:
 
 
 def _import_splash_screen() -> type[SplashScreen]:
-    """
-    Import SplashScreen dynamically.
+    """Import SplashScreen dynamically.
 
     Returns:
         type[SplashScreen]: The SplashScreen class.
@@ -214,8 +206,7 @@ def _import_splash_screen() -> type[SplashScreen]:
 
 
 def _import_theme_icon_managers() -> tuple[type[ThemeManager], type[IconManager]]:
-    """
-    Import theme and icon manager classes dynamically.
+    """Import theme and icon manager classes dynamically.
 
     Returns:
         tuple[type[ThemeManager], type[IconManager]]: Tuple of (ThemeManager class, IconManager class).
@@ -228,8 +219,7 @@ def _import_theme_icon_managers() -> tuple[type[ThemeManager], type[IconManager]
 
 
 def _import_orchestrator() -> type[Orchestrator]:
-    """
-    Import the Orchestrator class dynamically.
+    """Import the Orchestrator class dynamically.
 
     Returns:
         type[Orchestrator]: The Orchestrator class.
@@ -239,8 +229,7 @@ def _import_orchestrator() -> type[Orchestrator]:
 
 
 def _import_session_classes() -> tuple[type[SessionManager], type[SessionStore]]:
-    """
-    Import session management classes dynamically.
+    """Import session management classes dynamically.
 
     Returns:
         tuple[type[SessionManager], type[SessionStore]]: Tuple of (SessionManager class, SessionStore class).
@@ -253,8 +242,7 @@ def _import_session_classes() -> tuple[type[SessionManager], type[SessionStore]]
 
 
 def _import_tool_registry() -> type[ToolRegistry]:
-    """
-    Import the ToolRegistry class dynamically.
+    """Import the ToolRegistry class dynamically.
 
     Returns:
         type[ToolRegistry]: The ToolRegistry class.
@@ -264,8 +252,7 @@ def _import_tool_registry() -> type[ToolRegistry]:
 
 
 def _import_credential_loader() -> type[CredentialLoader]:
-    """
-    Import the CredentialLoader class dynamically.
+    """Import the CredentialLoader class dynamically.
 
     Returns:
         type[CredentialLoader]: The CredentialLoader class.
@@ -275,8 +262,7 @@ def _import_credential_loader() -> type[CredentialLoader]:
 
 
 def _get_provider_registry() -> ProviderRegistry:
-    """
-    Get the global provider registry singleton instance.
+    """Get the global provider registry singleton instance.
 
     Returns:
         ProviderRegistry: The singleton ProviderRegistry instance.
@@ -287,8 +273,7 @@ def _get_provider_registry() -> ProviderRegistry:
 
 
 def _import_main_window() -> type[MainWindow]:
-    """
-    Import the MainWindow class dynamically.
+    """Import the MainWindow class dynamically.
 
     Returns:
         type[MainWindow]: The MainWindow class.
@@ -298,8 +283,7 @@ def _import_main_window() -> type[MainWindow]:
 
 
 def _log_import_time(logger: BoundLogger, module_name: str, elapsed: float) -> None:
-    """
-    Log the elapsed time for a module import.
+    """Log the elapsed time for a module import.
 
     Args:
         logger: BoundLogger for timing output.
@@ -310,8 +294,7 @@ def _log_import_time(logger: BoundLogger, module_name: str, elapsed: float) -> N
 
 
 def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
-    """
-    Create QApplication and show a minimal splash screen for instant visual feedback.
+    """Create QApplication and show a minimal splash screen for instant visual feedback.
 
     This runs before any heavy intellicrack imports (config, logging,
     process manager) so the user sees visual feedback immediately.
@@ -361,8 +344,7 @@ def _upgrade_to_full_splash(
     early_splash: QSplashScreen,
     logger: BoundLogger,
 ) -> SplashScreen | None:
-    """
-    Replace the early splash with the full animated splash screen.
+    """Replace the early splash with the full animated splash screen.
 
     Imports the heavier UI resource modules (ThemeManager, IconManager,
     SplashScreen), applies the dark theme, closes the early splash,
@@ -409,8 +391,7 @@ async def _initialize_providers(
     credentials: CredentialLoader,
     logger: BoundLogger,
 ) -> None:
-    """
-    Initialize and connect LLM providers.
+    """Initialize and connect LLM providers.
 
     Args:
         registry: Provider registry to populate.
@@ -477,8 +458,7 @@ async def _initialize_providers(
 
 
 def main() -> int:
-    """
-    Run the Intellicrack application.
+    """Run the Intellicrack application.
 
     Returns:
         int: Exit code (0 for success, non-zero for failure).
@@ -546,8 +526,7 @@ def main() -> int:
 
 
 def _init_script_engine(config: Config, logger: BoundLogger) -> tuple[object, object]:
-    """
-    Initialize the script engine subsystem.
+    """Initialize the script engine subsystem.
 
     Args:
         config: Application configuration.
@@ -569,8 +548,7 @@ async def _init_model_discovery(
     config: Config,
     logger: BoundLogger,
 ) -> tuple[object, Path]:
-    """
-    Initialize the model discovery subsystem.
+    """Initialize the model discovery subsystem.
 
     Args:
         provider_registry: Provider registry for model queries.
@@ -596,8 +574,7 @@ async def init_model_discovery(
     config: Config,
     logger: BoundLogger,
 ) -> tuple[object, Path]:
-    """
-    Initialize the model discovery subsystem.
+    """Initialize the model discovery subsystem.
 
     Args:
         provider_registry: Provider registry for model queries.
@@ -611,8 +588,7 @@ async def init_model_discovery(
 
 
 def _clear_model_cache(logger: BoundLogger) -> None:
-    """
-    Clear the global model cache during shutdown.
+    """Clear the global model cache during shutdown.
 
     Args:
         logger: BoundLogger instance.
@@ -637,8 +613,7 @@ async def _run_application(
     process_manager: ProcessManager,
     logger: BoundLogger,
 ) -> int:
-    """
-    Run the main application logic.
+    """Run the main application logic.
 
     Args:
         config: Application configuration.

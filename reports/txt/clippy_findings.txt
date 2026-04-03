@@ -1,5 +1,13 @@
 71 findings in src\search.rs
 
+src\search.rs:950:24: [warning] long literal lacking separators
+
+src\search.rs:954:49: [warning] long literal lacking separators
+
+src\search.rs:962:24: [warning] long literal lacking separators
+
+src\search.rs:965:49: [warning] long literal lacking separators
+
 src\search.rs:30:24: [warning] casting `usize` to `isize` may wrap around the value
 
 src\search.rs:34:12: [warning] casting `usize` to `isize` may wrap around the value
@@ -128,14 +136,6 @@ src\search.rs:724:8: [warning] this function could have a `#[must_use]` attribut
 
 src\search.rs:745:13: [warning] casting `u64` to `i64` may wrap around the value
 
-src\search.rs:950:24: [warning] long literal lacking separators
-
-src\search.rs:954:49: [warning] long literal lacking separators
-
-src\search.rs:962:24: [warning] long literal lacking separators
-
-src\search.rs:965:49: [warning] long literal lacking separators
-
 src\search.rs:883:23: [warning] redundant closure
 
 src\search.rs:972:24: [warning] approximate value of `f{32, 64}::consts::PI` found
@@ -178,6 +178,8 @@ src\data_inspector.rs:304:13: [warning] binding's name is too similar to existin
 src\data_inspector.rs:303:13: [warning] binding's name is too similar to existing binding
 
 src\data_inspector.rs:229:41: [warning] long literal lacking separators
+
+src\data_inspector.rs:476:23: [warning] long literal lacking separators
 
 src\data_inspector.rs:8:12: [warning] this method could have a `#[must_use]` attribute
 
@@ -266,8 +268,6 @@ src\data_inspector.rs:306:53: [warning] variables can be used directly in the `f
 src\data_inspector.rs:309:53: [warning] variables can be used directly in the `format!` string
 
 src\data_inspector.rs:315:29: [warning] casting `u64` to `i64` may wrap around the value
-
-src\data_inspector.rs:476:23: [warning] long literal lacking separators
 
 src\data_inspector.rs:464:24: [warning] approximate value of `f{32, 64}::consts::PI` found
 
@@ -369,6 +369,8 @@ src\templates\mod.rs:476:32: [warning] casting `u64` to `i64` may wrap around th
 
 30 findings in src\templates\eval.rs
 
+src\templates\eval.rs:885:56: [warning] unused import: `StructTemplate`
+
 src\templates\eval.rs:20:12: [warning] this method could have a `#[must_use]` attribute
 
 src\templates\eval.rs:36:5: [warning] docs for function returning `Result` missing `# Errors` section
@@ -427,10 +429,14 @@ src\templates\eval.rs:827:54: [warning] variables can be used directly in the `f
 
 src\templates\eval.rs:875:53: [warning] variables can be used directly in the `format!` string
 
-src\templates\eval.rs:885:56: [warning] unused import: `StructTemplate`
-
 
 24 findings in src\hash.rs
+
+src\hash.rs:483:59: [warning] long literal lacking separators
+
+src\hash.rs:483:71: [warning] long literal lacking separators
+
+src\hash.rs:483:95: [warning] long literal lacking separators
 
 src\hash.rs:68:1: [warning] docs for function returning `Result` missing `# Errors` section
 
@@ -474,14 +480,14 @@ src\hash.rs:264:36: [warning] casting `u64` to `u32` may truncate the value
 
 src\hash.rs:265:18: [warning] variables can be used directly in the `format!` string
 
-src\hash.rs:483:59: [warning] long literal lacking separators
-
-src\hash.rs:483:71: [warning] long literal lacking separators
-
-src\hash.rs:483:95: [warning] long literal lacking separators
-
 
 22 findings in src\entropy.rs
+
+src\entropy.rs:250:13: [warning] binding's name is too similar to existing binding
+
+src\entropy.rs:249:13: [warning] binding's name is too similar to existing binding
+
+src\entropy.rs:284:40: [warning] long literal lacking separators
 
 src\entropy.rs:3:8: [warning] this function could have a `#[must_use]` attribute
 
@@ -507,12 +513,6 @@ src\entropy.rs:151:27: [warning] casting `u64` to `f64` may cause a loss of prec
 
 src\entropy.rs:164:8: [warning] manual `RangeInclusive::contains` implementation
 
-src\entropy.rs:250:13: [warning] binding's name is too similar to existing binding
-
-src\entropy.rs:249:13: [warning] binding's name is too similar to existing binding
-
-src\entropy.rs:284:40: [warning] long literal lacking separators
-
 src\entropy.rs:178:9: [warning] variables can be used directly in the `format!` string
 
 src\entropy.rs:185:18: [warning] casting `usize` to `u8` may truncate the value
@@ -533,6 +533,12 @@ src\entropy.rs:285:18: [warning] casting `u32` to `u8` may truncate the value
 src\patch_export.rs:22:27: [warning] long literal lacking separators
 
 src\patch_export.rs:29:33: [warning] long literal lacking separators
+
+src\patch_export.rs:248:35: [warning] long literal lacking separators
+
+src\patch_export.rs:256:40: [warning] long literal lacking separators
+
+src\patch_export.rs:262:50: [warning] long literal lacking separators
 
 src\patch_export.rs:17:1: [warning] docs for function returning `Result` missing `# Errors` section
 
@@ -563,12 +569,6 @@ src\patch_export.rs:63:25: [warning] casting `usize` to `u8` may truncate the va
 src\patch_export.rs:74:1: [warning] docs for function returning `Result` missing `# Errors` section
 
 src\patch_export.rs:185:8: [warning] this function could have a `#[must_use]` attribute
-
-src\patch_export.rs:248:35: [warning] long literal lacking separators
-
-src\patch_export.rs:256:40: [warning] long literal lacking separators
-
-src\patch_export.rs:262:50: [warning] long literal lacking separators
 
 
 20 findings in src\lib.rs
@@ -706,13 +706,13 @@ src\encodings.rs:205:5: [warning] this could be rewritten as `let...else`
 
 src\encodings.rs:271:8: [warning] this function could have a `#[must_use]` attribute
 
-src\encodings.rs:170:65: [warning] redundant closure
-
 src\encodings.rs:336:23: [warning] redundant closure
 
 src\encodings.rs:348:23: [warning] redundant closure
 
 src\encodings.rs:498:23: [warning] redundant closure
+
+src\encodings.rs:170:65: [warning] redundant closure
 
 
 15 findings in src\piece_table.rs

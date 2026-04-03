@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""
-Shared base class for Intellicrack analysis panels.
+"""Shared base class for Intellicrack analysis panels.
 
 Provides common layout scaffolding, toolbar construction, async bridge integration, and lifecycle signals used by all native analysis panels
 (Frida, Ghidra, Cutter, x64dbg, Sandbox).
@@ -41,8 +40,7 @@ _MIN_PANEL_HEIGHT: Final[int] = 150
 
 
 class AnalysisPanelBase(QWidget):
-    """
-    Base class for analysis panels with shared toolbar and layout scaffolding.
+    """Base class for analysis panels with shared toolbar and layout scaffolding.
 
     Provides the standard layout (``QVBoxLayout`` with 4 px margins),
     toolbar construction, factory helpers for toolbar widgets, async
@@ -79,8 +77,7 @@ class AnalysisPanelBase(QWidget):
         layout.addWidget(self._create_content())
 
     def _build_toolbar(self) -> QToolBar:
-        """
-        Create and configure the panel toolbar.
+        """Create and configure the panel toolbar.
 
         Returns:
             QToolBar: Toolbar populated by ``_populate_toolbar``.
@@ -92,8 +89,7 @@ class AnalysisPanelBase(QWidget):
         return toolbar
 
     def _populate_toolbar(self, _toolbar: QToolBar) -> None:
-        """
-        Add panel-specific controls to the toolbar.
+        """Add panel-specific controls to the toolbar.
 
         Override in subclasses to populate with buttons, labels, and
         inputs.  The toolbar is already configured with fixed height
@@ -104,8 +100,7 @@ class AnalysisPanelBase(QWidget):
         """
 
     def _create_content(self) -> QWidget:
-        """
-        Create the main content widget below the toolbar.
+        """Create the main content widget below the toolbar.
 
         Override in subclasses to build splitters, tabs, and views.
 
@@ -115,8 +110,7 @@ class AnalysisPanelBase(QWidget):
         return QWidget(self)
 
     def _cleanup(self) -> None:
-        """
-        Perform panel-specific cleanup during ``stop_tool``.
+        """Perform panel-specific cleanup during ``stop_tool``.
 
         Override in subclasses to shut down bridges, stop timers, or release resources.
         """
@@ -129,8 +123,7 @@ class AnalysisPanelBase(QWidget):
         *,
         enabled: bool = True,
     ) -> QPushButton:
-        """
-        Create a primary action button and add it to the toolbar.
+        """Create a primary action button and add it to the toolbar.
 
         Args:
             toolbar: Target toolbar.
@@ -154,8 +147,7 @@ class AnalysisPanelBase(QWidget):
         text: str,
         handler: Callable[[], None],
     ) -> QPushButton:
-        """
-        Create a secondary action button and add it to the toolbar.
+        """Create a secondary action button and add it to the toolbar.
 
         Args:
             toolbar: Target toolbar.
@@ -179,8 +171,7 @@ class AnalysisPanelBase(QWidget):
         *,
         enabled: bool = True,
     ) -> QPushButton:
-        """
-        Create a danger/destructive action button and add it to the toolbar.
+        """Create a danger/destructive action button and add it to the toolbar.
 
         Args:
             toolbar: Target toolbar.
@@ -203,8 +194,7 @@ class AnalysisPanelBase(QWidget):
         toolbar: QToolBar,
         text: str,
     ) -> QLabel:
-        """
-        Create a label and add it to the toolbar.
+        """Create a label and add it to the toolbar.
 
         Args:
             toolbar: Target toolbar.
@@ -225,8 +215,7 @@ class AnalysisPanelBase(QWidget):
         *,
         max_width: int = 200,
     ) -> QLineEdit:
-        """
-        Create a line edit with hint text and add it to the toolbar.
+        """Create a line edit with hint text and add it to the toolbar.
 
         Args:
             toolbar: Target toolbar.
@@ -244,8 +233,7 @@ class AnalysisPanelBase(QWidget):
         return line_edit
 
     def _set_status(self, text: str) -> None:
-        """
-        Update the status label text (null-safe).
+        """Update the status label text (null-safe).
 
         Args:
             text: New status text.
@@ -259,8 +247,7 @@ class AnalysisPanelBase(QWidget):
         on_success: Callable[[object], None] | None = None,
         on_error: Callable[[object], None] | None = None,
     ) -> None:
-        """
-        Run a bridge coroutine asynchronously with signal-based delivery.
+        """Run a bridge coroutine asynchronously with signal-based delivery.
 
         Args:
             coro: Coroutine to execute.
@@ -271,8 +258,7 @@ class AnalysisPanelBase(QWidget):
         run_bridge_coroutine_async(coro, on_success, on_error, self)
 
     def start_tool(self) -> bool:
-        """
-        Start the panel and emit the ``tool_started`` signal.
+        """Start the panel and emit the ``tool_started`` signal.
 
         Returns:
             bool: True always since native panels are always ready.
@@ -282,8 +268,7 @@ class AnalysisPanelBase(QWidget):
         return True
 
     def stop_tool(self) -> bool:
-        """
-        Stop the panel, run cleanup, and emit ``tool_closed``.
+        """Stop the panel, run cleanup, and emit ``tool_closed``.
 
         Returns:
             bool: True if cleanup completed.
