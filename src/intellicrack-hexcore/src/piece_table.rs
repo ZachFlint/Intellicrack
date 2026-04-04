@@ -19,6 +19,7 @@ pub struct PieceTable {
 }
 
 impl PieceTable {
+    #[must_use]
     pub fn new(data: &[u8]) -> Self {
         let length = data.len();
         let pieces = if length > 0 {
@@ -39,14 +40,17 @@ impl PieceTable {
         }
     }
 
+    #[must_use]
     pub fn length(&self) -> usize {
         self.total_length
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.total_length == 0
     }
 
+    #[must_use]
     pub fn find_piece(&self, offset: usize) -> Option<(usize, usize)> {
         if offset >= self.total_length || self.pieces.is_empty() {
             return None;
@@ -69,6 +73,7 @@ impl PieceTable {
         }
     }
 
+    #[must_use]
     pub fn read_byte(&self, offset: usize) -> Option<u8> {
         let (piece_idx, inner_offset) = self.find_piece(offset)?;
         let piece = &self.pieces[piece_idx];
@@ -76,6 +81,7 @@ impl PieceTable {
         Some(buf[piece.start + inner_offset])
     }
 
+    #[must_use]
     pub fn read(&self, offset: usize, length: usize) -> Vec<u8> {
         if length == 0 || offset >= self.total_length {
             return Vec::new();
@@ -87,9 +93,8 @@ impl PieceTable {
         let mut current_offset = offset;
 
         while remaining > 0 {
-            let (piece_idx, inner_offset) = match self.find_piece(current_offset) {
-                Some(v) => v,
-                None => break,
+            let Some((piece_idx, inner_offset)) = self.find_piece(current_offset) else {
+                break;
             };
 
             let piece = &self.pieces[piece_idx];
@@ -107,6 +112,12 @@ impl PieceTable {
         result
     }
 
+    /// Inserts data at the given offset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `find_piece` returns `None` for a valid in-range offset, which
+    /// indicates internal state corruption.
     pub fn insert(&mut self, offset: usize, data: &[u8]) {
         if data.is_empty() {
             return;
@@ -163,6 +174,12 @@ impl PieceTable {
         self.insert(offset, &data[..actual_len]);
     }
 
+    /// Deletes `length` bytes starting at the given offset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the piece list is non-empty but `last()` returns `None`, which
+    /// indicates internal state corruption.
     pub fn delete(&mut self, offset: usize, length: usize) {
         if length == 0 || offset >= self.total_length {
             return;
@@ -171,9 +188,8 @@ impl PieceTable {
         let actual_length = length.min(self.total_length - offset);
         let end = offset + actual_length;
 
-        let (start_piece_idx, start_inner) = match self.find_piece(offset) {
-            Some(v) => v,
-            None => return,
+        let Some((start_piece_idx, start_inner)) = self.find_piece(offset) else {
+            return;
         };
 
         let (end_piece_idx, end_inner) = if end >= self.total_length {
@@ -198,24 +214,13 @@ impl PieceTable {
             });
         }
 
-        if start_piece_idx == end_piece_idx {
-            let piece = &self.pieces[end_piece_idx];
-            if end_inner < piece.length {
-                new_pieces.push(Piece {
-                    source: piece.source,
-                    start: piece.start + end_inner,
-                    length: piece.length - end_inner,
-                });
-            }
-        } else {
-            let piece = &self.pieces[end_piece_idx];
-            if end_inner < piece.length {
-                new_pieces.push(Piece {
-                    source: piece.source,
-                    start: piece.start + end_inner,
-                    length: piece.length - end_inner,
-                });
-            }
+        let piece = &self.pieces[end_piece_idx];
+        if end_inner < piece.length {
+            new_pieces.push(Piece {
+                source: piece.source,
+                start: piece.start + end_inner,
+                length: piece.length - end_inner,
+            });
         }
 
         if end_piece_idx + 1 < self.pieces.len() {
@@ -226,6 +231,7 @@ impl PieceTable {
         self.total_length -= actual_length;
     }
 
+    #[must_use]
     pub fn materialize(&self) -> Vec<u8> {
         let mut result = Vec::with_capacity(self.total_length);
         for piece in &self.pieces {
@@ -294,10 +300,10 @@ mod tests {
 
     #[test]
     fn test_insert_in_middle() {
-        let mut pt = PieceTable::new(b"Helo");
-        pt.insert(2, b"ll");
+        let mut pt = PieceTable::new(b"abcd");
+        pt.insert(2, b"XX");
         assert_eq!(pt.length(), 6);
-        assert_eq!(pt.read(0, 6), b"Helllo".to_vec());
+        assert_eq!(pt.read(0, 6), b"abXXcd".to_vec());
     }
 
     #[test]

@@ -266,11 +266,11 @@ src\intellicrack\ui\provider_config.py:1871: '_load_settings' has rank C
 
 3 findings in src\intellicrack\ui\panels\binary_panel.py
 
-src\intellicrack\ui\panels\binary_panel.py:809: '_parse_elf_sections' has rank C
+src\intellicrack\ui\panels\binary_panel.py:812: '_parse_elf_sections' has rank C
 
 src\intellicrack\ui\panels\binary_panel.py:576: '_parse_pe_sections' has rank C
 
-src\intellicrack\ui\panels\binary_panel.py:766: '_parse_pe_ilt_entries' has rank C
+src\intellicrack\ui\panels\binary_panel.py:769: '_parse_pe_ilt_entries' has rank C
 
 
 2 findings in src\intellicrack\bridges\binary.py
@@ -497,3 +497,8 @@ tests\test_core\test_script_gen.py:107: 'test_script_context_defaults' has rank 
 1 findings in tests\test_core\test_types.py
 
 tests\test_core\test_types.py:225: 'test_bridge_analysis_summary_creation' has rank C
+
+
+1 findings in tests\test_ui\test_splash_screen.py
+
+tests\test_ui\test_splash_screen.py:778: 'test_pipeline_stages_advance_with_real_progress' has rank D

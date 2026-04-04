@@ -18,22 +18,28 @@ pub enum IoError {
 }
 
 pub struct MmapDocument {
-    _mmap: Option<Mmap>,
+    mmap: Option<Mmap>,
     path: Option<PathBuf>,
     piece_table: PieceTable,
     modified: bool,
 }
 
 impl MmapDocument {
+    /// Opens a file and memory-maps it for reading.
+    ///
+    /// # Errors
+    ///
+    /// Returns `IoError::Io` if the file cannot be opened or mapped.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, IoError> {
         let path = path.as_ref().to_path_buf();
         let file = fs::File::open(&path)?;
         let metadata = file.metadata()?;
-        let file_len = metadata.len() as usize;
+        let file_len = usize::try_from(metadata.len())
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
         if file_len == 0 {
             return Ok(Self {
-                _mmap: None,
+                mmap: None,
                 path: Some(path),
                 piece_table: PieceTable::new(&[]),
                 modified: false,
@@ -44,54 +50,68 @@ impl MmapDocument {
         let piece_table = PieceTable::new(&mmap[..]);
 
         Ok(Self {
-            _mmap: Some(mmap),
+            mmap: Some(mmap),
             path: Some(path),
             piece_table,
             modified: false,
         })
     }
 
+    #[must_use]
     pub fn from_bytes(data: &[u8]) -> Self {
         Self {
-            _mmap: None,
+            mmap: None,
             path: None,
             piece_table: PieceTable::new(data),
             modified: false,
         }
     }
 
+    #[must_use]
     pub fn new_empty() -> Self {
         Self {
-            _mmap: None,
+            mmap: None,
             path: None,
             piece_table: PieceTable::new(&[]),
             modified: false,
         }
     }
 
+    #[must_use]
     pub fn document_size(&self) -> usize {
         self.piece_table.length()
     }
 
+    #[must_use]
     pub fn file_path(&self) -> Option<&Path> {
         self.path.as_deref()
     }
 
+    #[must_use]
     pub fn is_modified(&self) -> bool {
         self.modified
     }
 
+    #[must_use]
     pub fn read(&self, offset: usize, length: usize) -> Vec<u8> {
         self.piece_table.read(offset, length)
     }
 
+    /// Reads a single byte at the given offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns `IoError::OffsetOutOfBounds` if the offset exceeds the document size.
     pub fn read_byte(&self, offset: usize) -> Result<u8, IoError> {
-        self.piece_table.read_byte(offset).ok_or(IoError::OffsetOutOfBounds {
-            offset,
-            length: self.piece_table.length(),
-        })
+        self.piece_table
+            .read_byte(offset)
+            .ok_or(IoError::OffsetOutOfBounds {
+                offset,
+                length: self.piece_table.length(),
+            })
     }
 
+    #[must_use]
     pub fn read_all(&self) -> Vec<u8> {
         self.piece_table.materialize()
     }
@@ -111,6 +131,11 @@ impl MmapDocument {
         self.modified = true;
     }
 
+    /// Saves the document to the specified path via atomic temp-file rename.
+    ///
+    /// # Errors
+    ///
+    /// Returns `IoError::Io` if writing, syncing, or renaming the file fails.
     pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), IoError> {
         let path = path.as_ref().to_path_buf();
         let data = self.piece_table.materialize();
@@ -118,9 +143,7 @@ impl MmapDocument {
         let dir = path.parent().unwrap_or_else(|| Path::new("."));
         let temp_path = dir.join(format!(
             ".{}.tmp",
-            path.file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
+            path.file_name().unwrap_or_default().to_string_lossy()
         ));
 
         let mut file = fs::File::create(&temp_path)?;
@@ -128,7 +151,7 @@ impl MmapDocument {
         file.sync_all()?;
         drop(file);
 
-        self._mmap = None;
+        self.mmap = None;
 
         fs::rename(&temp_path, &path)?;
 
@@ -138,7 +161,7 @@ impl MmapDocument {
         if let Ok(f) = fs::File::open(&path) {
             if let Ok(m) = unsafe { Mmap::map(&f) } {
                 self.piece_table = PieceTable::new(&m[..]);
-                self._mmap = Some(m);
+                self.mmap = Some(m);
             }
         }
 
@@ -146,6 +169,11 @@ impl MmapDocument {
         Ok(())
     }
 
+    /// Saves the document back to its original file path.
+    ///
+    /// # Errors
+    ///
+    /// Returns `IoError::NoFilePath` if no path is set, or `IoError::Io` on write failure.
     pub fn save_in_place(&mut self) -> Result<(), IoError> {
         let path = self.path.clone().ok_or(IoError::NoFilePath)?;
         self.save(path)

@@ -1,28 +1,7 @@
 {
   "tool": "machete",
-  "generated": "2026-04-01T02:39:04.400043+00:00",
-  "total_findings": 2,
-  "total_files": 1,
-  "files": [
-    {
-      "path": "Cargo.toml",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "severity": "warning",
-          "message": "Unused dependency: cipher",
-          "raw": "Cargo.toml: unused dependency cipher"
-        },
-        {
-          "line": null,
-          "column": null,
-          "severity": "warning",
-          "message": "Unused dependency: md-5",
-          "raw": "Cargo.toml: unused dependency md-5"
-        }
-      ]
-    }
-  ]
+  "generated": "2026-04-04T06:07:43.847766+00:00",
+  "total_findings": 0,
+  "total_files": 0,
+  "files": []
 }

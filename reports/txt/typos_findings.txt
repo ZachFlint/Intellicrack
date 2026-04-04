@@ -1,3 +1,1 @@
-1 findings in .\src\piece_table.rs
-
-.\src\piece_table.rs:297:40: `Helo` should be `Hello`
+No findings.

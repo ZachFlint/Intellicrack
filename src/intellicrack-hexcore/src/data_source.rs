@@ -13,11 +13,23 @@ pub enum DataSourceError {
 }
 
 pub trait DataSource: Send {
+    /// Reads data from the source at the given offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DataSourceError` if the offset is out of bounds or the read fails.
     fn read(&self, offset: usize, length: usize) -> Result<Vec<u8>, DataSourceError>;
+
+    /// Writes data to the source at the given offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DataSourceError` if the source is read-only, offset is out of bounds, or the write fails.
     fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), DataSourceError>;
+
     fn length(&self) -> usize;
     fn is_writable(&self) -> bool;
-    fn source_type(&self) -> &str;
+    fn source_type(&self) -> &'static str;
 }
 
 pub struct BufferDataSource {
@@ -26,12 +38,17 @@ pub struct BufferDataSource {
 }
 
 impl BufferDataSource {
+    #[must_use]
     pub fn new(data: Vec<u8>, writable: bool) -> Self {
         Self { data, writable }
     }
 
+    #[must_use]
     pub fn new_readonly(data: Vec<u8>) -> Self {
-        Self { data, writable: false }
+        Self {
+            data,
+            writable: false,
+        }
     }
 }
 
@@ -71,7 +88,7 @@ impl DataSource for BufferDataSource {
         self.writable
     }
 
-    fn source_type(&self) -> &str {
+    fn source_type(&self) -> &'static str {
         "buffer"
     }
 }
@@ -100,6 +117,11 @@ unsafe impl Send for ProcessDataSource {}
 
 #[cfg(windows)]
 impl ProcessDataSource {
+    /// Attaches to a running process for memory inspection.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DataSourceError::ProcessError` if `OpenProcess` fails.
     pub fn attach(
         pid: u32,
         base_address: usize,
@@ -118,8 +140,7 @@ impl ProcessDataSource {
         let handle = unsafe { OpenProcess(access, 0, pid) };
         if handle.is_null() {
             return Err(DataSourceError::ProcessError(format!(
-                "OpenProcess failed for pid {}",
-                pid
+                "OpenProcess failed for pid {pid}"
             )));
         }
         Ok(Self {
@@ -131,6 +152,11 @@ impl ProcessDataSource {
         })
     }
 
+    /// Lists all memory regions in the attached process.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DataSourceError` if querying virtual memory fails.
     pub fn list_regions(&self) -> Result<Vec<MemoryRegion>, DataSourceError> {
         use windows_sys::Win32::System::Memory::{VirtualQueryEx, MEMORY_BASIC_INFORMATION};
         let mut regions = Vec::new();
@@ -141,7 +167,7 @@ impl ProcessDataSource {
                 VirtualQueryEx(
                     self.handle,
                     address as *const std::ffi::c_void,
-                    &mut mbi,
+                    &raw mut mbi,
                     std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
                 )
             };
@@ -178,9 +204,9 @@ impl DataSource for ProcessDataSource {
             ReadProcessMemory(
                 self.handle,
                 addr as *const std::ffi::c_void,
-                buffer.as_mut_ptr() as *mut std::ffi::c_void,
+                buffer.as_mut_ptr().cast::<std::ffi::c_void>(),
                 length,
-                &mut bytes_read,
+                &raw mut bytes_read,
             )
         };
         if result == 0 {
@@ -193,10 +219,10 @@ impl DataSource for ProcessDataSource {
     }
 
     fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), DataSourceError> {
+        use windows_sys::Win32::System::Diagnostics::Debug::WriteProcessMemory;
         if !self.writable {
             return Err(DataSourceError::ReadOnly);
         }
-        use windows_sys::Win32::System::Diagnostics::Debug::WriteProcessMemory;
         if data.is_empty() {
             return Ok(());
         }
@@ -206,9 +232,9 @@ impl DataSource for ProcessDataSource {
             WriteProcessMemory(
                 self.handle,
                 addr as *const std::ffi::c_void,
-                data.as_ptr() as *const std::ffi::c_void,
+                data.as_ptr().cast::<std::ffi::c_void>(),
                 data.len(),
-                &mut bytes_written,
+                &raw mut bytes_written,
             )
         };
         if result == 0 {
@@ -227,7 +253,7 @@ impl DataSource for ProcessDataSource {
         self.writable
     }
 
-    fn source_type(&self) -> &str {
+    fn source_type(&self) -> &'static str {
         "process"
     }
 }

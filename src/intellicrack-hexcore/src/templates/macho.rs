@@ -31,13 +31,29 @@ fn mach_header() -> StructTemplate {
             bytes: vec![0xCE, 0xFA, 0xED, 0xFE],
         }),
         fields: vec![
-            fd("magic", FieldType::UInt32, "Mach-O magic (0xFEEDFACE or 0xCEFAEDFE)"),
+            fd(
+                "magic",
+                FieldType::UInt32,
+                "Mach-O magic (0xFEEDFACE or 0xCEFAEDFE)",
+            ),
             fd("cputype", FieldType::Int32, "CPU type identifier"),
             fd("cpusubtype", FieldType::Int32, "CPU subtype identifier"),
-            fd("filetype", FieldType::UInt32, "Type of file (MH_EXECUTE=2, MH_DYLIB=6, etc.)"),
+            fd(
+                "filetype",
+                FieldType::UInt32,
+                "Type of file (MH_EXECUTE=2, MH_DYLIB=6, etc.)",
+            ),
             fd("ncmds", FieldType::UInt32, "Number of load commands"),
-            fd("sizeofcmds", FieldType::UInt32, "Size of all load commands in bytes"),
-            fd("flags", FieldType::UInt32, "Flags (MH_NOUNDEFS, MH_PIE, etc.)"),
+            fd(
+                "sizeofcmds",
+                FieldType::UInt32,
+                "Size of all load commands in bytes",
+            ),
+            fd(
+                "flags",
+                FieldType::UInt32,
+                "Flags (MH_NOUNDEFS, MH_PIE, etc.)",
+            ),
         ],
     }
 }
@@ -55,12 +71,20 @@ fn mach_header_64() -> StructTemplate {
             bytes: vec![0xCF, 0xFA, 0xED, 0xFE],
         }),
         fields: vec![
-            fd("magic", FieldType::UInt32, "Mach-O 64-bit magic (0xFEEDFACF or 0xCFFAEDFE)"),
+            fd(
+                "magic",
+                FieldType::UInt32,
+                "Mach-O 64-bit magic (0xFEEDFACF or 0xCFFAEDFE)",
+            ),
             fd("cputype", FieldType::Int32, "CPU type identifier"),
             fd("cpusubtype", FieldType::Int32, "CPU subtype identifier"),
             fd("filetype", FieldType::UInt32, "Type of file"),
             fd("ncmds", FieldType::UInt32, "Number of load commands"),
-            fd("sizeofcmds", FieldType::UInt32, "Size of all load commands in bytes"),
+            fd(
+                "sizeofcmds",
+                FieldType::UInt32,
+                "Size of all load commands in bytes",
+            ),
             fd("flags", FieldType::UInt32, "Flags"),
             fd("reserved", FieldType::UInt32, "Reserved (64-bit padding)"),
         ],
@@ -77,8 +101,16 @@ fn load_command() -> StructTemplate {
         category: Some("Mach-O".to_string()),
         magic_detection: None,
         fields: vec![
-            fd("cmd", FieldType::UInt32, "Load command type (LC_SEGMENT_64=0x19, etc.)"),
-            fd("cmdsize", FieldType::UInt32, "Total size of command including data"),
+            fd(
+                "cmd",
+                FieldType::UInt32,
+                "Load command type (LC_SEGMENT_64=0x19, etc.)",
+            ),
+            fd(
+                "cmdsize",
+                FieldType::UInt32,
+                "Total size of command including data",
+            ),
         ],
     }
 }
@@ -95,14 +127,22 @@ fn segment_command_64() -> StructTemplate {
         fields: vec![
             fd("cmd", FieldType::UInt32, "LC_SEGMENT_64 (0x19)"),
             fd("cmdsize", FieldType::UInt32, "Size of this command"),
-            fd("segname", FieldType::FixedString(16), "Segment name (__TEXT, __DATA, etc.)"),
+            fd(
+                "segname",
+                FieldType::FixedString(16),
+                "Segment name (__TEXT, __DATA, etc.)",
+            ),
             fd("vmaddr", FieldType::UInt64, "Virtual memory address"),
             fd("vmsize", FieldType::UInt64, "Virtual memory size"),
             fd("fileoff", FieldType::UInt64, "File offset of this segment"),
             fd("filesize", FieldType::UInt64, "File size of this segment"),
             fd("maxprot", FieldType::Int32, "Maximum VM protection"),
             fd("initprot", FieldType::Int32, "Initial VM protection"),
-            fd("nsects", FieldType::UInt32, "Number of sections in this segment"),
+            fd(
+                "nsects",
+                FieldType::UInt32,
+                "Number of sections in this segment",
+            ),
             fd("flags", FieldType::UInt32, "Segment flags"),
         ],
     }

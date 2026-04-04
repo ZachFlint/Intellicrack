@@ -1,6 +1,6 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-04-01T02:40:43.133974+00:00",
+  "generated": "2026-04-03T23:24:14.818942+00:00",
   "total_findings": 173,
   "total_files": 96,
   "files": [
@@ -1661,12 +1661,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 181,
+          "line": 166,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\dialogs\\splash_screen.py:181: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\dialogs\\splash_screen.py:166: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },

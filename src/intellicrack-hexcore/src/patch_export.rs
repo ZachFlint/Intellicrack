@@ -14,27 +14,33 @@ pub struct PatchRecord {
     pub data: Vec<u8>,
 }
 
+/// Exports patch records in IPS format (24-bit offsets).
+///
+/// # Errors
+///
+/// Returns `PatchError::PatchTooLarge` if any patch offset exceeds `0x00FF_FFFF`.
 pub fn export_ips(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
     let mut output = Vec::new();
     output.extend_from_slice(b"PATCH");
 
     for patch in patches {
-        if patch.offset > 0xFFFFFF {
+        if patch.offset > 0x00FF_FFFF {
             return Err(PatchError::PatchTooLarge);
         }
         let mut remaining = patch.data.as_slice();
         let mut current_offset = patch.offset;
 
         while !remaining.is_empty() {
-            if current_offset > 0xFFFFFF {
+            if current_offset > 0x00FF_FFFF {
                 return Err(PatchError::PatchTooLarge);
             }
             let chunk_size = remaining.len().min(0xFFFF);
-            output.push(((current_offset >> 16) & 0xFF) as u8);
-            output.push(((current_offset >> 8) & 0xFF) as u8);
-            output.push((current_offset & 0xFF) as u8);
-            output.push(((chunk_size >> 8) & 0xFF) as u8);
-            output.push((chunk_size & 0xFF) as u8);
+            let offset_bytes = current_offset.to_be_bytes();
+            let offset_start = offset_bytes.len() - 3;
+            output.extend_from_slice(&offset_bytes[offset_start..]);
+            let size_bytes = chunk_size.to_be_bytes();
+            let size_start = size_bytes.len() - 2;
+            output.extend_from_slice(&size_bytes[size_start..]);
             output.extend_from_slice(&remaining[..chunk_size]);
             remaining = &remaining[chunk_size..];
             current_offset += chunk_size;
@@ -45,6 +51,11 @@ pub fn export_ips(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
     Ok(output)
 }
 
+/// Exports patch records in IPS32 format (32-bit offsets).
+///
+/// # Errors
+///
+/// Returns `PatchError` if the export fails.
 pub fn export_ips32(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
     let mut output = Vec::new();
     output.extend_from_slice(b"IPS32");
@@ -55,12 +66,12 @@ pub fn export_ips32(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
 
         while !remaining.is_empty() {
             let chunk_size = remaining.len().min(0xFFFF);
-            output.push(((current_offset >> 24) & 0xFF) as u8);
-            output.push(((current_offset >> 16) & 0xFF) as u8);
-            output.push(((current_offset >> 8) & 0xFF) as u8);
-            output.push((current_offset & 0xFF) as u8);
-            output.push(((chunk_size >> 8) & 0xFF) as u8);
-            output.push((chunk_size & 0xFF) as u8);
+            let offset_bytes = current_offset.to_be_bytes();
+            let offset_start = offset_bytes.len() - 4;
+            output.extend_from_slice(&offset_bytes[offset_start..]);
+            let size_bytes = chunk_size.to_be_bytes();
+            let size_start = size_bytes.len() - 2;
+            output.extend_from_slice(&size_bytes[size_start..]);
             output.extend_from_slice(&remaining[..chunk_size]);
             remaining = &remaining[chunk_size..];
             current_offset += chunk_size;
@@ -71,6 +82,12 @@ pub fn export_ips32(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
     Ok(output)
 }
 
+/// Imports patch records from IPS or IPS32 format data.
+///
+/// # Errors
+///
+/// Returns `PatchError::InvalidIps` if the data has an invalid header, is truncated,
+/// or is otherwise malformed.
 pub fn import_ips(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
     if data.len() < 5 {
         return Err(PatchError::InvalidIps("data too short".to_string()));
@@ -81,7 +98,9 @@ pub fn import_ips(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
     }
 
     if &data[..5] != b"PATCH" {
-        return Err(PatchError::InvalidIps("invalid header (expected PATCH or IPS32)".to_string()));
+        return Err(PatchError::InvalidIps(
+            "invalid header (expected PATCH or IPS32)".to_string(),
+        ));
     }
 
     let mut records = Vec::new();
@@ -97,7 +116,9 @@ pub fn import_ips(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
         }
 
         if pos + 5 > data.len() {
-            return Err(PatchError::InvalidIps("truncated record header".to_string()));
+            return Err(PatchError::InvalidIps(
+                "truncated record header".to_string(),
+            ));
         }
 
         let offset = ((data[pos] as usize) << 16)
@@ -138,7 +159,9 @@ fn import_ips32_inner(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
 
     loop {
         if pos + 4 > data.len() {
-            return Err(PatchError::InvalidIps("unexpected end of IPS32 data".to_string()));
+            return Err(PatchError::InvalidIps(
+                "unexpected end of IPS32 data".to_string(),
+            ));
         }
 
         if &data[pos..pos + 4] == b"EEOF" {
@@ -146,7 +169,9 @@ fn import_ips32_inner(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
         }
 
         if pos + 6 > data.len() {
-            return Err(PatchError::InvalidIps("truncated IPS32 record header".to_string()));
+            return Err(PatchError::InvalidIps(
+                "truncated IPS32 record header".to_string(),
+            ));
         }
 
         let offset = ((data[pos] as usize) << 24)
@@ -158,7 +183,9 @@ fn import_ips32_inner(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
 
         if size == 0 {
             if pos + 3 > data.len() {
-                return Err(PatchError::InvalidIps("truncated IPS32 RLE record".to_string()));
+                return Err(PatchError::InvalidIps(
+                    "truncated IPS32 RLE record".to_string(),
+                ));
             }
             let rle_count = ((data[pos] as usize) << 8) | (data[pos + 1] as usize);
             let rle_value = data[pos + 2];
@@ -169,7 +196,9 @@ fn import_ips32_inner(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
             });
         } else {
             if pos + size > data.len() {
-                return Err(PatchError::InvalidIps("truncated IPS32 record data".to_string()));
+                return Err(PatchError::InvalidIps(
+                    "truncated IPS32 record data".to_string(),
+                ));
             }
             records.push(PatchRecord {
                 offset,
@@ -182,12 +211,14 @@ fn import_ips32_inner(data: &[u8]) -> Result<Vec<PatchRecord>, PatchError> {
     Ok(records)
 }
 
+#[must_use]
 pub fn extract_patches_from_overwrites(operations: &[(usize, Vec<u8>)]) -> Vec<PatchRecord> {
     if operations.is_empty() {
         return Vec::new();
     }
 
-    let mut sorted: Vec<(usize, &[u8])> = operations.iter().map(|(o, d)| (*o, d.as_slice())).collect();
+    let mut sorted: Vec<(usize, &[u8])> =
+        operations.iter().map(|(o, d)| (*o, d.as_slice())).collect();
     sorted.sort_by_key(|(offset, _)| *offset);
 
     let mut merged: Vec<PatchRecord> = Vec::new();
@@ -227,8 +258,14 @@ mod tests {
     #[test]
     fn test_ips_roundtrip() {
         let patches = vec![
-            PatchRecord { offset: 0x100, data: vec![0x41, 0x42, 0x43] },
-            PatchRecord { offset: 0x200, data: vec![0x90, 0x90] },
+            PatchRecord {
+                offset: 0x100,
+                data: vec![0x41, 0x42, 0x43],
+            },
+            PatchRecord {
+                offset: 0x200,
+                data: vec![0x90, 0x90],
+            },
         ];
         let exported = export_ips(&patches).unwrap();
         assert!(exported.starts_with(b"PATCH"));
@@ -244,22 +281,26 @@ mod tests {
 
     #[test]
     fn test_ips32_roundtrip() {
-        let patches = vec![
-            PatchRecord { offset: 0x1000000, data: vec![0xDE, 0xAD] },
-        ];
+        let patches = vec![PatchRecord {
+            offset: 0x0100_0000,
+            data: vec![0xDE, 0xAD],
+        }];
         let exported = export_ips32(&patches).unwrap();
         assert!(exported.starts_with(b"IPS32"));
         assert!(exported.ends_with(b"EEOF"));
 
         let imported = import_ips(&exported).unwrap();
         assert_eq!(imported.len(), 1);
-        assert_eq!(imported[0].offset, 0x1000000);
+        assert_eq!(imported[0].offset, 0x0100_0000);
         assert_eq!(imported[0].data, vec![0xDE, 0xAD]);
     }
 
     #[test]
     fn test_ips_offset_too_large() {
-        let patches = vec![PatchRecord { offset: 0x1000000, data: vec![0x00] }];
+        let patches = vec![PatchRecord {
+            offset: 0x0100_0000,
+            data: vec![0x00],
+        }];
         assert!(export_ips(&patches).is_err());
     }
 
@@ -278,10 +319,7 @@ mod tests {
 
     #[test]
     fn test_extract_patches_merging() {
-        let ops = vec![
-            (10, vec![0x41, 0x42]),
-            (12, vec![0x43, 0x44]),
-        ];
+        let ops = vec![(10, vec![0x41, 0x42]), (12, vec![0x43, 0x44])];
         let merged = extract_patches_from_overwrites(&ops);
         assert_eq!(merged.len(), 1);
         assert_eq!(merged[0].offset, 10);
@@ -290,10 +328,7 @@ mod tests {
 
     #[test]
     fn test_extract_patches_no_overlap() {
-        let ops = vec![
-            (10, vec![0x41]),
-            (20, vec![0x42]),
-        ];
+        let ops = vec![(10, vec![0x41]), (20, vec![0x42])];
         let merged = extract_patches_from_overwrites(&ops);
         assert_eq!(merged.len(), 2);
     }

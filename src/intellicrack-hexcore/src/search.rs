@@ -27,21 +27,22 @@ fn build_good_suffix_table(pattern: &[u8]) -> Vec<usize> {
     let mut suffix = vec![0usize; m];
 
     suffix[m - 1] = m;
-    let mut g: isize = (m as isize) - 1;
+    let mut g: isize = m.cast_signed() - 1;
     let mut f: usize = 0;
 
     for i in (0..m - 1).rev() {
-        if (i as isize) > g && suffix[i + m - 1 - f] < ((i as isize) - g) as usize {
+        let i_signed = i.cast_signed();
+        if i_signed > g && suffix[i + m - 1 - f] < (i_signed - g).cast_unsigned() {
             suffix[i] = suffix[i + m - 1 - f];
         } else {
-            if (i as isize) < g {
-                g = i as isize;
+            if i_signed < g {
+                g = i_signed;
             }
             f = i;
-            while g >= 0 && pattern[g as usize] == pattern[(g as usize) + m - 1 - f] {
+            while g >= 0 && pattern[g.cast_unsigned()] == pattern[g.cast_unsigned() + m - 1 - f] {
                 g -= 1;
             }
-            suffix[i] = ((f as isize) - g) as usize;
+            suffix[i] = (f.cast_signed() - g).cast_unsigned();
         }
     }
 
@@ -64,6 +65,7 @@ fn build_good_suffix_table(pattern: &[u8]) -> Vec<usize> {
     table
 }
 
+#[must_use]
 pub fn search_bytes(data: &[u8], pattern: &[u8], max_results: usize) -> Vec<SearchResult> {
     if pattern.is_empty() || data.len() < pattern.len() {
         return Vec::new();
@@ -166,7 +168,7 @@ fn parse_hex_pattern(pattern_str: &str) -> Option<Vec<(u8, u8)>> {
             continue;
         }
         if ch.is_ascii_hexdigit() {
-            let val = ch.to_digit(16).unwrap() as u8;
+            let val = u8::try_from(ch.to_digit(16).unwrap()).unwrap();
             nibbles.push(HexNibble::Value(val));
             chars.next();
             continue;
@@ -174,7 +176,7 @@ fn parse_hex_pattern(pattern_str: &str) -> Option<Vec<(u8, u8)>> {
         chars.next();
     }
 
-    if nibbles.len() % 2 != 0 {
+    if !nibbles.len().is_multiple_of(2) {
         return None;
     }
 
@@ -192,14 +194,14 @@ fn parse_hex_pattern(pattern_str: &str) -> Option<Vec<(u8, u8)>> {
     Some(bytes)
 }
 
+#[must_use]
 pub fn search_hex_with_wildcards(
     data: &[u8],
     pattern_str: &str,
     max_results: usize,
 ) -> Vec<SearchResult> {
-    let pattern = match parse_hex_pattern(pattern_str) {
-        Some(p) => p,
-        None => return Vec::new(),
+    let Some(pattern) = parse_hex_pattern(pattern_str) else {
+        return Vec::new();
     };
 
     if pattern.is_empty() || data.len() < pattern.len() {
@@ -275,6 +277,7 @@ fn search_masked_single(
     results
 }
 
+#[must_use]
 pub fn search_text(
     data: &[u8],
     text: &str,
@@ -289,20 +292,13 @@ pub fn search_text(
     };
 
     let encoded: Vec<u8> = match encoding.to_lowercase().as_str() {
-        "ascii" | "utf-8" | "utf8" => {
-            if case_sensitive {
-                search_text.as_bytes().to_vec()
-            } else {
-                search_text.as_bytes().to_vec()
-            }
-        }
         "utf-16le" | "utf16le" => search_text
             .encode_utf16()
-            .flat_map(|u| u.to_le_bytes())
+            .flat_map(u16::to_le_bytes)
             .collect(),
         "utf-16be" | "utf16be" => search_text
             .encode_utf16()
-            .flat_map(|u| u.to_be_bytes())
+            .flat_map(u16::to_be_bytes)
             .collect(),
         _ => search_text.as_bytes().to_vec(),
     };
@@ -317,7 +313,7 @@ pub fn search_text(
             }
 
             let window = &data[i..i + plen];
-            let window_lower: Vec<u8> = window.iter().map(|b| b.to_ascii_lowercase()).collect();
+            let window_lower: Vec<u8> = window.iter().map(u8::to_ascii_lowercase).collect();
 
             if window_lower == encoded {
                 results.push(SearchResult {
@@ -333,10 +329,10 @@ pub fn search_text(
     }
 }
 
+#[must_use]
 pub fn search_regex(data: &[u8], pattern: &str, max_results: usize) -> Vec<SearchResult> {
-    let re = match regex::bytes::Regex::new(pattern) {
-        Ok(r) => r,
-        Err(_) => return Vec::new(),
+    let Some(re) = regex::bytes::Regex::new(pattern).ok() else {
+        return Vec::new();
     };
 
     let mut results = Vec::new();
@@ -353,11 +349,8 @@ pub fn search_regex(data: &[u8], pattern: &str, max_results: usize) -> Vec<Searc
     results
 }
 
-pub fn replace_all(
-    data: &[u8],
-    pattern: &[u8],
-    replacement: &[u8],
-) -> (Vec<u8>, usize) {
+#[must_use]
+pub fn replace_all(data: &[u8], pattern: &[u8], replacement: &[u8]) -> (Vec<u8>, usize) {
     if pattern.is_empty() {
         return (data.to_vec(), 0);
     }
@@ -384,28 +377,28 @@ pub fn replace_all(
 
 fn decode_uint(bytes: &[u8], size: usize, big_endian: bool) -> u64 {
     match size {
-        1 => bytes[0] as u64,
+        1 => u64::from(bytes[0]),
         2 => {
             let arr = [bytes[0], bytes[1]];
             if big_endian {
-                u16::from_be_bytes(arr) as u64
+                u64::from(u16::from_be_bytes(arr))
             } else {
-                u16::from_le_bytes(arr) as u64
+                u64::from(u16::from_le_bytes(arr))
             }
         }
         3 => {
             if big_endian {
-                ((bytes[0] as u64) << 16) | ((bytes[1] as u64) << 8) | (bytes[2] as u64)
+                (u64::from(bytes[0]) << 16) | (u64::from(bytes[1]) << 8) | u64::from(bytes[2])
             } else {
-                (bytes[0] as u64) | ((bytes[1] as u64) << 8) | ((bytes[2] as u64) << 16)
+                u64::from(bytes[0]) | (u64::from(bytes[1]) << 8) | (u64::from(bytes[2]) << 16)
             }
         }
         4 => {
             let arr = [bytes[0], bytes[1], bytes[2], bytes[3]];
             if big_endian {
-                u32::from_be_bytes(arr) as u64
+                u64::from(u32::from_be_bytes(arr))
             } else {
-                u32::from_le_bytes(arr) as u64
+                u64::from(u32::from_le_bytes(arr))
             }
         }
         8 => {
@@ -424,15 +417,23 @@ fn decode_uint(bytes: &[u8], size: usize, big_endian: bool) -> u64 {
 
 fn sign_extend(raw: u64, size: usize) -> i64 {
     match size {
-        1 => (raw as i8) as i64,
-        2 => (raw as i16) as i64,
+        1 => {
+            let byte = u8::try_from(raw & 0xFF).unwrap();
+            i64::from(byte.cast_signed())
+        }
+        2 => {
+            let half = u16::try_from(raw & 0xFFFF).unwrap();
+            i64::from(half.cast_signed())
+        }
         3 => {
             let shifted = raw << 40;
-            (shifted as i64) >> 40
+            shifted.cast_signed() >> 40
         }
-        4 => (raw as i32) as i64,
-        8 => raw as i64,
-        _ => raw as i64,
+        4 => {
+            let word = u32::try_from(raw & 0xFFFF_FFFF).unwrap();
+            i64::from(word.cast_signed())
+        }
+        _ => raw.cast_signed(),
     }
 }
 
@@ -441,30 +442,30 @@ fn encode_uint_target(value: i64, size: usize, signed: bool, big_endian: bool) -
         match size {
             1 => {
                 let v = i8::try_from(value).ok()?;
-                (v as u8) as u64
+                u64::from(v.cast_unsigned())
             }
             2 => {
                 let v = i16::try_from(value).ok()?;
-                (v as u16) as u64
+                u64::from(v.cast_unsigned())
             }
             3 => {
-                if value < -8_388_608 || value > 8_388_607 {
+                if !(-8_388_608..=8_388_607).contains(&value) {
                     return None;
                 }
-                (value as u64) & 0xFF_FFFF
+                value.cast_unsigned() & 0xFF_FFFF
             }
             4 => {
                 let v = i32::try_from(value).ok()?;
-                (v as u32) as u64
+                u64::from(v.cast_unsigned())
             }
-            8 => value as u64,
+            8 => value.cast_unsigned(),
             _ => return None,
         }
     } else {
         if value < 0 {
             return None;
         }
-        let uval = value as u64;
+        let uval = value.cast_unsigned();
         match size {
             1 => {
                 if uval > 0xFF {
@@ -496,9 +497,9 @@ fn encode_uint_target(value: i64, size: usize, signed: bool, big_endian: bool) -
     };
 
     let bytes = match size {
-        1 => vec![raw as u8],
+        1 => vec![u8::try_from(raw & 0xFF).unwrap()],
         2 => {
-            let v = raw as u16;
+            let v = u16::try_from(raw & 0xFFFF).unwrap();
             if big_endian {
                 v.to_be_bytes().to_vec()
             } else {
@@ -506,14 +507,17 @@ fn encode_uint_target(value: i64, size: usize, signed: bool, big_endian: bool) -
             }
         }
         3 => {
+            let b2 = u8::try_from((raw >> 16) & 0xFF).unwrap();
+            let b1 = u8::try_from((raw >> 8) & 0xFF).unwrap();
+            let b0 = u8::try_from(raw & 0xFF).unwrap();
             if big_endian {
-                vec![((raw >> 16) & 0xFF) as u8, ((raw >> 8) & 0xFF) as u8, (raw & 0xFF) as u8]
+                vec![b2, b1, b0]
             } else {
-                vec![(raw & 0xFF) as u8, ((raw >> 8) & 0xFF) as u8, ((raw >> 16) & 0xFF) as u8]
+                vec![b0, b1, b2]
             }
         }
         4 => {
-            let v = raw as u32;
+            let v = u32::try_from(raw & 0xFFFF_FFFF).unwrap();
             if big_endian {
                 v.to_be_bytes().to_vec()
             } else {
@@ -533,6 +537,7 @@ fn encode_uint_target(value: i64, size: usize, signed: bool, big_endian: bool) -
     Some(bytes)
 }
 
+#[must_use]
 pub fn search_numeric_int(
     data: &[u8],
     value: i64,
@@ -546,9 +551,8 @@ pub fn search_numeric_int(
         return Vec::new();
     }
 
-    let target = match encode_uint_target(value, size, signed, big_endian) {
-        Some(b) => b,
-        None => return Vec::new(),
+    let Some(target) = encode_uint_target(value, size, signed, big_endian) else {
+        return Vec::new();
     };
 
     let step = if alignment == 0 { 1 } else { alignment };
@@ -615,6 +619,7 @@ pub fn search_numeric_int(
     results
 }
 
+#[must_use]
 pub fn search_numeric_float(
     data: &[u8],
     value: f64,
@@ -641,7 +646,7 @@ pub fn search_numeric_float(
             if !fv.is_finite() {
                 return false;
             }
-            fv as f64
+            f64::from(fv)
         } else {
             let arr = [
                 bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
@@ -721,6 +726,7 @@ pub fn search_numeric_float(
     results
 }
 
+#[must_use]
 pub fn search_numeric_range(
     data: &[u8],
     min_val: i64,
@@ -742,7 +748,7 @@ pub fn search_numeric_range(
         let decoded: i64 = if signed {
             sign_extend(raw, size)
         } else {
-            raw as i64
+            i64::try_from(raw).unwrap_or(i64::MAX)
         };
         decoded >= min_val && decoded <= max_val
     };
@@ -878,10 +884,7 @@ mod tests {
     #[test]
     fn test_search_text_utf16le() {
         let text = "AB";
-        let encoded: Vec<u8> = text
-            .encode_utf16()
-            .flat_map(|u| u.to_le_bytes())
-            .collect();
+        let encoded: Vec<u8> = text.encode_utf16().flat_map(u16::to_le_bytes).collect();
         let mut data = vec![0x00; 10];
         data.extend_from_slice(&encoded);
         data.extend_from_slice(&[0x00; 10]);
@@ -947,11 +950,11 @@ mod tests {
 
     #[test]
     fn test_search_numeric_int_le() {
-        let val: u32 = 0x12345678;
+        let val: u32 = 0x1234_5678;
         let mut data = vec![0u8; 100];
         data[20..24].copy_from_slice(&val.to_le_bytes());
         data[50..54].copy_from_slice(&val.to_le_bytes());
-        let results = search_numeric_int(&data, 0x12345678, 4, false, false, 1, 100);
+        let results = search_numeric_int(&data, 0x1234_5678, 4, false, false, 1, 100);
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].offset, 20);
         assert_eq!(results[1].offset, 50);
@@ -959,20 +962,20 @@ mod tests {
 
     #[test]
     fn test_search_numeric_int_be() {
-        let val: u32 = 0x12345678;
+        let val: u32 = 0x1234_5678;
         let mut data = vec![0u8; 100];
         data[20..24].copy_from_slice(&val.to_be_bytes());
-        let results = search_numeric_int(&data, 0x12345678, 4, false, true, 1, 100);
+        let results = search_numeric_int(&data, 0x1234_5678, 4, false, true, 1, 100);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].offset, 20);
     }
 
     #[test]
     fn test_search_numeric_float() {
-        let val: f32 = 3.14;
+        let val: f32 = 1.234;
         let mut data = vec![0u8; 100];
         data[40..44].copy_from_slice(&val.to_le_bytes());
-        let results = search_numeric_float(&data, 3.14, 4, false, 0.001, 1, 100);
+        let results = search_numeric_float(&data, 1.234, 4, false, 0.001, 1, 100);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].offset, 40);
     }

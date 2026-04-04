@@ -187,9 +187,7 @@ class SplashScreen(QSplashScreen):
         self._finish_target: QWidget | None = None
 
         self._brain_icon: QPixmap | None = self._load_brain_icon()
-        self._splash_image: QPixmap | None = (
-            self._load_splash_image(scaled_w, scaled_h) if self._brain_icon is None else None
-        )
+        self._splash_image: QPixmap | None = self._load_splash_image(scaled_w, scaled_h) if self._brain_icon is None else None
 
         self._gradient_time: float = 0.0
         self._active_pulse_time: float = 0.0

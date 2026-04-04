@@ -1,5 +1,11 @@
 use super::{StructTemplate, TemplateError};
 
+/// Parse a JSON string into a `StructTemplate`.
+///
+/// # Errors
+///
+/// Returns `TemplateError::JsonParse` if the JSON is malformed or missing required fields,
+/// or `TemplateError::InvalidFieldReference` if field type references are invalid.
 pub fn parse_json_template(json_str: &str) -> Result<StructTemplate, TemplateError> {
     let template: StructTemplate =
         serde_json::from_str(json_str).map_err(|e| TemplateError::JsonParse(e.to_string()))?;
@@ -17,6 +23,11 @@ pub fn parse_json_template(json_str: &str) -> Result<StructTemplate, TemplateErr
     Ok(template)
 }
 
+/// Serialize a `StructTemplate` to a pretty-printed JSON string.
+///
+/// # Errors
+///
+/// Returns `TemplateError::JsonParse` if serialization fails.
 pub fn template_to_json(template: &StructTemplate) -> Result<String, TemplateError> {
     serde_json::to_string_pretty(template).map_err(|e| TemplateError::JsonParse(e.to_string()))
 }
@@ -69,16 +80,14 @@ fn validate_field_type(ft: &super::FieldType) -> Result<(), TemplateError> {
         super::FieldType::Array { element_type, .. } => {
             validate_field_type(element_type)?;
         }
-        super::FieldType::Bitfield { backing_type, .. } => {
+        super::FieldType::Bitfield { backing_type, .. }
+        | super::FieldType::Enum { backing_type, .. } => {
             validate_field_type(backing_type)?;
         }
         super::FieldType::Union { variants } => {
             for v in variants {
                 validate_field_type(&v.field_type)?;
             }
-        }
-        super::FieldType::Enum { backing_type, .. } => {
-            validate_field_type(backing_type)?;
         }
         super::FieldType::Computed { display_type, .. } => {
             validate_field_type(display_type)?;
@@ -116,7 +125,8 @@ mod tests {
 
     #[test]
     fn test_parse_empty_name() {
-        let json = r#"{"name": "", "description": "", "default_endianness": "little", "fields": []}"#;
+        let json =
+            r#"{"name": "", "description": "", "default_endianness": "little", "fields": []}"#;
         let result = parse_json_template(json);
         assert!(result.is_err());
     }

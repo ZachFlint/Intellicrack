@@ -33,20 +33,52 @@ fn elf32_ehdr() -> StructTemplate {
             bytes: vec![0x7F, 0x45, 0x4C, 0x46],
         }),
         fields: vec![
-            fd("e_ident", FieldType::Bytes(16), "ELF identification (magic, class, data, version, OS/ABI, padding)"),
+            fd(
+                "e_ident",
+                FieldType::Bytes(16),
+                "ELF identification (magic, class, data, version, OS/ABI, padding)",
+            ),
             fd("e_type", FieldType::UInt16, "Object file type"),
             fd("e_machine", FieldType::UInt16, "Architecture"),
             fd("e_version", FieldType::UInt32, "Object file version"),
             fd("e_entry", FieldType::UInt32, "Entry point virtual address"),
-            fd("e_phoff", FieldType::UInt32, "Program header table file offset"),
-            fd("e_shoff", FieldType::UInt32, "Section header table file offset"),
+            fd(
+                "e_phoff",
+                FieldType::UInt32,
+                "Program header table file offset",
+            ),
+            fd(
+                "e_shoff",
+                FieldType::UInt32,
+                "Section header table file offset",
+            ),
             fd("e_flags", FieldType::UInt32, "Processor-specific flags"),
             fd("e_ehsize", FieldType::UInt16, "ELF header size"),
-            fd("e_phentsize", FieldType::UInt16, "Program header table entry size"),
-            fd("e_phnum", FieldType::UInt16, "Program header table entry count"),
-            fd("e_shentsize", FieldType::UInt16, "Section header table entry size"),
-            fd("e_shnum", FieldType::UInt16, "Section header table entry count"),
-            fd("e_shstrndx", FieldType::UInt16, "Section name string table index"),
+            fd(
+                "e_phentsize",
+                FieldType::UInt16,
+                "Program header table entry size",
+            ),
+            fd(
+                "e_phnum",
+                FieldType::UInt16,
+                "Program header table entry count",
+            ),
+            fd(
+                "e_shentsize",
+                FieldType::UInt16,
+                "Section header table entry size",
+            ),
+            fd(
+                "e_shnum",
+                FieldType::UInt16,
+                "Section header table entry count",
+            ),
+            fd(
+                "e_shstrndx",
+                FieldType::UInt16,
+                "Section name string table index",
+            ),
         ],
     }
 }
@@ -69,15 +101,43 @@ fn elf64_ehdr() -> StructTemplate {
             fd("e_machine", FieldType::UInt16, "Architecture"),
             fd("e_version", FieldType::UInt32, "Object file version"),
             fd("e_entry", FieldType::UInt64, "Entry point virtual address"),
-            fd("e_phoff", FieldType::UInt64, "Program header table file offset"),
-            fd("e_shoff", FieldType::UInt64, "Section header table file offset"),
+            fd(
+                "e_phoff",
+                FieldType::UInt64,
+                "Program header table file offset",
+            ),
+            fd(
+                "e_shoff",
+                FieldType::UInt64,
+                "Section header table file offset",
+            ),
             fd("e_flags", FieldType::UInt32, "Processor-specific flags"),
             fd("e_ehsize", FieldType::UInt16, "ELF header size"),
-            fd("e_phentsize", FieldType::UInt16, "Program header table entry size"),
-            fd("e_phnum", FieldType::UInt16, "Program header table entry count"),
-            fd("e_shentsize", FieldType::UInt16, "Section header table entry size"),
-            fd("e_shnum", FieldType::UInt16, "Section header table entry count"),
-            fd("e_shstrndx", FieldType::UInt16, "Section name string table index"),
+            fd(
+                "e_phentsize",
+                FieldType::UInt16,
+                "Program header table entry size",
+            ),
+            fd(
+                "e_phnum",
+                FieldType::UInt16,
+                "Program header table entry count",
+            ),
+            fd(
+                "e_shentsize",
+                FieldType::UInt16,
+                "Section header table entry size",
+            ),
+            fd(
+                "e_shnum",
+                FieldType::UInt16,
+                "Section header table entry count",
+            ),
+            fd(
+                "e_shstrndx",
+                FieldType::UInt16,
+                "Section name string table index",
+            ),
         ],
     }
 }
@@ -136,7 +196,11 @@ fn elf32_shdr() -> StructTemplate {
         category: Some("ELF".to_string()),
         magic_detection: None,
         fields: vec![
-            fd("sh_name", FieldType::UInt32, "Section name (index into section name string table)"),
+            fd(
+                "sh_name",
+                FieldType::UInt32,
+                "Section name (index into section name string table)",
+            ),
             fd("sh_type", FieldType::UInt32, "Section type"),
             fd("sh_flags", FieldType::UInt32, "Section flags"),
             fd("sh_addr", FieldType::UInt32, "Section virtual address"),
@@ -145,7 +209,11 @@ fn elf32_shdr() -> StructTemplate {
             fd("sh_link", FieldType::UInt32, "Link to another section"),
             fd("sh_info", FieldType::UInt32, "Additional section info"),
             fd("sh_addralign", FieldType::UInt32, "Section alignment"),
-            fd("sh_entsize", FieldType::UInt32, "Entry size if section holds table"),
+            fd(
+                "sh_entsize",
+                FieldType::UInt32,
+                "Entry size if section holds table",
+            ),
         ],
     }
 }
@@ -160,7 +228,11 @@ fn elf64_shdr() -> StructTemplate {
         category: Some("ELF".to_string()),
         magic_detection: None,
         fields: vec![
-            fd("sh_name", FieldType::UInt32, "Section name (index into section name string table)"),
+            fd(
+                "sh_name",
+                FieldType::UInt32,
+                "Section name (index into section name string table)",
+            ),
             fd("sh_type", FieldType::UInt32, "Section type"),
             fd("sh_flags", FieldType::UInt64, "Section flags"),
             fd("sh_addr", FieldType::UInt64, "Section virtual address"),
@@ -169,7 +241,11 @@ fn elf64_shdr() -> StructTemplate {
             fd("sh_link", FieldType::UInt32, "Link to another section"),
             fd("sh_info", FieldType::UInt32, "Additional section info"),
             fd("sh_addralign", FieldType::UInt64, "Section alignment"),
-            fd("sh_entsize", FieldType::UInt64, "Entry size if section holds table"),
+            fd(
+                "sh_entsize",
+                FieldType::UInt64,
+                "Entry size if section holds table",
+            ),
         ],
     }
 }

@@ -1,6 +1,6 @@
 {
   "tool": "dead",
-  "generated": "2026-04-01T02:37:41.631085+00:00",
+  "generated": "2026-04-03T23:27:03.298013+00:00",
   "total_findings": 70,
   "total_files": 36,
   "files": [
@@ -180,32 +180,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 342,
+          "line": 319,
           "column": null,
           "variable": "compute_dpi_scale",
           "message": "'compute_dpi_scale' is never read",
-          "raw": "compute_dpi_scale is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:342"
+          "raw": "compute_dpi_scale is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:319"
         },
         {
-          "line": 351,
+          "line": 328,
           "column": null,
           "variable": "load_splash_pixmap",
           "message": "'load_splash_pixmap' is never read",
-          "raw": "load_splash_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:351"
+          "raw": "load_splash_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:328"
         },
         {
-          "line": 365,
+          "line": 342,
           "column": null,
           "variable": "create_fallback_pixmap",
           "message": "'create_fallback_pixmap' is never read",
-          "raw": "create_fallback_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:365"
+          "raw": "create_fallback_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:342"
         },
         {
-          "line": 556,
+          "line": 475,
           "column": null,
           "variable": "mark_stage_failed",
           "message": "'mark_stage_failed' is never read",
-          "raw": "mark_stage_failed is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:556"
+          "raw": "mark_stage_failed is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:475"
         }
       ]
     },

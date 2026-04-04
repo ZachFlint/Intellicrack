@@ -1,5 +1,5 @@
-use blake2::Blake2s256;
 use blake2::digest::consts::U32;
+use blake2::Blake2s256;
 
 type Blake2b256 = blake2::Blake2b<U32>;
 use md5::Md5;
@@ -65,119 +65,37 @@ fn fnv1a_64(data: &[u8]) -> u64 {
     hash
 }
 
+/// Compute the hash digest for the given data using the specified algorithm.
+///
+/// # Errors
+///
+/// Returns `HashError::UnsupportedAlgorithm` if the algorithm name is not recognized.
 pub fn compute_hash(data: &[u8], algorithm: &str) -> Result<HashResult, HashError> {
     let hex_digest = match algorithm.to_lowercase().as_str() {
-        "md5" => {
-            let mut hasher = Md5::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha1" => {
-            let mut hasher = Sha1::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha224" | "sha-224" => {
-            let mut hasher = Sha224::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha256" | "sha-256" => {
-            let mut hasher = Sha256::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha384" | "sha-384" => {
-            let mut hasher = Sha384::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha512" | "sha-512" => {
-            let mut hasher = Sha512::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha3-256" | "sha3_256" => {
-            let mut hasher = Sha3_256::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "sha3-512" | "sha3_512" => {
-            let mut hasher = Sha3_512::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "blake2b" | "blake2b-256" | "blake2b256" => {
-            let mut hasher = Blake2b256::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "blake2s" | "blake2s-256" | "blake2s256" => {
-            let mut hasher = Blake2s256::new();
-            hasher.update(data);
-            format!("{:x}", hasher.finalize())
-        }
-        "xxhash32" | "xxh32" => {
-            let hash = xxhash_rust::xxh32::xxh32(data, 0);
-            format!("{:08x}", hash)
-        }
-        "xxhash64" | "xxh64" => {
-            let hash = xxhash_rust::xxh64::xxh64(data, 0);
-            format!("{:016x}", hash)
-        }
-        "xxh3" | "xxh3-64" => {
-            let hash = xxhash_rust::xxh3::xxh3_64(data);
-            format!("{:016x}", hash)
-        }
-        "siphash64" | "siphash-2-4" | "siphash" => {
-            use std::hash::Hasher;
-            let mut hasher = siphasher::sip::SipHasher24::new();
-            hasher.write(data);
-            let hash = hasher.finish();
-            format!("{:016x}", hash)
-        }
-        "siphash128" | "siphash-2-4-128" => {
-            use std::hash::Hasher;
-            let mut hasher = siphasher::sip128::SipHasher24::new();
-            hasher.write(data);
-            let hash = hasher.finish128();
-            format!("{:016x}{:016x}", hash.h1, hash.h2)
-        }
-        "adler32" => {
-            let hash = adler::adler32_slice(data);
-            format!("{:08x}", hash)
-        }
-        "crc8" => {
-            let crc_algo = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
-            let hash = crc_algo.checksum(data);
-            format!("{:02x}", hash)
-        }
-        "crc16" => {
-            let crc_algo = crc::Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
-            let hash = crc_algo.checksum(data);
-            format!("{:04x}", hash)
-        }
-        "crc32" => {
-            let crc = crc32fast::hash(data);
-            format!("{:08x}", crc)
-        }
-        "crc64" | "crc64-ecma" => {
-            let crc_algo = crc::Crc::<u64>::new(&crc::CRC_64_ECMA_182);
-            let hash = crc_algo.checksum(data);
-            format!("{:016x}", hash)
-        }
-        "fnv1-32" | "fnv1_32" => {
-            format!("{:08x}", fnv1_32(data))
-        }
-        "fnv1-64" | "fnv1_64" => {
-            format!("{:016x}", fnv1_64(data))
-        }
-        "fnv1a-32" | "fnv1a_32" => {
-            format!("{:08x}", fnv1a_32(data))
-        }
-        "fnv1a-64" | "fnv1a_64" => {
-            format!("{:016x}", fnv1a_64(data))
-        }
+        "md5" => compute_digest_hash::<Md5>(data),
+        "sha1" => compute_digest_hash::<Sha1>(data),
+        "sha224" | "sha-224" => compute_digest_hash::<Sha224>(data),
+        "sha256" | "sha-256" => compute_digest_hash::<Sha256>(data),
+        "sha384" | "sha-384" => compute_digest_hash::<Sha384>(data),
+        "sha512" | "sha-512" => compute_digest_hash::<Sha512>(data),
+        "sha3-256" | "sha3_256" => compute_digest_hash::<Sha3_256>(data),
+        "sha3-512" | "sha3_512" => compute_digest_hash::<Sha3_512>(data),
+        "blake2b" | "blake2b-256" | "blake2b256" => compute_digest_hash::<Blake2b256>(data),
+        "blake2s" | "blake2s-256" | "blake2s256" => compute_digest_hash::<Blake2s256>(data),
+        "xxhash32" | "xxh32" => compute_xxh32(data),
+        "xxhash64" | "xxh64" => compute_xxh64(data),
+        "xxh3" | "xxh3-64" => compute_xxh3(data),
+        "siphash64" | "siphash-2-4" | "siphash" => compute_siphash64(data),
+        "siphash128" | "siphash-2-4-128" => compute_siphash128(data),
+        "adler32" => compute_adler32(data),
+        "crc8" => compute_crc8(data),
+        "crc16" => compute_crc16(data),
+        "crc32" => compute_crc32(data),
+        "crc64" | "crc64-ecma" => compute_crc64(data),
+        "fnv1-32" | "fnv1_32" => format!("{:08x}", fnv1_32(data)),
+        "fnv1-64" | "fnv1_64" => format!("{:016x}", fnv1_64(data)),
+        "fnv1a-32" | "fnv1a_32" => format!("{:08x}", fnv1a_32(data)),
+        "fnv1a-64" | "fnv1a_64" => format!("{:016x}", fnv1a_64(data)),
         other => return Err(HashError::UnsupportedAlgorithm(other.to_string())),
     };
 
@@ -187,6 +105,83 @@ pub fn compute_hash(data: &[u8], algorithm: &str) -> Result<HashResult, HashErro
     })
 }
 
+fn compute_digest_hash<D: Digest>(data: &[u8]) -> String {
+    let mut hasher = D::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    let mut hex = String::with_capacity(result.len() * 2);
+    for byte in result {
+        use std::fmt::Write;
+        let _ = write!(hex, "{byte:02x}");
+    }
+    hex
+}
+
+fn compute_xxh32(data: &[u8]) -> String {
+    let hash = xxhash_rust::xxh32::xxh32(data, 0);
+    format!("{hash:08x}")
+}
+
+fn compute_xxh64(data: &[u8]) -> String {
+    let hash = xxhash_rust::xxh64::xxh64(data, 0);
+    format!("{hash:016x}")
+}
+
+fn compute_xxh3(data: &[u8]) -> String {
+    let hash = xxhash_rust::xxh3::xxh3_64(data);
+    format!("{hash:016x}")
+}
+
+fn compute_siphash64(data: &[u8]) -> String {
+    use std::hash::Hasher;
+    let mut hasher = siphasher::sip::SipHasher24::new();
+    hasher.write(data);
+    let hash = hasher.finish();
+    format!("{hash:016x}")
+}
+
+fn compute_siphash128(data: &[u8]) -> String {
+    use std::hash::Hasher;
+    let mut hasher = siphasher::sip128::SipHasher24::new();
+    hasher.write(data);
+    let hash = hasher.finish128();
+    format!("{:016x}{:016x}", hash.h1, hash.h2)
+}
+
+fn compute_adler32(data: &[u8]) -> String {
+    let hash = adler2::adler32_slice(data);
+    format!("{hash:08x}")
+}
+
+fn compute_crc8(data: &[u8]) -> String {
+    let crc_algo = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
+    let hash = crc_algo.checksum(data);
+    format!("{hash:02x}")
+}
+
+fn compute_crc16(data: &[u8]) -> String {
+    let crc_algo = crc::Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
+    let hash = crc_algo.checksum(data);
+    format!("{hash:04x}")
+}
+
+fn compute_crc32(data: &[u8]) -> String {
+    let crc_val = crc32fast::hash(data);
+    format!("{crc_val:08x}")
+}
+
+fn compute_crc64(data: &[u8]) -> String {
+    let crc_algo = crc::Crc::<u64>::new(&crc::CRC_64_ECMA_182);
+    let hash = crc_algo.checksum(data);
+    format!("{hash:016x}")
+}
+
+/// Compute the hash digest for a sub-range of the given data.
+///
+/// # Errors
+///
+/// Returns `HashError::InvalidRange` if the range is out of bounds, or
+/// `HashError::UnsupportedAlgorithm` if the algorithm is not recognized.
 pub fn compute_hash_range(
     data: &[u8],
     start: usize,
@@ -203,6 +198,11 @@ pub fn compute_hash_range(
     compute_hash(&data[start..end], algorithm)
 }
 
+/// Compute a CRC checksum with custom parameters.
+///
+/// # Errors
+///
+/// Returns `HashError::InvalidCrcWidth` if width is not 8, 16, 32, or 64.
 pub fn compute_crc_custom(
     data: &[u8],
     width: u8,
@@ -219,20 +219,47 @@ pub fn compute_crc_custom(
     let w = u32::from(width);
     let mask: u64 = if w >= 64 { u64::MAX } else { (1u64 << w) - 1 };
 
-    fn reflect(mut val: u64, bits: u32) -> u64 {
-        let mut result: u64 = 0;
-        for i in 0..bits {
-            if val & 1 != 0 {
-                result |= 1u64 << (bits - 1 - i);
-            }
-            val >>= 1;
-        }
-        result
-    }
+    let table = build_crc_table(w, poly, mask);
 
+    let mut crc = init & mask;
+    for &byte in data {
+        let b = if refin {
+            (crc_reflect(u64::from(byte), 8) & 0xFF) as u8
+        } else {
+            byte
+        };
+        let idx = ((crc >> (w - 8)) ^ u64::from(b)) & 0xFF;
+        crc = (table[idx as usize] ^ (crc << 8)) & mask;
+    }
+    if refout {
+        crc = crc_reflect(crc, w);
+    }
+    crc = (crc ^ xorout) & mask;
+
+    match width {
+        8 => Ok(format!("{:02x}", (crc & 0xFF) as u8)),
+        16 => Ok(format!("{:04x}", (crc & 0xFFFF) as u16)),
+        32 => Ok(format!("{:08x}", (crc & 0xFFFF_FFFF) as u32)),
+        64 => Ok(format!("{crc:016x}")),
+        _ => unreachable!(),
+    }
+}
+
+fn crc_reflect(mut val: u64, bits: u32) -> u64 {
+    let mut result: u64 = 0;
+    for i in 0..bits {
+        if val & 1 != 0 {
+            result |= 1u64 << (bits - 1 - i);
+        }
+        val >>= 1;
+    }
+    result
+}
+
+fn build_crc_table(w: u32, poly: u64, mask: u64) -> [u64; 256] {
     let mut table = [0u64; 256];
-    for i in 0u64..256 {
-        let mut crc_val = i << (w - 8);
+    for (idx, entry) in table.iter_mut().enumerate() {
+        let mut crc_val = (idx as u64) << (w - 8);
         for _ in 0..8 {
             if crc_val & (1u64 << (w - 1)) != 0 {
                 crc_val = ((crc_val << 1) ^ poly) & mask;
@@ -240,31 +267,9 @@ pub fn compute_crc_custom(
                 crc_val = (crc_val << 1) & mask;
             }
         }
-        table[i as usize] = crc_val;
+        *entry = crc_val;
     }
-
-    let mut crc = init & mask;
-    for &byte in data {
-        let b = if refin {
-            reflect(u64::from(byte), 8) as u8
-        } else {
-            byte
-        };
-        let idx = ((crc >> (w - 8)) ^ u64::from(b)) as u8;
-        crc = (table[idx as usize] ^ (crc << 8)) & mask;
-    }
-    if refout {
-        crc = reflect(crc, w);
-    }
-    crc = (crc ^ xorout) & mask;
-
-    match width {
-        8 => Ok(format!("{:02x}", crc as u8)),
-        16 => Ok(format!("{:04x}", crc as u16)),
-        32 => Ok(format!("{:08x}", crc as u32)),
-        64 => Ok(format!("{:016x}", crc)),
-        _ => unreachable!(),
-    }
+    table
 }
 
 #[cfg(test)]
@@ -286,13 +291,19 @@ mod tests {
     #[test]
     fn test_sha1_empty() {
         let result = compute_hash(b"", "sha1").unwrap();
-        assert_eq!(result.hex_digest, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+        assert_eq!(
+            result.hex_digest,
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        );
     }
 
     #[test]
     fn test_sha1_abc() {
         let result = compute_hash(b"abc", "sha1").unwrap();
-        assert_eq!(result.hex_digest, "a9993e364706816aba3e25717850c26c9cd0d89d");
+        assert_eq!(
+            result.hex_digest,
+            "a9993e364706816aba3e25717850c26c9cd0d89d"
+        );
     }
 
     #[test]
@@ -480,7 +491,16 @@ mod tests {
 
     #[test]
     fn test_custom_crc32() {
-        let result = compute_crc_custom(b"123456789", 32, 0x04C11DB7, 0xFFFFFFFF, true, true, 0xFFFFFFFF).unwrap();
+        let result = compute_crc_custom(
+            b"123456789",
+            32,
+            0x04C1_1DB7,
+            0xFFFF_FFFF,
+            true,
+            true,
+            0xFFFF_FFFF,
+        )
+        .unwrap();
         assert_eq!(result, "cbf43926");
     }
 

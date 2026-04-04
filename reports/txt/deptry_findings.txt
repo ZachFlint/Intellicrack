@@ -291,11 +291,11 @@ src\intellicrack\ui\app.py:22:1: DEP003 'PyQt6' imported but it is a transitive 
 
 3 findings in src\intellicrack\ui\dialogs\splash_screen.py
 
+src\intellicrack\ui\dialogs\splash_screen.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency
+
 src\intellicrack\ui\dialogs\splash_screen.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\ui\dialogs\splash_screen.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency
-
-src\intellicrack\ui\dialogs\splash_screen.py:31:1: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\ui\dialogs\splash_screen.py:29:1: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 3 findings in src\intellicrack\ui\panels\frida_panel.py

@@ -225,6 +225,34 @@
 .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
+6 findings in .\.github\workflows\gemini-dispatch.yml
+
+.\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
+
+
+5 findings in .\.pre-commit-config.yaml
+
+.\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
 5 findings in .\.claude\worktrees\agent-a0defda8\.pre-commit-config.yaml
 
 .\.claude\worktrees\agent-a0defda8\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
@@ -407,30 +435,6 @@
 .\.claude\worktrees\agent-adcc5316\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
-5 findings in .\.github\workflows\gemini-dispatch.yml
-
-.\.github\workflows\gemini-dispatch.yml:56:121: [warning] line too long (189 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-dispatch.yml:73:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-dispatch.yml:114:121: [warning] line too long (236 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-dispatch.yml:177:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
-
-
-4 findings in .\.pre-commit-config.yaml
-
-.\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
-
-.\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
-
-.\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
-
-.\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
-
-
 4 findings in .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-triage.yml
 
 .\.claude\worktrees\agent-a0defda8\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -583,6 +587,17 @@
 .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+4 findings in .\.github\workflows\gemini-triage.yml
+
+.\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
 
 
 4 findings in .\vendor\PatternLanguage\.github\workflows\tests.yml
@@ -1478,13 +1493,65 @@
 .\.claude\worktrees\agent-adcc5316\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
 
 
-3 findings in .\.github\workflows\gemini-triage.yml
+3 findings in .\.github\workflows\ci.yml
 
-.\.github\workflows\gemini-triage.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+.\.github\workflows\ci.yml:1:9: [error] wrong new line character: expected \n  (new-lines)
 
-.\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
+.\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
 
-.\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+.\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
+
+
+3 findings in .\.github\workflows\claude-code-review.yml
+
+.\.github\workflows\claude-code-review.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+.\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
+
+
+3 findings in .\.github\workflows\claude.yml
+
+.\.github\workflows\claude.yml:1:18: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
+
+.\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
+
+
+3 findings in .\.github\workflows\gemini-invoke.yml
+
+.\.github\workflows\gemini-invoke.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.github\workflows\gemini-review.yml
+
+.\.github\workflows\gemini-review.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+
+3 findings in .\.github\workflows\gemini-scheduled-triage.yml
+
+.\.github\workflows\gemini-scheduled-triage.yml:1:40: [error] wrong new line character: expected \n  (new-lines)
+
+.\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
+
+.\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+
+
+2 findings in .\.sourcery.yaml
+
+.\.sourcery.yaml:1:56: [error] wrong new line character: expected \n  (new-lines)
+
+.\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
 
 
 2 findings in .\.claude\worktrees\agent-a0defda8\.github\workflows\qodana_code_quality.yml
@@ -1585,46 +1652,11 @@
 .\.claude\worktrees\agent-adcc5316\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
-2 findings in .\.github\workflows\ci.yml
+2 findings in .\.github\workflows\qodana_code_quality.yml
 
-.\.github\workflows\ci.yml:29:121: [warning] line too long (130 > 120 characters)  (line-length)
+.\.github\workflows\qodana_code_quality.yml:1:13: [error] wrong new line character: expected \n  (new-lines)
 
-.\.github\workflows\ci.yml:158:121: [warning] line too long (121 > 120 characters)  (line-length)
-
-
-2 findings in .\.github\workflows\claude-code-review.yml
-
-.\.github\workflows\claude-code-review.yml:47:121: [warning] line too long (127 > 120 characters)  (line-length)
-
-.\.github\workflows\claude-code-review.yml:53:121: [warning] line too long (183 > 120 characters)  (line-length)
-
-
-2 findings in .\.github\workflows\claude.yml
-
-.\.github\workflows\claude.yml:18:121: [warning] line too long (136 > 120 characters)  (line-length)
-
-.\.github\workflows\claude.yml:41:121: [warning] line too long (147 > 120 characters)  (line-length)
-
-
-2 findings in .\.github\workflows\gemini-invoke.yml
-
-.\.github\workflows\gemini-invoke.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-invoke.yml:29:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-
-2 findings in .\.github\workflows\gemini-review.yml
-
-.\.github\workflows\gemini-review.yml:11:121: [warning] line too long (134 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-review.yml:30:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-
-2 findings in .\.github\workflows\gemini-scheduled-triage.yml
-
-.\.github\workflows\gemini-scheduled-triage.yml:155:121: [warning] line too long (133 > 120 characters)  (line-length)
-
-.\.github\workflows\gemini-scheduled-triage.yml:210:121: [warning] line too long (139 > 120 characters)  (line-length)
+.\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
 
 
 2 findings in .\vendor\community-patterns\.github\workflows\dispatch.yml
@@ -1648,9 +1680,19 @@
 .\vendor\PatternLanguage\.github\codecov.yml:3:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
-1 findings in .\.sourcery.yaml
+1 findings in .\.readthedocs.yaml
 
-.\.sourcery.yaml:33:121: [warning] line too long (169 > 120 characters)  (line-length)
+.\.readthedocs.yaml:1:35: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\.yarnrc.yml
+
+.\.yarnrc.yml:1:25: [error] wrong new line character: expected \n  (new-lines)
+
+
+1 findings in .\qodana.yaml
+
+.\qodana.yaml:1:117: [error] wrong new line character: expected \n  (new-lines)
 
 
 1 findings in .\.claude\worktrees\agent-a0defda8\.readthedocs.yaml
@@ -1933,9 +1975,9 @@
 .\.claude\worktrees\agent-adcc5316\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
-1 findings in .\.github\workflows\qodana_code_quality.yml
+1 findings in .\.github\dependabot.yml
 
-.\.github\workflows\qodana_code_quality.yml:19:121: [warning] line too long (124 > 120 characters)  (line-length)
+.\.github\dependabot.yml:1:11: [error] wrong new line character: expected \n  (new-lines)
 
 
 1 findings in .\vendor\community-patterns\.github\FUNDING.yml

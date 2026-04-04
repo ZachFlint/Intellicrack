@@ -7,37 +7,15 @@
         "driver": {
           "name": "machete",
           "version": "1.0.0",
-          "rules": [
-            {
-              "id": "general",
-              "shortDescription": {
-                "text": "Unused dependency: cipher"
-              }
-            }
-          ]
+          "rules": []
         }
       },
-      "results": [
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused dependency: cipher"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused dependency: md-5"
-          }
-        }
-      ],
+      "results": [],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-01T02:39:04.400043+00:00"
+          "endTimeUtc": "2026-04-04T06:07:43.847766+00:00"
         }
       ]
     }

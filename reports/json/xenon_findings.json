@@ -1,8 +1,8 @@
 {
   "tool": "xenon",
-  "generated": "2026-04-01T02:38:20.150236+00:00",
-  "total_findings": 159,
-  "total_files": 61,
+  "generated": "2026-04-03T23:26:37.777296+00:00",
+  "total_findings": 160,
+  "total_files": 62,
   "files": [
     {
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py",
@@ -1041,13 +1041,13 @@
       "count": 3,
       "findings": [
         {
-          "line": 809,
+          "line": 812,
           "column": null,
           "name": "_parse_elf_sections",
           "rank": "C",
           "complexity": 20,
           "message": "'_parse_elf_sections' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:809: '_parse_elf_sections' has rank C"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:812: '_parse_elf_sections' has rank C"
         },
         {
           "line": 576,
@@ -1059,13 +1059,13 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:576: '_parse_pe_sections' has rank C"
         },
         {
-          "line": 766,
+          "line": 769,
           "column": null,
           "name": "_parse_pe_ilt_entries",
           "rank": "C",
           "complexity": 20,
           "message": "'_parse_pe_ilt_entries' has rank C (complexity > threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:766: '_parse_pe_ilt_entries' has rank C"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:769: '_parse_pe_ilt_entries' has rank C"
         }
       ]
     },
@@ -1798,6 +1798,21 @@
           "complexity": 20,
           "message": "'test_bridge_analysis_summary_creation' has rank C (complexity > threshold)",
           "raw": "tests\\test_core\\test_types.py:225: 'test_bridge_analysis_summary_creation' has rank C"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_splash_screen.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 778,
+          "column": null,
+          "name": "test_pipeline_stages_advance_with_real_progress",
+          "rank": "D",
+          "complexity": 30,
+          "message": "'test_pipeline_stages_advance_with_real_progress' has rank D (complexity > threshold)",
+          "raw": "tests\\test_ui\\test_splash_screen.py:778: 'test_pipeline_stages_advance_with_real_progress' has rank D"
         }
       ]
     }

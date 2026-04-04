@@ -1,2 +1,1 @@
-tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
-typos,.\src\piece_table.rs,297,40,warning,,,`Helo` should be `Hello`,,,,,,,,,,,Helo,Hello
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction

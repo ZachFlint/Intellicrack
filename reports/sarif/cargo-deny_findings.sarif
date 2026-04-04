@@ -9,9 +9,9 @@
           "version": "1.0.0",
           "rules": [
             {
-              "id": "unexpected-value",
+              "id": "license-not-encountered",
               "shortDescription": {
-                "text": "expected '[\"all\", \"workspace\", \"transitive\", \"none\"]'"
+                "text": "license was not encountered"
               }
             }
           ]
@@ -19,10 +19,10 @@
       },
       "results": [
         {
-          "ruleId": "unexpected-value",
-          "level": "error",
+          "ruleId": "license-not-encountered",
+          "level": "warning",
           "message": {
-            "text": "expected '[\"all\", \"workspace\", \"transitive\", \"none\"]'"
+            "text": "license was not encountered"
           },
           "locations": [
             {
@@ -32,8 +32,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6,
-                  "startColumn": 17
+                  "startLine": 17,
+                  "startColumn": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "license-not-encountered",
+          "level": "warning",
+          "message": {
+            "text": "license was not encountered"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack-hexcore/deny.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 6
                 }
               }
             }
@@ -44,7 +65,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-01T02:38:14.105696+00:00"
+          "endTimeUtc": "2026-04-04T06:07:03.869812+00:00"
         }
       ]
     }

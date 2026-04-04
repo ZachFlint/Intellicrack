@@ -63,7 +63,7 @@ src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0
 
 src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d:15: ser ==> set
 
-src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d:16: ser ==> set145
+src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d:16: ser ==> set
 
 src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d:17: ser ==> set
 
@@ -344,16 +344,6 @@ tests/test_hexcore_e2e\test_bridge_encoding_decoding.py:94: caf ==> calf
 tests/test_hexcore_e2e\test_encodings.py:59: caf ==> calf
 
 tests/test_hexcore_e2e\test_encodings.py:151: caf ==> calf
-
-
-1 findings in AGENTS.md
-
-AGENTS.md:31: covert ==> convert, cover, covet
-
-
-1 findings in CLAUDE.md
-
-CLAUDE.md:31: covert ==> convert, cover, covet
 
 
 1 findings in tests/test_hexcore_e2e\test_bridge_new_capabilities.py

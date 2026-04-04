@@ -10329,12 +10329,6 @@
     {
       "complexity": 0,
       "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::__init__",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_compute_gradient_stop_color",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
@@ -10342,6 +10336,18 @@
       "complexity": 0,
       "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_create_fallback_pixmap",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_title",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_on_animation_tick",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
@@ -10413,6 +10419,18 @@
     {
       "complexity": 1,
       "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::__init__",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_draw_brain_icon",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_draw_gradient_background",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
@@ -10459,39 +10477,9 @@
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
-      "complexity": 2,
-      "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_compute_glitch_intensity",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_draw_title",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
       "complexity": 3,
       "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_draw_glow_title",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_get_glitch_title_text",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_trigger_glitch",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::paintEvent",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
@@ -10515,6 +10503,12 @@
     {
       "complexity": 6,
       "file_name": "splash_screen.py",
+      "function_name": "SplashScreen::_load_brain_icon",
+      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_load_splash_image",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
@@ -10525,21 +10519,15 @@
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
-      "complexity": 6,
-      "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_on_animation_tick",
-      "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
-    },
-    {
       "complexity": 7,
       "file_name": "splash_screen.py",
       "function_name": "SplashScreen::_update_stage_states",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
-      "complexity": 13,
+      "complexity": 7,
       "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_draw_glitch_title",
+      "function_name": "SplashScreen::paintEvent",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {

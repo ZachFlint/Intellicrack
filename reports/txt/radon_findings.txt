@@ -266,11 +266,11 @@ src\intellicrack\ui\provider_config.py:1871:4: method 'ProviderSettingsWidget._l
 
 3 findings in src\intellicrack\ui\panels\binary_panel.py
 
-src\intellicrack\ui\panels\binary_panel.py:809:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)
+src\intellicrack\ui\panels\binary_panel.py:812:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)
 
 src\intellicrack\ui\panels\binary_panel.py:576:4: method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)
 
-src\intellicrack\ui\panels\binary_panel.py:766:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)
+src\intellicrack\ui\panels\binary_panel.py:769:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\bridges\binary.py

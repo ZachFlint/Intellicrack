@@ -1,6 +1,6 @@
 {
   "tool": "deadcode",
-  "generated": "2026-04-01T02:38:07.207117+00:00",
+  "generated": "2026-04-03T23:27:13.273629+00:00",
   "total_findings": 66,
   "total_files": 29,
   "files": [
@@ -129,34 +129,34 @@
       "count": 5,
       "findings": [
         {
-          "line": 342,
+          "line": 319,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcompute_dpi_scale\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:342:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcompute_dpi_scale\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:319:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcompute_dpi_scale\u001b[0m` is never used"
         },
         {
-          "line": 351,
+          "line": 328,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_splash_pixmap\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:351:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_splash_pixmap\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:328:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_splash_pixmap\u001b[0m` is never used"
         },
         {
-          "line": 365,
+          "line": 342,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcreate_fallback_pixmap\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:365:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcreate_fallback_pixmap\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:342:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mcreate_fallback_pixmap\u001b[0m` is never used"
         },
         {
-          "line": 406,
+          "line": 383,
           "column": null,
           "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_progress_bar\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:406:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_progress_bar\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:383:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_progress_bar\u001b[0m` is never used"
         },
         {
-          "line": 556,
+          "line": 475,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mmark_stage_failed\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:556:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mmark_stage_failed\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:475:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mmark_stage_failed\u001b[0m` is never used"
         }
       ]
     },

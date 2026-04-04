@@ -158,6 +158,12 @@ class KnowledgeGraphGenerator:
         "documentation": "#9B59B6",
     }
 
+    _WALK_EXCLUDE_DIRS: ClassVar[frozenset[str]] = frozenset({
+        "node_modules", ".git", "dist", "build", ".pixi", ".claude",
+        "target", "__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache",
+        "htmlcov", ".tox", ".nox", ".eggs", "*.egg-info",
+    })
+
     def __init__(self, root_dir: Path) -> None:
         """Initialize the knowledge graph generator."""
         self.root_dir = root_dir.resolve()
@@ -198,9 +204,8 @@ class KnowledgeGraphGenerator:
         """Scans JS/TS files in the repository."""
         import_re = re.compile(r'(?:import|require)\s*\(?[\'"]([^\'"]+)[\'"]\)?')
         try:
-            for root, _, files in os.walk(self.repo_root):
-                if any(x in Path(root).parts for x in ["node_modules", ".git", "dist", "build"]):
-                    continue
+            for root, dirs, files in os.walk(self.repo_root):
+                dirs[:] = [d for d in dirs if d not in self._WALK_EXCLUDE_DIRS]
                 for file in files:
                     if file.endswith((".js", ".ts", ".jsx", ".tsx", ".cjs", ".mjs")):
                         path = Path(root) / file
@@ -221,9 +226,8 @@ class KnowledgeGraphGenerator:
     def _scan_assets(self) -> None:
         """Scans config and documentation files."""
         try:
-            for root, _, files in os.walk(self.repo_root):
-                if any(x in Path(root).parts for x in ["node_modules", ".git"]):
-                    continue
+            for root, dirs, files in os.walk(self.repo_root):
+                dirs[:] = [d for d in dirs if d not in self._WALK_EXCLUDE_DIRS]
                 for file in files:
                     if file.endswith((".json", ".toml", ".yaml", ".yml", ".md")):
                         path = Path(root) / file

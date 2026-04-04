@@ -17,6 +17,7 @@ pub struct TemplateEvaluator<'a> {
 }
 
 impl<'a> TemplateEvaluator<'a> {
+    #[must_use]
     pub fn new(
         data: &'a [u8],
         base_offset: usize,
@@ -33,6 +34,12 @@ impl<'a> TemplateEvaluator<'a> {
         }
     }
 
+    /// Evaluate a slice of field definitions against the binary data.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TemplateError` if evaluation fails due to insufficient data,
+    /// invalid field references, expression errors, or circular references.
     pub fn evaluate_fields(
         &mut self,
         fields: &[FieldDefinition],
@@ -62,12 +69,7 @@ impl<'a> TemplateEvaluator<'a> {
                 condition_value,
                 condition_op,
                 fields,
-            } => self.eval_conditional(
-                condition_field,
-                *condition_value,
-                condition_op,
-                fields,
-            ),
+            } => self.eval_conditional(condition_field, *condition_value, *condition_op, fields),
 
             FieldType::StructRef(template_name) => {
                 self.eval_struct_ref(&field.name, template_name, field)
@@ -124,7 +126,7 @@ impl<'a> TemplateEvaluator<'a> {
                     .as_ref()
                     .map(|v| check_validation(v, numeric, &raw));
 
-                let children = self.eval_array_children(&field.field_type, endian)?;
+                let children = self.eval_array_children(&field.field_type, endian);
 
                 let parsed = ParsedField {
                     name: field.name.clone(),
@@ -144,11 +146,7 @@ impl<'a> TemplateEvaluator<'a> {
         }
     }
 
-    fn eval_array_children(
-        &self,
-        ft: &FieldType,
-        endian: Endianness,
-    ) -> Result<Vec<ParsedField>, TemplateError> {
+    fn eval_array_children(&self, ft: &FieldType, endian: Endianness) -> Vec<ParsedField> {
         if let FieldType::Array {
             element_type,
             count,
@@ -164,7 +162,7 @@ impl<'a> TemplateEvaluator<'a> {
                 let arr_raw = self.data[arr_offset..arr_offset + inner_size].to_vec();
                 let arr_display = format_field_value(element_type, &arr_raw, endian);
                 children.push(ParsedField {
-                    name: format!("[{}]", i),
+                    name: format!("[{i}]"),
                     offset: arr_offset,
                     size: inner_size,
                     raw_bytes: arr_raw,
@@ -175,9 +173,9 @@ impl<'a> TemplateEvaluator<'a> {
                     description: String::new(),
                 });
             }
-            Ok(children)
+            children
         } else {
-            Ok(Vec::new())
+            Vec::new()
         }
     }
 
@@ -189,14 +187,18 @@ impl<'a> TemplateEvaluator<'a> {
         endian: Endianness,
         field: &FieldDefinition,
     ) -> Result<Vec<ParsedField>, TemplateError> {
-        let count = self.parsed_values.get(count_field).copied().ok_or_else(|| {
-            TemplateError::InvalidFieldReference(format!(
-                "count_field '{}' not found in parsed values",
-                count_field
-            ))
-        })?;
+        let count_raw = self
+            .parsed_values
+            .get(count_field)
+            .copied()
+            .ok_or_else(|| {
+                TemplateError::InvalidFieldReference(format!(
+                    "count_field '{count_field}' not found in parsed values"
+                ))
+            })?;
 
-        let count = count.max(0) as usize;
+        let count = usize::try_from(count_raw.max(0))
+            .map_err(|e| TemplateError::ExpressionError(format!("count overflow: {e}")))?;
         let inner_size = field_size(element_type);
         let total_size = inner_size * count;
 
@@ -216,7 +218,7 @@ impl<'a> TemplateEvaluator<'a> {
             let arr_raw = self.data[arr_offset..arr_offset + inner_size].to_vec();
             let arr_display = format_field_value(element_type, &arr_raw, endian);
             children.push(ParsedField {
-                name: format!("[{}]", i),
+                name: format!("[{i}]"),
                 offset: arr_offset,
                 size: inner_size,
                 raw_bytes: arr_raw,
@@ -233,7 +235,7 @@ impl<'a> TemplateEvaluator<'a> {
             offset: self.current_offset,
             size: total_size,
             raw_bytes: raw,
-            display_value: format!("[{} x {}]", count, super::field_type_name(element_type)),
+            display_value: format!("[{count} x {}]", super::field_type_name(element_type)),
             children,
             color: field.color.clone(),
             validation_passed: None,
@@ -248,7 +250,7 @@ impl<'a> TemplateEvaluator<'a> {
         &mut self,
         condition_field: &str,
         condition_value: i64,
-        condition_op: &ConditionOp,
+        condition_op: ConditionOp,
         fields: &[FieldDefinition],
     ) -> Result<Vec<ParsedField>, TemplateError> {
         let actual = self
@@ -257,12 +259,11 @@ impl<'a> TemplateEvaluator<'a> {
             .copied()
             .ok_or_else(|| {
                 TemplateError::InvalidFieldReference(format!(
-                    "condition_field '{}' not found",
-                    condition_field
+                    "condition_field '{condition_field}' not found"
                 ))
             })?;
 
-        let matches = match condition_op {
+        let condition_met = match condition_op {
             ConditionOp::Eq => actual == condition_value,
             ConditionOp::Ne => actual != condition_value,
             ConditionOp::Gt => actual > condition_value,
@@ -272,7 +273,7 @@ impl<'a> TemplateEvaluator<'a> {
             ConditionOp::BitAnd => (actual & condition_value) != 0,
         };
 
-        if matches {
+        if condition_met {
             self.evaluate_fields(fields)
         } else {
             Ok(Vec::new())
@@ -287,8 +288,7 @@ impl<'a> TemplateEvaluator<'a> {
     ) -> Result<Vec<ParsedField>, TemplateError> {
         if self.depth >= MAX_DEPTH {
             return Err(TemplateError::CircularReference(format!(
-                "max nesting depth {} exceeded for '{}'",
-                MAX_DEPTH, template_name
+                "max nesting depth {MAX_DEPTH} exceeded for '{template_name}'"
             )));
         }
 
@@ -320,7 +320,7 @@ impl<'a> TemplateEvaluator<'a> {
             offset: start_offset,
             size,
             raw_bytes: raw,
-            display_value: format!("struct {}", template_name),
+            display_value: format!("struct {template_name}"),
             children,
             color: field.color.clone(),
             validation_passed: None,
@@ -346,11 +346,12 @@ impl<'a> TemplateEvaluator<'a> {
         }
 
         let raw = self.data[self.current_offset..self.current_offset + ptr_size].to_vec();
-        let ptr_value = read_numeric_value(pointer_type, &raw, endian) as usize;
-        self.parsed_values
-            .insert(name.to_string(), ptr_value as i64);
+        let ptr_numeric = read_numeric_value(pointer_type, &raw, endian);
+        let ptr_value = usize::try_from(ptr_numeric).unwrap_or(0);
+        let ptr_i64 = i64::try_from(ptr_value).unwrap_or(0);
+        self.parsed_values.insert(name.to_string(), ptr_i64);
 
-        let display = format!("-> 0x{:X} ({})", ptr_value, target_template);
+        let display = format!("-> 0x{ptr_value:X} ({target_template})");
 
         let children = if ptr_value < self.data.len() && self.depth < MAX_DEPTH {
             if let Some(template) = self.registry.get(target_template) {
@@ -453,10 +454,9 @@ impl<'a> TemplateEvaluator<'a> {
         let variant_name = values
             .iter()
             .find(|(_, v)| *v == numeric)
-            .map(|(n, _)| n.as_str())
-            .unwrap_or("unknown");
+            .map_or("unknown", |(n, _)| n.as_str());
 
-        let display = format!("{} ({}, 0x{:X})", variant_name, numeric, numeric);
+        let display = format!("{variant_name} ({numeric}, 0x{numeric:X})");
 
         let parsed = ParsedField {
             name: name.to_string(),
@@ -502,8 +502,10 @@ impl<'a> TemplateEvaluator<'a> {
         } else {
             (1u64 << bit_width) - 1
         };
-        let masked = (numeric as u64) & mask;
-        self.parsed_values.insert(name.to_string(), masked as i64);
+        let numeric_bits = u64::from_ne_bytes(numeric.to_ne_bytes());
+        let masked = numeric_bits & mask;
+        self.parsed_values
+            .insert(name.to_string(), i64::from_ne_bytes(masked.to_ne_bytes()));
 
         let mut children = Vec::new();
         if let Some(flag_list) = flags {
@@ -515,9 +517,9 @@ impl<'a> TemplateEvaluator<'a> {
                     size: 0,
                     raw_bytes: Vec::new(),
                     display_value: if is_set {
-                        format!("SET (0x{:X})", flag_value)
+                        format!("SET (0x{flag_value:X})")
                     } else {
-                        format!("CLEAR (0x{:X})", flag_value)
+                        format!("CLEAR (0x{flag_value:X})")
                     },
                     children: Vec::new(),
                     color: None,
@@ -527,7 +529,8 @@ impl<'a> TemplateEvaluator<'a> {
             }
         }
 
-        let display = format!("0x{:X} ({}:{} bits)", masked, bit_width, size * 8);
+        let bits = size * 8;
+        let display = format!("0x{masked:X} ({bit_width}:{bits} bits)");
 
         let parsed = ParsedField {
             name: name.to_string(),
@@ -555,12 +558,8 @@ impl<'a> TemplateEvaluator<'a> {
         let value = evaluate_expression(expression, &self.parsed_values, self.current_offset)?;
         self.parsed_values.insert(name.to_string(), value);
 
-        let display = format!(
-            "{} (0x{:X}) = {}",
-            value,
-            value as u64,
-            expression
-        );
+        let value_hex = u64::from_ne_bytes(value.to_ne_bytes());
+        let display = format!("{value} (0x{value_hex:X}) = {expression}");
 
         Ok(vec![ParsedField {
             name: name.to_string(),
@@ -674,24 +673,26 @@ fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, TemplateError> {
             }
             '0'..='9' => {
                 let start = i;
-                if i + 1 < chars.len() && chars[i] == '0' && (chars[i + 1] == 'x' || chars[i + 1] == 'X') {
+                if i + 1 < chars.len()
+                    && chars[i] == '0'
+                    && (chars[i + 1] == 'x' || chars[i + 1] == 'X')
+                {
                     i += 2;
                     while i < chars.len() && chars[i].is_ascii_hexdigit() {
                         i += 1;
                     }
                     let hex_str: String = chars[start + 2..i].iter().collect();
-                    let val = i64::from_str_radix(&hex_str, 16).map_err(|e| {
-                        TemplateError::ExpressionError(format!("bad hex: {}", e))
-                    })?;
+                    let val = i64::from_str_radix(&hex_str, 16)
+                        .map_err(|e| TemplateError::ExpressionError(format!("bad hex: {e}")))?;
                     tokens.push(ExprToken::Number(val));
                 } else {
                     while i < chars.len() && chars[i].is_ascii_digit() {
                         i += 1;
                     }
                     let num_str: String = chars[start..i].iter().collect();
-                    let val: i64 = num_str.parse().map_err(|e| {
-                        TemplateError::ExpressionError(format!("bad number: {}", e))
-                    })?;
+                    let val: i64 = num_str
+                        .parse()
+                        .map_err(|e| TemplateError::ExpressionError(format!("bad number: {e}")))?;
                     tokens.push(ExprToken::Number(val));
                 }
             }
@@ -709,8 +710,7 @@ fn tokenize_expr(expr: &str) -> Result<Vec<ExprToken>, TemplateError> {
             }
             c => {
                 return Err(TemplateError::ExpressionError(format!(
-                    "unexpected character '{}'",
-                    c
+                    "unexpected character '{c}'"
                 )));
             }
         }
@@ -772,9 +772,7 @@ fn parse_multiplicative(
                 *pos += 1;
                 let right = parse_unary(tokens, pos, values, current_offset)?;
                 if right == 0 {
-                    return Err(TemplateError::ExpressionError(
-                        "modulo by zero".to_string(),
-                    ));
+                    return Err(TemplateError::ExpressionError("modulo by zero".to_string()));
                 }
                 left = left.wrapping_rem(right);
             }
@@ -820,13 +818,13 @@ fn parse_primary(
         }
         ExprToken::Dollar => {
             *pos += 1;
-            Ok(current_offset as i64)
+            i64::try_from(current_offset)
+                .map_err(|e| TemplateError::ExpressionError(format!("offset overflow: {e}")))
         }
         ExprToken::Ident(name) => {
             let val = values.get(name).copied().ok_or_else(|| {
                 TemplateError::InvalidFieldReference(format!(
-                    "field '{}' not found in expression",
-                    name
+                    "field '{name}' not found in expression"
                 ))
             })?;
             *pos += 1;
@@ -873,8 +871,7 @@ fn parse_primary(
             Ok(val)
         }
         other => Err(TemplateError::ExpressionError(format!(
-            "unexpected token: {:?}",
-            other
+            "unexpected token: {other:?}"
         ))),
     }
 }
@@ -882,7 +879,7 @@ fn parse_primary(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::templates::{FieldDefinition, FieldType, StructTemplate};
+    use crate::templates::{FieldDefinition, FieldType};
 
     fn make_registry() -> TemplateRegistry {
         TemplateRegistry::new()
@@ -1103,10 +1100,7 @@ mod tests {
         assert_eq!(evaluate_expression("a + b", &values, 0).unwrap(), 13);
         assert_eq!(evaluate_expression("a * b", &values, 0).unwrap(), 30);
         assert_eq!(evaluate_expression("a - b", &values, 0).unwrap(), 7);
-        assert_eq!(
-            evaluate_expression("(a + b) * 2", &values, 0).unwrap(),
-            26
-        );
+        assert_eq!(evaluate_expression("(a + b) * 2", &values, 0).unwrap(), 26);
         assert_eq!(evaluate_expression("$", &values, 0x100).unwrap(), 0x100);
     }
 

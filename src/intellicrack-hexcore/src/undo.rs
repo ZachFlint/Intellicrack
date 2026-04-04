@@ -24,6 +24,7 @@ pub struct UndoManager {
 }
 
 impl UndoManager {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             undo_stack: Vec::new(),
@@ -38,9 +39,8 @@ impl UndoManager {
     }
 
     pub fn undo(&mut self, doc: &mut MmapDocument) -> bool {
-        let op = match self.undo_stack.pop() {
-            Some(op) => op,
-            None => return false,
+        let Some(op) = self.undo_stack.pop() else {
+            return false;
         };
 
         match &op {
@@ -69,9 +69,8 @@ impl UndoManager {
     }
 
     pub fn redo(&mut self, doc: &mut MmapDocument) -> bool {
-        let op = match self.redo_stack.pop() {
-            Some(op) => op,
-            None => return false,
+        let Some(op) = self.redo_stack.pop() else {
+            return false;
         };
 
         match &op {
@@ -99,10 +98,12 @@ impl UndoManager {
         true
     }
 
+    #[must_use]
     pub fn can_undo(&self) -> bool {
         !self.undo_stack.is_empty()
     }
 
+    #[must_use]
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
     }
@@ -111,6 +112,7 @@ impl UndoManager {
         self.saved_index = Some(self.undo_stack.len());
     }
 
+    #[must_use]
     pub fn is_modified(&self) -> bool {
         match self.saved_index {
             Some(idx) => self.undo_stack.len() != idx,
@@ -124,11 +126,14 @@ impl UndoManager {
         self.saved_index = Some(0);
     }
 
+    #[must_use]
     pub fn get_overwrite_patches(&self) -> Vec<(usize, Vec<u8>)> {
         self.undo_stack
             .iter()
             .filter_map(|op| match op {
-                Operation::Overwrite { offset, new_data, .. } => Some((*offset, new_data.clone())),
+                Operation::Overwrite {
+                    offset, new_data, ..
+                } => Some((*offset, new_data.clone())),
                 _ => None,
             })
             .collect()

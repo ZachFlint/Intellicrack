@@ -95,9 +95,9 @@ src\intellicrack\sandbox\qemu.py:90: unused variable 'PIDFILE_RETRY_DELAY' (60% 
 
 2 findings in src\intellicrack\ui\dialogs\splash_screen.py
 
-src\intellicrack\ui\dialogs\splash_screen.py:406: unused attribute '_progress_bar' (60% confidence)
+src\intellicrack\ui\dialogs\splash_screen.py:383: unused attribute '_progress_bar' (60% confidence)
 
-src\intellicrack\ui\dialogs\splash_screen.py:556: unused method 'mark_stage_failed' (60% confidence)
+src\intellicrack\ui\dialogs\splash_screen.py:475: unused method 'mark_stage_failed' (60% confidence)
 
 
 2 findings in src\intellicrack\ui\panels\cutter_panel.py
