@@ -4,7 +4,7 @@ aiosqlite==0.22.1
 alabaster==1.0.0
 annotated_doc==0.0.4
 annotated_types==0.7.0
-anthropic==0.86.0
+anthropic==0.87.0
 anyio==4.13.0
 argcomplete==3.6.3
 astor==0.8.1
