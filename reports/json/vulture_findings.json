@@ -1,6 +1,6 @@
 {
   "tool": "vulture",
-  "generated": "2026-04-01T02:37:32.530283+00:00",
+  "generated": "2026-04-03T23:26:54.848658+00:00",
   "total_findings": 59,
   "total_files": 30,
   "files": [
@@ -267,16 +267,16 @@
       "count": 2,
       "findings": [
         {
-          "line": 406,
+          "line": 383,
           "column": null,
           "message": "unused attribute '_progress_bar' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:406: unused attribute '_progress_bar' (60% confidence)"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:383: unused attribute '_progress_bar' (60% confidence)"
         },
         {
-          "line": 556,
+          "line": 475,
           "column": null,
           "message": "unused method 'mark_stage_failed' (60% confidence)",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:556: unused method 'mark_stage_failed' (60% confidence)"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:475: unused method 'mark_stage_failed' (60% confidence)"
         }
       ]
     },

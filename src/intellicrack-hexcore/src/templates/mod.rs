@@ -173,6 +173,7 @@ pub struct TemplateRegistry {
 }
 
 impl TemplateRegistry {
+    #[must_use]
     pub fn new() -> Self {
         let mut registry = Self {
             templates: HashMap::new(),
@@ -185,6 +186,12 @@ impl TemplateRegistry {
         self.templates.insert(template.name.clone(), template);
     }
 
+    /// Register a template from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TemplateError::JsonParse` if the JSON is invalid or
+    /// `TemplateError::InvalidFieldReference` if field references are invalid.
     pub fn register_json(&mut self, json_str: &str) -> Result<String, TemplateError> {
         let template = json_schema::parse_json_template(json_str)?;
         let name = template.name.clone();
@@ -196,6 +203,12 @@ impl TemplateRegistry {
         self.templates.remove(name).is_some()
     }
 
+    /// Export a template to a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TemplateError::NotFound` if the template does not exist or
+    /// `TemplateError::JsonParse` if serialization fails.
     pub fn export_json(&self, name: &str) -> Result<String, TemplateError> {
         let template = self
             .templates
@@ -204,10 +217,12 @@ impl TemplateRegistry {
         json_schema::template_to_json(template)
     }
 
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&StructTemplate> {
         self.templates.get(name)
     }
 
+    #[must_use]
     pub fn list(&self) -> Vec<(String, String)> {
         let mut entries: Vec<(String, String)> = self
             .templates
@@ -218,6 +233,7 @@ impl TemplateRegistry {
         entries
     }
 
+    #[must_use]
     pub fn list_detailed(&self) -> Vec<(String, String, String, usize)> {
         let mut entries: Vec<(String, String, String, usize)> = self
             .templates
@@ -231,6 +247,13 @@ impl TemplateRegistry {
         entries
     }
 
+    /// Apply a named template to binary data at the given offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TemplateError::NotFound` if the template does not exist,
+    /// `TemplateError::InsufficientData` if there is not enough data, or
+    /// other `TemplateError` variants for evaluation failures.
     pub fn apply(
         &self,
         name: &str,
@@ -254,6 +277,7 @@ impl Default for TemplateRegistry {
     }
 }
 
+#[must_use]
 pub fn field_size(ft: &FieldType) -> usize {
     match ft {
         FieldType::UInt8 | FieldType::Int8 | FieldType::Bool | FieldType::Char => 1,
@@ -265,8 +289,9 @@ pub fn field_size(ft: &FieldType) -> usize {
             element_type,
             count,
         } => field_size(element_type) * count,
-        FieldType::Bitfield { backing_type, .. } => field_size(backing_type),
-        FieldType::Enum { backing_type, .. } => field_size(backing_type),
+        FieldType::Bitfield { backing_type, .. } | FieldType::Enum { backing_type, .. } => {
+            field_size(backing_type)
+        }
         FieldType::Pointer { pointer_type, .. } => field_size(pointer_type),
         FieldType::DynamicArray { .. }
         | FieldType::Union { .. }
@@ -276,10 +301,13 @@ pub fn field_size(ft: &FieldType) -> usize {
     }
 }
 
-pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
+fn format_integer_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
     match ft {
         FieldType::UInt8 => format!("{} (0x{:02X})", raw[0], raw[0]),
-        FieldType::Int8 => format!("{} (0x{:02X})", raw[0] as i8, raw[0]),
+        FieldType::Int8 => {
+            let signed = i8::from_ne_bytes([raw[0]]);
+            format!("{signed} (0x{:02X})", raw[0])
+        }
         FieldType::Bool => {
             if raw[0] != 0 {
                 "true".to_string()
@@ -290,9 +318,9 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
         FieldType::Char => {
             let ch = raw[0];
             if ch.is_ascii_graphic() || ch == b' ' {
-                format!("'{}' (0x{:02X})", ch as char, ch)
+                format!("'{}' (0x{ch:02X})", ch as char)
             } else {
-                format!("0x{:02X}", ch)
+                format!("0x{ch:02X}")
             }
         }
         FieldType::UInt16 => {
@@ -300,28 +328,30 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
                 Endianness::Little => u16::from_le_bytes([raw[0], raw[1]]),
                 Endianness::Big => u16::from_be_bytes([raw[0], raw[1]]),
             };
-            format!("{} (0x{:04X})", v, v)
+            format!("{v} (0x{v:04X})")
         }
         FieldType::Int16 => {
             let v = match endian {
                 Endianness::Little => i16::from_le_bytes([raw[0], raw[1]]),
                 Endianness::Big => i16::from_be_bytes([raw[0], raw[1]]),
             };
-            format!("{} (0x{:04X})", v, v as u16)
+            let u = u16::from_ne_bytes(v.to_ne_bytes());
+            format!("{v} (0x{u:04X})")
         }
         FieldType::UInt32 => {
             let v = match endian {
                 Endianness::Little => u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
                 Endianness::Big => u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
             };
-            format!("{} (0x{:08X})", v, v)
+            format!("{v} (0x{v:08X})")
         }
         FieldType::Int32 => {
             let v = match endian {
                 Endianness::Little => i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
                 Endianness::Big => i32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
             };
-            format!("{} (0x{:08X})", v, v as u32)
+            let u = u32::from_ne_bytes(v.to_ne_bytes());
+            format!("{v} (0x{u:08X})")
         }
         FieldType::UInt64 => {
             let v = match endian {
@@ -332,7 +362,7 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
                     raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
                 ]),
             };
-            format!("{} (0x{:016X})", v, v)
+            format!("{v} (0x{v:016X})")
         }
         FieldType::Int64 => {
             let v = match endian {
@@ -343,14 +373,15 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
                     raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
                 ]),
             };
-            format!("{} (0x{:016X})", v, v as u64)
+            let u = u64::from_ne_bytes(v.to_ne_bytes());
+            format!("{v} (0x{u:016X})")
         }
         FieldType::Float32 => {
             let v = match endian {
                 Endianness::Little => f32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
                 Endianness::Big => f32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
             };
-            format!("{}", v)
+            format!("{v}")
         }
         FieldType::Float64 => {
             let v = match endian {
@@ -361,10 +392,16 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
                     raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
                 ]),
             };
-            format!("{}", v)
+            format!("{v}")
         }
+        _ => String::new(),
+    }
+}
+
+fn format_composite_value(ft: &FieldType, raw: &[u8]) -> String {
+    match ft {
         FieldType::Bytes(n) => {
-            let hex: Vec<String> = raw[..*n].iter().map(|b| format!("{:02X}", b)).collect();
+            let hex: Vec<String> = raw[..*n].iter().map(|b| format!("{b:02X}")).collect();
             hex.join(" ")
         }
         FieldType::FixedString(n) => {
@@ -379,39 +416,62 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
                     }
                 })
                 .collect();
-            format!("\"{}\"", s)
+            format!("\"{s}\"")
         }
         FieldType::Array {
             element_type,
             count,
         } => {
-            format!("[{} x {}]", count, field_type_name(element_type))
+            format!("[{count} x {}]", field_type_name(element_type))
         }
-        FieldType::Padding(n) => format!("padding[{}]", n),
+        FieldType::Padding(n) => format!("padding[{n}]"),
         FieldType::DynamicArray {
             element_type,
             count_field,
-        } => format!("[dyn {} x {}]", count_field, field_type_name(element_type)),
+        } => format!("[dyn {count_field} x {}]", field_type_name(element_type)),
         FieldType::Bitfield {
             bit_width,
             backing_type,
             ..
-        } => format!("bitfield<{}:{}>", field_type_name(backing_type), bit_width),
+        } => format!("bitfield<{}:{bit_width}>", field_type_name(backing_type)),
         FieldType::Union { variants } => format!("union<{} variants>", variants.len()),
         FieldType::Enum { backing_type, .. } => {
             format!("enum<{}>", field_type_name(backing_type))
         }
         FieldType::Pointer {
             target_template, ..
-        } => format!("*{}", target_template),
-        FieldType::Conditional { condition_field, .. } => {
-            format!("if({})", condition_field)
+        } => format!("*{target_template}"),
+        FieldType::Conditional {
+            condition_field, ..
+        } => {
+            format!("if({condition_field})")
         }
-        FieldType::StructRef(name) => format!("struct {}", name),
-        FieldType::Computed { expression, .. } => format!("= {}", expression),
+        FieldType::StructRef(name) => format!("struct {name}"),
+        FieldType::Computed { expression, .. } => format!("= {expression}"),
+        _ => String::new(),
     }
 }
 
+#[must_use]
+pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
+    match ft {
+        FieldType::UInt8
+        | FieldType::Int8
+        | FieldType::Bool
+        | FieldType::Char
+        | FieldType::UInt16
+        | FieldType::Int16
+        | FieldType::UInt32
+        | FieldType::Int32
+        | FieldType::UInt64
+        | FieldType::Int64
+        | FieldType::Float32
+        | FieldType::Float64 => format_integer_value(ft, raw, endian),
+        _ => format_composite_value(ft, raw),
+    }
+}
+
+#[must_use]
 pub fn field_type_name(ft: &FieldType) -> &'static str {
     match ft {
         FieldType::UInt8 => "uint8",
@@ -441,41 +501,40 @@ pub fn field_type_name(ft: &FieldType) -> &'static str {
     }
 }
 
+#[must_use]
 pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i64 {
     match ft {
-        FieldType::UInt8 | FieldType::Bool | FieldType::Char => raw[0] as i64,
-        FieldType::Int8 => raw[0] as i8 as i64,
+        FieldType::UInt8 | FieldType::Bool | FieldType::Char => i64::from(raw[0]),
+        FieldType::Int8 => i64::from(i8::from_ne_bytes([raw[0]])),
         FieldType::UInt16 => match endian {
-            Endianness::Little => u16::from_le_bytes([raw[0], raw[1]]) as i64,
-            Endianness::Big => u16::from_be_bytes([raw[0], raw[1]]) as i64,
+            Endianness::Little => i64::from(u16::from_le_bytes([raw[0], raw[1]])),
+            Endianness::Big => i64::from(u16::from_be_bytes([raw[0], raw[1]])),
         },
         FieldType::Int16 => match endian {
-            Endianness::Little => i16::from_le_bytes([raw[0], raw[1]]) as i64,
-            Endianness::Big => i16::from_be_bytes([raw[0], raw[1]]) as i64,
+            Endianness::Little => i64::from(i16::from_le_bytes([raw[0], raw[1]])),
+            Endianness::Big => i64::from(i16::from_be_bytes([raw[0], raw[1]])),
         },
         FieldType::UInt32 => match endian {
-            Endianness::Little => {
-                u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
-            }
-            Endianness::Big => {
-                u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
-            }
+            Endianness::Little => i64::from(u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]])),
+            Endianness::Big => i64::from(u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]])),
         },
         FieldType::Int32 => match endian {
-            Endianness::Little => {
-                i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
-            }
-            Endianness::Big => {
-                i32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]) as i64
-            }
+            Endianness::Little => i64::from(i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]])),
+            Endianness::Big => i64::from(i32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]])),
         },
         FieldType::UInt64 => match endian {
-            Endianness::Little => u64::from_le_bytes([
-                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-            ]) as i64,
-            Endianness::Big => u64::from_be_bytes([
-                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-            ]) as i64,
+            Endianness::Little => i64::from_ne_bytes(
+                u64::from_le_bytes([
+                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+                ])
+                .to_ne_bytes(),
+            ),
+            Endianness::Big => i64::from_ne_bytes(
+                u64::from_be_bytes([
+                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+                ])
+                .to_ne_bytes(),
+            ),
         },
         FieldType::Int64 => match endian {
             Endianness::Little => i64::from_le_bytes([
@@ -528,8 +587,7 @@ mod tests {
         assert!(!fields.is_empty());
         assert_eq!(fields[0].name, "e_magic");
         assert!(
-            fields[0].display_value.contains("23117")
-                || fields[0].display_value.contains("5A4D")
+            fields[0].display_value.contains("23117") || fields[0].display_value.contains("5A4D")
         );
     }
 

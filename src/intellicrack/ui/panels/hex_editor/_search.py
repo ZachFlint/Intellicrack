@@ -210,8 +210,7 @@ class NumericSearchWorker(QThread):
         """
         if self._is_range and hasattr(self._document, "search_numeric_range"):
             raw = self._document.search_numeric_range(
-                int(self._min_val),
-                int(self._max_val),
+                (int(self._min_val), int(self._max_val)),
                 self._size,
                 self._signed,
                 self._big_endian,

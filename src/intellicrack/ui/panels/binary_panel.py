@@ -758,7 +758,10 @@ class BinaryPanel(QWidget):
             ilt_off = self._pe_rva_to_offset(ilt_rva, sec_info)
             if ilt_off is not None:
                 self._parse_pe_ilt_entries(
-                    lib_name, ilt_off, is_pe32_plus=is_pe32_plus, rva_to_offset=lambda r: self._pe_rva_to_offset(r, sec_info),
+                    lib_name,
+                    ilt_off,
+                    is_pe32_plus=is_pe32_plus,
+                    rva_to_offset=lambda r: self._pe_rva_to_offset(r, sec_info),
                 )
 
             idx += 1

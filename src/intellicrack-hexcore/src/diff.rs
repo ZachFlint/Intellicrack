@@ -24,6 +24,7 @@ pub struct DiffResult {
 const BLOCK_SIZE: usize = 16;
 const BYTE_LEVEL_THRESHOLD: usize = 1_048_576;
 
+#[must_use]
 pub fn diff_data(data_a: &[u8], data_b: &[u8]) -> DiffResult {
     if data_a.len() <= BYTE_LEVEL_THRESHOLD && data_b.len() <= BYTE_LEVEL_THRESHOLD {
         diff_data_byte_level(data_a, data_b)
@@ -73,37 +74,37 @@ fn diff_data_byte_level(data_a: &[u8], data_b: &[u8]) -> DiffResult {
         });
     }
 
-    let mid_a_len = data_a.len() - prefix_len - suffix_len;
-    let mid_b_len = data_b.len() - prefix_len - suffix_len;
+    let middle_len_a = data_a.len() - prefix_len - suffix_len;
+    let middle_len_b = data_b.len() - prefix_len - suffix_len;
 
-    if mid_a_len > 0 && mid_b_len > 0 {
-        let common_mid = mid_a_len.min(mid_b_len);
+    if middle_len_a > 0 && middle_len_b > 0 {
+        let common_mid = middle_len_a.min(middle_len_b);
         total_diffs += data_a[prefix_len..prefix_len + common_mid]
             .iter()
             .zip(data_b[prefix_len..prefix_len + common_mid].iter())
             .filter(|(a, b)| a != b)
             .count();
-        total_diffs += mid_a_len.abs_diff(mid_b_len);
+        total_diffs += middle_len_a.abs_diff(middle_len_b);
         regions.push(DiffRegion {
             offset_a: prefix_len,
             offset_b: prefix_len,
-            length: mid_a_len.max(mid_b_len),
+            length: middle_len_a.max(middle_len_b),
             diff_type: DiffType::Modified,
         });
-    } else if mid_a_len > 0 {
-        total_diffs += mid_a_len;
+    } else if middle_len_a > 0 {
+        total_diffs += middle_len_a;
         regions.push(DiffRegion {
             offset_a: prefix_len,
             offset_b: prefix_len,
-            length: mid_a_len,
+            length: middle_len_a,
             diff_type: DiffType::InsertedA,
         });
-    } else if mid_b_len > 0 {
-        total_diffs += mid_b_len;
+    } else if middle_len_b > 0 {
+        total_diffs += middle_len_b;
         regions.push(DiffRegion {
             offset_a: prefix_len,
             offset_b: prefix_len,
-            length: mid_b_len,
+            length: middle_len_b,
             diff_type: DiffType::InsertedB,
         });
     }
@@ -140,7 +141,7 @@ fn diff_data_block(data_a: &[u8], data_b: &[u8]) -> DiffResult {
 
     let min_len = data_a.len().min(data_b.len());
     let max_len = data_a.len().max(data_b.len());
-    let num_blocks = (min_len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    let num_blocks = min_len.div_ceil(BLOCK_SIZE);
 
     let mut regions: Vec<DiffRegion> = Vec::new();
     let mut total_diffs: usize = 0;

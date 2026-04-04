@@ -524,7 +524,7 @@ src/intellicrack/ui\xpu_status.py:92: D107: in public method `__init__`: - Missi
 
 1 findings in src/intellicrack/ui\dialogs\splash_screen.py
 
-src/intellicrack/ui\dialogs\splash_screen.py:181: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\dialogs\splash_screen.py:166: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\analysis_panel.py

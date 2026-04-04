@@ -1,20 +1,28 @@
 {
   "tool": "cargo-deny",
-  "generated": "2026-04-01T02:38:14.105696+00:00",
-  "total_findings": 1,
+  "generated": "2026-04-04T06:07:03.869812+00:00",
+  "total_findings": 2,
   "total_files": 2,
   "files": [
     {
       "path": "D:\\Intellicrack\\src\\intellicrack-hexcore\\deny.toml",
-      "count": 1,
+      "count": 2,
       "findings": [
         {
-          "line": 6,
-          "column": 17,
-          "severity": "error",
-          "code": "unexpected-value",
-          "message": "expected '[\"all\", \"workspace\", \"transitive\", \"none\"]'",
-          "raw": "error[unexpected-value]: expected '[\"all\", \"workspace\", \"transitive\", \"none\"]'"
+          "line": 17,
+          "column": 6,
+          "severity": "warning",
+          "code": "license-not-encountered",
+          "message": "license was not encountered",
+          "raw": "warning[license-not-encountered]: license was not encountered"
+        },
+        {
+          "line": 20,
+          "column": 6,
+          "severity": "warning",
+          "code": "license-not-encountered",
+          "message": "license was not encountered",
+          "raw": "warning[license-not-encountered]: license was not encountered"
         }
       ]
     },

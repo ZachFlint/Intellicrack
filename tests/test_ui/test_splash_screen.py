@@ -988,4 +988,3 @@ class TestEndToEndLifecycle:
         assert splash_without.version_label is None
         splash_with.close()
         splash_without.close()
-

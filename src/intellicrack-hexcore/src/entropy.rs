@@ -1,21 +1,31 @@
 use rayon::prelude::*;
 
+#[must_use]
 pub fn compute_entropy(data: &[u8]) -> f64 {
     if data.is_empty() {
         return 0.0;
     }
     let counts = byte_distribution(data);
-    let total = data.len() as f64;
+    let len_u64: u64 = data.len().try_into().unwrap_or(u64::MAX);
+    let total = u64_to_f64(len_u64);
     let mut entropy = 0.0;
     for &count in &counts {
         if count > 0 {
-            let p = count as f64 / total;
+            let p = u64_to_f64(count) / total;
             entropy -= p * p.log2();
         }
     }
     entropy
 }
 
+fn u64_to_f64(val: u64) -> f64 {
+    let bytes = val.to_le_bytes();
+    let lower = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    let upper = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+    f64::from(upper) * 4_294_967_296.0 + f64::from(lower)
+}
+
+#[must_use]
 pub fn entropy_map(data: &[u8], block_size: usize) -> Vec<f64> {
     if data.is_empty() || block_size == 0 {
         return Vec::new();
@@ -28,13 +38,14 @@ pub fn entropy_map(data: &[u8], block_size: usize) -> Vec<f64> {
         .collect()
 }
 
+#[must_use]
 pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
     const PARALLEL_THRESHOLD: usize = 1024 * 1024;
 
     if data.len() < PARALLEL_THRESHOLD {
         let mut counts = [0u64; 256];
         for &b in data {
-            counts[b as usize] += 1;
+            counts[usize::from(b)] += 1;
         }
         counts
     } else {
@@ -44,7 +55,7 @@ pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
             .map(|chunk| {
                 let mut local = [0u64; 256];
                 for &b in chunk {
-                    local[b as usize] += 1;
+                    local[usize::from(b)] += 1;
                 }
                 local
             })
@@ -60,6 +71,7 @@ pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
     }
 }
 
+#[must_use]
 pub fn byte_type_distribution(data: &[u8]) -> (u64, u64, u64, u64) {
     let mut null_count: u64 = 0;
     let mut printable_count: u64 = 0;
@@ -78,6 +90,7 @@ pub fn byte_type_distribution(data: &[u8]) -> (u64, u64, u64, u64) {
     (null_count, printable_count, control_count, high_count)
 }
 
+#[must_use]
 pub fn digram_matrix(data: &[u8]) -> Vec<u64> {
     const PARALLEL_THRESHOLD: usize = 1024 * 1024;
 
@@ -88,7 +101,7 @@ pub fn digram_matrix(data: &[u8]) -> Vec<u64> {
     if data.len() < PARALLEL_THRESHOLD {
         let mut matrix = vec![0u64; 65536];
         for window in data.windows(2) {
-            let idx = (window[0] as usize) * 256 + (window[1] as usize);
+            let idx = usize::from(window[0]) * 256 + usize::from(window[1]);
             matrix[idx] += 1;
         }
         matrix
@@ -110,7 +123,7 @@ pub fn digram_matrix(data: &[u8]) -> Vec<u64> {
             .map(|(_, chunk)| {
                 let mut local = vec![0u64; 65536];
                 for window in chunk.windows(2) {
-                    let idx = (window[0] as usize) * 256 + (window[1] as usize);
+                    let idx = usize::from(window[0]) * 256 + usize::from(window[1]);
                     local[idx] += 1;
                 }
                 local
@@ -127,6 +140,7 @@ pub fn digram_matrix(data: &[u8]) -> Vec<u64> {
     }
 }
 
+#[must_use]
 pub fn content_classification(data: &[u8], block_size: usize) -> Vec<u8> {
     if data.is_empty() || block_size == 0 {
         return Vec::new();
@@ -144,27 +158,27 @@ fn classify_block(block: &[u8]) -> u8 {
         return 0;
     }
 
-    let (null_count, printable_count, _control_count, _high_count) =
-        byte_type_distribution(block);
-    let total = block.len() as f64;
-    let null_ratio = null_count as f64 / total;
-    let printable_ratio = printable_count as f64 / total;
+    let (null_count, printable_count, _control_count, _high_count) = byte_type_distribution(block);
+    let block_len_u64: u64 = block.len().try_into().unwrap_or(u64::MAX);
+    let total = u64_to_f64(block_len_u64);
+    let null_ratio = u64_to_f64(null_count) / total;
+    let printable_ratio = u64_to_f64(printable_count) / total;
 
     let entropy = compute_entropy(block);
 
     if entropy < 0.5 && null_ratio > 0.9 {
-        return 0; // null/empty
+        return 0;
     }
     if entropy < 4.5 && printable_ratio > 0.7 {
-        return 1; // plaintext
+        return 1;
     }
     if entropy > 7.0 {
-        return 3; // encrypted/compressed
+        return 3;
     }
-    if entropy >= 4.5 && entropy <= 7.0 {
-        return 4; // code
+    if (4.5..=7.0).contains(&entropy) {
+        return 4;
     }
-    2 // structured
+    2
 }
 
 #[cfg(test)]
@@ -175,28 +189,34 @@ mod tests {
     fn test_entropy_uniform() {
         let data = vec![0x42u8; 1000];
         let ent = compute_entropy(&data);
-        assert!(ent < 0.01, "uniform data should have near-zero entropy, got {}", ent);
+        assert!(
+            ent < 0.01,
+            "uniform data should have near-zero entropy, got {ent}"
+        );
     }
 
     #[test]
     fn test_entropy_random() {
         let mut data = vec![0u8; 256 * 100];
         for (i, b) in data.iter_mut().enumerate() {
-            *b = (i % 256) as u8;
+            *b = i.to_le_bytes()[0];
         }
         let ent = compute_entropy(&data);
-        assert!(ent > 7.99, "uniform distribution should have entropy ~8.0, got {}", ent);
+        assert!(
+            ent > 7.99,
+            "uniform distribution should have entropy ~8.0, got {ent}"
+        );
     }
 
     #[test]
     fn test_entropy_empty() {
-        assert_eq!(compute_entropy(&[]), 0.0);
+        assert!(compute_entropy(&[]).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_entropy_map_blocks() {
         let mut data = vec![0u8; 2048];
-        for b in data[1024..].iter_mut() {
+        for b in &mut data[1024..] {
             *b = 0xFF;
         }
         let map = entropy_map(&data, 1024);
@@ -246,12 +266,12 @@ mod tests {
     fn test_digram_matrix_counts() {
         let data = b"AABB";
         let matrix = digram_matrix(data);
-        let aa_idx = 0x41 * 256 + 0x41;
-        let ab_idx = 0x41 * 256 + 0x42;
-        let bb_idx = 0x42 * 256 + 0x42;
-        assert_eq!(matrix[aa_idx], 1);
-        assert_eq!(matrix[ab_idx], 1);
-        assert_eq!(matrix[bb_idx], 1);
+        let pair_double_a = 0x41 * 256 + 0x41;
+        let pair_a_then_b = 0x41 * 256 + 0x42;
+        let pair_double_b = 0x42 * 256 + 0x42;
+        assert_eq!(matrix[pair_double_a], 1);
+        assert_eq!(matrix[pair_a_then_b], 1);
+        assert_eq!(matrix[pair_double_b], 1);
     }
 
     #[test]
@@ -280,9 +300,9 @@ mod tests {
     fn test_classification_high_entropy() {
         let mut data = vec![0u8; 4096];
         let mut state: u32 = 12345;
-        for b in data.iter_mut() {
-            state = state.wrapping_mul(1103515245).wrapping_add(12345);
-            *b = (state >> 16) as u8;
+        for b in &mut data {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12345);
+            *b = (state >> 16).to_le_bytes()[0];
         }
         let classes = content_classification(&data, data.len());
         assert!(classes[0] == 3 || classes[0] == 4);

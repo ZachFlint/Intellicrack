@@ -7,44 +7,15 @@
         "driver": {
           "name": "typos",
           "version": "1.0.0",
-          "rules": [
-            {
-              "id": "general",
-              "shortDescription": {
-                "text": "`Helo` should be `Hello`"
-              }
-            }
-          ]
+          "rules": []
         }
       },
-      "results": [
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "`Helo` should be `Hello`"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "./src/piece_table.rs",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 297,
-                  "startColumn": 40
-                }
-              }
-            }
-          ]
-        }
-      ],
+      "results": [],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-01T02:39:17.843447+00:00"
+          "endTimeUtc": "2026-04-04T06:07:57.921846+00:00"
         }
       ]
     }

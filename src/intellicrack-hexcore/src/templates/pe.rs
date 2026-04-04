@@ -28,21 +28,55 @@ fn image_dos_header() -> StructTemplate {
             fd("e_cblp", FieldType::UInt16, "Bytes on last page of file"),
             fd("e_cp", FieldType::UInt16, "Pages in file"),
             fd("e_crlc", FieldType::UInt16, "Relocations"),
-            fd("e_cparhdr", FieldType::UInt16, "Size of header in paragraphs"),
-            fd("e_minalloc", FieldType::UInt16, "Minimum extra paragraphs needed"),
-            fd("e_maxalloc", FieldType::UInt16, "Maximum extra paragraphs needed"),
+            fd(
+                "e_cparhdr",
+                FieldType::UInt16,
+                "Size of header in paragraphs",
+            ),
+            fd(
+                "e_minalloc",
+                FieldType::UInt16,
+                "Minimum extra paragraphs needed",
+            ),
+            fd(
+                "e_maxalloc",
+                FieldType::UInt16,
+                "Maximum extra paragraphs needed",
+            ),
             fd("e_ss", FieldType::UInt16, "Initial (relative) SS value"),
             fd("e_sp", FieldType::UInt16, "Initial SP value"),
             fd("e_csum", FieldType::UInt16, "Checksum"),
             fd("e_ip", FieldType::UInt16, "Initial IP value"),
             fd("e_cs", FieldType::UInt16, "Initial (relative) CS value"),
-            fd("e_lfarlc", FieldType::UInt16, "File address of relocation table"),
+            fd(
+                "e_lfarlc",
+                FieldType::UInt16,
+                "File address of relocation table",
+            ),
             fd("e_ovno", FieldType::UInt16, "Overlay number"),
-            fd("e_res", FieldType::Array { element_type: Box::new(FieldType::UInt16), count: 4 }, "Reserved words"),
+            fd(
+                "e_res",
+                FieldType::Array {
+                    element_type: Box::new(FieldType::UInt16),
+                    count: 4,
+                },
+                "Reserved words",
+            ),
             fd("e_oemid", FieldType::UInt16, "OEM identifier"),
             fd("e_oeminfo", FieldType::UInt16, "OEM information"),
-            fd("e_res2", FieldType::Array { element_type: Box::new(FieldType::UInt16), count: 10 }, "Reserved words"),
-            fd("e_lfanew", FieldType::Int32, "File address of new exe header"),
+            fd(
+                "e_res2",
+                FieldType::Array {
+                    element_type: Box::new(FieldType::UInt16),
+                    count: 10,
+                },
+                "Reserved words",
+            ),
+            fd(
+                "e_lfanew",
+                FieldType::Int32,
+                "File address of new exe header",
+            ),
         ],
     }
 }
@@ -59,16 +93,155 @@ fn image_file_header() -> StructTemplate {
         fields: vec![
             fd("Machine", FieldType::UInt16, "Target machine type"),
             fd("NumberOfSections", FieldType::UInt16, "Number of sections"),
-            fd("TimeDateStamp", FieldType::UInt32, "UNIX timestamp of creation"),
-            fd("PointerToSymbolTable", FieldType::UInt32, "File offset of COFF symbol table"),
-            fd("NumberOfSymbols", FieldType::UInt32, "Number of entries in symbol table"),
-            fd("SizeOfOptionalHeader", FieldType::UInt16, "Size of optional header"),
-            fd("Characteristics", FieldType::UInt16, "Flags indicating file attributes"),
+            fd(
+                "TimeDateStamp",
+                FieldType::UInt32,
+                "UNIX timestamp of creation",
+            ),
+            fd(
+                "PointerToSymbolTable",
+                FieldType::UInt32,
+                "File offset of COFF symbol table",
+            ),
+            fd(
+                "NumberOfSymbols",
+                FieldType::UInt32,
+                "Number of entries in symbol table",
+            ),
+            fd(
+                "SizeOfOptionalHeader",
+                FieldType::UInt16,
+                "Size of optional header",
+            ),
+            fd(
+                "Characteristics",
+                FieldType::UInt16,
+                "Flags indicating file attributes",
+            ),
         ],
     }
 }
 
+fn optional_header_common_fields() -> Vec<FieldDefinition> {
+    vec![
+        fd(
+            "MajorLinkerVersion",
+            FieldType::UInt8,
+            "Linker major version",
+        ),
+        fd(
+            "MinorLinkerVersion",
+            FieldType::UInt8,
+            "Linker minor version",
+        ),
+        fd("SizeOfCode", FieldType::UInt32, "Size of code sections"),
+        fd(
+            "SizeOfInitializedData",
+            FieldType::UInt32,
+            "Size of initialized data",
+        ),
+        fd("SizeOfUninitializedData", FieldType::UInt32, "Size of BSS"),
+        fd("AddressOfEntryPoint", FieldType::UInt32, "Entry point RVA"),
+        fd("BaseOfCode", FieldType::UInt32, "Base of code section RVA"),
+    ]
+}
+
+fn optional_header_tail_fields(stack_type: FieldType) -> Vec<FieldDefinition> {
+    vec![
+        fd(
+            "SectionAlignment",
+            FieldType::UInt32,
+            "Section alignment in memory",
+        ),
+        fd(
+            "FileAlignment",
+            FieldType::UInt32,
+            "Section alignment on disk",
+        ),
+        fd(
+            "MajorOperatingSystemVersion",
+            FieldType::UInt16,
+            "Required OS major version",
+        ),
+        fd(
+            "MinorOperatingSystemVersion",
+            FieldType::UInt16,
+            "Required OS minor version",
+        ),
+        fd(
+            "MajorImageVersion",
+            FieldType::UInt16,
+            "Image major version",
+        ),
+        fd(
+            "MinorImageVersion",
+            FieldType::UInt16,
+            "Image minor version",
+        ),
+        fd(
+            "MajorSubsystemVersion",
+            FieldType::UInt16,
+            "Subsystem major version",
+        ),
+        fd(
+            "MinorSubsystemVersion",
+            FieldType::UInt16,
+            "Subsystem minor version",
+        ),
+        fd(
+            "Win32VersionValue",
+            FieldType::UInt32,
+            "Reserved, must be zero",
+        ),
+        fd("SizeOfImage", FieldType::UInt32, "Size of image in memory"),
+        fd(
+            "SizeOfHeaders",
+            FieldType::UInt32,
+            "Combined size of all headers",
+        ),
+        fd("CheckSum", FieldType::UInt32, "Image file checksum"),
+        fd("Subsystem", FieldType::UInt16, "Required subsystem"),
+        fd(
+            "DllCharacteristics",
+            FieldType::UInt16,
+            "DLL characteristics flags",
+        ),
+        fd(
+            "SizeOfStackReserve",
+            stack_type.clone(),
+            "Stack reserve size",
+        ),
+        fd("SizeOfStackCommit", stack_type.clone(), "Stack commit size"),
+        fd("SizeOfHeapReserve", stack_type.clone(), "Heap reserve size"),
+        fd("SizeOfHeapCommit", stack_type, "Heap commit size"),
+        fd("LoaderFlags", FieldType::UInt32, "Reserved, must be zero"),
+        fd(
+            "NumberOfRvaAndSizes",
+            FieldType::UInt32,
+            "Number of data directory entries",
+        ),
+    ]
+}
+
 fn image_optional_header32() -> StructTemplate {
+    let mut fields = vec![fd(
+        "Magic",
+        FieldType::UInt16,
+        "Magic number (0x10B = PE32)",
+    )];
+    fields.extend(optional_header_common_fields());
+    fields.push(fd(
+        "BaseOfData",
+        FieldType::UInt32,
+        "Base of data section RVA",
+    ));
+    fields.push(fd(
+        "ImageBase",
+        FieldType::UInt32,
+        "Preferred image base address",
+    ));
+    fields.extend(optional_header_tail_fields(FieldType::UInt32));
+
     StructTemplate {
         name: "IMAGE_OPTIONAL_HEADER32".to_string(),
         description: "PE32 Optional Header (96 bytes standard + data directories)".to_string(),
@@ -77,42 +250,24 @@ fn image_optional_header32() -> StructTemplate {
         author: None,
         category: Some("PE".to_string()),
         magic_detection: None,
-        fields: vec![
-            fd("Magic", FieldType::UInt16, "Magic number (0x10B = PE32)"),
-            fd("MajorLinkerVersion", FieldType::UInt8, "Linker major version"),
-            fd("MinorLinkerVersion", FieldType::UInt8, "Linker minor version"),
-            fd("SizeOfCode", FieldType::UInt32, "Size of code sections"),
-            fd("SizeOfInitializedData", FieldType::UInt32, "Size of initialized data"),
-            fd("SizeOfUninitializedData", FieldType::UInt32, "Size of BSS"),
-            fd("AddressOfEntryPoint", FieldType::UInt32, "Entry point RVA"),
-            fd("BaseOfCode", FieldType::UInt32, "Base of code section RVA"),
-            fd("BaseOfData", FieldType::UInt32, "Base of data section RVA"),
-            fd("ImageBase", FieldType::UInt32, "Preferred image base address"),
-            fd("SectionAlignment", FieldType::UInt32, "Section alignment in memory"),
-            fd("FileAlignment", FieldType::UInt32, "Section alignment on disk"),
-            fd("MajorOperatingSystemVersion", FieldType::UInt16, "Required OS major version"),
-            fd("MinorOperatingSystemVersion", FieldType::UInt16, "Required OS minor version"),
-            fd("MajorImageVersion", FieldType::UInt16, "Image major version"),
-            fd("MinorImageVersion", FieldType::UInt16, "Image minor version"),
-            fd("MajorSubsystemVersion", FieldType::UInt16, "Subsystem major version"),
-            fd("MinorSubsystemVersion", FieldType::UInt16, "Subsystem minor version"),
-            fd("Win32VersionValue", FieldType::UInt32, "Reserved, must be zero"),
-            fd("SizeOfImage", FieldType::UInt32, "Size of image in memory"),
-            fd("SizeOfHeaders", FieldType::UInt32, "Combined size of all headers"),
-            fd("CheckSum", FieldType::UInt32, "Image file checksum"),
-            fd("Subsystem", FieldType::UInt16, "Required subsystem"),
-            fd("DllCharacteristics", FieldType::UInt16, "DLL characteristics flags"),
-            fd("SizeOfStackReserve", FieldType::UInt32, "Stack reserve size"),
-            fd("SizeOfStackCommit", FieldType::UInt32, "Stack commit size"),
-            fd("SizeOfHeapReserve", FieldType::UInt32, "Heap reserve size"),
-            fd("SizeOfHeapCommit", FieldType::UInt32, "Heap commit size"),
-            fd("LoaderFlags", FieldType::UInt32, "Reserved, must be zero"),
-            fd("NumberOfRvaAndSizes", FieldType::UInt32, "Number of data directory entries"),
-        ],
+        fields,
     }
 }
 
 fn image_optional_header64() -> StructTemplate {
+    let mut fields = vec![fd(
+        "Magic",
+        FieldType::UInt16,
+        "Magic number (0x20B = PE32+)",
+    )];
+    fields.extend(optional_header_common_fields());
+    fields.push(fd(
+        "ImageBase",
+        FieldType::UInt64,
+        "Preferred image base address",
+    ));
+    fields.extend(optional_header_tail_fields(FieldType::UInt64));
+
     StructTemplate {
         name: "IMAGE_OPTIONAL_HEADER64".to_string(),
         description: "PE32+ Optional Header (112 bytes standard + data directories)".to_string(),
@@ -121,37 +276,7 @@ fn image_optional_header64() -> StructTemplate {
         author: None,
         category: Some("PE".to_string()),
         magic_detection: None,
-        fields: vec![
-            fd("Magic", FieldType::UInt16, "Magic number (0x20B = PE32+)"),
-            fd("MajorLinkerVersion", FieldType::UInt8, "Linker major version"),
-            fd("MinorLinkerVersion", FieldType::UInt8, "Linker minor version"),
-            fd("SizeOfCode", FieldType::UInt32, "Size of code sections"),
-            fd("SizeOfInitializedData", FieldType::UInt32, "Size of initialized data"),
-            fd("SizeOfUninitializedData", FieldType::UInt32, "Size of BSS"),
-            fd("AddressOfEntryPoint", FieldType::UInt32, "Entry point RVA"),
-            fd("BaseOfCode", FieldType::UInt32, "Base of code section RVA"),
-            fd("ImageBase", FieldType::UInt64, "Preferred image base address"),
-            fd("SectionAlignment", FieldType::UInt32, "Section alignment in memory"),
-            fd("FileAlignment", FieldType::UInt32, "Section alignment on disk"),
-            fd("MajorOperatingSystemVersion", FieldType::UInt16, "Required OS major version"),
-            fd("MinorOperatingSystemVersion", FieldType::UInt16, "Required OS minor version"),
-            fd("MajorImageVersion", FieldType::UInt16, "Image major version"),
-            fd("MinorImageVersion", FieldType::UInt16, "Image minor version"),
-            fd("MajorSubsystemVersion", FieldType::UInt16, "Subsystem major version"),
-            fd("MinorSubsystemVersion", FieldType::UInt16, "Subsystem minor version"),
-            fd("Win32VersionValue", FieldType::UInt32, "Reserved, must be zero"),
-            fd("SizeOfImage", FieldType::UInt32, "Size of image in memory"),
-            fd("SizeOfHeaders", FieldType::UInt32, "Combined size of all headers"),
-            fd("CheckSum", FieldType::UInt32, "Image file checksum"),
-            fd("Subsystem", FieldType::UInt16, "Required subsystem"),
-            fd("DllCharacteristics", FieldType::UInt16, "DLL characteristics flags"),
-            fd("SizeOfStackReserve", FieldType::UInt64, "Stack reserve size"),
-            fd("SizeOfStackCommit", FieldType::UInt64, "Stack commit size"),
-            fd("SizeOfHeapReserve", FieldType::UInt64, "Heap reserve size"),
-            fd("SizeOfHeapCommit", FieldType::UInt64, "Heap commit size"),
-            fd("LoaderFlags", FieldType::UInt32, "Reserved, must be zero"),
-            fd("NumberOfRvaAndSizes", FieldType::UInt32, "Number of data directory entries"),
-        ],
+        fields,
     }
 }
 
@@ -165,15 +290,47 @@ fn image_section_header() -> StructTemplate {
         category: Some("PE".to_string()),
         magic_detection: None,
         fields: vec![
-            fd("Name", FieldType::FixedString(8), "Section name (8 bytes, null-padded)"),
-            fd("VirtualSize", FieldType::UInt32, "Size in memory (or PhysicalAddress)"),
+            fd(
+                "Name",
+                FieldType::FixedString(8),
+                "Section name (8 bytes, null-padded)",
+            ),
+            fd(
+                "VirtualSize",
+                FieldType::UInt32,
+                "Size in memory (or PhysicalAddress)",
+            ),
             fd("VirtualAddress", FieldType::UInt32, "RVA of section"),
-            fd("SizeOfRawData", FieldType::UInt32, "Size of section on disk"),
-            fd("PointerToRawData", FieldType::UInt32, "File offset of section"),
-            fd("PointerToRelocations", FieldType::UInt32, "File offset of relocations"),
-            fd("PointerToLinenumbers", FieldType::UInt32, "File offset of line numbers"),
-            fd("NumberOfRelocations", FieldType::UInt16, "Number of relocations"),
-            fd("NumberOfLinenumbers", FieldType::UInt16, "Number of line numbers"),
+            fd(
+                "SizeOfRawData",
+                FieldType::UInt32,
+                "Size of section on disk",
+            ),
+            fd(
+                "PointerToRawData",
+                FieldType::UInt32,
+                "File offset of section",
+            ),
+            fd(
+                "PointerToRelocations",
+                FieldType::UInt32,
+                "File offset of relocations",
+            ),
+            fd(
+                "PointerToLinenumbers",
+                FieldType::UInt32,
+                "File offset of line numbers",
+            ),
+            fd(
+                "NumberOfRelocations",
+                FieldType::UInt16,
+                "Number of relocations",
+            ),
+            fd(
+                "NumberOfLinenumbers",
+                FieldType::UInt16,
+                "Number of line numbers",
+            ),
             fd("Characteristics", FieldType::UInt32, "Section flags"),
         ],
     }
@@ -205,11 +362,27 @@ fn image_import_descriptor() -> StructTemplate {
         category: Some("PE".to_string()),
         magic_detection: None,
         fields: vec![
-            fd("OriginalFirstThunk", FieldType::UInt32, "RVA of Import Lookup Table (ILT)"),
-            fd("TimeDateStamp", FieldType::UInt32, "Timestamp (0 if not bound)"),
-            fd("ForwarderChain", FieldType::UInt32, "Index of first forwarder ref"),
+            fd(
+                "OriginalFirstThunk",
+                FieldType::UInt32,
+                "RVA of Import Lookup Table (ILT)",
+            ),
+            fd(
+                "TimeDateStamp",
+                FieldType::UInt32,
+                "Timestamp (0 if not bound)",
+            ),
+            fd(
+                "ForwarderChain",
+                FieldType::UInt32,
+                "Index of first forwarder ref",
+            ),
             fd("Name", FieldType::UInt32, "RVA of DLL name string"),
-            fd("FirstThunk", FieldType::UInt32, "RVA of Import Address Table (IAT)"),
+            fd(
+                "FirstThunk",
+                FieldType::UInt32,
+                "RVA of Import Address Table (IAT)",
+            ),
         ],
     }
 }
@@ -225,16 +398,40 @@ fn image_export_directory() -> StructTemplate {
         magic_detection: None,
         fields: vec![
             fd("Characteristics", FieldType::UInt32, "Reserved, must be 0"),
-            fd("TimeDateStamp", FieldType::UInt32, "Export creation timestamp"),
+            fd(
+                "TimeDateStamp",
+                FieldType::UInt32,
+                "Export creation timestamp",
+            ),
             fd("MajorVersion", FieldType::UInt16, "Major version number"),
             fd("MinorVersion", FieldType::UInt16, "Minor version number"),
             fd("Name", FieldType::UInt32, "RVA of DLL name"),
             fd("Base", FieldType::UInt32, "Starting ordinal number"),
-            fd("NumberOfFunctions", FieldType::UInt32, "Number of entries in EAT"),
-            fd("NumberOfNames", FieldType::UInt32, "Number of entries in name pointer table"),
-            fd("AddressOfFunctions", FieldType::UInt32, "RVA of Export Address Table"),
-            fd("AddressOfNames", FieldType::UInt32, "RVA of Export Name Pointer Table"),
-            fd("AddressOfNameOrdinals", FieldType::UInt32, "RVA of Ordinal Table"),
+            fd(
+                "NumberOfFunctions",
+                FieldType::UInt32,
+                "Number of entries in EAT",
+            ),
+            fd(
+                "NumberOfNames",
+                FieldType::UInt32,
+                "Number of entries in name pointer table",
+            ),
+            fd(
+                "AddressOfFunctions",
+                FieldType::UInt32,
+                "RVA of Export Address Table",
+            ),
+            fd(
+                "AddressOfNames",
+                FieldType::UInt32,
+                "RVA of Export Name Pointer Table",
+            ),
+            fd(
+                "AddressOfNameOrdinals",
+                FieldType::UInt32,
+                "RVA of Ordinal Table",
+            ),
         ],
     }
 }

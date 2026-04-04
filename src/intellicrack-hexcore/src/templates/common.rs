@@ -29,7 +29,11 @@ fn guid_template() -> StructTemplate {
             fd("Data1", FieldType::UInt32, "First 4 bytes (little-endian)"),
             fd("Data2", FieldType::UInt16, "Next 2 bytes (little-endian)"),
             fd("Data3", FieldType::UInt16, "Next 2 bytes (little-endian)"),
-            fd("Data4", FieldType::Bytes(8), "Last 8 bytes (big-endian order)"),
+            fd(
+                "Data4",
+                FieldType::Bytes(8),
+                "Last 8 bytes (big-endian order)",
+            ),
         ],
     }
 }

@@ -31,7 +31,6 @@ cffi==2.0.0
 cfgv==3.5.0
 chardet==5.2.0
 charset_normalizer==3.4.6
-check_wheel_contents==0.6.3
 cleo==2.1.0
 click==8.3.1
 cloudpickle==3.1.2
@@ -57,7 +56,6 @@ detect_secrets==1.5.0
 dill==0.4.1
 distlib==0.4.0
 distro==1.9.0
-docformatter==1.7.7
 docstring_parser==0.17.0
 docstring_parser_fork==0.0.14
 docutils==0.22.4
@@ -154,7 +152,6 @@ msgpack==1.1.2
 mypy==1.19.1
 mypy_extensions==1.1.0
 myst_parser==5.0.0
-narwhals==2.18.1
 networkx==3.6.1
 nh3==0.3.4
 nltk==3.9.4
@@ -186,13 +183,11 @@ pip_requirements_parser==32.0.1
 pipdeptree==2.34.0
 pkginfo==1.12.1.2
 platformdirs==4.9.4
-plotly==6.6.0
 pluggy==1.6.0
 poetry==2.3.2
 poetry_core==2.3.1
 pre_commit==4.5.1
 pre_commit_hooks==6.0.0
-progress==1.6.1
 prompt_toolkit==3.0.51
 psutil==7.2.2
 pure_eval==0.2.3
@@ -222,7 +217,6 @@ pylint==4.0.5
 pymdown_extensions==10.21
 pyparsing==3.3.2
 pyproject_api==1.10.0
-pyproject_fmt==2.20.0
 pyproject_hooks==1.2.0
 pyqt6==6.10.2
 pyqt6_qt6==6.10.2
@@ -313,7 +307,6 @@ tenacity==9.1.4
 termcolor==3.3.0
 tokenize_rt==6.2.0
 tokenizers==0.22.2
-toml_fmt_common==1.3.2
 tomli==2.4.1
 tomli_w==1.2.0
 tomlkit==0.14.0
@@ -335,12 +328,10 @@ typing_inspection==0.4.2
 tzdata==2025.3
 umf==1.0.2
 uncalled==0.1.8
-untokenize==0.1.1
 urllib3==2.6.3
 uvicorn==0.42.0
 validate_pyproject==0.25
 validate_pyproject_schema_store==2026.3.27
-vermin==1.8.0
 virtualenv==21.2.0
 vulture==2.16
 watchdog==6.0.0
@@ -349,8 +340,6 @@ wcwidth==0.6.0
 websockets==13.1
 wemake_python_styleguide==1.6.1
 wheel==0.46.3
-wheel_filename==1.4.2
-wily==1.12.2
 wrapt==2.1.2
 xenon==0.9.3
 xxhash==3.6.0

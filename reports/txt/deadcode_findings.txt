@@ -43,15 +43,15 @@ src\intellicrack\core\types.py:1563:0: [91mDC03[0m Class `[1mConfigurationErr
 
 5 findings in src\intellicrack\ui\dialogs\splash_screen.py
 
-src\intellicrack\ui\dialogs\splash_screen.py:342:4: [91mDC04[0m Method `[1mcompute_dpi_scale[0m` is never used
+src\intellicrack\ui\dialogs\splash_screen.py:319:4: [91mDC04[0m Method `[1mcompute_dpi_scale[0m` is never used
 
-src\intellicrack\ui\dialogs\splash_screen.py:351:4: [91mDC04[0m Method `[1mload_splash_pixmap[0m` is never used
+src\intellicrack\ui\dialogs\splash_screen.py:328:4: [91mDC04[0m Method `[1mload_splash_pixmap[0m` is never used
 
-src\intellicrack\ui\dialogs\splash_screen.py:365:4: [91mDC04[0m Method `[1mcreate_fallback_pixmap[0m` is never used
+src\intellicrack\ui\dialogs\splash_screen.py:342:4: [91mDC04[0m Method `[1mcreate_fallback_pixmap[0m` is never used
 
-src\intellicrack\ui\dialogs\splash_screen.py:406:8: [91mDC05[0m Attribute `[1m_progress_bar[0m` is never used
+src\intellicrack\ui\dialogs\splash_screen.py:383:8: [91mDC05[0m Attribute `[1m_progress_bar[0m` is never used
 
-src\intellicrack\ui\dialogs\splash_screen.py:556:4: [91mDC04[0m Method `[1mmark_stage_failed[0m` is never used
+src\intellicrack\ui\dialogs\splash_screen.py:475:4: [91mDC04[0m Method `[1mmark_stage_failed[0m` is never used
 
 
 5 findings in src\intellicrack\ui\tools.py

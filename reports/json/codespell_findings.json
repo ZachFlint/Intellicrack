@@ -1,8 +1,8 @@
 {
   "tool": "codespell",
-  "generated": "2026-04-01T02:40:36.015932+00:00",
-  "total_findings": 145,
-  "total_files": 26,
+  "generated": "2026-04-03T23:41:58.010469+00:00",
+  "total_findings": 143,
+  "total_files": 24,
   "files": [
     {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-d86809d9b0b73174.d",
@@ -289,9 +289,9 @@
           "column": null,
           "code": "SPELL",
           "misspelling": "ser",
-          "correction": "set145",
-          "message": "'ser' ==> 'set145'",
-          "raw": "src/intellicrack-hexcore\\target\\llvm-cov-target\\debug\\deps\\serde_core-d86809d9b0b73174.d:16: ser ==> set145"
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\llvm-cov-target\\debug\\deps\\serde_core-d86809d9b0b73174.d:16: ser ==> set"
         },
         {
           "line": 17,
@@ -1402,36 +1402,6 @@
           "correction": "calf",
           "message": "'caf' ==> 'calf'",
           "raw": "tests/test_hexcore_e2e\\test_encodings.py:151: caf ==> calf"
-        }
-      ]
-    },
-    {
-      "path": "AGENTS.md",
-      "count": 1,
-      "findings": [
-        {
-          "line": 31,
-          "column": null,
-          "code": "SPELL",
-          "misspelling": "covert",
-          "correction": "convert, cover, covet",
-          "message": "'covert' ==> 'convert, cover, covet'",
-          "raw": "AGENTS.md:31: covert ==> convert, cover, covet"
-        }
-      ]
-    },
-    {
-      "path": "CLAUDE.md",
-      "count": 1,
-      "findings": [
-        {
-          "line": 31,
-          "column": null,
-          "code": "SPELL",
-          "misspelling": "covert",
-          "correction": "convert, cover, covet",
-          "message": "'covert' ==> 'convert, cover, covet'",
-          "raw": "CLAUDE.md:31: covert ==> convert, cover, covet"
         }
       ]
     },

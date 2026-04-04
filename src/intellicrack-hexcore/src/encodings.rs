@@ -10,53 +10,41 @@ pub enum EncodingError {
 
 static EBCDIC_TO_UNICODE: [char; 256] = [
     // 0x00-0x0F
-    '\0', '\x01', '\x02', '\x03', '\u{009C}', '\x09', '\u{0086}', '\x7F',
-    '\u{0097}', '\u{008D}', '\u{008E}', '\x0B', '\x0C', '\r', '\x0E', '\x0F',
-    // 0x10-0x1F
-    '\x10', '\x11', '\x12', '\x13', '\u{009D}', '\u{0085}', '\x08', '\u{0087}',
-    '\x18', '\x19', '\u{0092}', '\u{008F}', '\x1C', '\x1D', '\x1E', '\x1F',
-    // 0x20-0x2F
-    '\u{0080}', '\u{0081}', '\u{0082}', '\u{0083}', '\u{0084}', '\n', '\x17', '\x1B',
-    '\u{0088}', '\u{0089}', '\u{008A}', '\u{008B}', '\u{008C}', '\x05', '\x06', '\x07',
+    '\0', '\x01', '\x02', '\x03', '\u{009C}', '\x09', '\u{0086}', '\x7F', '\u{0097}', '\u{008D}',
+    '\u{008E}', '\x0B', '\x0C', '\r', '\x0E', '\x0F', // 0x10-0x1F
+    '\x10', '\x11', '\x12', '\x13', '\u{009D}', '\u{0085}', '\x08', '\u{0087}', '\x18', '\x19',
+    '\u{0092}', '\u{008F}', '\x1C', '\x1D', '\x1E', '\x1F', // 0x20-0x2F
+    '\u{0080}', '\u{0081}', '\u{0082}', '\u{0083}', '\u{0084}', '\n', '\x17', '\x1B', '\u{0088}',
+    '\u{0089}', '\u{008A}', '\u{008B}', '\u{008C}', '\x05', '\x06', '\x07',
     // 0x30-0x3F
     '\u{0090}', '\u{0091}', '\x16', '\u{0093}', '\u{0094}', '\u{0095}', '\u{0096}', '\x04',
     '\u{0098}', '\u{0099}', '\u{009A}', '\u{009B}', '\x14', '\x15', '\u{009E}', '\x1A',
     // 0x40-0x4F
     ' ', '\u{00A0}', '\u{00E2}', '\u{00E4}', '\u{00E0}', '\u{00E1}', '\u{00E3}', '\u{00E5}',
-    '\u{00E7}', '\u{00F1}', '\u{00A2}', '.', '<', '(', '+', '|',
-    // 0x50-0x5F
+    '\u{00E7}', '\u{00F1}', '\u{00A2}', '.', '<', '(', '+', '|', // 0x50-0x5F
     '&', '\u{00E9}', '\u{00EA}', '\u{00EB}', '\u{00E8}', '\u{00ED}', '\u{00EE}', '\u{00EF}',
-    '\u{00EC}', '\u{00DF}', '!', '$', '*', ')', ';', '\u{00AC}',
-    // 0x60-0x6F
-    '-', '/', '\u{00C2}', '\u{00C4}', '\u{00C0}', '\u{00C1}', '\u{00C3}', '\u{00C5}',
-    '\u{00C7}', '\u{00D1}', '\u{00A6}', ',', '%', '_', '>', '?',
-    // 0x70-0x7F
+    '\u{00EC}', '\u{00DF}', '!', '$', '*', ')', ';', '\u{00AC}', // 0x60-0x6F
+    '-', '/', '\u{00C2}', '\u{00C4}', '\u{00C0}', '\u{00C1}', '\u{00C3}', '\u{00C5}', '\u{00C7}',
+    '\u{00D1}', '\u{00A6}', ',', '%', '_', '>', '?', // 0x70-0x7F
     '\u{00F8}', '\u{00C9}', '\u{00CA}', '\u{00CB}', '\u{00C8}', '\u{00CD}', '\u{00CE}', '\u{00CF}',
-    '\u{00CC}', '`', ':', '#', '@', '\'', '=', '"',
-    // 0x80-0x8F
-    '\u{00D8}', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
-    'h', 'i', '\u{00AB}', '\u{00BB}', '\u{00F0}', '\u{00FD}', '\u{00FE}', '\u{00B1}',
-    // 0x90-0x9F
-    '\u{00B0}', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-    'q', 'r', '\u{00AA}', '\u{00BA}', '\u{00E6}', '\u{00B8}', '\u{00C6}', '\u{00A4}',
-    // 0xA0-0xAF
-    '\u{00B5}', '~', 's', 't', 'u', 'v', 'w', 'x',
-    'y', 'z', '\u{00A1}', '\u{00BF}', '\u{00D0}', '\u{00DD}', '\u{00DE}', '\u{00AE}',
-    // 0xB0-0xBF
+    '\u{00CC}', '`', ':', '#', '@', '\'', '=', '"', // 0x80-0x8F
+    '\u{00D8}', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', '\u{00AB}', '\u{00BB}', '\u{00F0}',
+    '\u{00FD}', '\u{00FE}', '\u{00B1}', // 0x90-0x9F
+    '\u{00B0}', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', '\u{00AA}', '\u{00BA}', '\u{00E6}',
+    '\u{00B8}', '\u{00C6}', '\u{00A4}', // 0xA0-0xAF
+    '\u{00B5}', '~', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '\u{00A1}', '\u{00BF}', '\u{00D0}',
+    '\u{00DD}', '\u{00DE}', '\u{00AE}', // 0xB0-0xBF
     '^', '\u{00A3}', '\u{00A5}', '\u{00B7}', '\u{00A9}', '\u{00A7}', '\u{00B6}', '\u{00BC}',
     '\u{00BD}', '\u{00BE}', '[', ']', '\u{00AF}', '\u{00A8}', '\u{00B4}', '\u{00D7}',
     // 0xC0-0xCF
-    '{', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
-    'H', 'I', '\u{00AD}', '\u{00F4}', '\u{00F6}', '\u{00F2}', '\u{00F3}', '\u{00F5}',
-    // 0xD0-0xDF
-    '}', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-    'Q', 'R', '\u{00B9}', '\u{00FB}', '\u{00FC}', '\u{00F9}', '\u{00FA}', '\u{00FF}',
-    // 0xE0-0xEF
-    '\\', '\u{00F7}', 'S', 'T', 'U', 'V', 'W', 'X',
-    'Y', 'Z', '\u{00B2}', '\u{00D4}', '\u{00D6}', '\u{00D2}', '\u{00D3}', '\u{00D5}',
-    // 0xF0-0xFF
-    '0', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', '\u{00B3}', '\u{00DB}', '\u{00DC}', '\u{00D9}', '\u{00DA}', '\u{009F}',
+    '{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '\u{00AD}', '\u{00F4}', '\u{00F6}',
+    '\u{00F2}', '\u{00F3}', '\u{00F5}', // 0xD0-0xDF
+    '}', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', '\u{00B9}', '\u{00FB}', '\u{00FC}',
+    '\u{00F9}', '\u{00FA}', '\u{00FF}', // 0xE0-0xEF
+    '\\', '\u{00F7}', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '\u{00B2}', '\u{00D4}', '\u{00D6}',
+    '\u{00D2}', '\u{00D3}', '\u{00D5}', // 0xF0-0xFF
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '\u{00B3}', '\u{00DB}', '\u{00DC}',
+    '\u{00D9}', '\u{00DA}', '\u{009F}',
 ];
 
 fn resolve_encoding(name: &str) -> Result<&'static encoding_rs::Encoding, EncodingError> {
@@ -65,7 +53,8 @@ fn resolve_encoding(name: &str) -> Result<&'static encoding_rs::Encoding, Encodi
         "utf-8" | "utf8" => encoding_rs::UTF_8,
         "utf-16le" | "utf16le" => encoding_rs::UTF_16LE,
         "utf-16be" | "utf16be" => encoding_rs::UTF_16BE,
-        "iso-8859-1" | "iso8859-1" | "iso_8859-1" | "latin1" | "latin-1" => encoding_rs::WINDOWS_1252,
+        "iso-8859-1" | "iso8859-1" | "iso_8859-1" | "latin1" | "latin-1" | "windows-1252"
+        | "cp1252" => encoding_rs::WINDOWS_1252,
         "iso-8859-2" | "iso8859-2" => encoding_rs::ISO_8859_2,
         "iso-8859-3" | "iso8859-3" => encoding_rs::ISO_8859_3,
         "iso-8859-4" | "iso8859-4" => encoding_rs::ISO_8859_4,
@@ -80,7 +69,6 @@ fn resolve_encoding(name: &str) -> Result<&'static encoding_rs::Encoding, Encodi
         "iso-8859-16" | "iso8859-16" => encoding_rs::ISO_8859_16,
         "windows-1250" | "cp1250" => encoding_rs::WINDOWS_1250,
         "windows-1251" | "cp1251" => encoding_rs::WINDOWS_1251,
-        "windows-1252" | "cp1252" => encoding_rs::WINDOWS_1252,
         "windows-1253" | "cp1253" => encoding_rs::WINDOWS_1253,
         "windows-1254" | "cp1254" => encoding_rs::WINDOWS_1254,
         "windows-1255" | "cp1255" => encoding_rs::WINDOWS_1255,
@@ -119,7 +107,9 @@ fn decode_ebcdic(data: &[u8]) -> (String, bool) {
 fn build_ebcdic_reverse_table() -> std::collections::HashMap<char, u8> {
     let mut map = std::collections::HashMap::with_capacity(256);
     for (byte_val, &ch) in EBCDIC_TO_UNICODE.iter().enumerate() {
-        map.entry(ch).or_insert(byte_val as u8);
+        if let Ok(b) = u8::try_from(byte_val) {
+            map.entry(ch).or_insert(b);
+        }
     }
     map
 }
@@ -141,6 +131,11 @@ fn encode_ebcdic(text: &str) -> Result<Vec<u8>, EncodingError> {
     Ok(result)
 }
 
+/// Decodes raw bytes into a string using the specified encoding.
+///
+/// # Errors
+///
+/// Returns `EncodingError::UnsupportedEncoding` if the encoding name is not recognized.
 pub fn decode_text(data: &[u8], encoding_name: &str) -> Result<(String, bool), EncodingError> {
     let lower = encoding_name.to_lowercase();
     match lower.as_str() {
@@ -158,20 +153,26 @@ pub fn decode_text(data: &[u8], encoding_name: &str) -> Result<(String, bool), E
     }
 }
 
+/// Encodes a string into raw bytes using the specified encoding.
+///
+/// # Errors
+///
+/// Returns `EncodingError::UnsupportedEncoding` if the encoding name is not recognized,
+/// or `EncodingError::EncodeFailed` if the text contains unmappable characters.
 pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingError> {
     let lower = encoding_name.to_lowercase();
     match lower.as_str() {
         "ascii" => {
-            let bytes: Vec<u8> = text.chars().map(|c| c as u32 as u8).collect();
+            let bytes: Vec<u8> = text.chars().map(|c| (c as u32).to_le_bytes()[0]).collect();
             Ok(bytes)
         }
         "utf-8" | "utf8" => Ok(text.as_bytes().to_vec()),
         "utf-16le" | "utf16le" => {
-            let encoded: Vec<u8> = text.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+            let encoded: Vec<u8> = text.encode_utf16().flat_map(u16::to_le_bytes).collect();
             Ok(encoded)
         }
         "utf-16be" | "utf16be" => {
-            let encoded: Vec<u8> = text.encode_utf16().flat_map(|u| u.to_be_bytes()).collect();
+            let encoded: Vec<u8> = text.encode_utf16().flat_map(u16::to_be_bytes).collect();
             Ok(encoded)
         }
         "ebcdic" | "ebcdic-cp037" | "cp037" => encode_ebcdic(text),
@@ -180,8 +181,7 @@ pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingE
             let (cow, _enc_used, had_unmappable) = enc.encode(text);
             if had_unmappable {
                 return Err(EncodingError::EncodeFailed(format!(
-                    "text contains characters that cannot be encoded in '{}'",
-                    encoding_name
+                    "text contains characters that cannot be encoded in '{encoding_name}'"
                 )));
             }
             Ok(cow.into_owned())
@@ -189,6 +189,7 @@ pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingE
     }
 }
 
+#[must_use]
 pub fn search_text_encoded(
     data: &[u8],
     text: &str,
@@ -202,9 +203,8 @@ pub fn search_text_encoded(
 
     let mut results: Vec<(usize, usize)> = Vec::new();
 
-    let search_bytes = match encode_text(text, encoding_name) {
-        Ok(b) => b,
-        Err(_) => return Vec::new(),
+    let Ok(search_bytes) = encode_text(text, encoding_name) else {
+        return Vec::new();
     };
 
     if search_bytes.is_empty() {
@@ -248,7 +248,12 @@ pub fn search_text_encoded(
     results
 }
 
-fn find_pattern(data: &[u8], pattern: &[u8], max_results: usize, results: &mut Vec<(usize, usize)>) {
+fn find_pattern(
+    data: &[u8],
+    pattern: &[u8],
+    max_results: usize,
+    results: &mut Vec<(usize, usize)>,
+) {
     if pattern.is_empty() || results.len() >= max_results {
         return;
     }
@@ -268,45 +273,54 @@ fn find_pattern(data: &[u8], pattern: &[u8], max_results: usize, results: &mut V
     }
 }
 
+const ENCODING_LIST: &[(&str, &str)] = &[
+    ("utf-8", "UTF-8"),
+    ("utf-16le", "UTF-16 Little Endian"),
+    ("utf-16be", "UTF-16 Big Endian"),
+    ("ascii", "ASCII (7-bit)"),
+    ("ebcdic", "EBCDIC Code Page 037"),
+    ("iso-8859-1", "ISO-8859-1 (Latin-1)"),
+    ("iso-8859-2", "ISO-8859-2 (Latin-2, Central European)"),
+    ("iso-8859-3", "ISO-8859-3 (Latin-3, South European)"),
+    ("iso-8859-4", "ISO-8859-4 (Latin-4, North European)"),
+    ("iso-8859-5", "ISO-8859-5 (Latin/Cyrillic)"),
+    ("iso-8859-6", "ISO-8859-6 (Latin/Arabic)"),
+    ("iso-8859-7", "ISO-8859-7 (Latin/Greek)"),
+    ("iso-8859-8", "ISO-8859-8 (Latin/Hebrew)"),
+    ("iso-8859-10", "ISO-8859-10 (Latin-6, Nordic)"),
+    ("iso-8859-13", "ISO-8859-13 (Latin-7, Baltic Rim)"),
+    ("iso-8859-14", "ISO-8859-14 (Latin-8, Celtic)"),
+    ("iso-8859-15", "ISO-8859-15 (Latin-9)"),
+    (
+        "iso-8859-16",
+        "ISO-8859-16 (Latin-10, South-Eastern European)",
+    ),
+    ("windows-1250", "Windows-1250 (Central European)"),
+    ("windows-1251", "Windows-1251 (Cyrillic)"),
+    ("windows-1252", "Windows-1252 (Western European)"),
+    ("windows-1253", "Windows-1253 (Greek)"),
+    ("windows-1254", "Windows-1254 (Turkish)"),
+    ("windows-1255", "Windows-1255 (Hebrew)"),
+    ("windows-1256", "Windows-1256 (Arabic)"),
+    ("windows-1257", "Windows-1257 (Baltic)"),
+    ("windows-1258", "Windows-1258 (Vietnamese)"),
+    ("shift_jis", "Shift_JIS (Japanese)"),
+    ("euc-jp", "EUC-JP (Japanese)"),
+    ("iso-2022-jp", "ISO-2022-JP (Japanese)"),
+    ("euc-kr", "EUC-KR (Korean)"),
+    ("gb2312", "GB2312/GBK (Chinese Simplified)"),
+    ("gb18030", "GB18030 (Chinese National Standard)"),
+    ("big5", "Big5 (Chinese Traditional)"),
+    ("koi8-r", "KOI8-R (Russian)"),
+    ("koi8-u", "KOI8-U (Ukrainian)"),
+];
+
+#[must_use]
 pub fn list_encodings() -> Vec<(String, String)> {
-    vec![
-        ("utf-8".to_string(), "UTF-8".to_string()),
-        ("utf-16le".to_string(), "UTF-16 Little Endian".to_string()),
-        ("utf-16be".to_string(), "UTF-16 Big Endian".to_string()),
-        ("ascii".to_string(), "ASCII (7-bit)".to_string()),
-        ("ebcdic".to_string(), "EBCDIC Code Page 037".to_string()),
-        ("iso-8859-1".to_string(), "ISO-8859-1 (Latin-1)".to_string()),
-        ("iso-8859-2".to_string(), "ISO-8859-2 (Latin-2, Central European)".to_string()),
-        ("iso-8859-3".to_string(), "ISO-8859-3 (Latin-3, South European)".to_string()),
-        ("iso-8859-4".to_string(), "ISO-8859-4 (Latin-4, North European)".to_string()),
-        ("iso-8859-5".to_string(), "ISO-8859-5 (Latin/Cyrillic)".to_string()),
-        ("iso-8859-6".to_string(), "ISO-8859-6 (Latin/Arabic)".to_string()),
-        ("iso-8859-7".to_string(), "ISO-8859-7 (Latin/Greek)".to_string()),
-        ("iso-8859-8".to_string(), "ISO-8859-8 (Latin/Hebrew)".to_string()),
-        ("iso-8859-10".to_string(), "ISO-8859-10 (Latin-6, Nordic)".to_string()),
-        ("iso-8859-13".to_string(), "ISO-8859-13 (Latin-7, Baltic Rim)".to_string()),
-        ("iso-8859-14".to_string(), "ISO-8859-14 (Latin-8, Celtic)".to_string()),
-        ("iso-8859-15".to_string(), "ISO-8859-15 (Latin-9)".to_string()),
-        ("iso-8859-16".to_string(), "ISO-8859-16 (Latin-10, South-Eastern European)".to_string()),
-        ("windows-1250".to_string(), "Windows-1250 (Central European)".to_string()),
-        ("windows-1251".to_string(), "Windows-1251 (Cyrillic)".to_string()),
-        ("windows-1252".to_string(), "Windows-1252 (Western European)".to_string()),
-        ("windows-1253".to_string(), "Windows-1253 (Greek)".to_string()),
-        ("windows-1254".to_string(), "Windows-1254 (Turkish)".to_string()),
-        ("windows-1255".to_string(), "Windows-1255 (Hebrew)".to_string()),
-        ("windows-1256".to_string(), "Windows-1256 (Arabic)".to_string()),
-        ("windows-1257".to_string(), "Windows-1257 (Baltic)".to_string()),
-        ("windows-1258".to_string(), "Windows-1258 (Vietnamese)".to_string()),
-        ("shift_jis".to_string(), "Shift_JIS (Japanese)".to_string()),
-        ("euc-jp".to_string(), "EUC-JP (Japanese)".to_string()),
-        ("iso-2022-jp".to_string(), "ISO-2022-JP (Japanese)".to_string()),
-        ("euc-kr".to_string(), "EUC-KR (Korean)".to_string()),
-        ("gb2312".to_string(), "GB2312/GBK (Chinese Simplified)".to_string()),
-        ("gb18030".to_string(), "GB18030 (Chinese National Standard)".to_string()),
-        ("big5".to_string(), "Big5 (Chinese Traditional)".to_string()),
-        ("koi8-r".to_string(), "KOI8-R (Russian)".to_string()),
-        ("koi8-u".to_string(), "KOI8-U (Ukrainian)".to_string()),
-    ]
+    ENCODING_LIST
+        .iter()
+        .map(|&(name, desc)| (name.to_string(), desc.to_string()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -331,10 +345,7 @@ mod tests {
 
     #[test]
     fn test_decode_utf16le() {
-        let data: Vec<u8> = "Hello"
-            .encode_utf16()
-            .flat_map(|c| c.to_le_bytes())
-            .collect();
+        let data: Vec<u8> = "Hello".encode_utf16().flat_map(u16::to_le_bytes).collect();
         let (text, had_replacement) = decode_text(&data, "utf-16le").unwrap();
         assert_eq!(text, "Hello");
         assert!(!had_replacement);
@@ -343,10 +354,7 @@ mod tests {
     #[test]
     fn test_decode_utf16le_unicode() {
         let original = "日本語";
-        let data: Vec<u8> = original
-            .encode_utf16()
-            .flat_map(|c| c.to_le_bytes())
-            .collect();
+        let data: Vec<u8> = original.encode_utf16().flat_map(u16::to_le_bytes).collect();
         let (text, had_replacement) = decode_text(&data, "utf-16le").unwrap();
         assert_eq!(text, original);
         assert!(!had_replacement);
@@ -495,7 +503,7 @@ mod tests {
         let haystack_str = "Hello World Hello";
         let haystack: Vec<u8> = haystack_str
             .encode_utf16()
-            .flat_map(|c| c.to_le_bytes())
+            .flat_map(u16::to_le_bytes)
             .collect();
         let results = search_text_encoded(&haystack, "Hello", "utf-16le", true, 10);
         assert_eq!(results.len(), 2);

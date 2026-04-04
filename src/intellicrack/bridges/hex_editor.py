@@ -2607,7 +2607,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         if hasattr(self.document, "compute_hash_custom_crc"):
-            result: str = self.document.compute_hash_custom_crc(start, end, poly, init, width, refin, refout, xorout)
+            result: str = self.document.compute_hash_custom_crc((start, end), poly, init, width, (refin, refout), xorout)
             _logger.debug("custom_crc_computed", width=width)
             return result
 
@@ -2889,8 +2889,7 @@ class HexEditorBridge(ToolBridgeBase):
 
         if hasattr(self.document, "search_numeric_range"):
             results = self.document.search_numeric_range(
-                min_val,
-                max_val,
+                (min_val, max_val),
                 size,
                 value_type == "int",
                 endianness == "big",

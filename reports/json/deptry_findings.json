@@ -1,6 +1,6 @@
 {
   "tool": "deptry",
-  "generated": "2026-04-01T02:41:06.705696+00:00",
+  "generated": "2026-04-03T23:28:59.195937+00:00",
   "total_findings": 243,
   "total_files": 70,
   "files": [
@@ -987,6 +987,13 @@
       "count": 3,
       "findings": [
         {
+          "line": 17,
+          "column": 1,
+          "code": "DEP003",
+          "message": "'PyQt6' imported but it is a transitive dependency",
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:17:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+        },
+        {
           "line": 18,
           "column": 1,
           "code": "DEP003",
@@ -994,18 +1001,11 @@
           "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:18:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         },
         {
-          "line": 19,
+          "line": 29,
           "column": 1,
           "code": "DEP003",
           "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:19:1: DEP003 'PyQt6' imported but it is a transitive dependency"
-        },
-        {
-          "line": 31,
-          "column": 1,
-          "code": "DEP003",
-          "message": "'PyQt6' imported but it is a transitive dependency",
-          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:31:1: DEP003 'PyQt6' imported but it is a transitive dependency"
+          "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py:29:1: DEP003 'PyQt6' imported but it is a transitive dependency"
         }
       ]
     },

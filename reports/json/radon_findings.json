@@ -1,6 +1,6 @@
 {
   "tool": "radon",
-  "generated": "2026-04-01T02:38:13.388322+00:00",
+  "generated": "2026-04-03T23:26:28.659909+00:00",
   "total_findings": 153,
   "total_files": 57,
   "files": [
@@ -1141,14 +1141,14 @@
       "count": 3,
       "findings": [
         {
-          "line": 809,
+          "line": 812,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryPanel._parse_elf_sections",
           "rank": "C",
           "complexity": 13,
           "message": "method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:809:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:812:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)"
         },
         {
           "line": 576,
@@ -1161,14 +1161,14 @@
           "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:576:4: method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)"
         },
         {
-          "line": 766,
+          "line": 769,
           "column": 4,
           "entity_type": "M",
           "name": "BinaryPanel._parse_pe_ilt_entries",
           "rank": "C",
           "complexity": 11,
           "message": "method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:766:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:769:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)"
         }
       ]
     },

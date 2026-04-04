@@ -54,13 +54,13 @@ terminate_existing is never read, defined in src/intellicrack/ui/panels/hxd_pane
 
 4 findings in src/intellicrack/ui/dialogs/splash_screen.py
 
-compute_dpi_scale is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:342
+compute_dpi_scale is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:319
 
-load_splash_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:351
+load_splash_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:328
 
-create_fallback_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:365
+create_fallback_pixmap is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:342
 
-mark_stage_failed is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:556
+mark_stage_failed is never read, defined in src/intellicrack/ui/dialogs/splash_screen.py:475
 
 
 4 findings in src/intellicrack/ui/panels/stack_viewer.py

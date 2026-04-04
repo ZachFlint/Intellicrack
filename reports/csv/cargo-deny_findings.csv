@@ -1,2 +1,3 @@
-tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
-cargo-deny,D:\Intellicrack\src\intellicrack-hexcore\deny.toml,6,17,error,unexpected-value,unexpected-value,"expected '[""all"", ""workspace"", ""transitive"", ""none""]'",,,,,,,,,,,,
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+cargo-deny,D:\Intellicrack\src\intellicrack-hexcore\deny.toml,17,6,warning,license-not-encountered,license-not-encountered,license was not encountered,,,,,,,,,,,,
+cargo-deny,D:\Intellicrack\src\intellicrack-hexcore\deny.toml,20,6,warning,license-not-encountered,license-not-encountered,license was not encountered,,,,,,,,,,,,
