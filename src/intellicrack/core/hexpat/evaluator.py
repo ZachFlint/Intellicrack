@@ -1894,7 +1894,7 @@ class HexPatEvaluator:
         Returns:
             dict[str, BuiltinCallable]: A dict mapping function name to a BuiltinCallable wrapper.
         """
-        evaluator = self
+        data = self._data
 
         def builtin_sizeof(*args: PatternValue) -> PatternValue:
             return PatternValue(value=args[0].size) if args else PatternValue(value=0)
@@ -1941,7 +1941,7 @@ class HexPatEvaluator:
             sz = args[1].value
             if not isinstance(off, int) or not isinstance(sz, int):
                 return PatternValue(value=0)
-            raw = evaluator._data.read(off, sz)
+            raw = data.read(off, sz)
             return PatternValue(value=int.from_bytes(raw, byteorder="little"))
 
         def builtin_read_signed(*args: PatternValue) -> PatternValue:
@@ -1951,7 +1951,7 @@ class HexPatEvaluator:
             sz = args[1].value
             if not isinstance(off, int) or not isinstance(sz, int):
                 return PatternValue(value=0)
-            raw = evaluator._data.read(off, sz)
+            raw = data.read(off, sz)
             return PatternValue(value=int.from_bytes(raw, byteorder="little", signed=True))
 
         def builtin_read_string(*args: PatternValue) -> PatternValue:
@@ -1960,7 +1960,7 @@ class HexPatEvaluator:
             off = args[0].value
             if not isinstance(off, int):
                 return PatternValue(value="")
-            decoded, _ = evaluator._data.read_string(off)
+            decoded, _ = data.read_string(off)
             return PatternValue(value=decoded)
 
         def builtin_find_sequence(*args: PatternValue) -> PatternValue:
@@ -1970,7 +1970,7 @@ class HexPatEvaluator:
             seq_val = args[1].value
             if isinstance(off, int) and isinstance(seq_val, (bytes, str)):
                 pat = seq_val if isinstance(seq_val, bytes) else seq_val.encode()
-                return PatternValue(value=evaluator._data.find_sequence(pat, off))
+                return PatternValue(value=data.find_sequence(pat, off))
             return PatternValue(value=-1)
 
         def builtin_min(*args: PatternValue) -> PatternValue:

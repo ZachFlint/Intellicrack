@@ -39558,6 +39558,11 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d2">D:\Intellicrack\.serena\memories\task_completion_checklist.md</data>
       <data key="d3">task_completion_checklist.md</data>
     </node>
+    <node id=".skylos/cache/grep_results.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\.skylos\cache\grep_results.json</data>
+      <data key="d3">grep_results.json</data>
+    </node>
     <node id=".vscode/mcp.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.vscode\mcp.json</data>

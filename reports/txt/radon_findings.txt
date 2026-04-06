@@ -467,7 +467,7 @@ src\intellicrack\ui\panels\hex_editor\_disassembly.py:118:4: method 'Disassembly
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_search.py
 
-src\intellicrack\ui\panels\hex_editor\_search.py:489:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)
+src\intellicrack\ui\panels\hex_editor\_search.py:488:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_yara.py

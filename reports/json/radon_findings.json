@@ -1,6 +1,6 @@
 {
   "tool": "radon",
-  "generated": "2026-04-03T23:26:28.659909+00:00",
+  "generated": "2026-04-05T20:16:31.173388+00:00",
   "total_findings": 153,
   "total_files": 57,
   "files": [
@@ -1849,14 +1849,14 @@
       "count": 1,
       "findings": [
         {
-          "line": 489,
+          "line": 488,
           "column": 4,
           "entity_type": "M",
           "name": "SearchMixin._on_numeric_search",
           "rank": "C",
           "complexity": 20,
           "message": "method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:489:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:488:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)"
         }
       ]
     },

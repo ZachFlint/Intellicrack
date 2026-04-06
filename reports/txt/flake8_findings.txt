@@ -138,8 +138,3 @@ tests/test_core\test_main.py:52:9: F841 local variable '_store' is assigned to b
 1 findings in tests/test_hexcore_e2e\test_hexpat_compiler_e2e.py
 
 tests/test_hexcore_e2e\test_hexpat_compiler_e2e.py:18:1: E402 module level import not at top of file
-
-
-1 findings in tests/test_ui\test_splash_screen.py
-
-tests/test_ui\test_splash_screen.py:991:1: W391 blank line at end of file

@@ -1,3 +1,38 @@
+16 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:14: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:15: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:16: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:17: ser ==> set
+
+
 16 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d
 
 src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d:1: ser ==> set
@@ -103,6 +138,33 @@ src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d:16: s
 src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d:17: ser ==> set
 
 
+12 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:12: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:13: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:14: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:15: ser ==> set
+
+
 12 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d
 
 src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d:1: ser ==> set
@@ -168,6 +230,25 @@ src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d:12: ser
 src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d:18: ser ==> set
 
 
+8 findings in src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:12: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:18: ser ==> set
+
+
 8 findings in src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d
 
 src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d:1: ser ==> set
@@ -221,6 +302,21 @@ src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d:10: ser
 src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d:16: ser ==> set
 
 
+6 findings in src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d:10: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d:16: ser ==> set
+
+
 4 findings in src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d
 
 src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:1: inout ==> input, in out
@@ -230,6 +326,28 @@ src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:3: inout ==>
 src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:5: inout ==> input, in out
 
 src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:9: inout ==> input, in out
+
+
+4 findings in src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d
+
+src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d:5: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d:9: inout ==> input, in out
+
+
+4 findings in src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d
+
+src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d:11: ser ==> set
 
 
 4 findings in src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d
@@ -296,6 +414,15 @@ src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:3: inout ==>
 src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:7: inout ==> input, in out
 
 
+3 findings in src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d
+
+src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:7: inout ==> input, in out
+
+
 3 findings in src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d
 
 src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d:1: ser ==> set
@@ -303,6 +430,24 @@ src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d:1: ser ==> s
 src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d:3: ser ==> set
 
 src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d:9: ser ==> set
+
+
+3 findings in src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d
+
+src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d:9: ser ==> set
+
+
+3 findings in src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d:31: ser ==> set
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d

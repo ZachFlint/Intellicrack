@@ -39,17 +39,88 @@ MIN_ARGV_FOR_TEXT_FILE = 4
 ENTITY_TYPE_NAMES: dict[str, str] = {"F": "function", "M": "method", "C": "class", "E": "exception"}
 RANK_COMPLEXITY_MAP: dict[str, int] = {"A": 5, "B": 10, "C": 20, "D": 30, "E": 40, "F": 50}
 CSV_COLUMNS: list[str] = [
-    "tool", "file", "line", "column", "severity", "code", "rule",
-    "message", "confidence", "complexity", "rank", "name",
-    "entity_type", "category", "function", "variable",
-    "crate", "vulnerability", "misspelling", "correction",
+    "tool",
+    "file",
+    "line",
+    "column",
+    "severity",
+    "code",
+    "rule",
+    "message",
+    "confidence",
+    "complexity",
+    "rank",
+    "name",
+    "entity_type",
+    "category",
+    "function",
+    "variable",
+    "crate",
+    "vulnerability",
+    "misspelling",
+    "correction",
 ]
 _SARIF_SEVERITY_MAP: dict[str, str] = {
-    "error": "error", "high": "error", "critical": "error",
-    "warning": "warning", "medium": "warning", "security": "warning",
-    "info": "note", "style": "note", "low": "note", "note": "note",
+    "error": "error",
+    "high": "error",
+    "critical": "error",
+    "warning": "warning",
+    "medium": "warning",
+    "security": "warning",
+    "info": "note",
+    "style": "note",
+    "low": "note",
+    "note": "note",
     "information": "note",
 }
+
+_SEVERITY_GREEN_MAX = 10
+_SEVERITY_YELLOW_MAX = 50
+_SEVERITY_ORANGE_MAX = 200
+_TEXT_BAR_WIDTH = 40
+
+
+def severity_color_for_count(count: int) -> tuple[int, int, int]:
+    """Map a finding count to a severity-based RGB color.
+
+    Args:
+        count: Number of findings.
+
+    Returns:
+        An (R, G, B) tuple.
+    """
+    if count <= _SEVERITY_GREEN_MAX:
+        return (0, 180, 0)
+    if count <= _SEVERITY_YELLOW_MAX:
+        return (200, 200, 0)
+    if count <= _SEVERITY_ORANGE_MAX:
+        return (220, 140, 0)
+    return (200, 0, 0)
+
+
+def print_sixel_legend(
+    labels: list[str],
+    values: list[int],
+    colors: list[tuple[int, int, int]],
+) -> None:
+    """Print a colored text bar chart with labels and proportional bars.
+
+    Args:
+        labels: Bar labels.
+        values: Numeric value for each bar.
+        colors: RGB color tuple for each bar.
+    """
+    if not labels:
+        return
+    max_label = max((len(lbl) for lbl in labels), default=0)
+    max_val = max(values) if values else 1
+    if max_val == 0:
+        max_val = 1
+    val_width = max(len(str(v)) for v in values)
+    for lbl, val, (r, g, b) in zip(labels, values, colors, strict=True):
+        bar_len = max(1, int(val / max_val * _TEXT_BAR_WIDTH))
+        bar = f"\x1b[38;2;{r};{g};{b}m" + "\u2588" * bar_len + "\x1b[0m"
+        print(f"  {lbl:<{max_label}}  {bar} {val:>{val_width}}")
 
 
 def process_eslint(data: list[Any]) -> tuple[dict[str, list[dict[str, Any]]], int]:
@@ -478,7 +549,14 @@ def process_mypy_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]]
                 bracket_pos = message.rfind("[")
                 code = message[bracket_pos + 1 : -1]
                 message = message[:bracket_pos].strip()
-            grouped[fp].append({"line": line_num, "column": col_num, "severity": severity, "code": code, "message": message, "raw": stripped_line})
+            grouped[fp].append({
+                "line": line_num,
+                "column": col_num,
+                "severity": severity,
+                "code": code,
+                "message": message,
+                "raw": stripped_line,
+            })
         else:
             match2 = pattern2.match(stripped_line)
             if match2:
@@ -491,7 +569,14 @@ def process_mypy_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]]
                     bracket_pos = message.rfind("[")
                     code = message[bracket_pos + 1 : -1]
                     message = message[:bracket_pos].strip()
-                grouped[fp].append({"line": line_num, "column": None, "severity": severity, "code": code, "message": message, "raw": stripped_line})
+                grouped[fp].append({
+                    "line": line_num,
+                    "column": None,
+                    "severity": severity,
+                    "code": code,
+                    "message": message,
+                    "raw": stripped_line,
+                })
     cnt = sum(len(v) for v in grouped.values())
     return grouped, cnt
 
@@ -1249,7 +1334,14 @@ def process_shellcheck_text(text_output: str) -> tuple[dict[str, list[dict[str, 
                 if bracket_end > 0:
                     code = message[1:bracket_end]
                     message = message[bracket_end + 1 :].strip()
-            grouped[fp].append({"line": line_num, "column": col_num, "severity": severity, "code": code, "message": message, "raw": stripped_line})
+            grouped[fp].append({
+                "line": line_num,
+                "column": col_num,
+                "severity": severity,
+                "code": code,
+                "message": message,
+                "raw": stripped_line,
+            })
     cnt = sum(len(v) for v in grouped.values())
     return grouped, cnt
 
@@ -1359,7 +1451,14 @@ def process_psscriptanalyzer_text(text_output: str) -> tuple[dict[str, list[dict
             severity = match.group(4)
             message = match.group(5).strip()
             rule = match.group(6)
-            grouped[fp].append({"line": line_num, "column": col_num, "severity": severity, "rule": rule, "message": message, "raw": stripped_line})
+            grouped[fp].append({
+                "line": line_num,
+                "column": col_num,
+                "severity": severity,
+                "rule": rule,
+                "message": message,
+                "raw": stripped_line,
+            })
         else:
             match2 = pattern2.match(stripped_line)
             if match2:
@@ -2047,7 +2146,9 @@ def _build_finding_xml(finding: dict[str, Any]) -> str:
 
 
 def _build_sarif_output(
-    tool: str, grouped: dict[str, list[dict[str, Any]]], ts: str,
+    tool: str,
+    grouped: dict[str, list[dict[str, Any]]],
+    ts: str,
 ) -> dict[str, Any]:
     """Build a SARIF v2.1.0 output structure from grouped findings.
 
@@ -2261,7 +2362,8 @@ def write_outputs(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int)
 
     sarif_obj = _build_sarif_output(tool, grouped, ts)
     Path(f"reports/sarif/{tool}_findings.sarif").write_text(
-        json.dumps(sarif_obj, indent=2), encoding="utf-8",
+        json.dumps(sarif_obj, indent=2),
+        encoding="utf-8",
     )
 
     write_sql_output(tool, grouped, cnt, ts)
@@ -2915,14 +3017,33 @@ def _build_html_template(json_data: str, generated_ts: str, title: str) -> str:
         A complete HTML document as a string.
     """
     return (
-        _HTML_TEMPLATE
-        .replace("__JSON_DATA__", json_data)
+        _HTML_TEMPLATE.replace("__JSON_DATA__", json_data)
         .replace("__TITLE__", html_escape(title))
         .replace("__GENERATED__", html_escape(generated_ts))
     )
 
 
-def generate_report(input_dir: str, output_path: str, title: str) -> None:
+def _emit_dashboard_chart(dashboard_data: dict[str, Any]) -> None:
+    """Print a text bar chart of findings per tool from dashboard data.
+
+    Args:
+        dashboard_data: Dashboard data dict with 'tools' list.
+    """
+    tools_data: list[dict[str, Any]] = dashboard_data["tools"]
+    sorted_tools = sorted(tools_data, key=lambda t: int(t["total_findings"]), reverse=True)
+    if not sorted_tools:
+        return
+    chart_labels = [str(t["name"]) for t in sorted_tools]
+    chart_values = [int(t["total_findings"]) for t in sorted_tools]
+    chart_colors = [severity_color_for_count(v) for v in chart_values]
+    print_sixel_legend(chart_labels, chart_values, chart_colors)
+
+
+def generate_report(
+    input_dir: str,
+    output_path: str,
+    title: str,
+) -> None:
     """Orchestrate HTML dashboard generation from JSON lint reports.
 
     Args:
@@ -3002,6 +3123,8 @@ def generate_report(input_dir: str, output_path: str, title: str) -> None:
     tools_count = len(dashboard_data["tools"])
     print(f"[REPORT] Dashboard generated: {output_path}")
     print(f"[REPORT] {total} findings from {tools_count} tools")
+
+    _emit_dashboard_chart(dashboard_data)
 
 
 def main() -> None:

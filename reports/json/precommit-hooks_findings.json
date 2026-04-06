@@ -1,9 +1,109 @@
 {
   "tool": "precommit-hooks",
-  "generated": "2026-04-03T23:42:14.419800+00:00",
-  "total_findings": 193,
-  "total_files": 135,
+  "generated": "2026-04-05T20:21:46.547597+00:00",
+  "total_findings": 255,
+  "total_files": 175,
   "files": [
+    {
+      "path": "reports/csv/cargo-deny_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/cargo-deny_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/cargo-deny_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/clippy_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/clippy_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/clippy_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/llvm-cov_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/llvm-cov_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/llvm-cov_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/machete_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/machete_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/machete_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/nextest_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/nextest_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/nextest_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
     {
       "path": "reports/csv/precommit-hooks_findings.csv",
       "count": 2,
@@ -21,6 +121,66 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/csv/precommit-hooks_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/rust-code-analysis_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/rust-code-analysis_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/rust-code-analysis_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/rustfmt_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/rustfmt_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/rustfmt_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/typos_findings.csv",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "trailing-whitespace",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/csv/typos_findings.csv: [trailing-whitespace] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/typos_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -141,6 +301,46 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/json/blinter_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/cargo-deny_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/cargo-deny_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/cargo-deny_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/clippy_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/clippy_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/clippy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -325,6 +525,46 @@
       ]
     },
     {
+      "path": "reports/json/llvm-cov_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/llvm-cov_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/llvm-cov_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/machete_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/machete_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/machete_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/json/markdownlint_findings.json",
       "count": 2,
       "findings": [
@@ -381,6 +621,26 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/json/mypy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/nextest_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/nextest_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/nextest_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -505,6 +765,46 @@
       ]
     },
     {
+      "path": "reports/json/rust-code-analysis_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/rust-code-analysis_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/rust-code-analysis_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/rustfmt_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/rustfmt_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/rustfmt_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/json/semgrep_findings.json",
       "count": 2,
       "findings": [
@@ -521,26 +821,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/json/semgrep_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/json/shellcheck_findings.json",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/json/shellcheck_findings.json: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/json/shellcheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -581,6 +861,26 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/json/ty_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/typos_findings.json",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/json/typos_findings.json: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/typos_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -705,6 +1005,126 @@
       ]
     },
     {
+      "path": "reports/lint_dashboard.html",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/lint_dashboard.html: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/lint_dashboard.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/cargo-deny_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/cargo-deny_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/cargo-deny_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/clippy_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/clippy_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/clippy_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/llvm-cov_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/llvm-cov_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/llvm-cov_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/machete_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/machete_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/machete_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/nextest_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/nextest_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/nextest_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/sarif/precommit-hooks_findings.sarif",
       "count": 2,
       "findings": [
@@ -721,6 +1141,86 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/sarif/precommit-hooks_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/rust-code-analysis_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/rust-code-analysis_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/rust-code-analysis_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/rustfmt_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/rustfmt_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/rustfmt_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/typos_findings.sarif",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/sarif/typos_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/typos_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/basedpyright_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -845,26 +1345,6 @@
       ]
     },
     {
-      "path": "reports/txt/deptry_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/deptry_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/flake8_findings.txt",
       "count": 2,
       "findings": [
@@ -901,26 +1381,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/interrogate_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/markdownlint_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/markdownlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/markdownlint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -965,7 +1425,7 @@
       ]
     },
     {
-      "path": "reports/txt/pydoclint_findings.txt",
+      "path": "reports/txt/precommit-hooks_findings.txt",
       "count": 2,
       "findings": [
         {
@@ -973,14 +1433,34 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "reports/txt/pydoclint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/precommit-hooks_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         },
         {
           "line": null,
           "column": null,
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/pydoclint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+          "raw": "reports/txt/precommit-hooks_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/psscriptanalyzer_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/psscriptanalyzer_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/psscriptanalyzer_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -1021,46 +1501,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/shellcheck_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/shellcheck_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/shellcheck_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/ty_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/ty_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/ty_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -1125,26 +1565,6 @@
       ]
     },
     {
-      "path": "reports/txt/xenon_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/xenon_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/xenon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/yamllint_findings.txt",
       "count": 2,
       "findings": [
@@ -1165,6 +1585,26 @@
       ]
     },
     {
+      "path": "reports/xml/basedpyright_findings.xml",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/basedpyright_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/bandit_findings.txt",
       "count": 1,
       "findings": [
@@ -1178,7 +1618,7 @@
       ]
     },
     {
-      "path": "reports/txt/basedpyright_findings.txt",
+      "path": "reports/txt/cargo-deny_findings.txt",
       "count": 1,
       "findings": [
         {
@@ -1186,7 +1626,33 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/cargo-deny_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/clippy_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/clippy_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/deptry_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1204,7 +1670,7 @@
       ]
     },
     {
-      "path": "reports/txt/precommit-hooks_findings.txt",
+      "path": "reports/txt/llvm-cov_findings.txt",
       "count": 1,
       "findings": [
         {
@@ -1212,12 +1678,12 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "reports/txt/precommit-hooks_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/llvm-cov_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
     {
-      "path": "reports/txt/psscriptanalyzer_findings.txt",
+      "path": "reports/txt/machete_findings.txt",
       "count": 1,
       "findings": [
         {
@@ -1225,7 +1691,46 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "reports/txt/psscriptanalyzer_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/machete_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/markdownlint_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/markdownlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/nextest_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/nextest_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/pydoclint_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/pydoclint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1239,6 +1744,32 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/rust-code-analysis_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/rust-code-analysis_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/rustfmt_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/rustfmt_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1269,6 +1800,32 @@
       ]
     },
     {
+      "path": "reports/txt/ty_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/ty_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/typos_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/typos_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/vermin_findings.txt",
       "count": 1,
       "findings": [
@@ -1278,6 +1835,19 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/txt/vermin_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/xenon_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/xenon_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1295,19 +1865,6 @@
       ]
     },
     {
-      "path": "reports/xml/basedpyright_findings.xml",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
       "path": "reports/xml/blinter_findings.xml",
       "count": 1,
       "findings": [
@@ -1317,6 +1874,32 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/blinter_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/cargo-deny_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/cargo-deny_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/clippy_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/clippy_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1438,6 +2021,32 @@
       ]
     },
     {
+      "path": "reports/xml/llvm-cov_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/llvm-cov_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/machete_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/machete_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
       "path": "reports/xml/markdownlint_findings.xml",
       "count": 1,
       "findings": [
@@ -1473,6 +2082,19 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/mypy_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/nextest_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/nextest_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1555,6 +2177,32 @@
       ]
     },
     {
+      "path": "reports/xml/rust-code-analysis_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/rust-code-analysis_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/rustfmt_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/rustfmt_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
       "path": "reports/xml/semgrep_findings.xml",
       "count": 1,
       "findings": [
@@ -1564,19 +2212,6 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "reports/xml/shellcheck_findings.xml",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/xml/shellcheck_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1603,6 +2238,19 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/ty_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/typos_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/typos_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1681,19 +2329,6 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_ui/test_splash_screen.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "tests/test_ui/test_splash_screen.py: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -1941,6 +2576,45 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/shellcheck_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/shellcheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/shellcheck_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/shellcheck_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/shellcheck_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/shellcheck_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },

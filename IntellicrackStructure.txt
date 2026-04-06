@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sat, Apr 04, 2026 06:10:55 AM
+Generated: Mon, Apr 06, 2026 02:10:18 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -56,6 +56,9 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .qodo/
 │   ├── agents/
 │   └── workflows/
+├── .skylos/
+│   └── cache/
+│       └── grep_results.json
 ├── .vscode/
 │   ├── mcp.json
 │   └── settings.json
@@ -2551,6 +2554,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   └── requirements.txt
 ├── logs/
 │   └── intellicrack.log
+├── notebooks/
+│   ├── .ipynb_checkpoints/
+│   │   └── hexcore_tutorial-checkpoint.ipynb
+│   └── hexcore_tutorial.ipynb
 ├── reports/
 │   ├── ci-jobs/
 │   │   ├── ci/
@@ -2756,7 +2763,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── custom_20260322_190221.txt
 │   │   │   ├── custom_20260322_190221.xml
 │   │   │   └── custom_20260326_220325.txt
-│   │   ├── _sandbox_output.txt
 │   │   ├── _sandbox_pytest_args.txt
 │   │   └── _sandbox_verbose.log
 │   ├── txt/
@@ -2862,17 +2868,49 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── IntellicrackKnowledgeGraph.graphml
 │   │   └── visualize_architecture.py
 │   ├── build-cli-launcher.cmd
+│   ├── ci-reports.ps1
+│   ├── clean.ps1
 │   ├── clean_nul.py
+│   ├── common.ps1
+│   ├── docs-build.ps1
+│   ├── docs-linkcheck.ps1
+│   ├── docs-pdf.ps1
 │   ├── download_ci_reports.py
 │   ├── fix_pyqt6_stubs.py
+│   ├── generate-map.ps1
+│   ├── generate-structure.ps1
 │   ├── generate_commit_message.py
 │   ├── generate_requirements.py
 │   ├── generate_tree.py
+│   ├── git-commit-hooks.ps1
+│   ├── git-commit.ps1
+│   ├── git-rebase.ps1
+│   ├── install-all.ps1
+│   ├── install-cutter.ps1
+│   ├── install-ghidra.ps1
+│   ├── install-qemu.ps1
+│   ├── install-radare2.ps1
+│   ├── install-rust-tools.ps1
+│   ├── install-x64dbg-plugin.ps1
+│   ├── install-x64dbg.ps1
+│   ├── kill-processes.ps1
+│   ├── lint-blinter.ps1
+│   ├── lint-check.ps1
+│   ├── lint-fix.ps1
+│   ├── lint-jsonlint.ps1
+│   ├── lint-psscriptanalyzer.ps1
+│   ├── lint-shellcheck.ps1
 │   ├── lint_report.py
+│   ├── nul-cleanup.ps1
 │   ├── precommit_hooks.py
 │   ├── process_lint_json.py
+│   ├── run-all-tools.ps1
+│   ├── run-lint-tool.ps1
 │   ├── run.py
-│   └── verify_no_mocks.py
+│   ├── test-verify-real.ps1
+│   ├── uninstall.ps1
+│   ├── verify_no_mocks.py
+│   └── watch-ci.ps1
 ├── src/
 │   ├── intellicrack/
 │   │   ├── assets/
@@ -6950,7 +6988,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── dep-graph.bin
 │       │   │   │   │   │   ├── query-cache.bin
 │       │   │   │   │   │   └── work-products.bin
-│       │   │   │   │   └── s-hha9ntx32h-13jar9p.lock
+│       │   │   │   │   ├── s-hhaadev7cd-07i2m6n-ej8royrk3jrfnbx8uf9du56jc/
+│       │   │   │   │   │   ├── dep-graph.bin
+│       │   │   │   │   │   ├── query-cache.bin
+│       │   │   │   │   │   └── work-products.bin
+│       │   │   │   │   ├── s-hha9ntx32h-13jar9p.lock
+│       │   │   │   │   └── s-hhaadev7cd-07i2m6n.lock
 │       │   │   │   ├── intellicrack_hexcore-0xsw2n1sqgods/
 │       │   │   │   │   ├── s-hgobtf8b89-19u1yp3-b98zui3ssm8ycb6shdgowk7z1/
 │       │   │   │   │   │   ├── dep-graph.bin
@@ -7780,7 +7823,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── dep-graph.bin
 │       │   │   │   │   │   ├── query-cache.bin
 │       │   │   │   │   │   └── work-products.bin
-│       │   │   │   │   └── s-hha9ntx2lw-0swblyw.lock
+│       │   │   │   │   ├── s-hhaadev21s-0x8s5dx-eqw2lr9atmwhvdgfe9gt6koar/
+│       │   │   │   │   │   ├── dep-graph.bin
+│       │   │   │   │   │   ├── query-cache.bin
+│       │   │   │   │   │   └── work-products.bin
+│       │   │   │   │   ├── s-hha9ntx2lw-0swblyw.lock
+│       │   │   │   │   └── s-hhaadev21s-0x8s5dx.lock
 │       │   │   │   ├── intellicrack_hexcore-2vcfoc3rh53jn/
 │       │   │   │   │   ├── s-hguharvhmv-0vurqq8-270y0o7g7k60xy5yw3hhr8bdi/
 │       │   │   │   │   │   ├── 0051e6wpdugvg9l8m2yp26kcv.o
@@ -8587,7 +8635,268 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   │   ├── f25rf8gxk6h5o555bte5v13kd.o
 │       │   │   │   │   │   ├── query-cache.bin
 │       │   │   │   │   │   └── work-products.bin
-│       │   │   │   │   └── s-hha9o90rab-1aoevg1.lock
+│       │   │   │   │   ├── s-hhaadtc6u7-0jirstw-57nb0yodxtz78saifzvjzuvj5/
+│       │   │   │   │   │   ├── 030l1sdr49jfczfkof1cuj0g5.o
+│       │   │   │   │   │   ├── 03gslfle1to8kcwjuubqoqkei.o
+│       │   │   │   │   │   ├── 049l1yop74qay765yadslku3z.o
+│       │   │   │   │   │   ├── 0clk7sopxcyvwdxj4vifq8mok.o
+│       │   │   │   │   │   ├── 0efr8hirsofrl24nm2ofppq9r.o
+│       │   │   │   │   │   ├── 0j2awh6wln381gtarbhfejriq.o
+│       │   │   │   │   │   ├── 0k3cc9zmz7gjd1u2hdcyoe5j9.o
+│       │   │   │   │   │   ├── 0l8lby6jbh6tbklboidb4h9sp.o
+│       │   │   │   │   │   ├── 0qzvtfm65g6irf6lz6vvu3b6i.o
+│       │   │   │   │   │   ├── 0s7t7m1xn8202n08fcplrkbas.o
+│       │   │   │   │   │   ├── 0w5cbtl302t39ghgutpaiq0re.o
+│       │   │   │   │   │   ├── 10ky0rfohafkxplz2iuhw5odr.o
+│       │   │   │   │   │   ├── 11l24idfn90nvfqmseybtknpu.o
+│       │   │   │   │   │   ├── 13gr3zgbu21zi4r4lsu2ywpy2.o
+│       │   │   │   │   │   ├── 14244h72sxxshx9cct4xig937.o
+│       │   │   │   │   │   ├── 156i5expr6wabgebmsgddrs45.o
+│       │   │   │   │   │   ├── 16eeu823s7l6ujwpazujnitku.o
+│       │   │   │   │   │   ├── 17e8rz58fodblgj8i11oy248x.o
+│       │   │   │   │   │   ├── 19hf63pa1sugz92whr8ujoq5q.o
+│       │   │   │   │   │   ├── 1a00efm1n6alysbyscdb38ze7.o
+│       │   │   │   │   │   ├── 1jrnbzaw6o41ab8xrolg6i1lx.o
+│       │   │   │   │   │   ├── 1lvbq89meprbs7l50x1k12jjb.o
+│       │   │   │   │   │   ├── 1n839up4l9q0kpret02f5z2ot.o
+│       │   │   │   │   │   ├── 1nqit8gf39oehwmv3qgvy46w1.o
+│       │   │   │   │   │   ├── 1v0fsngueow6ov78twx44kj7k.o
+│       │   │   │   │   │   ├── 1vt7l31e6kdxz742rtw8w9kv4.o
+│       │   │   │   │   │   ├── 1ykj0j11hleobm107mc8gykwi.o
+│       │   │   │   │   │   ├── 1yx7g2lw3kise6dz805vm21zr.o
+│       │   │   │   │   │   ├── 21368j7j3tyeg4ml0016p1wug.o
+│       │   │   │   │   │   ├── 24sx8ugpovem9lb4rl208ogvh.o
+│       │   │   │   │   │   ├── 25in6yp8q2qjf4bsxjdamekes.o
+│       │   │   │   │   │   ├── 26alte00vyrzh2o7yq4h5rj6v.o
+│       │   │   │   │   │   ├── 27p8axy197wz8x9mixt9zejgv.o
+│       │   │   │   │   │   ├── 2883yoiycjbdttikbn007q3ko.o
+│       │   │   │   │   │   ├── 2dea472yw3bo31bd9flruhidj.o
+│       │   │   │   │   │   ├── 2gcjmx8zgzg6vxuvn97kaosxo.o
+│       │   │   │   │   │   ├── 2hzqkbesh8e9jcvebl8mbywdr.o
+│       │   │   │   │   │   ├── 2lcy4mhk28ajq0siz7m6t48uu.o
+│       │   │   │   │   │   ├── 2ocjyzk77ofoaa9ahcmw6j8fe.o
+│       │   │   │   │   │   ├── 2pwfio4r6y174k7syug2hk48v.o
+│       │   │   │   │   │   ├── 2qwf8t5cl22rbt8canhgt5nbk.o
+│       │   │   │   │   │   ├── 2rjfsu44u3j3zwymjzti3kdif.o
+│       │   │   │   │   │   ├── 2v631dxtvksulib1ab0vzr88y.o
+│       │   │   │   │   │   ├── 2vwmv2xj0hca6rf1acxxl3qos.o
+│       │   │   │   │   │   ├── 301njon784pa25fx7ojh3zlqs.o
+│       │   │   │   │   │   ├── 30aavl9ls319tabpcrql18ydk.o
+│       │   │   │   │   │   ├── 30dajycba3bscrcfnydx472cy.o
+│       │   │   │   │   │   ├── 32lgfjqzfr8akhmqa1o4fvkm8.o
+│       │   │   │   │   │   ├── 35fzv2q54vy6w984rfxb8kq1o.o
+│       │   │   │   │   │   ├── 394lm1viyv0hicbguwhn7yut1.o
+│       │   │   │   │   │   ├── 3afopcxeq4kzkorfh68cw91xy.o
+│       │   │   │   │   │   ├── 3b5mav33k3z2np07f7ix4ywh8.o
+│       │   │   │   │   │   ├── 3bqi2ttzvv1nfx2bfg1r6v9ic.o
+│       │   │   │   │   │   ├── 3cyen1eyyv8ypipxvo67r7ci5.o
+│       │   │   │   │   │   ├── 3ezwdr25313a8czs0hw4tj76i.o
+│       │   │   │   │   │   ├── 3hghwb02vx7cwrb80h1f3sym4.o
+│       │   │   │   │   │   ├── 3hyeeb0sa2ajdvx3muuj4dqao.o
+│       │   │   │   │   │   ├── 3jaleh7ehyg8fo1st2hcvsasp.o
+│       │   │   │   │   │   ├── 3jvnttog594hm7pqt1ehqpol6.o
+│       │   │   │   │   │   ├── 3m0hzts7z7h7tz4jyl6ofixlm.o
+│       │   │   │   │   │   ├── 3s4wek0b391nb2hnjom312vah.o
+│       │   │   │   │   │   ├── 3xcf3u92dn5zf7y9eghceqg3l.o
+│       │   │   │   │   │   ├── 3yt2y6aqn9yfvzlxdaleij3m5.o
+│       │   │   │   │   │   ├── 42lmn3pgcd1dv11n2q43xl6n8.o
+│       │   │   │   │   │   ├── 431isuxsj67k5p1w8avlum34x.o
+│       │   │   │   │   │   ├── 45c8dgmug89836jgomr0t025n.o
+│       │   │   │   │   │   ├── 46pmtn81df9074b2b49ek50gw.o
+│       │   │   │   │   │   ├── 47mggmp6njq0j5dmfsuhrvpsd.o
+│       │   │   │   │   │   ├── 48xpptjsx6013xk0xoytyfnjj.o
+│       │   │   │   │   │   ├── 4aquvm8n16i6w45qkhwb177w7.o
+│       │   │   │   │   │   ├── 4erlxjikfvosngwgufule6nrh.o
+│       │   │   │   │   │   ├── 4hr0lbxbhdfnp6nw0um4l9q48.o
+│       │   │   │   │   │   ├── 4i3yu9q034l5v1g79syyffyaf.o
+│       │   │   │   │   │   ├── 4ikkbedek6ljgxuiboa7e4s4a.o
+│       │   │   │   │   │   ├── 4jsooilxa0t2d2x8fy2jpvc2c.o
+│       │   │   │   │   │   ├── 4ogzz18i07nknueg88b3534y4.o
+│       │   │   │   │   │   ├── 4qak4d8u2p0kzvvy8bzhfwuda.o
+│       │   │   │   │   │   ├── 4r6lvg1dglkztxouqg5z3d4g1.o
+│       │   │   │   │   │   ├── 4svb26hk2bhrsazbjokay86x5.o
+│       │   │   │   │   │   ├── 4v29i7rhxjwus7kqbtbb3ftk0.o
+│       │   │   │   │   │   ├── 4w0n3gs5cpkjwa0n76ncly7ga.o
+│       │   │   │   │   │   ├── 4wxls7jmast7sm3sfx1lu9y1v.o
+│       │   │   │   │   │   ├── 4zdu1s1e3hx9eqp45t1djdoxk.o
+│       │   │   │   │   │   ├── 4zh7g8twec9b8oit0754vxj33.o
+│       │   │   │   │   │   ├── 51e6fs1vnfiz23p6hmbve8ow4.o
+│       │   │   │   │   │   ├── 529cxjz0q836zn9tyesn2b484.o
+│       │   │   │   │   │   ├── 56jedaj8hx1q5to49bv758y3v.o
+│       │   │   │   │   │   ├── 5c5tfm0953s9rnkh529108h7f.o
+│       │   │   │   │   │   ├── 5eeiuaezid0s7gztjrvr2se7y.o
+│       │   │   │   │   │   ├── 5g9ugbchfa2bvbz1refy67vqo.o
+│       │   │   │   │   │   ├── 5gwf6pwffm21qrtrq9ebq79c8.o
+│       │   │   │   │   │   ├── 5h9gvtwzxg7xhkrywxh9snlxi.o
+│       │   │   │   │   │   ├── 5i7yautfdr1gchpxdfi128c4z.o
+│       │   │   │   │   │   ├── 5jdnmxmoxgkid1yw2iiu4lx9f.o
+│       │   │   │   │   │   ├── 5kc68s3ie9mzucgxsn5q3n05c.o
+│       │   │   │   │   │   ├── 5m8cm03klqwrl9my7sor2l7k3.o
+│       │   │   │   │   │   ├── 5n59hzfltmjmod5yz2amnec40.o
+│       │   │   │   │   │   ├── 5n9krwu8kf9ecr3hezuoz0low.o
+│       │   │   │   │   │   ├── 5r41wonld2k9vqvhe5idzy668.o
+│       │   │   │   │   │   ├── 5rialnftnzlpw2cn24ticiz3y.o
+│       │   │   │   │   │   ├── 5t2lq2ozz2izsxgdtlumjgcj7.o
+│       │   │   │   │   │   ├── 5x8vz51rumznu2uvc7ytjy78i.o
+│       │   │   │   │   │   ├── 5yh1nzb9tchmbgtdi9ocp59yc.o
+│       │   │   │   │   │   ├── 60zgz2sxxedv7o1ypfmvamuxc.o
+│       │   │   │   │   │   ├── 62z1telnnqc0qpgq0rbc4poz2.o
+│       │   │   │   │   │   ├── 64gmkgpvb6r8em5xe54lv5ox2.o
+│       │   │   │   │   │   ├── 65avopvlmumei6p8tj79v49fu.o
+│       │   │   │   │   │   ├── 66crkm3tf1pxsqflioriucvre.o
+│       │   │   │   │   │   ├── 69rlbisar4q6ggscmvnoagajl.o
+│       │   │   │   │   │   ├── 6aesv8u5svx7nzt17y9mem5bh.o
+│       │   │   │   │   │   ├── 6ck4temp9lwych4xidckcfk1c.o
+│       │   │   │   │   │   ├── 6dj53ky67yjeun2wmdo6snx41.o
+│       │   │   │   │   │   ├── 6iencoqjno7zo8b3o9rp8smj3.o
+│       │   │   │   │   │   ├── 6utto3rwk3gcjfk7gw8k6rh02.o
+│       │   │   │   │   │   ├── 6vt1iebusv7m4lv4ummk0fprx.o
+│       │   │   │   │   │   ├── 6xh14vy1obnreyrno6nuy8m3o.o
+│       │   │   │   │   │   ├── 71r0qsfcl2nfdh69ua80i36tz.o
+│       │   │   │   │   │   ├── 720s5fcpqhd5pn02xwjz2efxu.o
+│       │   │   │   │   │   ├── 72krtjjcqge54ikxbmpmum693.o
+│       │   │   │   │   │   ├── 73m65xrvatktp63zacy27dvtz.o
+│       │   │   │   │   │   ├── 76yxu0kt1h45s0kbn41knvgkb.o
+│       │   │   │   │   │   ├── 786k63eon1jg51jeouggpag93.o
+│       │   │   │   │   │   ├── 7dg7gq7343sti92ks6u1golew.o
+│       │   │   │   │   │   ├── 7dhk48c1bcvtmzdt03qv8cudy.o
+│       │   │   │   │   │   ├── 7g7hi9j9ihupbhlmn81fju0ho.o
+│       │   │   │   │   │   ├── 7g9qvltgmf8x85cxaq3ycc244.o
+│       │   │   │   │   │   ├── 7hba26y60iqj9dqkd5r0nkcrv.o
+│       │   │   │   │   │   ├── 7iucd7zvumkch2aeyql971qpm.o
+│       │   │   │   │   │   ├── 7kqxyotsck2k6l88cqu30tiqs.o
+│       │   │   │   │   │   ├── 7pg57u875xs6mde3te0rj3jh0.o
+│       │   │   │   │   │   ├── 7pqp6sp3v66awsbwk7uizgc1p.o
+│       │   │   │   │   │   ├── 7qxvgmctoiath8jys7gfcfisb.o
+│       │   │   │   │   │   ├── 7rol4iyafjueinpy9u1bku0ts.o
+│       │   │   │   │   │   ├── 7uo5nrezal0wow1knpht8w10c.o
+│       │   │   │   │   │   ├── 7uxmd0skrtdqa5zkgljr1h647.o
+│       │   │   │   │   │   ├── 7v87nmt96rohd3qzrqj70hzot.o
+│       │   │   │   │   │   ├── 8431wghcskpe0aktq31ih9i08.o
+│       │   │   │   │   │   ├── 844daojqgym4tid1eqeili6e3.o
+│       │   │   │   │   │   ├── 86228zbl7gapeujxs4frrpz7z.o
+│       │   │   │   │   │   ├── 88pjryb9pu01xyq5jhp4c6fct.o
+│       │   │   │   │   │   ├── 8bz7xy3a6w6u7y7bnuqm0a6eo.o
+│       │   │   │   │   │   ├── 8fwbvmngo0orjklm42ia15ref.o
+│       │   │   │   │   │   ├── 8g28jfa7112rxdjps5ocxoedl.o
+│       │   │   │   │   │   ├── 8k11mlaa1mhi6op57dgu3aof0.o
+│       │   │   │   │   │   ├── 8litk9x8couk8i9nqzdija9zn.o
+│       │   │   │   │   │   ├── 8m2kcey56y9ewdye1z8q61t22.o
+│       │   │   │   │   │   ├── 8mnh3ilf0k1e4gtgg63iy407c.o
+│       │   │   │   │   │   ├── 8p32h2zto5s61mptwm82n9u5b.o
+│       │   │   │   │   │   ├── 8r7c1tmn9vj9lfuic5i6s1tre.o
+│       │   │   │   │   │   ├── 8s5oi2rb2bjvzavbqgf7njgz9.o
+│       │   │   │   │   │   ├── 8v8e1owv19w9utfk2jn4ec1pv.o
+│       │   │   │   │   │   ├── 8woesqvqqdvoe2ia4fcj3jilh.o
+│       │   │   │   │   │   ├── 8yige2ric0lfx3drndi4s5q3y.o
+│       │   │   │   │   │   ├── 90hojjkrj9oo0gvkz9kwxqaqc.o
+│       │   │   │   │   │   ├── 90w6hllkd40ezgcssxqpvjup1.o
+│       │   │   │   │   │   ├── 92fo0elymg7zr2wt8ov8ahu0b.o
+│       │   │   │   │   │   ├── 94k3exots1c38on7eb3aexnhy.o
+│       │   │   │   │   │   ├── 98682u92ntteoqhihhcd99e6z.o
+│       │   │   │   │   │   ├── 9cg8fylc44q0cke6lxiglu85l.o
+│       │   │   │   │   │   ├── 9i1v4etksw7d7e7xwzzny7ywe.o
+│       │   │   │   │   │   ├── 9i7vtsnt0zczgpwp6hviqjtpd.o
+│       │   │   │   │   │   ├── 9l90lnnffbs4oy9hc1olldx8c.o
+│       │   │   │   │   │   ├── 9otgt6rn8y9861cbta2pigran.o
+│       │   │   │   │   │   ├── 9p2shj663jszcmrqbbfqtvbon.o
+│       │   │   │   │   │   ├── 9s7pqu52rah70ureipn1vevgh.o
+│       │   │   │   │   │   ├── 9uhsm97bqmyb5skzf2sbx28nw.o
+│       │   │   │   │   │   ├── 9wc1wikvjlfgdc7e8iplcjn8k.o
+│       │   │   │   │   │   ├── 9wyvq73v9greiocp1isqol403.o
+│       │   │   │   │   │   ├── 9x4rqhx9p9lswtqvuows9gahu.o
+│       │   │   │   │   │   ├── 9x4s623yiw49lsub2it8tmmd3.o
+│       │   │   │   │   │   ├── 9xfb8t51yhqqo7uyoto4ck827.o
+│       │   │   │   │   │   ├── 9xlpztwjxce6m3vyn4hvs86kk.o
+│       │   │   │   │   │   ├── a44lus067mrt8hegvze77nyuz.o
+│       │   │   │   │   │   ├── a47n9w6k1ivjgk706purb2xrx.o
+│       │   │   │   │   │   ├── a6s3i084xxa7fgg0l15bttbqm.o
+│       │   │   │   │   │   ├── a8uh688t4q2jrt0ates6oe6ps.o
+│       │   │   │   │   │   ├── a923t5y23osocvw8t7mqek4eo.o
+│       │   │   │   │   │   ├── a9orgsy1d7epstgxcddp89u0h.o
+│       │   │   │   │   │   ├── abdmx6zpquh8j9urus5xv7xkj.o
+│       │   │   │   │   │   ├── agrw4hdh47u20pr9wtecvqz2z.o
+│       │   │   │   │   │   ├── ahgur4tozxx48rdbqggdqq17z.o
+│       │   │   │   │   │   ├── ahxa78rkn5ottd080pl02peot.o
+│       │   │   │   │   │   ├── ahzihxb44v6tl3jpv1hwsppry.o
+│       │   │   │   │   │   ├── ai6iurlmevc7t6u6s6e2vcnyv.o
+│       │   │   │   │   │   ├── akgs7f3isje4s5fanaueus37b.o
+│       │   │   │   │   │   ├── akuzxptz2o95tokmuz5l3c0df.o
+│       │   │   │   │   │   ├── alvxd4o6q6nrijvq589e2rlaa.o
+│       │   │   │   │   │   ├── am0nssg8rei7tw6inw16l7e43.o
+│       │   │   │   │   │   ├── anbezejwxdhuetvzsjz8rs7en.o
+│       │   │   │   │   │   ├── arw27aintllkhnwaw5rf7s31f.o
+│       │   │   │   │   │   ├── at5vnqa95plsbr9p4zjd05kg9.o
+│       │   │   │   │   │   ├── auin1a4glfignjtjydvyues10.o
+│       │   │   │   │   │   ├── auyeanwhg6bv5h9jm4he5bapz.o
+│       │   │   │   │   │   ├── azx2k8rppxumxqtr56j1frnds.o
+│       │   │   │   │   │   ├── b4lclx53rujruy9jfqve252uh.o
+│       │   │   │   │   │   ├── b596afj6f6uymb7ubwyegob29.o
+│       │   │   │   │   │   ├── b5jh08jovguwiinf5ink29e4s.o
+│       │   │   │   │   │   ├── b97ver9hxu9zgdsmdmkirt570.o
+│       │   │   │   │   │   ├── ba4ri5wqdvhg6lnokfgcqippy.o
+│       │   │   │   │   │   ├── ba6ctsepil239u2ke00eq2uzp.o
+│       │   │   │   │   │   ├── ben5bmqy9inxhi6frlk22dts4.o
+│       │   │   │   │   │   ├── bo9hhvo254lgqjua4r8m1aver.o
+│       │   │   │   │   │   ├── botyjyz6k50xx5mo72uhhuwk8.o
+│       │   │   │   │   │   ├── bw6vdsez5d98u0o50yfz8p285.o
+│       │   │   │   │   │   ├── bx2cpnewss8vtdpoutwg55a04.o
+│       │   │   │   │   │   ├── bx2ozk2w5j5z8avuyogiytzju.o
+│       │   │   │   │   │   ├── bxivgys3l3e9ccfg9tlhhk034.o
+│       │   │   │   │   │   ├── bxlkyi5iwlw9tpmpkgz5bv4t6.o
+│       │   │   │   │   │   ├── by57xp314y048ee9cbesgk8mo.o
+│       │   │   │   │   │   ├── bzq5jjscab4z760x023mlou9a.o
+│       │   │   │   │   │   ├── c2yq5p0z54xpazpk0lgujinog.o
+│       │   │   │   │   │   ├── c46fw7xw8l2pri415pn6yv8m0.o
+│       │   │   │   │   │   ├── cd14uv6kdjv984xepv6bcwln2.o
+│       │   │   │   │   │   ├── cgdkr5mnzs598n7d77zwa9s8k.o
+│       │   │   │   │   │   ├── chh5dvhb1jdajabq5en2xfw04.o
+│       │   │   │   │   │   ├── ciwo4t3clu92u14l2bduc4f7z.o
+│       │   │   │   │   │   ├── cjwayrf47nm48aqsp89hxsa6v.o
+│       │   │   │   │   │   ├── clqykiklovk8zdceu7lv6wvnu.o
+│       │   │   │   │   │   ├── cnxkpwbbr5l78r7fx41o52vnn.o
+│       │   │   │   │   │   ├── cxef5iirjr0ipplj0wa4jysud.o
+│       │   │   │   │   │   ├── d1iymoumqc9u4g2mt9clgo6ov.o
+│       │   │   │   │   │   ├── d1kluptqllogaubdia3h4m5e1.o
+│       │   │   │   │   │   ├── d5chrd0cc5eraj1nqjbpszid3.o
+│       │   │   │   │   │   ├── d7gdsv659qc09j4voc49mkfet.o
+│       │   │   │   │   │   ├── d8t1lj51gg0pyfm6hdyj9j7v7.o
+│       │   │   │   │   │   ├── da5xh2py7r1ellf3oshfmhky1.o
+│       │   │   │   │   │   ├── deigspf9ol2mp1nsaoi3imhmy.o
+│       │   │   │   │   │   ├── dep-graph.bin
+│       │   │   │   │   │   ├── dieh7rpxfbwuc49fh2zbjol5a.o
+│       │   │   │   │   │   ├── dk0jy8jwpkwn1cse7691qooke.o
+│       │   │   │   │   │   ├── dklus7i1vljvkxm7m1nyrgxb4.o
+│       │   │   │   │   │   ├── dlpuwok301swzbq5wdkz24wkg.o
+│       │   │   │   │   │   ├── dofuipdqr170nhpjkm2ec69q0.o
+│       │   │   │   │   │   ├── dv4msrc1964c06gyzdbqv6g3v.o
+│       │   │   │   │   │   ├── e10ouusddhmm6ptcey6q6gmr1.o
+│       │   │   │   │   │   ├── e1e98r2ouj9wkmycl8jhy0gjc.o
+│       │   │   │   │   │   ├── e3dkn0jscgzztks8zmoem0101.o
+│       │   │   │   │   │   ├── e59s7vntms24qtl8015ywj4lv.o
+│       │   │   │   │   │   ├── e77hrfyuned5nlqj1048gu9ln.o
+│       │   │   │   │   │   ├── e7ft6lah9my3u1z3ey4yarn6h.o
+│       │   │   │   │   │   ├── e7ll711f1rngdd26whwwprbs7.o
+│       │   │   │   │   │   ├── e92qyydj0otpbgd8wp3avqbyp.o
+│       │   │   │   │   │   ├── ea49tygcsesg107xwgpuijeag.o
+│       │   │   │   │   │   ├── eazo3w4xn23enlkbdrg10lfex.o
+│       │   │   │   │   │   ├── ecs7xcs36d7n8vg1vloeapdd9.o
+│       │   │   │   │   │   ├── educ850xj5e8u4ojsnn216ir4.o
+│       │   │   │   │   │   ├── ef2lazsup9814em8ebfd6zcpn.o
+│       │   │   │   │   │   ├── efy5m7slznfejpi34o1e5aw47.o
+│       │   │   │   │   │   ├── ekwh3j75angz1a5l9us4ky2ar.o
+│       │   │   │   │   │   ├── eqbq0dshsgvb0dkopaa2e36wl.o
+│       │   │   │   │   │   ├── eqr68vmiwurj5bplyoekg2bhu.o
+│       │   │   │   │   │   ├── exy8gwhxgctp6c2jox1zp9pdp.o
+│       │   │   │   │   │   ├── eyy1kdaf7eo6c56cpq1hiarxw.o
+│       │   │   │   │   │   ├── ez4361xfzzxknftp9foy85di4.o
+│       │   │   │   │   │   ├── f11wx87bdq611o66uvwqv978m.o
+│       │   │   │   │   │   ├── f1m1yacxhh987np48y0vdrr6r.o
+│       │   │   │   │   │   ├── f25rf8gxk6h5o555bte5v13kd.o
+│       │   │   │   │   │   ├── query-cache.bin
+│       │   │   │   │   │   └── work-products.bin
+│       │   │   │   │   ├── s-hha9o90rab-1aoevg1.lock
+│       │   │   │   │   └── s-hhaadtc6u7-0jirstw.lock
 │       │   │   │   ├── intellicrack_hexcore-3flzy53kl31n7/
 │       │   │   │   │   ├── s-hha6n1lj4i-1cqa5j5-c88qkrr1a8vbq78hapvpvh4za/
 │       │   │   │   │   │   ├── 004h1e7kb8h0e78g05wt9v4l8.o
@@ -9661,7 +9970,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── examples/
 │       │   │   │   ├── incremental/
 │       │   │   │   │   └── intellicrack_hexcore-37uad4mtonp3y/
-│       │   │   │   │       ├── s-hha9ojj82c-0igzlan-f30i7j3b1i6p5ms92ige19t02/
+│       │   │   │   │       ├── s-hhc0xj202x-1lgoh4a-f30i7j3b1i6p5ms92ige19t02/
 │       │   │   │   │       │   ├── 030l1sdr49jfczfkof1cuj0g5.o
 │       │   │   │   │       │   ├── 03gslfle1to8kcwjuubqoqkei.o
 │       │   │   │   │       │   ├── 0clk7sopxcyvwdxj4vifq8mok.o
@@ -9921,11 +10230,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │       │   ├── f1gdbyqyy0t7fq1klwld75rmq.o
 │       │   │   │   │       │   ├── query-cache.bin
 │       │   │   │   │       │   └── work-products.bin
-│       │   │   │   │       └── s-hha9ojj82c-0igzlan.lock
+│       │   │   │   │       └── s-hhc0xj202x-1lgoh4a.lock
 │       │   │   │   └── .cargo-lock
 │       │   │   ├── .rustc_info.json
-│       │   │   ├── intellicrack-hexcore-5452-3674787816894337136_18.profraw
-│       │   │   ├── intellicrack-hexcore-8032-3674787816894337136_2.profraw
+│       │   │   ├── intellicrack-hexcore-12356-3674787816894337136_14.profraw
+│       │   │   ├── intellicrack-hexcore-29464-3674787816894337136_6.profraw
 │       │   │   └── intellicrack-hexcore-profraw-list
 │       │   ├── maturin/
 │       │   │   └── intellicrack_hexcore.dll
@@ -9937,6 +10246,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   ├── lib-adler
 │       │   │   │   │   └── lib-adler.json
 │       │   │   │   ├── adler2-4477c79999437fcf/
+│       │   │   │   │   ├── dep-lib-adler2
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-adler2
+│       │   │   │   │   └── lib-adler2.json
+│       │   │   │   ├── adler2-4c960989dd9dc5db/
 │       │   │   │   │   ├── dep-lib-adler2
 │       │   │   │   │   ├── invoked.timestamp
 │       │   │   │   │   ├── lib-adler2
@@ -10062,6 +10376,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   ├── invoked.timestamp
 │       │   │   │   │   ├── lib-flate2
 │       │   │   │   │   └── lib-flate2.json
+│       │   │   │   ├── flate2-f27395ef20f3d941/
+│       │   │   │   │   ├── dep-lib-flate2
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-flate2
+│       │   │   │   │   └── lib-flate2.json
 │       │   │   │   ├── generic-array-1591f3b109d6259b/
 │       │   │   │   │   ├── dep-lib-generic_array
 │       │   │   │   │   ├── invoked.timestamp
@@ -10156,6 +10475,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │   ├── invoked.timestamp
 │       │   │   │   │   ├── lib-memoffset
 │       │   │   │   │   └── lib-memoffset.json
+│       │   │   │   ├── miniz_oxide-46ca826e268df5cc/
+│       │   │   │   │   ├── dep-lib-miniz_oxide
+│       │   │   │   │   ├── invoked.timestamp
+│       │   │   │   │   ├── lib-miniz_oxide
+│       │   │   │   │   └── lib-miniz_oxide.json
 │       │   │   │   ├── miniz_oxide-65f7a3f92cc7a373/
 │       │   │   │   │   ├── dep-lib-miniz_oxide
 │       │   │   │   │   ├── invoked.timestamp
@@ -10497,6 +10821,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   ├── deps/
 │       │   │   │   ├── adler-f407f9ffc091fcd9.d
 │       │   │   │   ├── adler2-4477c79999437fcf.d
+│       │   │   │   ├── adler2-4c960989dd9dc5db.d
 │       │   │   │   ├── aes-3327931a9fb4ec57.d
 │       │   │   │   ├── aho_corasick-dfba2a0ba8cc06ae.d
 │       │   │   │   ├── autocfg-a2c6748e1abc0e67.d
@@ -10518,6 +10843,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── either-c0572c8e65673265.d
 │       │   │   │   ├── encoding_rs-168a6485f78d5ed7.d
 │       │   │   │   ├── flate2-3b392c30bfc82550.d
+│       │   │   │   ├── flate2-f27395ef20f3d941.d
 │       │   │   │   ├── generic_array-1591f3b109d6259b.d
 │       │   │   │   ├── half-78f1465ec8d85939.d
 │       │   │   │   ├── heck-715f626dcb4698d3.d
@@ -10538,6 +10864,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── libadler-f407f9ffc091fcd9.rmeta
 │       │   │   │   ├── libadler2-4477c79999437fcf.rlib
 │       │   │   │   ├── libadler2-4477c79999437fcf.rmeta
+│       │   │   │   ├── libadler2-4c960989dd9dc5db.rlib
+│       │   │   │   ├── libadler2-4c960989dd9dc5db.rmeta
 │       │   │   │   ├── libaes-3327931a9fb4ec57.rlib
 │       │   │   │   ├── libaes-3327931a9fb4ec57.rmeta
 │       │   │   │   ├── libaho_corasick-dfba2a0ba8cc06ae.rlib
@@ -10581,6 +10909,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── libencoding_rs-168a6485f78d5ed7.rmeta
 │       │   │   │   ├── libflate2-3b392c30bfc82550.rlib
 │       │   │   │   ├── libflate2-3b392c30bfc82550.rmeta
+│       │   │   │   ├── libflate2-f27395ef20f3d941.rlib
+│       │   │   │   ├── libflate2-f27395ef20f3d941.rmeta
 │       │   │   │   ├── libgeneric_array-1591f3b109d6259b.rlib
 │       │   │   │   ├── libgeneric_array-1591f3b109d6259b.rmeta
 │       │   │   │   ├── libhalf-78f1465ec8d85939.rlib
@@ -10605,6 +10935,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── libmemmap2-fd61326e2259ca6b.rmeta
 │       │   │   │   ├── libmemoffset-913e1c7aaac62924.rlib
 │       │   │   │   ├── libmemoffset-913e1c7aaac62924.rmeta
+│       │   │   │   ├── libminiz_oxide-46ca826e268df5cc.rlib
+│       │   │   │   ├── libminiz_oxide-46ca826e268df5cc.rmeta
 │       │   │   │   ├── libminiz_oxide-65f7a3f92cc7a373.rlib
 │       │   │   │   ├── libminiz_oxide-65f7a3f92cc7a373.rmeta
 │       │   │   │   ├── libonce_cell-3a535680e70514f6.rlib
@@ -10686,6 +11018,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── memchr-d29f5a4c159c3c86.d
 │       │   │   │   ├── memmap2-fd61326e2259ca6b.d
 │       │   │   │   ├── memoffset-913e1c7aaac62924.d
+│       │   │   │   ├── miniz_oxide-46ca826e268df5cc.d
 │       │   │   │   ├── miniz_oxide-65f7a3f92cc7a373.d
 │       │   │   │   ├── once_cell-3a535680e70514f6.d
 │       │   │   │   ├── once_cell-4a9322c3b06b7429.d
@@ -10859,10 +11192,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── test_agentic_capabilities.py
 │   │   ├── test_anthropic_provider.py
 │   │   ├── test_credential_loading.py
+│   │   ├── test_e2e_chat.py
 │   │   ├── test_google_provider.py
 │   │   ├── test_grok_provider.py
 │   │   ├── test_huggingface_provider.py
 │   │   ├── test_local_transformers_provider.py
+│   │   ├── test_local_xpu_e2e.py
 │   │   ├── test_message_conversion.py
 │   │   ├── test_model_discovery.py
 │   │   ├── test_ollama_provider.py
@@ -27116,7 +27451,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .aider.input.history
 ├── .aiderignore
 ├── .codeqlignore
-├── .coverage
 ├── .dead-allowlist
 ├── .editorconfig
 ├── .env

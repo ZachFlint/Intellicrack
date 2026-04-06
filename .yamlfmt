@@ -4,6 +4,7 @@ include:
   - "**/*.yaml"
 exclude:
   - ".pixi/**"
+  - ".claude/**"
   - "build/**"
   - "dist/**"
   - "node_modules/**"

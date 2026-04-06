@@ -10,6 +10,7 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
+
 SKIP_DIRS: frozenset[str] = frozenset({
     ".pixi",
     ".git",
@@ -25,13 +26,16 @@ SKIP_DIRS: frozenset[str] = frozenset({
 })
 
 RESERVED_NAMES: frozenset[str] = frozenset({
-    "nul", "con", "prn", "aux",
+    "nul",
+    "con",
+    "prn",
+    "aux",
     *(f"com{i}" for i in range(1, 10)),
     *(f"lpt{i}" for i in range(1, 10)),
 })
 
 
-def _walk_filtered(root: str) -> Iterator[str]:
+def _walk_filtered(root: str) -> Iterator[Path]:
     """Walk directory tree, skipping heavy non-project directories.
 
     Args:
@@ -43,7 +47,7 @@ def _walk_filtered(root: str) -> Iterator[str]:
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for fname in filenames:
-            yield os.path.join(dirpath, fname)
+            yield Path(dirpath, fname)
 
 
 def clean_nul_files() -> None:
@@ -59,10 +63,10 @@ def clean_nul_files() -> None:
 
     try:
         for filepath in _walk_filtered(root_dir):
-            basename = os.path.basename(filepath).lower()
+            basename = filepath.name.lower()
             stem = basename.rsplit(".", 1)[0] if "." in basename else basename
             if stem in RESERVED_NAMES:
-                prefixed_path = "\\\\?\\" + os.path.abspath(filepath)
+                prefixed_path = "\\\\?\\" + str(filepath.resolve())
                 try:
                     Path(prefixed_path).unlink()
                     print(f"  [OK] Deleted: {filepath}")

@@ -1,8 +1,8 @@
 {
   "tool": "flake8",
-  "generated": "2026-04-03T23:22:32.287080+00:00",
-  "total_findings": 42,
-  "total_files": 21,
+  "generated": "2026-04-05T20:12:57.611180+00:00",
+  "total_findings": 41,
+  "total_files": 20,
   "files": [
     {
       "path": "tests/test_hexcore_e2e\\test_hashing.py",
@@ -408,19 +408,6 @@
           "code": "E402",
           "message": "module level import not at top of file",
           "raw": "tests/test_hexcore_e2e\\test_hexpat_compiler_e2e.py:18:1: E402 module level import not at top of file"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_ui\\test_splash_screen.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 991,
-          "column": 1,
-          "code": "W391",
-          "message": "blank line at end of file",
-          "raw": "tests/test_ui\\test_splash_screen.py:991:1: W391 blank line at end of file"
         }
       ]
     }

@@ -159,9 +159,22 @@ class KnowledgeGraphGenerator:
     }
 
     _WALK_EXCLUDE_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "node_modules", ".git", "dist", "build", ".pixi", ".claude",
-        "target", "__pycache__", ".mypy_cache", ".ruff_cache", ".pytest_cache",
-        "htmlcov", ".tox", ".nox", ".eggs", "*.egg-info",
+        "node_modules",
+        ".git",
+        "dist",
+        "build",
+        ".pixi",
+        ".claude",
+        "target",
+        "__pycache__",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".pytest_cache",
+        "htmlcov",
+        ".tox",
+        ".nox",
+        ".eggs",
+        "*.egg-info",
     })
 
     def __init__(self, root_dir: Path) -> None:
@@ -244,11 +257,12 @@ class KnowledgeGraphGenerator:
     def _scan_python(self) -> None:
         """Scans Python files and parses deep structure."""
         try:
-            for root, _, files in os.walk(self.root_dir):
+            for root, dirs, files in os.walk(self.root_dir):
+                dirs[:] = [d for d in dirs if d not in self._WALK_EXCLUDE_DIRS]
                 for file in files:
                     if file.endswith(".py"):
                         path = Path(root) / file
-                        if "tests" in path.parts or "__pycache__" in path.parts:
+                        if "tests" in path.parts:
                             continue
 
                         module_name = self._get_module_name(path)
@@ -269,7 +283,9 @@ class KnowledgeGraphGenerator:
 
         module_doc = ast.get_docstring(tree)
         if module_doc and module_name in self.graph.nodes:
-            self.graph.nodes[module_name]["docstring"] = module_doc[:_MAX_DOCSTRING_LENGTH] + ("..." if len(module_doc) > _MAX_DOCSTRING_LENGTH else "")
+            self.graph.nodes[module_name]["docstring"] = module_doc[:_MAX_DOCSTRING_LENGTH] + (
+                "..." if len(module_doc) > _MAX_DOCSTRING_LENGTH else ""
+            )
 
         imports_map: dict[str, str] = {}
 
@@ -292,7 +308,11 @@ class KnowledgeGraphGenerator:
             elif isinstance(node, ast.ClassDef):
                 class_id = f"{module_name}.{node.name}"
                 class_doc = ast.get_docstring(node)
-                doc_str = (class_doc[:_MAX_DOCSTRING_LENGTH] + "..." if len(class_doc) > _MAX_DOCSTRING_LENGTH else class_doc) if class_doc else ""
+                doc_str = (
+                    (class_doc[:_MAX_DOCSTRING_LENGTH] + "..." if len(class_doc) > _MAX_DOCSTRING_LENGTH else class_doc)
+                    if class_doc
+                    else ""
+                )
                 self.graph.add_node(class_id, type="class", lang="python", label=node.name, docstring=doc_str)
                 self.graph.add_edge(module_name, class_id, type="defines")
                 for base in node.bases:
@@ -304,7 +324,9 @@ class KnowledgeGraphGenerator:
                 func_id = f"{module_name}.{node.name}"
                 args = [a.arg for a in node.args.args]
                 func_doc = ast.get_docstring(node)
-                doc_str = (func_doc[:_MAX_DOCSTRING_LENGTH] + "..." if len(func_doc) > _MAX_DOCSTRING_LENGTH else func_doc) if func_doc else ""
+                doc_str = (
+                    (func_doc[:_MAX_DOCSTRING_LENGTH] + "..." if len(func_doc) > _MAX_DOCSTRING_LENGTH else func_doc) if func_doc else ""
+                )
                 self.graph.add_node(func_id, type="function", lang="python", label=node.name, args=str(args), docstring=doc_str)
                 self.graph.add_edge(module_name, func_id, type="defines")
 
@@ -332,6 +354,12 @@ class KnowledgeGraphGenerator:
         """Export the graph to GraphML format."""
         try:
             nx.write_graphml(self.graph, str(output_path))
+            raw = output_path.read_bytes()
+            if not raw.endswith(b"\r\n"):
+                raw = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                if not raw.endswith(b"\r\n"):
+                    raw += b"\r\n"
+                output_path.write_bytes(raw)
             logger.info("GraphML saved to: %s", output_path)
         except Exception:
             logger.exception("Failed to save GraphML file:")
@@ -483,7 +511,7 @@ class KnowledgeGraphGenerator:
             try:
                 nx.drawing.nx_pydot.write_dot(filtered_graph, str(dot_path))
             except (ImportError, AttributeError):
-                with dot_path.open("w", encoding="utf-8") as f:
+                with dot_path.open("w", encoding="utf-8", newline="\r\n") as f:
                     f.write('digraph "Intellicrack" {\n')
                     for n in filtered_graph.nodes:
                         safe_n = n.replace('"', '\\"')
@@ -493,6 +521,12 @@ class KnowledgeGraphGenerator:
                         safe_v = v.replace('"', '\\"')
                         f.write(f'  "{safe_u}" -> "{safe_v}";\n')
                     f.write("}\n")
+            raw = dot_path.read_bytes()
+            if not raw.endswith(b"\r\n"):
+                raw = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                if not raw.endswith(b"\r\n"):
+                    raw += b"\r\n"
+                dot_path.write_bytes(raw)
         except Exception:
             logger.exception("Failed to generate DOT file.")
             return False
@@ -579,17 +613,14 @@ class KnowledgeGraphGenerator:
         Returns:
             list[dict[str, Any]]: Edge data with source and target mappings.
         """
-        edges_data: list[dict[str, Any]] = [
-            {"source": u, "target": v} for u, v, _attrs in filtered_graph.edges(data=True)
-        ]
+        edges_data: list[dict[str, Any]] = [{"source": u, "target": v} for u, v, _attrs in filtered_graph.edges(data=True)]
 
         if positions:
             bundler = EdgeBundler(positions)
             vis_edges = [{"from": e["source"], "to": e["target"]} for e in edges_data]
             bundled = bundler.bundle_edges(vis_edges)
             edges_data = [
-                {"source": e["from"], "target": e["to"], **{k: v for k, v in e.items() if k not in {"from", "to"}}}
-                for e in bundled
+                {"source": e["from"], "target": e["to"], **{k: v for k, v in e.items() if k not in {"from", "to"}}} for e in bundled
             ]
 
         return edges_data
@@ -637,6 +668,8 @@ class KnowledgeGraphGenerator:
         )
 
         try:
+            if not html_content.endswith("\n"):
+                html_content += "\n"
             Path(output_path).write_text(html_content, encoding="utf-8")
             logger.info("Interactive HTML saved to: %s", output_path)
         except Exception:

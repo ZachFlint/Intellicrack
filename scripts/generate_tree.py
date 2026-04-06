@@ -125,7 +125,22 @@ def scan_directory(root_path: str) -> tuple[str, int, int]:
             try:
                 items = []
                 for entry in Path(path).iterdir():
-                    if entry.name in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
+                    if entry.name in {
+                        ".git",
+                        ".pixi",
+                        "node_modules",
+                        "__pycache__",
+                        ".ruff_cache",
+                        ".aider.tags.cache.v4",
+                        "dist",
+                        "build",
+                        ".venv",
+                        ".mypy_cache",
+                        ".pytest_cache",
+                        ".claude",
+                        ".serena",
+                        "Intellicrack.egg-info",
+                    }:
                         continue
                     items.append(str(entry))
 
@@ -259,7 +274,22 @@ def generate_fallback_tree(root_path: str, prefix: str = "", *, _is_last: bool =
     try:
         items = []
         for entry in Path(root_path).iterdir():
-            if entry.name in {".git", ".pixi", "node_modules", "__pycache__", ".ruff_cache", ".aider.tags.cache.v4", "dist", "build", ".venv", ".mypy_cache", ".pytest_cache", ".claude", ".serena", "Intellicrack.egg-info"}:
+            if entry.name in {
+                ".git",
+                ".pixi",
+                "node_modules",
+                "__pycache__",
+                ".ruff_cache",
+                ".aider.tags.cache.v4",
+                "dist",
+                "build",
+                ".venv",
+                ".mypy_cache",
+                ".pytest_cache",
+                ".claude",
+                ".serena",
+                "Intellicrack.egg-info",
+            }:
                 continue
             items.append((entry.name, str(entry)))
 
@@ -826,6 +856,8 @@ function hasHighlightedChildren(element) {{
 </body>
 </html>"""
 
+    if not hta_content.endswith("\n"):
+        hta_content += "\n"
     Path(output_file).write_text(hta_content, encoding="utf-8")
 
     print(f"HTA file generated successfully: {output_file}")
