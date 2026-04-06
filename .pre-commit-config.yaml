@@ -114,5 +114,5 @@ repos:
       - id: check-ast
       - id: debug-statements
       - id: mixed-line-ending
-        args: ['--fix=lf']
-      - id: check-byte-order-marker
+        args: ['--fix=crlf']
+      - id: fix-byte-order-marker

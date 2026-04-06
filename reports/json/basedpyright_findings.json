@@ -1,7 +1,2894 @@
 {
   "tool": "basedpyright",
-  "generated": "2026-04-03T23:23:23.176082+00:00",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-04-05T20:13:46.802404+00:00",
+  "total_findings": 333,
+  "total_files": 37,
+  "files": [
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py",
+      "count": 40,
+      "findings": [
+        {
+          "line": 433,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:433:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 434,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:434:9: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 640,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:640:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 654,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:654:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 675,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:675:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 681,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:681:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 687,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:687:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 693,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:693:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 699,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:699:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 705,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:705:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 711,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:711:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 717,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:717:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 723,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:723:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 737,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:737:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 747,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:747:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 752,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:752:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 776,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:776:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 832,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:832:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 833,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:833:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 834,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:834:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 835,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:835:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 836,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:836:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 837,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:837:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 838,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:838:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 839,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:839:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 853,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:853:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 949,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:949:9: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        },
+        {
+          "line": 1031,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1031:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1032,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1032:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1380,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1380:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1381,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1381:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1468,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1468:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1469,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1469:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1547,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1547:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1579,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1579:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1580,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1580:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1684,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1684:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1685,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1685:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1937,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1937:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1938,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\app.py:1938:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py",
+      "count": 34,
+      "findings": [
+        {
+          "line": 840,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:840:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 893,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:893:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 905,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:905:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 910,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:910:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 918,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:918:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 923,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:923:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 930,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:930:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 935,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:935:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 942,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:942:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 947,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:947:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 962,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:962:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 963,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:963:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 966,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:966:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1009,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1009:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1408,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1408:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1418,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1418:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1458,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1458:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1495,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1495:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1526,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1526:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1544,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1544:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1583,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1583:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1604,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1604:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1610,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1610:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1613,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1613:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1616,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1616:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1628,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1628:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1923,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:1923:13: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        },
+        {
+          "line": 2023,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2023:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 2100,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2100:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 2121,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2121:13: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        },
+        {
+          "line": 2403,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2403:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 2417,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2417:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 2420,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2420:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 2421,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\provider_config.py:2421:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py",
+      "count": 31,
+      "findings": [
+        {
+          "line": 583,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:583:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 666,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:666:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 784,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:784:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 785,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:785:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 797,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:797:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 801,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:801:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1049,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1049:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1050,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1050:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1101,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1101:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1102,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1102:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1150,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1150:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1151,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1151:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1197,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1197:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1198,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1198:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1244,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1244:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1245,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1245:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1292,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1292:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1293,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1293:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1317,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1317:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1318,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1318:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1348,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1348:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1349,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1349:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1716,
+          "column": 25,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1716:25: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1718,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1718:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1722,
+          "column": 24,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1722:24: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1724,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1724:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1726,
+          "column": 31,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1726:31: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1728,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1728:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1730,
+          "column": 28,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1730:28: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1732,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1732:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1759,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tools.py:1759:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py",
+      "count": 20,
+      "findings": [
+        {
+          "line": 280,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:280:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 301,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:301:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 310,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:310:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 312,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:312:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 314,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:314:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 316,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:316:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 318,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:318:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 320,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:320:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 322,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:322:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 324,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:324:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 353,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:353:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 356,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:356:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 371,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:371:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 379,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:379:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 395,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:395:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 425,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:425:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 439,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:439:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 442,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:442:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 456,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:456:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 459,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:459:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py",
+      "count": 18,
+      "findings": [
+        {
+          "line": 515,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:515:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 516,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:516:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 563,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:563:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 620,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:620:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 675,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:675:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 683,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:683:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 744,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:744:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 799,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:799:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 801,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:801:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 824,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:824:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 845,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:845:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 855,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:855:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 876,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:876:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 878,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:878:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 880,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:880:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 882,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:882:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 894,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:894:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 901,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_tools_panel.py:901:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py",
+      "count": 15,
+      "findings": [
+        {
+          "line": 586,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:586:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 599,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:599:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 600,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:600:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 603,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:603:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 753,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:753:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 768,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:768:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 779,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:779:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 877,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:877:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 934,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:934:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 939,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:939:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1210,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:1210:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1224,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:1224:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1228,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:1228:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1234,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:1234:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1315,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\tool_config.py:1315:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py",
+      "count": 14,
+      "findings": [
+        {
+          "line": 427,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:427:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 429,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:429:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 453,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:453:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 460,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:460:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 470,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:470:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 477,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:477:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 482,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:482:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 502,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:502:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 544,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:544:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 567,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:567:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 577,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:577:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 623,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:623:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 734,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:734:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 854,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\process_panel.py:854:17: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py",
+      "count": 13,
+      "findings": [
+        {
+          "line": 317,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:317:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 406,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:406:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 478,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:478:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 484,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:484:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 507,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:507:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 513,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:513:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 520,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:520:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 524,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:524:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 528,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:528:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 532,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:532:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 538,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:538:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 543,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:543:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 807,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\script_manager.py:807:9: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py",
+      "count": 12,
+      "findings": [
+        {
+          "line": 189,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:189:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 203,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:203:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 208,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:208:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 217,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:217:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 222,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:222:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 229,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:229:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 235,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:235:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 240,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:240:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 249,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:249:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 260,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:260:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 301,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:301:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 318,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\binary_panel.py:318:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": 372,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:372:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 387,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:387:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 395,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:395:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 396,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:396:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 399,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:399:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 600,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:600:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 612,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:612:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 613,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:613:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 793,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:793:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 797,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\sandbox_config.py:797:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": 145,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:145:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 146,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:146:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 156,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:156:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 160,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:160:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 227,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:227:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 230,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:230:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 235,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:235:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 238,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:238:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 850,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:850:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 851,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\session_manager.py:851:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 111,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:111:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 228,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:228:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 236,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:236:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 275,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:275:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 280,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:280:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 314,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:314:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 380,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:380:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 386,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\frida_panel.py:386:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 88,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:88:21: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 189,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:189:21: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 317,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:317:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 318,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:318:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 435,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:435:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 451,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:451:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 563,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:563:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 564,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_search.py:564:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 93,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:93:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 105,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:105:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 108,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:108:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 130,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:130:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 133,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:133:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 136,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:136:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 139,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:139:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 144,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py:144:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 401,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:401:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 404,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:404:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1828,
+          "column": 26,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1828:26: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1835,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1835:21: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1860,
+          "column": 26,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1860:26: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1868,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1868:21: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 1870,
+          "column": 26,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1870:26: [error] Type of \"addAction\" is partially unknown\n\u00a0\u00a0Type of \"addAction\" is \"Overload[(icon: QIcon, text: str | None) -> (QAction | None), (icon: QIcon, text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (icon: QIcon, text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None) -> (QAction | None), (text: str | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (text: str | None, shortcut: QKeySequence | StandardKey | str | int | None, slot: ((...) -> Unknown) | pyqtBoundSignal, type: ConnectionType = ...) -> (QAction | None), (action: QAction | None) -> None]\""
+        },
+        {
+          "line": 1878,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor_widget.py:1878:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 327,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:327:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 328,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:328:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 453,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:453:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 463,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:463:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 472,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:472:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 478,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:478:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 479,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:479:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 527,
+          "column": 17,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\stack_viewer.py:527:17: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": 166,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:166:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 173,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:173:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 180,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:180:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 231,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:231:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 236,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:236:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 310,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:310:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 315,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\cutter_panel.py:315:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 88,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:88:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 115,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:115:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 119,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:119:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 123,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:123:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 127,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:127:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 131,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:131:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 144,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:144:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 312,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:312:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 317,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:317:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 361,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:361:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 388,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:388:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 529,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\x64dbg_panel.py:529:13: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 130,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py:130:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 138,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py:138:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 496,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py:496:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 614,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py:614:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 615,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py:615:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 617,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\preferences.py:617:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\analysis_panel.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 128,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\analysis_panel.py:128:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 129,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\analysis_panel.py:129:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 130,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\analysis_panel.py:130:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 131,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\analysis_panel.py:131:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 132,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\analysis_panel.py:132:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 182,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:182:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 187,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:187:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 238,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:238:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 244,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:244:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 251,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\ghidra_panel.py:251:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\sandbox_panel.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 85,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\sandbox_panel.py:85:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 148,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\sandbox_panel.py:148:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 164,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\sandbox_panel.py:164:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 200,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\sandbox_panel.py:200:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 345,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\sandbox_panel.py:345:9: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\chat.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 239,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\chat.py:239:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 263,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\chat.py:263:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 399,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\chat.py:399:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 419,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\chat.py:419:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hxd_panel.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 149,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hxd_panel.py:149:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 211,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"setArguments\" is partially unknown\n\u00a0\u00a0Type of \"setArguments\" is \"(arguments: Unknown) -> None\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hxd_panel.py:211:13: [error] Type of \"setArguments\" is partially unknown\n\u00a0\u00a0Type of \"setArguments\" is \"(arguments: Unknown) -> None\""
+        },
+        {
+          "line": 212,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"start\" is partially unknown\n\u00a0\u00a0Type of \"start\" is \"Overload[(program: str | None, arguments: Unknown = ..., mode: OpenModeFlag = ...) -> None, (mode: OpenModeFlag = ...) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hxd_panel.py:212:13: [error] Type of \"start\" is partially unknown\n\u00a0\u00a0Type of \"start\" is \"Overload[(program: str | None, arguments: Unknown = ..., mode: OpenModeFlag = ...) -> None, (mode: OpenModeFlag = ...) -> None]\""
+        },
+        {
+          "line": 244,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"start\" is partially unknown\n\u00a0\u00a0Type of \"start\" is \"Overload[(program: str | None, arguments: Unknown = ..., mode: OpenModeFlag = ...) -> None, (mode: OpenModeFlag = ...) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hxd_panel.py:244:13: [error] Type of \"start\" is partially unknown\n\u00a0\u00a0Type of \"start\" is \"Overload[(program: str | None, arguments: Unknown = ..., mode: OpenModeFlag = ...) -> None, (mode: OpenModeFlag = ...) -> None]\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\dialogs\\splash_screen.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 196,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\dialogs\\splash_screen.py:196:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 203,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\dialogs\\splash_screen.py:203:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 442,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\dialogs\\splash_screen.py:442:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\async_bridge.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 119,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\async_bridge.py:119:21: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 192,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\async_bridge.py:192:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 194,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\async_bridge.py:194:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\base_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 140,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\base_panel.py:140:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 162,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\base_panel.py:162:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 188,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\base_panel.py:188:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 87,
+          "column": 21,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py:87:21: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 234,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py:234:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 235,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_statistics.py:235:13: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 73,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py:73:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 90,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py:90:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 96,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py:96:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\xpu_status.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 98,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\xpu_status.py:98:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 205,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\xpu_status.py:205:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 211,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\xpu_status.py:211:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\confirmation_dialog.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 194,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\confirmation_dialog.py:194:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 215,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\confirmation_dialog.py:215:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 92,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py:92:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 113,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py:113:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 338,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:338:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        },
+        {
+          "line": 342,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py:342:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\win32_embed.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 166,
+          "column": 13,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\win32_embed.py:166:13: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        },
+        {
+          "line": 174,
+          "column": 5,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\win32_embed.py:174:5: [error] Type of \"singleShot\" is partially unknown\n\u00a0\u00a0Type of \"singleShot\" is \"Overload[(msec: int, slot: Unknown | pyqtBoundSignal) -> None, (msec: int, timerType: TimerType, slot: Unknown | pyqtBoundSignal) -> None]\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panel_dock.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 79,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panel_dock.py:79:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    },
+    {
+      "path": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 487,
+          "column": 9,
+          "severity": "error",
+          "rule": "reportUnknownMemberType",
+          "message": "Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\"",
+          "raw": "d:\\Intellicrack\\src\\intellicrack\\ui\\panels\\vnc_widget.py:487:9: [error] Type of \"connect\" is partially unknown\n\u00a0\u00a0Type of \"connect\" is \"(slot: Unknown | pyqtBoundSignal) -> Connection\""
+        }
+      ]
+    }
+  ]
 }

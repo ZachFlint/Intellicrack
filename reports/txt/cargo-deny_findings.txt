@@ -1,8 +1,1 @@
-2 findings in D:\Intellicrack\src\intellicrack-hexcore\deny.toml
-
-warning[license-not-encountered]: license was not encountered
-
-warning[license-not-encountered]: license was not encountered
-
-
-0 findings in Cargo.toml
+No findings.

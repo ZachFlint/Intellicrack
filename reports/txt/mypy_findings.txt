@@ -507,47 +507,6 @@ tests\test_hexcore_e2e\test_bridge_document_info.py:234: error: Incompatible typ
 tests\test_hexcore_e2e\test_bridge_document_info.py:236: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
 
-19 findings in src\intellicrack\ui\provider_config.py
-
-src\intellicrack\ui\provider_config.py:67: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:73: error: Incompatible types in assignment (expression has type "None", variable has type "type[OllamaProvider]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:79: error: Incompatible types in assignment (expression has type "None", variable has type "type[OpenRouterProvider]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:93: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:94: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:95: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:96: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], int]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:97: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:98: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:108: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:109: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
-
-src\intellicrack\ui\provider_config.py:1638: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\provider_config.py:1673: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\provider_config.py:1734: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\provider_config.py:2283: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\provider_config.py:2300: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\provider_config.py:2320: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\provider_config.py:2347: error: Statement is unreachable  [unreachable]
-
-
 19 findings in tests\test_ui\test_tools_logic.py
 
 tests\test_ui\test_tools_logic.py:42: error: "FunctionListPanel" has no attribute "on_item_double_clicked"; maybe "_on_item_double_clicked"?  [attr-defined]
@@ -700,6 +659,41 @@ tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:234: error: Incompatible 
 tests\test_hexcore_e2e\test_bridge_disassembly_deep.py:251: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
 
 
+16 findings in src\intellicrack\ui\provider_config.py
+
+src\intellicrack\ui\provider_config.py:67: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:73: error: Incompatible types in assignment (expression has type "None", variable has type "type[OllamaProvider]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:79: error: Incompatible types in assignment (expression has type "None", variable has type "type[OpenRouterProvider]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:93: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:94: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:95: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:96: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], int]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:97: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:98: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:108: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:109: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
+
+src\intellicrack\ui\provider_config.py:1638: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\provider_config.py:1673: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\provider_config.py:1734: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\ui\provider_config.py:2347: error: Statement is unreachable  [unreachable]
+
+
 15 findings in tests\test_hexcore_e2e\test_bridge_yara_deep.py
 
 tests\test_hexcore_e2e\test_bridge_yara_deep.py:136: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
@@ -731,6 +725,37 @@ tests\test_hexcore_e2e\test_bridge_yara_deep.py:286: error: Incompatible types i
 tests\test_hexcore_e2e\test_bridge_yara_deep.py:300: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
 
 tests\test_hexcore_e2e\test_bridge_yara_deep.py:323: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
+
+
+14 findings in tests\test_core\test_process_manager.py
+
+tests\test_core\test_process_manager.py:264: error: Unexpected keyword argument "timeout" for "run_tracked_async" of "ProcessManager"  [call-arg]
+
+tests\test_core\test_process_manager.py:264: note: "run_tracked_async" defined in "intellicrack.core.process_manager"
+
+tests\test_core\test_process_manager.py:324: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:325: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:326: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:327: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:336: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:341: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:360: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:376: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:453: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:477: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:482: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
+
+tests\test_core\test_process_manager.py:508: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
 
 
 14 findings in tests\test_bridges\test_frida_bridge.py
@@ -793,35 +818,6 @@ tests\test_hexcore_e2e\test_bridge_display.py:157: error: Incompatible types in 
 tests\test_hexcore_e2e\test_bridge_display.py:167: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
 
 tests\test_hexcore_e2e\test_bridge_display.py:176: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
-
-
-13 findings in tests\test_core\test_process_manager.py
-
-tests\test_core\test_process_manager.py:264: error: Unexpected keyword argument "timeout" for "run_tracked_async" of "ProcessManager"  [call-arg]
-
-tests\test_core\test_process_manager.py:324: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:325: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:326: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:327: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:336: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:341: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:360: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:376: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:453: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:477: error: "ProcessManager" has no attribute "sync_cleanup"; maybe "_sync_cleanup"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:482: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-tests\test_core\test_process_manager.py:508: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
 
 
 13 findings in tests\test_hexcore_e2e\test_bridge_search_numeric_deep.py
@@ -1064,6 +1060,27 @@ tests\test_ui\test_app_embedded_tools.py:371: error: "MainWindow" has no attribu
 tests\test_ui\test_app_embedded_tools.py:387: error: "MainWindow" has no attribute "show_no_binary_warning"; maybe "_show_no_binary_warning"?  [attr-defined]
 
 
+9 findings in tests\test_ui\test_vnc_widget.py
+
+tests\test_ui\test_vnc_widget.py:96: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+
+tests\test_ui\test_vnc_widget.py:98: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+
+tests\test_ui\test_vnc_widget.py:105: error: Unexpected keyword argument "timeout" for "connect" of "RFBClient"  [call-arg]
+
+tests\test_ui\test_vnc_widget.py:105: note: "connect" defined in "intellicrack.ui.panels.vnc_widget"
+
+tests\test_ui\test_vnc_widget.py:199: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:214: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:220: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:230: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+
+tests\test_ui\test_vnc_widget.py:353: error: "type[VNCWidget]" has no attribute "button_mask"  [attr-defined]
+
+
 8 findings in tests\test_hexcore_e2e\test_bridge_yara.py
 
 tests\test_hexcore_e2e\test_bridge_yara.py:85: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
@@ -1083,23 +1100,23 @@ tests\test_hexcore_e2e\test_bridge_yara.py:154: error: Incompatible types in ass
 tests\test_hexcore_e2e\test_bridge_yara.py:167: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
 
 
-8 findings in tests\test_ui\test_vnc_widget.py
+8 findings in tests\test_hexcore_e2e\test_bridge_sandbox.py
 
-tests\test_ui\test_vnc_widget.py:96: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:81: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
 
-tests\test_ui\test_vnc_widget.py:98: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:93: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
 
-tests\test_ui\test_vnc_widget.py:105: error: Unexpected keyword argument "timeout" for "connect" of "RFBClient"  [call-arg]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:103: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
 
-tests\test_ui\test_vnc_widget.py:199: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:138: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
 
-tests\test_ui\test_vnc_widget.py:214: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:149: error: Unexpected keyword argument "timeout" for "test_in_sandbox" of "HexEditorBridge"  [call-arg]
 
-tests\test_ui\test_vnc_widget.py:220: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:149: note: "test_in_sandbox" defined in "intellicrack.bridges.hex_editor"
 
-tests\test_ui\test_vnc_widget.py:230: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:170: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
 
-tests\test_ui\test_vnc_widget.py:353: error: "type[VNCWidget]" has no attribute "button_mask"  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_sandbox.py:171: error: Non-overlapping identity check (left operand type: "ToolRegistry | None", right operand type: "_MinimalRegistry")  [comparison-overlap]
 
 
 7 findings in tests\test_hexcore_e2e\test_hex_document_state.py
@@ -1134,23 +1151,6 @@ tests\test_bridges\test_x64dbg_events.py:170: error: "X64DbgBridge" has no attri
 tests\test_bridges\test_x64dbg_events.py:187: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
 
 tests\test_bridges\test_x64dbg_events.py:195: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
-
-
-7 findings in tests\test_hexcore_e2e\test_bridge_sandbox.py
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:81: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:93: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:103: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:138: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:149: error: Unexpected keyword argument "timeout" for "test_in_sandbox" of "HexEditorBridge"  [call-arg]
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:170: error: Argument 1 to "set_tool_registry" of "HexEditorBridge" has incompatible type "_MinimalRegistry"; expected "ToolRegistry"  [arg-type]
-
-tests\test_hexcore_e2e\test_bridge_sandbox.py:171: error: Non-overlapping identity check (left operand type: "ToolRegistry | None", right operand type: "_MinimalRegistry")  [comparison-overlap]
 
 
 7 findings in tests\test_hexcore_e2e\test_bridge_patches.py
@@ -1217,15 +1217,15 @@ tests\test_providers\test_model_discovery.py:157: error: Argument 1 to "connect"
 tests\test_providers\test_model_discovery.py:167: error: Argument 1 to "connect" of "AnthropicProvider" has incompatible type "ProviderCredentials | None"; expected "ProviderCredentials"  [arg-type]
 
 
-4 findings in tests\test_ui\test_graph_view.py
+4 findings in tests\test_providers\test_local_transformers_provider.py
 
-tests\test_ui\test_graph_view.py:256: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+tests\test_providers\test_local_transformers_provider.py:501: error: "LocalTransformersProvider" has no attribute "format_prompt"; maybe "_format_prompt"?  [attr-defined]
 
-tests\test_ui\test_graph_view.py:270: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+tests\test_providers\test_local_transformers_provider.py:514: error: "LocalTransformersProvider" has no attribute "format_prompt"; maybe "_format_prompt"?  [attr-defined]
 
-tests\test_ui\test_graph_view.py:280: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
+tests\test_providers\test_local_transformers_provider.py:526: error: "LocalTransformersProvider" has no attribute "parse_tool_calls"; maybe "_parse_tool_calls"?  [attr-defined]
 
-tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
+tests\test_providers\test_local_transformers_provider.py:534: error: "LocalTransformersProvider" has no attribute "parse_tool_calls"; maybe "_parse_tool_calls"?  [attr-defined]
 
 
 4 findings in tests\test_hexcore_e2e\conftest.py
@@ -1250,15 +1250,15 @@ src\intellicrack\ui\panels\binary_panel.py:815: error: Statement is unreachable 
 src\intellicrack\ui\panels\binary_panel.py:869: error: Statement is unreachable  [unreachable]
 
 
-4 findings in tests\test_providers\test_local_transformers_provider.py
+4 findings in tests\test_ui\test_graph_view.py
 
-tests\test_providers\test_local_transformers_provider.py:501: error: "LocalTransformersProvider" has no attribute "format_prompt"; maybe "_format_prompt"?  [attr-defined]
+tests\test_ui\test_graph_view.py:256: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
 
-tests\test_providers\test_local_transformers_provider.py:514: error: "LocalTransformersProvider" has no attribute "format_prompt"; maybe "_format_prompt"?  [attr-defined]
+tests\test_ui\test_graph_view.py:270: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
 
-tests\test_providers\test_local_transformers_provider.py:526: error: "LocalTransformersProvider" has no attribute "parse_tool_calls"; maybe "_parse_tool_calls"?  [attr-defined]
+tests\test_ui\test_graph_view.py:280: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
 
-tests\test_providers\test_local_transformers_provider.py:534: error: "LocalTransformersProvider" has no attribute "parse_tool_calls"; maybe "_parse_tool_calls"?  [attr-defined]
+tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
 
 
 4 findings in src\intellicrack\ui\app.py
@@ -1324,13 +1324,6 @@ tests\test_hexcore_e2e\test_data_inspector.py:173: error: Returning Any from fun
 tests\test_hexcore_e2e\test_data_inspector.py:299: error: Redundant cast to "dict[str, str]"  [redundant-cast]
 
 
-2 findings in src\intellicrack\core\process_manager.py
-
-src\intellicrack\core\process_manager.py:148: error: Cannot determine type of "_initialized"  [has-type]
-
-src\intellicrack\core\process_manager.py:820: note: "run_tracked_async" of "ProcessManager" defined here
-
-
 2 findings in src\intellicrack\credentials\store.py
 
 src\intellicrack\credentials\store.py:35: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
@@ -1366,13 +1359,6 @@ tests\test_ui\test_font_manager.py:146: error: Non-overlapping equality check (l
 tests\test_ui\test_font_manager.py:187: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 
-2 findings in src\intellicrack\bridges\hex_editor.py
-
-src\intellicrack\bridges\hex_editor.py:1733: error: Name "data" already defined on line 1727  [no-redef]
-
-src\intellicrack\bridges\hex_editor.py:2047: note: "test_in_sandbox" of "HexEditorBridge" defined here
-
-
 1 findings in src\intellicrack\core\hexpat\evaluator.py
 
 src\intellicrack\core\hexpat\evaluator.py:1467: error: Right operand of "or" is never evaluated  [unreachable]
@@ -1383,9 +1369,9 @@ src\intellicrack\core\hexpat\evaluator.py:1467: error: Right operand of "or" is 
 tests\test_core\test_config.py:166: error: "Config" has no attribute "to_dict"; maybe "_to_dict"?  [attr-defined]
 
 
-1 findings in src\intellicrack\credentials\env_loader.py
+1 findings in src\intellicrack\core\process_manager.py
 
-src\intellicrack\credentials\env_loader.py:395: error: Argument 2 to "get" of "Mapping" has incompatible type "str | None"; expected "str"  [arg-type]
+src\intellicrack\core\process_manager.py:148: error: Cannot determine type of "_initialized"  [has-type]
 
 
 1 findings in tests\test_core\test_main.py
@@ -1413,6 +1399,16 @@ tests\test_providers\test_openrouter_provider.py:22: error: Module "intellicrack
 tests\test_providers\test_huggingface_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
+1 findings in src\intellicrack\credentials\oauth.py
+
+src\intellicrack\credentials\oauth.py:95: error: Statement is unreachable  [unreachable]
+
+
+1 findings in src\intellicrack\providers\model_loader.py
+
+src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
 1 findings in tests\test_hexpat\test_interpreter.py
 
 tests\test_hexpat\test_interpreter.py:267: error: Argument 2 to "execute_bytes" of "HexPatInterpreter" has incompatible type "bytearray"; expected "bytes"  [arg-type]
@@ -1433,6 +1429,21 @@ tests\test_providers\test_grok_provider.py:22: error: Module "intellicrack.crede
 tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
+1 findings in src\intellicrack\providers\local_transformers.py
+
+src\intellicrack\providers\local_transformers.py:64: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
+1 findings in src\intellicrack\bridges\hex_editor.py
+
+src\intellicrack\bridges\hex_editor.py:1733: error: Name "data" already defined on line 1727  [no-redef]
+
+
+1 findings in tests\test_hexcore_e2e\test_bridge_error_handling.py
+
+tests\test_hexcore_e2e\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+
 1 findings in tests\test_providers\test_google_provider.py
 
 tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
@@ -1443,36 +1454,16 @@ tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.cre
 src\intellicrack\ui\win32_embed.py:119: error: Argument 1 to "createWindowContainer" of "QWidget" has incompatible type "object"; expected "QWindow | None"  [arg-type]
 
 
-1 findings in tests\test_ui\test_icon_manager.py
-
-tests\test_ui\test_icon_manager.py:264: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
-
-
-1 findings in tests\test_hexcore_e2e\test_bridge_error_handling.py
-
-tests\test_hexcore_e2e\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
-
-
 1 findings in tests\test_ui\test_panel_dock.py
 
 tests\test_ui\test_panel_dock.py:91: error: "DetachedPanelWindow" has no attribute "on_redock"; maybe "_on_redock"?  [attr-defined]
 
 
-1 findings in src\intellicrack\providers\model_loader.py
+1 findings in tests\test_ui\test_icon_manager.py
 
-src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-
-1 findings in src\intellicrack\providers\local_transformers.py
-
-src\intellicrack\providers\local_transformers.py:64: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+tests\test_ui\test_icon_manager.py:264: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
 
 
 1 findings in tests\test_ui\test_xpu_status.py
 
 tests\test_ui\test_xpu_status.py:193: error: "XPUStatusDialog" has no attribute "status_label"; maybe "_status_label"?  [attr-defined]
-
-
-1 findings in src\intellicrack\ui\panels\vnc_widget.py
-
-src\intellicrack\ui\panels\vnc_widget.py:83: note: "connect" of "RFBClient" defined here

@@ -1,6 +1,6 @@
 {
   "tool": "wemake",
-  "generated": "2026-04-03T23:23:01.341712+00:00",
+  "generated": "2026-04-05T20:13:27.646617+00:00",
   "total_findings": 545,
   "total_files": 88,
   "files": [
@@ -616,11 +616,11 @@
           "raw": "src/intellicrack\\bridges\\hex_editor.py:2859:5: WPS211 Found too many arguments: 7 > 5"
         },
         {
-          "line": 2914,
+          "line": 2913,
           "column": 21,
           "code": "WPS460",
           "message": "Found single element destructuring",
-          "raw": "src/intellicrack\\bridges\\hex_editor.py:2914:21: WPS460 Found single element destructuring"
+          "raw": "src/intellicrack\\bridges\\hex_editor.py:2913:21: WPS460 Found single element destructuring"
         }
       ]
     },
@@ -3561,18 +3561,18 @@
           "raw": "src/intellicrack\\ui\\panels\\hex_editor\\_search.py:159:5: WPS211 Found too many arguments: 13 > 5"
         },
         {
-          "line": 248,
+          "line": 247,
           "column": 13,
           "code": "WPS327",
           "message": "Found useless `continue` at the end of the loop",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor\\_search.py:248:13: WPS327 Found useless `continue` at the end of the loop"
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor\\_search.py:247:13: WPS327 Found useless `continue` at the end of the loop"
         },
         {
-          "line": 253,
+          "line": 252,
           "column": 21,
           "code": "WPS460",
           "message": "Found single element destructuring",
-          "raw": "src/intellicrack\\ui\\panels\\hex_editor\\_search.py:253:21: WPS460 Found single element destructuring"
+          "raw": "src/intellicrack\\ui\\panels\\hex_editor\\_search.py:252:21: WPS460 Found single element destructuring"
         }
       ]
     },

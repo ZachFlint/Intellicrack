@@ -346,3 +346,8 @@ src/intellicrack/ui\panels\hex_editor\_yara.py:116:5: C901 'YaraMixin._on_yara_s
 1 findings in src/intellicrack/ui\panels\hex_editor\panel.py
 
 src/intellicrack/ui\panels\hex_editor\panel.py:703:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)
+
+
+1 findings in tests/test_providers\test_e2e_chat.py
+
+tests/test_providers\test_e2e_chat.py:1132:5: C901 'TestCrossProviderConsistency.available_providers' is too complex (11)

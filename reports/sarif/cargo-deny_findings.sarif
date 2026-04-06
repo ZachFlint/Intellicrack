@@ -7,65 +7,15 @@
         "driver": {
           "name": "cargo-deny",
           "version": "1.0.0",
-          "rules": [
-            {
-              "id": "license-not-encountered",
-              "shortDescription": {
-                "text": "license was not encountered"
-              }
-            }
-          ]
+          "rules": []
         }
       },
-      "results": [
-        {
-          "ruleId": "license-not-encountered",
-          "level": "warning",
-          "message": {
-            "text": "license was not encountered"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack-hexcore/deny.toml",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 6
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "license-not-encountered",
-          "level": "warning",
-          "message": {
-            "text": "license was not encountered"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack-hexcore/deny.toml",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 20,
-                  "startColumn": 6
-                }
-              }
-            }
-          ]
-        }
-      ],
+      "results": [],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-04T06:07:03.869812+00:00"
+          "endTimeUtc": "2026-04-05T20:21:59.563432+00:00"
         }
       ]
     }

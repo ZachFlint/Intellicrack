@@ -23,6 +23,7 @@ Exit codes:
 
 from __future__ import annotations
 
+import operator
 import os
 import re
 import sys
@@ -58,9 +59,18 @@ def _load_env() -> None:
 _load_env()
 
 
-API_KEY_MODEL: Final[str] = os.environ.get(
-    "GEMINI_COMMIT_MODEL", "gemini-flash-latest",
+_GEMINI_COMMIT_MODEL_OVERRIDE: Final[str] = os.environ.get(
+    "GEMINI_COMMIT_MODEL",
+    "",
 )
+_FLASH_EXCLUDE_KEYWORDS: Final[tuple[str, ...]] = (
+    "tts",
+    "image",
+    "audio",
+    "live",
+    "native",
+)
+_active_model: list[str] = []
 SINGLE_CALL_TOKEN_LIMIT: Final[int] = 900_000
 CHUNK_TOKEN_TARGET: Final[int] = 800_000
 BATCH_COOLDOWN: Final[int] = 2
@@ -122,6 +132,150 @@ _YELLOW: Final[str] = "\033[33m"
 _RESET: Final[str] = "\033[0m"
 
 
+def _get_model() -> str:
+    """Return the active model name for API calls.
+
+    Returns the resolved model cached by ``_resolve_model``. Raises if
+    ``_resolve_model`` has not been called yet.
+
+    Returns:
+        str: The model identifier to use for API calls.
+
+    Raises:
+        RuntimeError: If ``_resolve_model`` was not called first.
+    """
+    if _active_model:
+        return _active_model[0]
+    if _GEMINI_COMMIT_MODEL_OVERRIDE:
+        return _GEMINI_COMMIT_MODEL_OVERRIDE
+    msg = "_resolve_model must be called before _get_model"
+    raise RuntimeError(msg)
+
+
+def _is_general_flash(name: str) -> bool:
+    """Check whether a model name is a general-purpose flash variant.
+
+    Excludes specialized variants (TTS, image, audio, live) that are not
+    suitable for text generation.
+
+    Args:
+        name: The full model resource name from the API listing.
+
+    Returns:
+        bool: True if the model is a general-purpose flash model.
+    """
+    lower = name.lower()
+    if "flash" not in lower or "gemini" not in lower:
+        return False
+    return not any(kw in lower for kw in _FLASH_EXCLUDE_KEYWORDS)
+
+
+def _rank_flash_models(
+    models: list[str],
+    *,
+    lite: bool = False,
+) -> list[str]:
+    """Rank flash models by version, highest first.
+
+    Parses version numbers from model names (e.g. ``gemini-3-flash-preview``
+    yields ``(3, 0)``, ``gemini-2.5-flash`` yields ``(2, 5)``). Returns
+    all matching models sorted by descending version.
+
+    Args:
+        models: List of full model resource names.
+        lite: If True, only consider lite variants. If False, exclude them.
+
+    Returns:
+        list[str]: Model names sorted by version descending, empty if none.
+    """
+    candidates: list[tuple[tuple[int, ...], str]] = []
+    for name in models:
+        lower = name.lower()
+        is_lite = "lite" in lower
+        if lite != is_lite:
+            continue
+        short = lower.rsplit("/", maxsplit=1)[-1]
+        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", short)
+        if not version_match:
+            continue
+        version_str = version_match.group(1)
+        version_parts = tuple(int(p) for p in version_str.split("."))
+        candidates.append((version_parts, name))
+    candidates.sort(key=operator.itemgetter(0), reverse=True)
+    return [c[1] for c in candidates]
+
+
+def _probe_model(client: genai.Client, model: str) -> bool:
+    """Test whether a model is accessible via a lightweight count_tokens call.
+
+    Args:
+        client: The genai client instance.
+        model: The model identifier to probe.
+
+    Returns:
+        bool: True if the model responded successfully, False on 404.
+
+    Raises:
+        ClientError: If the API returns a non-404 error.
+    """
+    try:
+        client.models.count_tokens(model=model, contents="test")
+    except ClientError as exc:
+        if "404" in str(exc):
+            return False
+        raise
+    return True
+
+
+def _resolve_model(client: genai.Client) -> str:
+    """Discover the latest accessible flash model from Vertex AI and cache it.
+
+    Queries the model listing API, ranks general-purpose flash models by
+    version, then probes each with a lightweight ``count_tokens`` call to
+    verify the project has access. Falls back through flash-lite models if
+    no standard flash model is accessible. The first accessible model is
+    cached in ``_active_model`` for all subsequent ``_get_model`` calls.
+
+    If ``GEMINI_COMMIT_MODEL`` env var is set, that value is used directly
+    without querying the listing.
+
+    Args:
+        client: The genai client instance.
+
+    Returns:
+        str: The resolved model identifier.
+
+    Raises:
+        RuntimeError: If no accessible flash model could be found.
+    """
+    if _GEMINI_COMMIT_MODEL_OVERRIDE:
+        _active_model.clear()
+        _active_model.append(_GEMINI_COMMIT_MODEL_OVERRIDE)
+        _log(f"Using override model: {_GEMINI_COMMIT_MODEL_OVERRIDE}")
+        return _GEMINI_COMMIT_MODEL_OVERRIDE
+
+    all_flash: list[str] = []
+    for m in client.models.list():
+        name = m.name or ""
+        if _is_general_flash(name):
+            all_flash.append(name)
+
+    ranked = _rank_flash_models(all_flash, lite=False)
+    ranked.extend(_rank_flash_models(all_flash, lite=True))
+
+    for candidate in ranked:
+        _log(f"Probing {candidate}...")
+        if _probe_model(client, candidate):
+            _active_model.clear()
+            _active_model.append(candidate)
+            _log(f"Using model: {candidate}")
+            return candidate
+        _log(f"WARN: {candidate} not accessible, trying next")
+
+    msg = "No accessible Gemini Flash model found in Vertex AI"
+    raise RuntimeError(msg)
+
+
 def _log(msg: str) -> None:
     """Write a diagnostic line to stderr.
 
@@ -181,9 +335,11 @@ def _count_tokens(client: genai.Client, text: str) -> int:
         int: Number of tokens in the text.
     """
     response = client.models.count_tokens(
-        model=API_KEY_MODEL,
+        model=_get_model(),
         contents=text,
     )
+    if response.total_tokens is None:
+        return len(text) // 4
     return response.total_tokens
 
 
@@ -229,8 +385,7 @@ def _batch_cooldown_wait(chunk_num: int, total_chunks: int) -> None:
     for remaining in range(BATCH_COOLDOWN, 0, -1):
         bar = _build_progress_bar(BATCH_COOLDOWN - remaining, BATCH_COOLDOWN)
         _progress(
-            f"[{chunk_num}/{total_chunks}] "
-            f"Next batch in: {bar} {remaining}s",
+            f"[{chunk_num}/{total_chunks}] Next batch in: {bar} {remaining}s",
         )
         time.sleep(1)
     _progress(
@@ -271,9 +426,7 @@ def _split_diff_on_file_boundaries(
     for i, file_diff in enumerate(file_diffs):
         file_tokens = _count_tokens(client, file_diff)
         _progress(
-            f"Splitting: file {i + 1}/{len(file_diffs)} "
-            f"({_format_tokens(current_tokens)} in current chunk, "
-            f"{len(chunks)} chunks built)",
+            f"Splitting: file {i + 1}/{len(file_diffs)} ({_format_tokens(current_tokens)} in current chunk, {len(chunks)} chunks built)",
         )
 
         if file_tokens > CHUNK_TOKEN_TARGET:
@@ -319,11 +472,14 @@ def _generate_content(
     """
     try:
         response = client.models.generate_content(
-            model=API_KEY_MODEL,
+            model=_get_model(),
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.3,
                 max_output_tokens=max_output_tokens,
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=24576,
+                ),
             ),
         )
     except ClientError as exc:
@@ -364,8 +520,7 @@ def _summarize_chunk(
     """
     chunk_tokens = _count_tokens(client, chunk)
     _progress(
-        f"{_GREEN}[{chunk_num}/{total_chunks}]{_RESET} "
-        f"Summarizing chunk ({_format_tokens(chunk_tokens)} tokens)...",
+        f"{_GREEN}[{chunk_num}/{total_chunks}]{_RESET} Summarizing chunk ({_format_tokens(chunk_tokens)} tokens)...",
         overwrite=False,
     )
 
@@ -374,14 +529,12 @@ def _summarize_chunk(
 
     if result:
         _progress(
-            f"{_GREEN}[{chunk_num}/{total_chunks}]{_RESET} "
-            f"Summary received ({len(result)} chars)",
+            f"{_GREEN}[{chunk_num}/{total_chunks}]{_RESET} Summary received ({len(result)} chars)",
             overwrite=False,
         )
     else:
         _progress(
-            f"{_YELLOW}[{chunk_num}/{total_chunks}]{_RESET} "
-            f"Summary failed, skipping chunk",
+            f"{_YELLOW}[{chunk_num}/{total_chunks}]{_RESET} Summary failed, skipping chunk",
             overwrite=False,
         )
 
@@ -440,15 +593,13 @@ def _batch_generate(
     total_chunks = len(chunks)
     estimated_time = total_chunks * BATCH_COOLDOWN
     _log(
-        f"Batch mode: {total_chunks} chunks, "
-        f"~{estimated_time // 60}m {estimated_time % 60}s estimated",
+        f"Batch mode: {total_chunks} chunks, ~{estimated_time // 60}m {estimated_time % 60}s estimated",
     )
 
     if estimated_time > MAX_BATCH_TIME:
         max_chunks = MAX_BATCH_TIME // BATCH_COOLDOWN
         _log(
-            f"Capping at {max_chunks} chunks to stay under "
-            f"{MAX_BATCH_TIME // 60}m timeout",
+            f"Capping at {max_chunks} chunks to stay under {MAX_BATCH_TIME // 60}m timeout",
         )
         chunks = chunks[:max_chunks]
         total_chunks = len(chunks)
@@ -477,9 +628,7 @@ def _batch_generate(
             _batch_cooldown_wait(chunk_num, total_chunks)
 
     _progress(
-        f"Progress: {_build_progress_bar(total_chunks, total_chunks)} "
-        f"{total_chunks}/{total_chunks} chunks | "
-        f"All batches complete",
+        f"Progress: {_build_progress_bar(total_chunks, total_chunks)} {total_chunks}/{total_chunks} chunks | All batches complete",
         overwrite=False,
     )
 
@@ -489,8 +638,7 @@ def _batch_generate(
 
     _log(f"Collected {len(summaries)}/{total_chunks} summaries, generating final message...")
     _progress(
-        f"{_GREEN}[FINAL]{_RESET} Combining {len(summaries)} summaries "
-        f"into commit message...",
+        f"{_GREEN}[FINAL]{_RESET} Combining {len(summaries)} summaries into commit message...",
         overwrite=False,
     )
 
@@ -528,10 +676,7 @@ def _single_generate(
         cut_point = int(len(diff_input) * ratio * 0.95)
         diff_input = diff_input[:cut_point]
         final_tokens = _count_tokens(client, diff_input)
-        truncation_notice = (
-            f"NOTE: Diff was truncated from {total_tokens:,} to "
-            f"{final_tokens:,} tokens. Focus on the visible changes."
-        )
+        truncation_notice = f"NOTE: Diff was truncated from {total_tokens:,} to {final_tokens:,} tokens. Focus on the visible changes."
         _log(f"Truncated for single call: {total_tokens:,} -> {final_tokens:,} tokens")
 
     prompt = COMMIT_MESSAGE_PROMPT.format(
@@ -539,7 +684,7 @@ def _single_generate(
         diff_input=diff_input,
     )
 
-    _log(f"Calling {API_KEY_MODEL}...")
+    _log(f"Calling {_get_model()}...")
     return _generate_content(client, prompt)
 
 
@@ -565,6 +710,7 @@ def main() -> int:
 
     _log(f"Vertex AI: project={project}, location={location}")
     client = genai.Client(vertexai=True, project=project, location=location)
+    _resolve_model(client)
 
     stat_section, diff_body = _extract_stat_section(diff_input)
 
@@ -584,8 +730,7 @@ def main() -> int:
             result = _single_generate(client, diff_input, total_tokens)
         else:
             _log(
-                f"Diff exceeds {SINGLE_CALL_TOKEN_LIMIT:,} token limit, "
-                f"using batch mode",
+                f"Diff exceeds {SINGLE_CALL_TOKEN_LIMIT:,} token limit, using batch mode",
             )
             result = _batch_generate(client, diff_body, stat_section)
 

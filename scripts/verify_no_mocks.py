@@ -67,6 +67,14 @@ EXCLUDE_FILES = [
 EXCLUDE_DIRS = [
     "__pycache__",
     ".pytest_cache",
+    ".claude",
+    ".pixi",
+    ".git",
+    "node_modules",
+    "vendor",
+    "target",
+    "build",
+    "dist",
     "legacy_tests",
 ]
 

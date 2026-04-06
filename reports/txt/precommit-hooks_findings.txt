@@ -1,8 +1,64 @@
+2 findings in reports/csv/cargo-deny_findings.csv
+
+reports/csv/cargo-deny_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/cargo-deny_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/clippy_findings.csv
+
+reports/csv/clippy_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/clippy_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/llvm-cov_findings.csv
+
+reports/csv/llvm-cov_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/llvm-cov_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/machete_findings.csv
+
+reports/csv/machete_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/machete_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/nextest_findings.csv
+
+reports/csv/nextest_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/nextest_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/csv/precommit-hooks_findings.csv
 
 reports/csv/precommit-hooks_findings.csv: [trailing-whitespace] [FIXED] Fixed
 
 reports/csv/precommit-hooks_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/rust-code-analysis_findings.csv
+
+reports/csv/rust-code-analysis_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/rust-code-analysis_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/rustfmt_findings.csv
+
+reports/csv/rustfmt_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/rustfmt_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/csv/typos_findings.csv
+
+reports/csv/typos_findings.csv: [trailing-whitespace] [FIXED] Fixed
+
+reports/csv/typos_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in .complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json
@@ -45,6 +101,20 @@ reports/json/basedpyright_findings.json: [mixed-line-ending] [FIXED] fixed mixed
 reports/json/blinter_findings.json: [end-of-file-fixer] [FIXED] Fixed
 
 reports/json/blinter_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/json/cargo-deny_findings.json
+
+reports/json/cargo-deny_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/cargo-deny_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/json/clippy_findings.json
+
+reports/json/clippy_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/clippy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/json/codespell_findings.json
@@ -110,6 +180,20 @@ reports/json/jsonlint_findings.json: [end-of-file-fixer] [FIXED] Fixed
 reports/json/jsonlint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/json/llvm-cov_findings.json
+
+reports/json/llvm-cov_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/llvm-cov_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/json/machete_findings.json
+
+reports/json/machete_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/machete_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/json/markdownlint_findings.json
 
 reports/json/markdownlint_findings.json: [end-of-file-fixer] [FIXED] Fixed
@@ -129,6 +213,13 @@ reports/json/mccabe_findings.json: [mixed-line-ending] [FIXED] fixed mixed line 
 reports/json/mypy_findings.json: [end-of-file-fixer] [FIXED] Fixed
 
 reports/json/mypy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/json/nextest_findings.json
+
+reports/json/nextest_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/nextest_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/json/precommit-hooks_findings.json
@@ -173,18 +264,25 @@ reports/json/ruff_findings.json: [end-of-file-fixer] [FIXED] Fixed
 reports/json/ruff_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/json/rust-code-analysis_findings.json
+
+reports/json/rust-code-analysis_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/rust-code-analysis_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/json/rustfmt_findings.json
+
+reports/json/rustfmt_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/rustfmt_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/json/semgrep_findings.json
 
 reports/json/semgrep_findings.json: [end-of-file-fixer] [FIXED] Fixed
 
 reports/json/semgrep_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/json/shellcheck_findings.json
-
-reports/json/shellcheck_findings.json: [end-of-file-fixer] [FIXED] Fixed
-
-reports/json/shellcheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/json/taplo_findings.json
@@ -199,6 +297,13 @@ reports/json/taplo_findings.json: [mixed-line-ending] [FIXED] fixed mixed line e
 reports/json/ty_findings.json: [end-of-file-fixer] [FIXED] Fixed
 
 reports/json/ty_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/json/typos_findings.json
+
+reports/json/typos_findings.json: [end-of-file-fixer] [FIXED] Fixed
+
+reports/json/typos_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/json/uncalled_findings.json
@@ -243,11 +348,81 @@ reports/json/yamllint_findings.json: [end-of-file-fixer] [FIXED] Fixed
 reports/json/yamllint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/lint_dashboard.html
+
+reports/lint_dashboard.html: [end-of-file-fixer] [FIXED] Fixed
+
+reports/lint_dashboard.html: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/cargo-deny_findings.sarif
+
+reports/sarif/cargo-deny_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/cargo-deny_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/clippy_findings.sarif
+
+reports/sarif/clippy_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/clippy_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/llvm-cov_findings.sarif
+
+reports/sarif/llvm-cov_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/llvm-cov_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/machete_findings.sarif
+
+reports/sarif/machete_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/machete_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/nextest_findings.sarif
+
+reports/sarif/nextest_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/nextest_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/sarif/precommit-hooks_findings.sarif
 
 reports/sarif/precommit-hooks_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
 
 reports/sarif/precommit-hooks_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/rust-code-analysis_findings.sarif
+
+reports/sarif/rust-code-analysis_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/rust-code-analysis_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/rustfmt_findings.sarif
+
+reports/sarif/rustfmt_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/rustfmt_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/sarif/typos_findings.sarif
+
+reports/sarif/typos_findings.sarif: [end-of-file-fixer] [FIXED] Fixed
+
+reports/sarif/typos_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/txt/basedpyright_findings.txt
+
+reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/blinter_findings.txt
@@ -292,13 +467,6 @@ reports/txt/deadcode_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/deadcode_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/deptry_findings.txt
-
-reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/deptry_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/txt/flake8_findings.txt
 
 reports/txt/flake8_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -311,13 +479,6 @@ reports/txt/flake8_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line en
 reports/txt/interrogate_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/interrogate_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/markdownlint_findings.txt
-
-reports/txt/markdownlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/markdownlint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/mccabe_findings.txt
@@ -334,11 +495,18 @@ reports/txt/mypy_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/mypy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/pydoclint_findings.txt
+2 findings in reports/txt/precommit-hooks_findings.txt
 
-reports/txt/pydoclint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+reports/txt/precommit-hooks_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
-reports/txt/pydoclint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+reports/txt/precommit-hooks_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/txt/psscriptanalyzer_findings.txt
+
+reports/txt/psscriptanalyzer_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/psscriptanalyzer_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/pydocstyle_findings.txt
@@ -353,20 +521,6 @@ reports/txt/pydocstyle_findings.txt: [mixed-line-ending] [FIXED] fixed mixed lin
 reports/txt/radon_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/shellcheck_findings.txt
-
-reports/txt/shellcheck_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/shellcheck_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-2 findings in reports/txt/ty_findings.txt
-
-reports/txt/ty_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/ty_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/uncalled_findings.txt
@@ -390,13 +544,6 @@ reports/txt/wemake_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/wemake_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/xenon_findings.txt
-
-reports/txt/xenon_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/xenon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/txt/yamllint_findings.txt
 
 reports/txt/yamllint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -404,14 +551,31 @@ reports/txt/yamllint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/yamllint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/xml/basedpyright_findings.xml
+
+reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+reports/xml/basedpyright_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in reports/txt/bandit_findings.txt
 
 reports/txt/bandit_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
-1 findings in reports/txt/basedpyright_findings.txt
+1 findings in reports/txt/cargo-deny_findings.txt
 
-reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+reports/txt/cargo-deny_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/clippy_findings.txt
+
+reports/txt/clippy_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/deptry_findings.txt
+
+reports/txt/deptry_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/jsonlint_findings.txt
@@ -419,19 +583,44 @@ reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/jsonlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
-1 findings in reports/txt/precommit-hooks_findings.txt
+1 findings in reports/txt/llvm-cov_findings.txt
 
-reports/txt/precommit-hooks_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+reports/txt/llvm-cov_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
-1 findings in reports/txt/psscriptanalyzer_findings.txt
+1 findings in reports/txt/machete_findings.txt
 
-reports/txt/psscriptanalyzer_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+reports/txt/machete_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/markdownlint_findings.txt
+
+reports/txt/markdownlint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/nextest_findings.txt
+
+reports/txt/nextest_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/pydoclint_findings.txt
+
+reports/txt/pydoclint_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/ruff_findings.txt
 
 reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/rust-code-analysis_findings.txt
+
+reports/txt/rust-code-analysis_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/rustfmt_findings.txt
+
+reports/txt/rustfmt_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/semgrep_findings.txt
@@ -444,9 +633,24 @@ reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/taplo_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
+1 findings in reports/txt/ty_findings.txt
+
+reports/txt/ty_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/typos_findings.txt
+
+reports/txt/typos_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/txt/vermin_findings.txt
 
 reports/txt/vermin_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/txt/xenon_findings.txt
+
+reports/txt/xenon_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/bandit_findings.xml
@@ -454,14 +658,19 @@ reports/txt/vermin_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/xml/bandit_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
-1 findings in reports/xml/basedpyright_findings.xml
-
-reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed
-
-
 1 findings in reports/xml/blinter_findings.xml
 
 reports/xml/blinter_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/cargo-deny_findings.xml
+
+reports/xml/cargo-deny_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/clippy_findings.xml
+
+reports/xml/clippy_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/codespell_findings.xml
@@ -509,6 +718,16 @@ reports/xml/interrogate_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 reports/xml/jsonlint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
+1 findings in reports/xml/llvm-cov_findings.xml
+
+reports/xml/llvm-cov_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/machete_findings.xml
+
+reports/xml/machete_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/xml/markdownlint_findings.xml
 
 reports/xml/markdownlint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
@@ -522,6 +741,11 @@ reports/xml/mccabe_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/xml/mypy_findings.xml
 
 reports/xml/mypy_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/nextest_findings.xml
+
+reports/xml/nextest_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/precommit-hooks_findings.xml
@@ -554,14 +778,19 @@ reports/xml/radon_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 reports/xml/ruff_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
+1 findings in reports/xml/rust-code-analysis_findings.xml
+
+reports/xml/rust-code-analysis_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/rustfmt_findings.xml
+
+reports/xml/rustfmt_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/xml/semgrep_findings.xml
 
 reports/xml/semgrep_findings.xml: [end-of-file-fixer] [FIXED] Fixed
-
-
-1 findings in reports/xml/shellcheck_findings.xml
-
-reports/xml/shellcheck_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/taplo_findings.xml
@@ -572,6 +801,11 @@ reports/xml/taplo_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/xml/ty_findings.xml
 
 reports/xml/ty_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/typos_findings.xml
+
+reports/xml/typos_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/uncalled_findings.xml
@@ -602,11 +836,6 @@ reports/xml/xenon_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/xml/yamllint_findings.xml
 
 reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
-
-
-1 findings in tests/test_ui/test_splash_screen.py
-
-tests/test_ui/test_splash_screen.py: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in .github/dependabot.yml
@@ -702,6 +931,21 @@ pyrightconfig.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 1 findings in qodana.yaml
 
 qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in reports/json/shellcheck_findings.json
+
+reports/json/shellcheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in reports/txt/shellcheck_findings.txt
+
+reports/txt/shellcheck_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in reports/xml/shellcheck_findings.xml
+
+reports/xml/shellcheck_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in requirements.txt

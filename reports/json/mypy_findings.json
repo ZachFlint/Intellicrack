@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-04-03T23:23:47.029537+00:00",
-  "total_findings": 626,
-  "total_files": 76,
+  "generated": "2026-04-05T20:13:52.908672+00:00",
+  "total_findings": 623,
+  "total_files": 75,
   "files": [
     {
       "path": "tests\\test_hexcore_e2e\\test_bridge_transforms_deep.py",
@@ -1987,164 +1987,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\provider_config.py",
-      "count": 19,
-      "findings": [
-        {
-          "line": 67,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[LocalTransformersProvider]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:67: error: Incompatible types in assignment (expression has type \"None\", variable has type \"type[LocalTransformersProvider]\")  [assignment]"
-        },
-        {
-          "line": 73,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[OllamaProvider]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:73: error: Incompatible types in assignment (expression has type \"None\", variable has type \"type[OllamaProvider]\")  [assignment]"
-        },
-        {
-          "line": 79,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[OpenRouterProvider]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:79: error: Incompatible types in assignment (expression has type \"None\", variable has type \"type[OpenRouterProvider]\")  [assignment]"
-        },
-        {
-          "line": 93,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], tuple[bool, list[str]]]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:93: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], tuple[bool, list[str]]]\")  [assignment]"
-        },
-        {
-          "line": 94,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:94: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")  [assignment]"
-        },
-        {
-          "line": 95,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], str]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:95: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], str]\")  [assignment]"
-        },
-        {
-          "line": 96,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], int]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:96: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], int]\")  [assignment]"
-        },
-        {
-          "line": 97,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], XPUDeviceInfo | None]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:97: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], XPUDeviceInfo | None]\")  [assignment]"
-        },
-        {
-          "line": 98,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], tuple[int, int]]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:98: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], tuple[int, int]]\")  [assignment]"
-        },
-        {
-          "line": 99,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], bool]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:99: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], bool]\")  [assignment]"
-        },
-        {
-          "line": 108,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:108: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")  [assignment]"
-        },
-        {
-          "line": 109,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:109: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")  [assignment]"
-        },
-        {
-          "line": 1638,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1638: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1673,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1673: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1734,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:1734: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 2283,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:2283: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 2300,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:2300: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 2320,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:2320: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 2347,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\provider_config.py:2347: error: Statement is unreachable  [unreachable]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_ui\\test_tools_logic.py",
       "count": 19,
       "findings": [
@@ -2729,6 +2571,140 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\provider_config.py",
+      "count": 16,
+      "findings": [
+        {
+          "line": 67,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[LocalTransformersProvider]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:67: error: Incompatible types in assignment (expression has type \"None\", variable has type \"type[LocalTransformersProvider]\")  [assignment]"
+        },
+        {
+          "line": 73,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[OllamaProvider]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:73: error: Incompatible types in assignment (expression has type \"None\", variable has type \"type[OllamaProvider]\")  [assignment]"
+        },
+        {
+          "line": 79,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[OpenRouterProvider]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:79: error: Incompatible types in assignment (expression has type \"None\", variable has type \"type[OpenRouterProvider]\")  [assignment]"
+        },
+        {
+          "line": 93,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], tuple[bool, list[str]]]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:93: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], tuple[bool, list[str]]]\")  [assignment]"
+        },
+        {
+          "line": 94,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:94: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")  [assignment]"
+        },
+        {
+          "line": 95,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], str]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:95: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], str]\")  [assignment]"
+        },
+        {
+          "line": 96,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], int]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:96: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], int]\")  [assignment]"
+        },
+        {
+          "line": 97,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], XPUDeviceInfo | None]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:97: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], XPUDeviceInfo | None]\")  [assignment]"
+        },
+        {
+          "line": 98,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], tuple[int, int]]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:98: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], tuple[int, int]]\")  [assignment]"
+        },
+        {
+          "line": 99,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], bool]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:99: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], bool]\")  [assignment]"
+        },
+        {
+          "line": 108,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:108: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], None]\")  [assignment]"
+        },
+        {
+          "line": 109,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:109: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")  [assignment]"
+        },
+        {
+          "line": 1638,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1638: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 1673,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1673: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 1734,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:1734: error: Statement is unreachable  [unreachable]"
+        },
+        {
+          "line": 2347,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\ui\\provider_config.py:2347: error: Statement is unreachable  [unreachable]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_hexcore_e2e\\test_bridge_yara_deep.py",
       "count": 15,
       "findings": [
@@ -2851,6 +2827,124 @@
           "code": "assignment",
           "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[dict[str, Any]]\")",
           "raw": "tests\\test_hexcore_e2e\\test_bridge_yara_deep.py:323: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[dict[str, Any]]\")  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_core\\test_process_manager.py",
+      "count": 14,
+      "findings": [
+        {
+          "line": 264,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Unexpected keyword argument \"timeout\" for \"run_tracked_async\" of \"ProcessManager\"",
+          "raw": "tests\\test_core\\test_process_manager.py:264: error: Unexpected keyword argument \"timeout\" for \"run_tracked_async\" of \"ProcessManager\"  [call-arg]"
+        },
+        {
+          "line": 264,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "\"run_tracked_async\" defined in \"intellicrack.core.process_manager\"",
+          "raw": "tests\\test_core\\test_process_manager.py:264: note: \"run_tracked_async\" defined in \"intellicrack.core.process_manager\""
+        },
+        {
+          "line": 324,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:324: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 325,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:325: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 326,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:326: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 327,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:327: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 336,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:336: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 341,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:341: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 360,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:360: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 376,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:376: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 453,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:453: error: \"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?  [attr-defined]"
+        },
+        {
+          "line": 477,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:477: error: \"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?  [attr-defined]"
+        },
+        {
+          "line": 482,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:482: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
+        },
+        {
+          "line": 508,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
+          "raw": "tests\\test_core\\test_process_manager.py:508: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
         }
       ]
     },
@@ -3087,116 +3181,6 @@
           "code": "assignment",
           "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[dict[str, Any]]\")",
           "raw": "tests\\test_hexcore_e2e\\test_bridge_display.py:176: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[dict[str, Any]]\")  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_core\\test_process_manager.py",
-      "count": 13,
-      "findings": [
-        {
-          "line": 264,
-          "column": null,
-          "severity": "error",
-          "code": "call-arg",
-          "message": "Unexpected keyword argument \"timeout\" for \"run_tracked_async\" of \"ProcessManager\"",
-          "raw": "tests\\test_core\\test_process_manager.py:264: error: Unexpected keyword argument \"timeout\" for \"run_tracked_async\" of \"ProcessManager\"  [call-arg]"
-        },
-        {
-          "line": 324,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:324: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 325,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:325: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 326,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:326: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 327,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:327: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 336,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:336: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 341,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:341: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 360,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:360: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 376,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:376: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 453,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:453: error: \"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?  [attr-defined]"
-        },
-        {
-          "line": 477,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:477: error: \"ProcessManager\" has no attribute \"sync_cleanup\"; maybe \"_sync_cleanup\"?  [attr-defined]"
-        },
-        {
-          "line": 482,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:482: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        },
-        {
-          "line": 508,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
-          "raw": "tests\\test_core\\test_process_manager.py:508: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
         }
       ]
     },
@@ -4101,6 +4085,84 @@
       ]
     },
     {
+      "path": "tests\\test_ui\\test_vnc_widget.py",
+      "count": 9,
+      "findings": [
+        {
+          "line": 96,
+          "column": null,
+          "severity": "error",
+          "code": "misc",
+          "message": "Property \"connected\" defined in \"RFBClient\" is read-only",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:96: error: Property \"connected\" defined in \"RFBClient\" is read-only  [misc]"
+        },
+        {
+          "line": 98,
+          "column": null,
+          "severity": "error",
+          "code": "misc",
+          "message": "Property \"connected\" defined in \"RFBClient\" is read-only",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:98: error: Property \"connected\" defined in \"RFBClient\" is read-only  [misc]"
+        },
+        {
+          "line": 105,
+          "column": null,
+          "severity": "error",
+          "code": "call-arg",
+          "message": "Unexpected keyword argument \"timeout\" for \"connect\" of \"RFBClient\"",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:105: error: Unexpected keyword argument \"timeout\" for \"connect\" of \"RFBClient\"  [call-arg]"
+        },
+        {
+          "line": 105,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "\"connect\" defined in \"intellicrack.ui.panels.vnc_widget\"",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:105: note: \"connect\" defined in \"intellicrack.ui.panels.vnc_widget\""
+        },
+        {
+          "line": 199,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:199: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
+        },
+        {
+          "line": 214,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:214: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
+        },
+        {
+          "line": 220,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:220: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
+        },
+        {
+          "line": 230,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:230: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
+        },
+        {
+          "line": 353,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[VNCWidget]\" has no attribute \"button_mask\"",
+          "raw": "tests\\test_ui\\test_vnc_widget.py:353: error: \"type[VNCWidget]\" has no attribute \"button_mask\"  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_hexcore_e2e\\test_bridge_yara.py",
       "count": 8,
       "findings": [
@@ -4171,72 +4233,72 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_vnc_widget.py",
+      "path": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py",
       "count": 8,
       "findings": [
         {
-          "line": 96,
+          "line": 81,
           "column": null,
           "severity": "error",
-          "code": "misc",
-          "message": "Property \"connected\" defined in \"RFBClient\" is read-only",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:96: error: Property \"connected\" defined in \"RFBClient\" is read-only  [misc]"
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:81: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
         },
         {
-          "line": 98,
+          "line": 93,
           "column": null,
           "severity": "error",
-          "code": "misc",
-          "message": "Property \"connected\" defined in \"RFBClient\" is read-only",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:98: error: Property \"connected\" defined in \"RFBClient\" is read-only  [misc]"
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:93: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
         },
         {
-          "line": 105,
+          "line": 103,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:103: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
+        },
+        {
+          "line": 138,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:138: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
+        },
+        {
+          "line": 149,
           "column": null,
           "severity": "error",
           "code": "call-arg",
-          "message": "Unexpected keyword argument \"timeout\" for \"connect\" of \"RFBClient\"",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:105: error: Unexpected keyword argument \"timeout\" for \"connect\" of \"RFBClient\"  [call-arg]"
+          "message": "Unexpected keyword argument \"timeout\" for \"test_in_sandbox\" of \"HexEditorBridge\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:149: error: Unexpected keyword argument \"timeout\" for \"test_in_sandbox\" of \"HexEditorBridge\"  [call-arg]"
         },
         {
-          "line": 199,
+          "line": 149,
           "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:199: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
+          "severity": "note",
+          "code": "",
+          "message": "\"test_in_sandbox\" defined in \"intellicrack.bridges.hex_editor\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:149: note: \"test_in_sandbox\" defined in \"intellicrack.bridges.hex_editor\""
         },
         {
-          "line": 214,
+          "line": 170,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:214: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
+          "code": "arg-type",
+          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:170: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
         },
         {
-          "line": 220,
+          "line": 171,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:220: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
-        },
-        {
-          "line": 230,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:230: error: \"RFBClient\" has no attribute \"apply_raw_rect\"; maybe \"_apply_raw_rect\"?  [attr-defined]"
-        },
-        {
-          "line": 353,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"type[VNCWidget]\" has no attribute \"button_mask\"",
-          "raw": "tests\\test_ui\\test_vnc_widget.py:353: error: \"type[VNCWidget]\" has no attribute \"button_mask\"  [attr-defined]"
+          "code": "comparison-overlap",
+          "message": "Non-overlapping identity check (left operand type: \"ToolRegistry | None\", right operand type: \"_MinimalRegistry\")",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:171: error: Non-overlapping identity check (left operand type: \"ToolRegistry | None\", right operand type: \"_MinimalRegistry\")  [comparison-overlap]"
         }
       ]
     },
@@ -4361,68 +4423,6 @@
           "code": "attr-defined",
           "message": "\"X64DbgBridge\" has no attribute \"handle_event\"; maybe \"_handle_event\"?",
           "raw": "tests\\test_bridges\\test_x64dbg_events.py:195: error: \"X64DbgBridge\" has no attribute \"handle_event\"; maybe \"_handle_event\"?  [attr-defined]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py",
-      "count": 7,
-      "findings": [
-        {
-          "line": 81,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:81: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
-        },
-        {
-          "line": 93,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:93: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
-        },
-        {
-          "line": 103,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:103: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
-        },
-        {
-          "line": 138,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:138: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
-        },
-        {
-          "line": 149,
-          "column": null,
-          "severity": "error",
-          "code": "call-arg",
-          "message": "Unexpected keyword argument \"timeout\" for \"test_in_sandbox\" of \"HexEditorBridge\"",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:149: error: Unexpected keyword argument \"timeout\" for \"test_in_sandbox\" of \"HexEditorBridge\"  [call-arg]"
-        },
-        {
-          "line": 170,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:170: error: Argument 1 to \"set_tool_registry\" of \"HexEditorBridge\" has incompatible type \"_MinimalRegistry\"; expected \"ToolRegistry\"  [arg-type]"
-        },
-        {
-          "line": 171,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping identity check (left operand type: \"ToolRegistry | None\", right operand type: \"_MinimalRegistry\")",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_sandbox.py:171: error: Non-overlapping identity check (left operand type: \"ToolRegistry | None\", right operand type: \"_MinimalRegistry\")  [comparison-overlap]"
         }
       ]
     },
@@ -4659,40 +4659,40 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_graph_view.py",
+      "path": "tests\\test_providers\\test_local_transformers_provider.py",
       "count": 4,
       "findings": [
         {
-          "line": 256,
+          "line": 501,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\"",
-          "raw": "tests\\test_ui\\test_graph_view.py:256: error: \"type[CFGGraphScene]\" has no attribute \"compute_layers\"  [attr-defined]"
+          "message": "\"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?",
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:501: error: \"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?  [attr-defined]"
         },
         {
-          "line": 270,
+          "line": 514,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\"",
-          "raw": "tests\\test_ui\\test_graph_view.py:270: error: \"type[CFGGraphScene]\" has no attribute \"compute_layers\"  [attr-defined]"
+          "message": "\"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?",
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:514: error: \"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?  [attr-defined]"
         },
         {
-          "line": 280,
+          "line": 526,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\"",
-          "raw": "tests\\test_ui\\test_graph_view.py:280: error: \"type[CFGGraphScene]\" has no attribute \"compute_layers\"  [attr-defined]"
+          "message": "\"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?",
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:526: error: \"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?  [attr-defined]"
         },
         {
-          "line": 335,
+          "line": 534,
           "column": null,
           "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"",
-          "raw": "tests\\test_ui\\test_graph_view.py:335: error: Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"  [union-attr]"
+          "code": "attr-defined",
+          "message": "\"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?",
+          "raw": "tests\\test_providers\\test_local_transformers_provider.py:534: error: \"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?  [attr-defined]"
         }
       ]
     },
@@ -4773,40 +4773,40 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_local_transformers_provider.py",
+      "path": "tests\\test_ui\\test_graph_view.py",
       "count": 4,
       "findings": [
         {
-          "line": 501,
+          "line": 256,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?",
-          "raw": "tests\\test_providers\\test_local_transformers_provider.py:501: error: \"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?  [attr-defined]"
+          "message": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\"",
+          "raw": "tests\\test_ui\\test_graph_view.py:256: error: \"type[CFGGraphScene]\" has no attribute \"compute_layers\"  [attr-defined]"
         },
         {
-          "line": 514,
+          "line": 270,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?",
-          "raw": "tests\\test_providers\\test_local_transformers_provider.py:514: error: \"LocalTransformersProvider\" has no attribute \"format_prompt\"; maybe \"_format_prompt\"?  [attr-defined]"
+          "message": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\"",
+          "raw": "tests\\test_ui\\test_graph_view.py:270: error: \"type[CFGGraphScene]\" has no attribute \"compute_layers\"  [attr-defined]"
         },
         {
-          "line": 526,
+          "line": 280,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?",
-          "raw": "tests\\test_providers\\test_local_transformers_provider.py:526: error: \"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?  [attr-defined]"
+          "message": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\"",
+          "raw": "tests\\test_ui\\test_graph_view.py:280: error: \"type[CFGGraphScene]\" has no attribute \"compute_layers\"  [attr-defined]"
         },
         {
-          "line": 534,
+          "line": 335,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?",
-          "raw": "tests\\test_providers\\test_local_transformers_provider.py:534: error: \"LocalTransformersProvider\" has no attribute \"parse_tool_calls\"; maybe \"_parse_tool_calls\"?  [attr-defined]"
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"",
+          "raw": "tests\\test_ui\\test_graph_view.py:335: error: Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\"  [union-attr]"
         }
       ]
     },
@@ -5021,28 +5021,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\process_manager.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 148,
-          "column": null,
-          "severity": "error",
-          "code": "has-type",
-          "message": "Cannot determine type of \"_initialized\"",
-          "raw": "src\\intellicrack\\core\\process_manager.py:148: error: Cannot determine type of \"_initialized\"  [has-type]"
-        },
-        {
-          "line": 820,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "\"run_tracked_async\" of \"ProcessManager\" defined here",
-          "raw": "src\\intellicrack\\core\\process_manager.py:820: note: \"run_tracked_async\" of \"ProcessManager\" defined here"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\credentials\\store.py",
       "count": 2,
       "findings": [
@@ -5153,28 +5131,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 1733,
-          "column": null,
-          "severity": "error",
-          "code": "no-redef",
-          "message": "Name \"data\" already defined on line 1727",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:1733: error: Name \"data\" already defined on line 1727  [no-redef]"
-        },
-        {
-          "line": 2047,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "\"test_in_sandbox\" of \"HexEditorBridge\" defined here",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2047: note: \"test_in_sandbox\" of \"HexEditorBridge\" defined here"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py",
       "count": 1,
       "findings": [
@@ -5203,16 +5159,16 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\credentials\\env_loader.py",
+      "path": "src\\intellicrack\\core\\process_manager.py",
       "count": 1,
       "findings": [
         {
-          "line": 395,
+          "line": 148,
           "column": null,
           "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 2 to \"get\" of \"Mapping\" has incompatible type \"str | None\"; expected \"str\"",
-          "raw": "src\\intellicrack\\credentials\\env_loader.py:395: error: Argument 2 to \"get\" of \"Mapping\" has incompatible type \"str | None\"; expected \"str\"  [arg-type]"
+          "code": "has-type",
+          "message": "Cannot determine type of \"_initialized\"",
+          "raw": "src\\intellicrack\\core\\process_manager.py:148: error: Cannot determine type of \"_initialized\"  [has-type]"
         }
       ]
     },
@@ -5287,6 +5243,34 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\credentials\\oauth.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 95,
+          "column": null,
+          "severity": "error",
+          "code": "unreachable",
+          "message": "Statement is unreachable",
+          "raw": "src\\intellicrack\\credentials\\oauth.py:95: error: Statement is unreachable  [unreachable]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 27,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:27: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_hexpat\\test_interpreter.py",
       "count": 1,
       "findings": [
@@ -5343,6 +5327,48 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 64,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:64: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1733,
+          "column": null,
+          "severity": "error",
+          "code": "no-redef",
+          "message": "Name \"data\" already defined on line 1727",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:1733: error: Name \"data\" already defined on line 1727  [no-redef]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_hexcore_e2e\\test_bridge_error_handling.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 81,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")  [assignment]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_google_provider.py",
       "count": 1,
       "findings": [
@@ -5371,34 +5397,6 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_icon_manager.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 264,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?",
-          "raw": "tests\\test_ui\\test_icon_manager.py:264: error: \"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?  [attr-defined]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_hexcore_e2e\\test_bridge_error_handling.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 81,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_error_handling.py:81: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")  [assignment]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_ui\\test_panel_dock.py",
       "count": 1,
       "findings": [
@@ -5413,30 +5411,16 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
+      "path": "tests\\test_ui\\test_icon_manager.py",
       "count": 1,
       "findings": [
         {
-          "line": 27,
+          "line": 264,
           "column": null,
           "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:27: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\local_transformers.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 64,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:64: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+          "code": "attr-defined",
+          "message": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?",
+          "raw": "tests\\test_ui\\test_icon_manager.py:264: error: \"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?  [attr-defined]"
         }
       ]
     },
@@ -5451,20 +5435,6 @@
           "code": "attr-defined",
           "message": "\"XPUStatusDialog\" has no attribute \"status_label\"; maybe \"_status_label\"?",
           "raw": "tests\\test_ui\\test_xpu_status.py:193: error: \"XPUStatusDialog\" has no attribute \"status_label\"; maybe \"_status_label\"?  [attr-defined]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 83,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "\"connect\" of \"RFBClient\" defined here",
-          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py:83: note: \"connect\" of \"RFBClient\" defined here"
         }
       ]
     }

@@ -1,8 +1,8 @@
 {
   "tool": "mccabe",
-  "generated": "2026-04-03T23:26:20.374738+00:00",
-  "total_findings": 106,
-  "total_files": 46,
+  "generated": "2026-04-05T20:16:26.280201+00:00",
+  "total_findings": 107,
+  "total_files": 47,
   "files": [
     {
       "path": "src/intellicrack/core\\hexpat\\evaluator.py",
@@ -1125,6 +1125,20 @@
           "complexity": 16,
           "message": "'HexEditorPanel.set_state_holder' is too complex (16)",
           "raw": "src/intellicrack/ui\\panels\\hex_editor\\panel.py:703:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers\\test_e2e_chat.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1132,
+          "column": 5,
+          "code": "C901",
+          "complexity": 11,
+          "message": "'TestCrossProviderConsistency.available_providers' is too complex (11)",
+          "raw": "tests/test_providers\\test_e2e_chat.py:1132:5: C901 'TestCrossProviderConsistency.available_providers' is too complex (11)"
         }
       ]
     }

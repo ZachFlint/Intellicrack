@@ -176,7 +176,7 @@ src/intellicrack\bridges\hex_editor.py:2794:5: WPS211 Found too many arguments: 
 
 src/intellicrack\bridges\hex_editor.py:2859:5: WPS211 Found too many arguments: 7 > 5
 
-src/intellicrack\bridges\hex_editor.py:2914:21: WPS460 Found single element destructuring
+src/intellicrack\bridges\hex_editor.py:2913:21: WPS460 Found single element destructuring
 
 
 19 findings in src/intellicrack\bridges\x64dbg.py
@@ -1074,9 +1074,9 @@ src/intellicrack\ui\panels\hex_editor\_search.py:73:5: WPS211 Found too many arg
 
 src/intellicrack\ui\panels\hex_editor\_search.py:159:5: WPS211 Found too many arguments: 13 > 5
 
-src/intellicrack\ui\panels\hex_editor\_search.py:248:13: WPS327 Found useless `continue` at the end of the loop
+src/intellicrack\ui\panels\hex_editor\_search.py:247:13: WPS327 Found useless `continue` at the end of the loop
 
-src/intellicrack\ui\panels\hex_editor\_search.py:253:21: WPS460 Found single element destructuring
+src/intellicrack\ui\panels\hex_editor\_search.py:252:21: WPS460 Found single element destructuring
 
 
 4 findings in src/intellicrack\ui\panels\hex_editor\panel.py

@@ -16,6 +16,7 @@ rules:
 
 ignore: |
   .pixi/
+  .claude/
   .venv*/
   node_modules/
   build/
