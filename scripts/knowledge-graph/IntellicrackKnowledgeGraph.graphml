@@ -39383,6 +39383,11 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d2">D:\Intellicrack\package.json</data>
       <data key="d3">package.json</data>
     </node>
+    <node id="prompts.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\prompts.md</data>
+      <data key="d3">prompts.md</data>
+    </node>
     <node id="pyproject.toml">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\pyproject.toml</data>

@@ -4,12 +4,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Generate git commit messages using Google Gemini API via Vertex AI.
+"""Generate git commit messages using the Google Gemini API.
 
-Uses Application Default Credentials and ``GOOGLE_CLOUD_PROJECT`` from
-``.env`` to call the Gemini API through Vertex AI. Billing flows through
-GCP project credits. Supports map-reduce batching for diffs that exceed
-Paid Tier 1 token limits.
+Uses ``GOOGLE_API_KEY`` or ``GEMINI_API_KEY`` from ``.env`` to call the
+Gemini API directly. The default model is ``gemini-flash-latest`` which
+always resolves to the newest Flash release. Override with the
+``GEMINI_COMMIT_MODEL`` env var.
+
+Supports map-reduce batching for diffs that exceed Paid Tier 1 token limits.
 
 The script reads a git diff from stdin and generates a conventional commit
 message. For large diffs (>900K tokens), it splits the diff into chunks,
@@ -23,7 +25,6 @@ Exit codes:
 
 from __future__ import annotations
 
-import operator
 import os
 import re
 import sys
@@ -59,18 +60,11 @@ def _load_env() -> None:
 _load_env()
 
 
+_DEFAULT_MODEL: Final[str] = "gemini-flash-latest"
 _GEMINI_COMMIT_MODEL_OVERRIDE: Final[str] = os.environ.get(
     "GEMINI_COMMIT_MODEL",
     "",
 )
-_FLASH_EXCLUDE_KEYWORDS: Final[tuple[str, ...]] = (
-    "tts",
-    "image",
-    "audio",
-    "live",
-    "native",
-)
-_active_model: list[str] = []
 SINGLE_CALL_TOKEN_LIMIT: Final[int] = 900_000
 CHUNK_TOKEN_TARGET: Final[int] = 800_000
 BATCH_COOLDOWN: Final[int] = 2
@@ -133,147 +127,54 @@ _RESET: Final[str] = "\033[0m"
 
 
 def _get_model() -> str:
-    """Return the active model name for API calls.
+    """Return the model name for API calls.
 
-    Returns the resolved model cached by ``_resolve_model``. Raises if
-    ``_resolve_model`` has not been called yet.
+    Returns ``GEMINI_COMMIT_MODEL`` env var if set, otherwise
+    ``gemini-flash-latest`` which always resolves to the newest
+    Flash release on the Gemini API.
 
     Returns:
         str: The model identifier to use for API calls.
+    """
+    return _GEMINI_COMMIT_MODEL_OVERRIDE or _DEFAULT_MODEL
+
+
+_model_resolved: list[bool] = [False]
+
+
+def _create_client() -> genai.Client:
+    """Create a Gemini API client using an API key.
+
+    Checks ``GOOGLE_API_KEY`` first, then ``GEMINI_API_KEY``. Falls back
+    to Vertex AI if neither is set but ``GOOGLE_CLOUD_PROJECT`` is
+    available.
+
+    Returns:
+        genai.Client: Configured Gemini API client.
 
     Raises:
-        RuntimeError: If ``_resolve_model`` was not called first.
+        ApiKeyError: If no API key or Vertex AI project is configured.
     """
-    if _active_model:
-        return _active_model[0]
-    if _GEMINI_COMMIT_MODEL_OVERRIDE:
-        return _GEMINI_COMMIT_MODEL_OVERRIDE
-    msg = "_resolve_model must be called before _get_model"
-    raise RuntimeError(msg)
+    api_key = (
+        os.environ.get("GOOGLE_API_KEY", "").strip()
+        or os.environ.get(
+            "GEMINI_API_KEY",
+            "",
+        ).strip()
+    )
 
+    if api_key:
+        _log(f"Using Gemini API with key ({api_key[:8]}...)")
+        return genai.Client(api_key=api_key)
 
-def _is_general_flash(name: str) -> bool:
-    """Check whether a model name is a general-purpose flash variant.
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1").strip()
+    if project:
+        _log(f"No API key found, falling back to Vertex AI: project={project}, location={location}")
+        return genai.Client(vertexai=True, project=project, location=location)
 
-    Excludes specialized variants (TTS, image, audio, live) that are not
-    suitable for text generation.
-
-    Args:
-        name: The full model resource name from the API listing.
-
-    Returns:
-        bool: True if the model is a general-purpose flash model.
-    """
-    lower = name.lower()
-    if "flash" not in lower or "gemini" not in lower:
-        return False
-    return not any(kw in lower for kw in _FLASH_EXCLUDE_KEYWORDS)
-
-
-def _rank_flash_models(
-    models: list[str],
-    *,
-    lite: bool = False,
-) -> list[str]:
-    """Rank flash models by version, highest first.
-
-    Parses version numbers from model names (e.g. ``gemini-3-flash-preview``
-    yields ``(3, 0)``, ``gemini-2.5-flash`` yields ``(2, 5)``). Returns
-    all matching models sorted by descending version.
-
-    Args:
-        models: List of full model resource names.
-        lite: If True, only consider lite variants. If False, exclude them.
-
-    Returns:
-        list[str]: Model names sorted by version descending, empty if none.
-    """
-    candidates: list[tuple[tuple[int, ...], str]] = []
-    for name in models:
-        lower = name.lower()
-        is_lite = "lite" in lower
-        if lite != is_lite:
-            continue
-        short = lower.rsplit("/", maxsplit=1)[-1]
-        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", short)
-        if not version_match:
-            continue
-        version_str = version_match.group(1)
-        version_parts = tuple(int(p) for p in version_str.split("."))
-        candidates.append((version_parts, name))
-    candidates.sort(key=operator.itemgetter(0), reverse=True)
-    return [c[1] for c in candidates]
-
-
-def _probe_model(client: genai.Client, model: str) -> bool:
-    """Test whether a model is accessible via a lightweight count_tokens call.
-
-    Args:
-        client: The genai client instance.
-        model: The model identifier to probe.
-
-    Returns:
-        bool: True if the model responded successfully, False on 404.
-
-    Raises:
-        ClientError: If the API returns a non-404 error.
-    """
-    try:
-        client.models.count_tokens(model=model, contents="test")
-    except ClientError as exc:
-        if "404" in str(exc):
-            return False
-        raise
-    return True
-
-
-def _resolve_model(client: genai.Client) -> str:
-    """Discover the latest accessible flash model from Vertex AI and cache it.
-
-    Queries the model listing API, ranks general-purpose flash models by
-    version, then probes each with a lightweight ``count_tokens`` call to
-    verify the project has access. Falls back through flash-lite models if
-    no standard flash model is accessible. The first accessible model is
-    cached in ``_active_model`` for all subsequent ``_get_model`` calls.
-
-    If ``GEMINI_COMMIT_MODEL`` env var is set, that value is used directly
-    without querying the listing.
-
-    Args:
-        client: The genai client instance.
-
-    Returns:
-        str: The resolved model identifier.
-
-    Raises:
-        RuntimeError: If no accessible flash model could be found.
-    """
-    if _GEMINI_COMMIT_MODEL_OVERRIDE:
-        _active_model.clear()
-        _active_model.append(_GEMINI_COMMIT_MODEL_OVERRIDE)
-        _log(f"Using override model: {_GEMINI_COMMIT_MODEL_OVERRIDE}")
-        return _GEMINI_COMMIT_MODEL_OVERRIDE
-
-    all_flash: list[str] = []
-    for m in client.models.list():
-        name = m.name or ""
-        if _is_general_flash(name):
-            all_flash.append(name)
-
-    ranked = _rank_flash_models(all_flash, lite=False)
-    ranked.extend(_rank_flash_models(all_flash, lite=True))
-
-    for candidate in ranked:
-        _log(f"Probing {candidate}...")
-        if _probe_model(client, candidate):
-            _active_model.clear()
-            _active_model.append(candidate)
-            _log(f"Using model: {candidate}")
-            return candidate
-        _log(f"WARN: {candidate} not accessible, trying next")
-
-    msg = "No accessible Gemini Flash model found in Vertex AI"
-    raise RuntimeError(msg)
+    msg = "Set GOOGLE_API_KEY, GEMINI_API_KEY, or GOOGLE_CLOUD_PROJECT in .env"
+    raise ApiKeyError(msg)
 
 
 def _log(msg: str) -> None:
@@ -489,6 +390,12 @@ def _generate_content(
         _log(f"WARN: API network error: {exc}")
         return None
 
+    if not _model_resolved[0]:
+        _model_resolved[0] = True
+        model_version = getattr(response, "model_version", "")
+        if model_version:
+            _log(f"Resolved model: {model_version}")
+
     if not response.text:
         candidates_info = ""
         if hasattr(response, "candidates") and response.candidates:
@@ -703,14 +610,12 @@ def main() -> int:
     if not diff_input.strip():
         return _fail("No diff input provided on stdin")
 
-    project = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
-    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1").strip()
-    if not project:
-        return _fail("GOOGLE_CLOUD_PROJECT not set")
+    try:
+        client = _create_client()
+    except ApiKeyError as exc:
+        return _fail(str(exc))
 
-    _log(f"Vertex AI: project={project}, location={location}")
-    client = genai.Client(vertexai=True, project=project, location=location)
-    _resolve_model(client)
+    _log(f"Model: {_get_model()}")
 
     stat_section, diff_body = _extract_stat_section(diff_input)
 
