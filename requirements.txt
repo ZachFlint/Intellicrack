@@ -101,7 +101,7 @@ idna==3.11
 imagesize==2.0.0
 iniconfig==2.3.0
 inquirer==3.4.1
-installer==0.7.0
+installer==1.0.0
 intel_cmplr_lib_rt==2025.3.1
 intel_cmplr_lib_ur==2025.3.1
 intel_cmplr_lic_rt==2025.3.1
