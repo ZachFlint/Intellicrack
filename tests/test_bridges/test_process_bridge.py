@@ -91,7 +91,11 @@ def _configure_kernel32_signatures(k32: ctypes.WinDLL) -> None:
 
 @pytest_asyncio.fixture(scope="module")
 async def process_bridge() -> AsyncGenerator[ProcessBridge]:
-    """Create, initialize, and shutdown a ProcessBridge for the module."""
+    """Create, initialize, and shutdown a ProcessBridge for the module.
+
+    Yields:
+        AsyncGenerator[ProcessBridge]: Initialized bridge that will be shut down on teardown.
+    """
     bridge = ProcessBridge()
     await bridge.initialize()
     if bridge._kernel32 is not None:
@@ -102,7 +106,14 @@ async def process_bridge() -> AsyncGenerator[ProcessBridge]:
 
 @pytest_asyncio.fixture
 async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[ProcessBridge]:
-    """Attach the bridge to the current Python process."""
+    """Attach the bridge to the current Python process.
+
+    Args:
+        process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+
+    Yields:
+        AsyncGenerator[ProcessBridge]: The shared bridge with an open handle on the current Python process.
+    """
     await process_bridge.open_process(os.getpid(), "all")
     yield process_bridge
     await process_bridge.close()
@@ -110,14 +121,27 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
 
 @pytest_asyncio.fixture
 async def main_thread_tid(attached_bridge: ProcessBridge) -> int:
-    """Get the TID of the first thread in the current process."""
+    """Get the TID of the first thread in the current process.
+
+    Args:
+        attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+
+    Returns:
+        int: Windows thread id of the first thread enumerated in the current process.
+    """
     threads = await attached_bridge.get_threads(os.getpid())
     return threads[0].tid
 
 
 @pytest.fixture
 def known_buffer() -> tuple[int, ctypes.Array[ctypes.c_char], bytes]:
-    """Create a buffer with known content for memory read tests."""
+    """Create a buffer with known content for memory read tests.
+
+    Returns:
+        tuple[int, ctypes.Array[ctypes.c_char], bytes]: Tuple ``(address,
+        backing_buffer, expected_bytes)`` whose address may be safely read
+        by the bridge.
+    """
     data = b"INTELLICRACK_BRIDGE_TEST_7890ABCDEF"
     buf = ctypes.create_string_buffer(data)
     return ctypes.addressof(buf), buf, data
@@ -125,7 +149,11 @@ def known_buffer() -> tuple[int, ctypes.Array[ctypes.c_char], bytes]:
 
 @pytest.fixture
 def secondary_thread() -> Generator[int]:
-    """Spawn a blocking thread and yield its Windows TID for context tests."""
+    """Spawn a blocking thread and yield its Windows TID for context tests.
+
+    Yields:
+        Generator[int]: Windows thread id of a parked worker thread that blocks until the fixture tears down.
+    """
     event = threading.Event()
     tid_holder: list[int] = []
 
@@ -145,36 +173,68 @@ class TestInitialization:
     """Verify bridge initialization loads DLLs and sets state."""
 
     async def test_initialize_loads_kernel32(self, process_bridge: ProcessBridge) -> None:
-        """Verify kernel32 is loaded after initialization."""
+        """Verify kernel32 is loaded after initialization.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert process_bridge._kernel32 is not None
 
     async def test_initialize_loads_ntdll(self, process_bridge: ProcessBridge) -> None:
-        """Verify ntdll is loaded after initialization."""
+        """Verify ntdll is loaded after initialization.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert process_bridge._ntdll is not None
 
     async def test_initialize_loads_advapi32(self, process_bridge: ProcessBridge) -> None:
-        """Verify advapi32 is loaded after initialization."""
+        """Verify advapi32 is loaded after initialization.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert process_bridge._advapi32 is not None
 
     async def test_initialize_sets_connected(self, process_bridge: ProcessBridge) -> None:
-        """Verify state shows connected and tool_running after init."""
+        """Verify state shows connected and tool_running after init.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert process_bridge.state.connected is True
         assert process_bridge.state.tool_running is True
 
     async def test_initialize_debug_privilege_flag(self, process_bridge: ProcessBridge) -> None:
-        """Verify debug privilege flag is a boolean."""
+        """Verify debug privilege flag is a boolean.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert isinstance(process_bridge._debug_privilege_enabled, bool)
 
     async def test_name_is_process(self, process_bridge: ProcessBridge) -> None:
-        """Verify bridge name is ToolName.PROCESS."""
+        """Verify bridge name is ToolName.PROCESS.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert process_bridge.name == ToolName.PROCESS
 
     async def test_is_available(self, process_bridge: ProcessBridge) -> None:
-        """Verify is_available returns True on Windows."""
+        """Verify is_available returns True on Windows.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert await process_bridge.is_available() is True
 
     async def test_tool_definition_count(self, process_bridge: ProcessBridge) -> None:
-        """Verify tool definition has 53 functions."""
+        """Verify tool definition has 53 functions.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         assert len(process_bridge.tool_definition.functions) == 53
 
 
@@ -182,29 +242,49 @@ class TestProcessListing:
     """Verify process listing and filtering."""
 
     async def test_list_processes_non_empty(self, process_bridge: ProcessBridge) -> None:
-        """Verify process list is non-empty."""
+        """Verify process list is non-empty.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes()
         assert len(procs) > 0
 
     async def test_list_processes_includes_self(self, process_bridge: ProcessBridge) -> None:
-        """Verify process list contains current PID."""
+        """Verify process list contains current PID.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes()
         assert any(p.pid == os.getpid() for p in procs)
 
     async def test_list_processes_has_python_name(self, process_bridge: ProcessBridge) -> None:
-        """Verify our process entry name contains 'python'."""
+        """Verify our process entry name contains 'python'.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes()
         self_proc = next((p for p in procs if p.pid == os.getpid()), None)
         assert self_proc is not None
         assert "python" in self_proc.name.lower()
 
     async def test_list_processes_filter(self, process_bridge: ProcessBridge) -> None:
-        """Verify name filter returns at least one python process."""
+        """Verify name filter returns at least one python process.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes(filter_name="python")
         assert len(procs) >= 1
 
     async def test_list_processes_detailed_has_fields(self, process_bridge: ProcessBridge) -> None:
-        """Verify detailed listing includes expected keys."""
+        """Verify detailed listing includes expected keys.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes_detailed(filter_name="python")
         assert len(procs) >= 1
         entry = procs[0]
@@ -212,27 +292,43 @@ class TestProcessListing:
             assert key in entry
 
     async def test_list_processes_detailed_self_arch(self, process_bridge: ProcessBridge) -> None:
-        """Verify our process architecture is x64 or x86."""
+        """Verify our process architecture is x64 or x86.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes_detailed(filter_name="python")
         self_proc = next((p for p in procs if p["pid"] == os.getpid()), None)
         assert self_proc is not None
         assert self_proc["architecture"] in {"x64", "x86"}
 
     async def test_list_processes_detailed_self_memory(self, process_bridge: ProcessBridge) -> None:
-        """Verify our process has positive memory usage."""
+        """Verify our process has positive memory usage.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         procs = await process_bridge.list_processes_detailed(filter_name="python")
         self_proc = next((p for p in procs if p["pid"] == os.getpid()), None)
         assert self_proc is not None
         assert self_proc["memory_mb"] > 0
 
     async def test_detect_architecture_self(self, process_bridge: ProcessBridge) -> None:
-        """Verify architecture detection returns x64 on 64-bit Python."""
+        """Verify architecture detection returns x64 on 64-bit Python.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         arch = await process_bridge.detect_architecture(os.getpid())
         expected = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
         assert arch == expected
 
     async def test_detect_architecture_invalid_pid(self, process_bridge: ProcessBridge) -> None:
-        """Verify architecture detection returns Unknown for invalid PID."""
+        """Verify architecture detection returns Unknown for invalid PID.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         arch = await process_bridge.detect_architecture(99999999)
         assert arch == "Unknown"
 
@@ -241,14 +337,22 @@ class TestProcessOpenClose:
     """Verify process open/close lifecycle."""
 
     async def test_open_process_query(self, process_bridge: ProcessBridge) -> None:
-        """Verify opening own process succeeds."""
+        """Verify opening own process succeeds.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         result = await process_bridge.open_process(os.getpid(), "query")
         assert result is True
         assert process_bridge._process_handle is not None
         await process_bridge.close()
 
     async def test_close_resets_state(self, process_bridge: ProcessBridge) -> None:
-        """Verify close resets handle, pid, and state."""
+        """Verify close resets handle, pid, and state.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.open_process(os.getpid(), "all")
         await process_bridge.close()
         assert process_bridge._process_handle is None
@@ -256,12 +360,20 @@ class TestProcessOpenClose:
         assert process_bridge.state.process_attached is False
 
     async def test_open_invalid_pid_raises(self, process_bridge: ProcessBridge) -> None:
-        """Verify opening an invalid PID raises ToolError."""
+        """Verify opening an invalid PID raises ToolError.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         with pytest.raises(ToolError, match="process open failed"):
             await process_bridge.open_process(99999999, "all")
 
     async def test_get_process_memory_mb_self(self, process_bridge: ProcessBridge) -> None:
-        """Verify memory query returns positive value for self."""
+        """Verify memory query returns positive value for self.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         mem = await process_bridge.get_process_memory_mb(os.getpid())
         assert mem > 0
 
@@ -274,19 +386,32 @@ class TestMemoryOperations:
         attached_bridge: ProcessBridge,
         known_buffer: tuple[int, ctypes.Array[ctypes.c_char], bytes],
     ) -> None:
-        """Verify reading from a known buffer returns expected data."""
+        """Verify reading from a known buffer returns expected data.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            known_buffer: Triple of (address, backing buffer, expected bytes) for a buffer with known content.
+        """
         addr, _buf, data = known_buffer
         result = await attached_bridge.read_memory(addr, len(data))
         assert result[: len(data)] == data
 
     async def test_read_memory_not_attached_raises(self, process_bridge: ProcessBridge) -> None:
-        """Verify reading without attachment raises ToolError."""
+        """Verify reading without attachment raises ToolError.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process attached"):
             await process_bridge.read_memory(0x1000, 16)
 
     async def test_write_read_roundtrip(self, attached_bridge: ProcessBridge) -> None:
-        """Verify allocate-write-read-free roundtrip works."""
+        """Verify allocate-write-read-free roundtrip works.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         addr = await attached_bridge.allocate(4096, "rw")
         try:
             test_data = b"WRITE_TEST"
@@ -298,14 +423,22 @@ class TestMemoryOperations:
             await attached_bridge.free(addr)
 
     async def test_allocate_free_cycle(self, attached_bridge: ProcessBridge) -> None:
-        """Verify allocate returns non-zero address and free succeeds."""
+        """Verify allocate returns non-zero address and free succeeds.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         addr = await attached_bridge.allocate(4096, "rw")
         assert addr != 0
         result = await attached_bridge.free(addr)
         assert result is True
 
     async def test_protect_returns_old_protection(self, attached_bridge: ProcessBridge) -> None:
-        """Verify protect returns the previous protection string."""
+        """Verify protect returns the previous protection string.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         addr = await attached_bridge.allocate(4096, "rw")
         try:
             old_prot = await attached_bridge.protect(addr, 4096, "r")
@@ -318,7 +451,12 @@ class TestMemoryOperations:
         attached_bridge: ProcessBridge,
         known_buffer: tuple[int, ctypes.Array[ctypes.c_char], bytes],
     ) -> None:
-        """Verify pattern search finds known bytes in memory."""
+        """Verify pattern search finds known bytes in memory.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            known_buffer: Triple of (address, backing buffer, expected bytes) for a buffer with known content.
+        """
         addr, _buf, data = known_buffer
         pattern = " ".join(f"{b:02X}" for b in data[:8])
         results = await attached_bridge.search_pattern(
@@ -327,7 +465,11 @@ class TestMemoryOperations:
         assert addr in results
 
     async def test_get_memory_map_non_empty(self, attached_bridge: ProcessBridge) -> None:
-        """Verify memory map returns non-empty list with required fields."""
+        """Verify memory map returns non-empty list with required fields.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         regions = await attached_bridge.get_memory_map()
         assert len(regions) > 0
         region = regions[0]
@@ -340,28 +482,48 @@ class TestThreadEnumeration:
     """Verify thread listing and bug-fix fields (start_address, state)."""
 
     async def test_get_threads_non_empty(self, attached_bridge: ProcessBridge) -> None:
-        """Verify thread list is non-empty."""
+        """Verify thread list is non-empty.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         assert len(threads) > 0
 
     async def test_get_threads_have_tid(self, attached_bridge: ProcessBridge) -> None:
-        """Verify all threads have positive TIDs."""
+        """Verify all threads have positive TIDs.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         assert all(t.tid > 0 for t in threads)
 
     async def test_get_threads_start_address_nonzero(self, attached_bridge: ProcessBridge) -> None:
-        """Verify at least one thread has a non-zero start address (bug fix)."""
+        """Verify at least one thread has a non-zero start address (bug fix).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         assert any(t.start_address != 0 for t in threads)
 
     async def test_get_threads_state_not_unknown(self, attached_bridge: ProcessBridge) -> None:
-        """Verify at least one thread has a known state (bug fix)."""
+        """Verify at least one thread has a known state (bug fix).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         valid_states = {"running", "suspended", "terminated", "waiting"}
         assert any(t.state in valid_states for t in threads)
 
     async def test_get_threads_have_priority(self, attached_bridge: ProcessBridge) -> None:
-        """Verify all threads have non-negative priority."""
+        """Verify all threads have non-negative priority.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         assert all(t.priority >= 0 for t in threads)
 
@@ -370,22 +532,38 @@ class TestModuleListing:
     """Verify module enumeration."""
 
     async def test_get_modules_non_empty(self, attached_bridge: ProcessBridge) -> None:
-        """Verify module list is non-empty."""
+        """Verify module list is non-empty.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         modules = await attached_bridge.get_modules(os.getpid())
         assert len(modules) > 0
 
     async def test_get_modules_includes_python(self, attached_bridge: ProcessBridge) -> None:
-        """Verify at least one module name contains 'python'."""
+        """Verify at least one module name contains 'python'.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         modules = await attached_bridge.get_modules(os.getpid())
         assert any("python" in m.name.lower() for m in modules)
 
     async def test_get_modules_have_base_address(self, attached_bridge: ProcessBridge) -> None:
-        """Verify all modules have positive base addresses."""
+        """Verify all modules have positive base addresses.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         modules = await attached_bridge.get_modules(os.getpid())
         assert all(m.base_address > 0 for m in modules)
 
     async def test_get_modules_no_pid_raises(self, process_bridge: ProcessBridge) -> None:
-        """Verify get_modules raises when no process is attached."""
+        """Verify get_modules raises when no process is attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process"):
             await process_bridge.get_modules()
@@ -395,14 +573,22 @@ class TestProcessInfo:
     """Verify process info aggregation."""
 
     async def test_get_process_info_self(self, attached_bridge: ProcessBridge) -> None:
-        """Verify process info is populated for self."""
+        """Verify process info is populated for self.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         info = await attached_bridge.get_process_info(os.getpid())
         assert info is not None
         assert len(info.threads) > 0
         assert len(info.modules) > 0
 
     async def test_get_process_info_no_pid(self, process_bridge: ProcessBridge) -> None:
-        """Verify process info returns None when no process is attached."""
+        """Verify process info returns None when no process is attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         info = await process_bridge.get_process_info()
         assert info is None
@@ -412,19 +598,31 @@ class TestTokenPrivileges:
     """Verify token privilege enumeration and adjustment."""
 
     async def test_get_token_privileges_has_entries(self, attached_bridge: ProcessBridge) -> None:
-        """Verify token privileges list is non-empty."""
+        """Verify token privileges list is non-empty.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         privs = await attached_bridge.get_token_privileges(os.getpid())
         assert len(privs) > 0
 
     async def test_get_token_privileges_has_sechangenotify(
         self, attached_bridge: ProcessBridge
     ) -> None:
-        """Verify SeChangeNotifyPrivilege is present."""
+        """Verify SeChangeNotifyPrivilege is present.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         privs = await attached_bridge.get_token_privileges(os.getpid())
         assert any("SeChangeNotifyPrivilege" in str(p.get("name", "")) for p in privs)
 
     async def test_get_token_privileges_entry_keys(self, attached_bridge: ProcessBridge) -> None:
-        """Verify each privilege entry has required keys."""
+        """Verify each privilege entry has required keys.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         privs = await attached_bridge.get_token_privileges(os.getpid())
         for priv in privs:
             for key in ("name", "luid_low", "luid_high", "enabled", "attributes"):
@@ -433,7 +631,11 @@ class TestTokenPrivileges:
     async def test_adjust_token_privilege_invalid_raises(
         self, attached_bridge: ProcessBridge
     ) -> None:
-        """Verify adjusting a fake privilege raises ToolError."""
+        """Verify adjusting a fake privilege raises ToolError.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         with pytest.raises(ToolError, match="privilege lookup failed"):
             await attached_bridge.adjust_token_privilege(
                 "SeCompletelyFakePrivilege", enable=True, pid=os.getpid()
@@ -444,12 +646,20 @@ class TestHandleEnumeration:
     """Verify handle enumeration via NtQuerySystemInformation."""
 
     async def test_get_handles_returns_list(self, process_bridge: ProcessBridge) -> None:
-        """Verify handle enumeration returns a list without error."""
+        """Verify handle enumeration returns a list without error.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         handles = await process_bridge.get_handles(os.getpid())
         assert isinstance(handles, list)
 
     async def test_get_handles_have_fields(self, process_bridge: ProcessBridge) -> None:
-        """Verify each handle entry has required fields when available."""
+        """Verify each handle entry has required fields when available.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         handles = await process_bridge.get_handles(os.getpid())
         for handle in handles[:5]:
             assert "handle_value" in handle
@@ -460,7 +670,11 @@ class TestWindowEnumeration:
     """Verify window enumeration doesn't crash."""
 
     async def test_get_windows_no_crash(self, attached_bridge: ProcessBridge) -> None:
-        """Verify get_windows returns a list without crashing."""
+        """Verify get_windows returns a list without crashing.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         windows = await attached_bridge.get_windows(os.getpid())
         assert isinstance(windows, list)
 
@@ -469,12 +683,20 @@ class TestServiceListing:
     """Verify service enumeration."""
 
     async def test_list_services_returns_list(self, process_bridge: ProcessBridge) -> None:
-        """Verify service listing returns a list without error."""
+        """Verify service listing returns a list without error.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         services = await process_bridge.list_services()
         assert isinstance(services, list)
 
     async def test_list_services_have_name_state(self, process_bridge: ProcessBridge) -> None:
-        """Verify each service has name and state when available."""
+        """Verify each service has name and state when available.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         services = await process_bridge.list_services()
         for svc in services[:5]:
             assert "name" in svc
@@ -485,24 +707,40 @@ class TestPebTebAccess:
     """Verify PEB and TEB reads."""
 
     async def test_read_peb_has_address(self, attached_bridge: ProcessBridge) -> None:
-        """Verify PEB read returns a positive peb_address."""
+        """Verify PEB read returns a positive peb_address.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         peb = await attached_bridge.read_peb()
         assert peb["peb_address"] > 0
 
     async def test_read_peb_has_image_base(self, attached_bridge: ProcessBridge) -> None:
-        """Verify PEB contains positive image_base_address."""
+        """Verify PEB contains positive image_base_address.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         peb = await attached_bridge.read_peb()
         assert peb["image_base_address"] > 0
 
     async def test_read_teb_has_address(self, attached_bridge: ProcessBridge) -> None:
-        """Verify TEB read returns a positive teb_address."""
+        """Verify TEB read returns a positive teb_address.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         tid = threads[0].tid
         teb = await attached_bridge.read_teb(tid)
         assert teb["teb_address"] > 0
 
     async def test_read_teb_stack_range(self, attached_bridge: ProcessBridge) -> None:
-        """Verify stack_base > 0 and stack_limit < stack_base (downward growth)."""
+        """Verify stack_base > 0 and stack_limit < stack_base (downward growth).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         threads = await attached_bridge.get_threads(os.getpid())
         tid = threads[0].tid
         teb = await attached_bridge.read_teb(tid)
@@ -518,12 +756,20 @@ class TestHeapEnumeration:
     """Verify heap enumeration via Toolhelp32."""
 
     async def test_get_heaps_non_empty(self, attached_bridge: ProcessBridge) -> None:
-        """Verify heap list is non-empty."""
+        """Verify heap list is non-empty.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         heaps = await attached_bridge.get_heaps(os.getpid())
         assert len(heaps) > 0
 
     async def test_get_heaps_has_default(self, attached_bridge: ProcessBridge) -> None:
-        """Verify at least one heap is the default."""
+        """Verify at least one heap is the default.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         heaps = await attached_bridge.get_heaps(os.getpid())
         assert any(h.get("is_default") is True for h in heaps)
 
@@ -534,7 +780,12 @@ class TestThreadContext:
     async def test_get_thread_context_has_registers(
         self, attached_bridge: ProcessBridge, secondary_thread: int
     ) -> None:
-        """Verify context has rip and rsp on 64-bit, or eip/esp on 32-bit."""
+        """Verify context has rip and rsp on 64-bit, or eip/esp on 32-bit.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            secondary_thread: Windows thread id of a parked worker thread used for context queries.
+        """
         ctx = await attached_bridge.get_thread_context(secondary_thread)
         if struct.calcsize("P") * 8 == 64:
             assert "rip" in ctx
@@ -546,7 +797,11 @@ class TestThreadContext:
             assert "esp" in ctx
 
     async def test_get_thread_context_invalid_tid(self, attached_bridge: ProcessBridge) -> None:
-        """Verify invalid TID raises ToolError."""
+        """Verify invalid TID raises ToolError.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         with pytest.raises(ToolError):
             await attached_bridge.get_thread_context(0)
 
@@ -555,12 +810,20 @@ class TestMitigationPolicies:
     """Verify mitigation policy queries."""
 
     async def test_mitigation_policies_has_dep(self, attached_bridge: ProcessBridge) -> None:
-        """Verify result has 'DEP' key."""
+        """Verify result has 'DEP' key.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         policies = await attached_bridge.get_mitigation_policies(os.getpid())
         assert "DEP" in policies
 
     async def test_mitigation_policies_dep_structure(self, attached_bridge: ProcessBridge) -> None:
-        """Verify DEP value is dict with 'enabled' and 'flags'."""
+        """Verify DEP value is dict with 'enabled' and 'flags'.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         policies = await attached_bridge.get_mitigation_policies(os.getpid())
         dep = policies["DEP"]
         assert isinstance(dep, dict)
@@ -572,12 +835,20 @@ class TestEnvironmentVariables:
     """Verify environment variable reading from PEB."""
 
     async def test_get_environment_non_empty(self, attached_bridge: ProcessBridge) -> None:
-        """Verify environment dict is non-empty."""
+        """Verify environment dict is non-empty.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         env = await attached_bridge.get_environment(pid=os.getpid())
         assert len(env) > 0
 
     async def test_get_environment_has_path(self, attached_bridge: ProcessBridge) -> None:
-        """Verify environment contains PATH (case-insensitive)."""
+        """Verify environment contains PATH (case-insensitive).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         env = await attached_bridge.get_environment(pid=os.getpid())
         assert any(k.upper() == "PATH" for k in env)
 
@@ -586,7 +857,11 @@ class TestDotNetDetection:
     """Verify .NET CLR detection."""
 
     async def test_detect_dotnet_python_is_negative(self, attached_bridge: ProcessBridge) -> None:
-        """Verify Python process has no CLR loaded."""
+        """Verify Python process has no CLR loaded.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         result = await attached_bridge.detect_dotnet(os.getpid())
         assert result["clr_loaded"] is False
 
@@ -595,13 +870,21 @@ class TestJobGuiCom:
     """Verify job object, GUI resources, and COM enumeration."""
 
     async def test_get_job_info_has_in_job(self, attached_bridge: ProcessBridge) -> None:
-        """Verify job info has 'in_job' key."""
+        """Verify job info has 'in_job' key.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         info = await attached_bridge.get_job_info(os.getpid())
         assert "in_job" in info
         assert isinstance(info["in_job"], bool)
 
     async def test_get_gui_resources_has_counts(self, attached_bridge: ProcessBridge) -> None:
-        """Verify GUI resources has non-negative counts."""
+        """Verify GUI resources has non-negative counts.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         res = await attached_bridge.get_gui_resources(os.getpid())
         assert res["gdi_objects"] >= 0
         assert res["user_objects"] >= 0
@@ -609,7 +892,11 @@ class TestJobGuiCom:
     async def test_enumerate_com_servers_returns_list(
         self, attached_bridge: ProcessBridge
     ) -> None:
-        """Verify COM enumeration returns a list without crashing."""
+        """Verify COM enumeration returns a list without crashing.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
         result = await attached_bridge.enumerate_com_servers(os.getpid())
         assert isinstance(result, list)
 
@@ -618,7 +905,11 @@ class TestRegistry:
     """Verify registry access operations."""
 
     async def test_reg_read_value_product_name(self, process_bridge: ProcessBridge) -> None:
-        """Verify reading ProductName from CurrentVersion."""
+        """Verify reading ProductName from CurrentVersion.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         result = await process_bridge.reg_read_value(
             r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "ProductName"
         )
@@ -626,19 +917,31 @@ class TestRegistry:
         assert len(str(result["data"])) > 0
 
     async def test_reg_enum_keys_microsoft(self, process_bridge: ProcessBridge) -> None:
-        """Verify enumerating HKLM\\SOFTWARE\\Microsoft returns non-empty list."""
+        """Verify enumerating HKLM\\SOFTWARE\\Microsoft returns non-empty list.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         keys = await process_bridge.reg_enum_keys(r"HKLM\SOFTWARE\Microsoft")
         assert len(keys) > 0
 
     async def test_reg_enum_values_currentversion(self, process_bridge: ProcessBridge) -> None:
-        """Verify enumerating values under CurrentVersion returns non-empty list."""
+        """Verify enumerating values under CurrentVersion returns non-empty list.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         values = await process_bridge.reg_enum_values(
             r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
         )
         assert len(values) > 0
 
     async def test_reg_read_invalid_key_raises(self, process_bridge: ProcessBridge) -> None:
-        """Verify reading invalid key raises ToolError."""
+        """Verify reading invalid key raises ToolError.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         with pytest.raises(ToolError, match="registry key open failed"):
             await process_bridge.reg_read_value(
                 r"HKLM\SOFTWARE\TOTALLY_FAKE_KEY_12345", "value"
@@ -649,7 +952,11 @@ class TestSectionMapping:
     """Verify section create and map operations."""
 
     async def test_create_section_returns_handle(self, process_bridge: ProcessBridge) -> None:
-        """Verify section creation returns a positive handle."""
+        """Verify section creation returns a positive handle.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         handle = await process_bridge.create_section(4096)
         try:
             assert handle > 0
@@ -657,7 +964,11 @@ class TestSectionMapping:
             ctypes.windll.kernel32.CloseHandle(handle)
 
     async def test_map_section_returns_address(self, process_bridge: ProcessBridge) -> None:
-        """Verify mapping a section returns a positive address."""
+        """Verify mapping a section returns a positive address.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         k32 = ctypes.windll.kernel32
         k32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
         handle = await process_bridge.create_section(4096)
@@ -675,7 +986,11 @@ class TestNtQuerySystemInformation:
     """Verify raw NtQuerySystemInformation bridge."""
 
     async def test_query_system_info_process_info(self, process_bridge: ProcessBridge) -> None:
-        """Verify SystemProcessInformation (class 5) returns non-empty bytes."""
+        """Verify SystemProcessInformation (class 5) returns non-empty bytes.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         result = await process_bridge.query_system_info(5)
         assert isinstance(result, bytes)
         assert len(result) > 0
@@ -687,14 +1002,24 @@ class TestSehFiberTls:
     async def test_get_seh_chain_no_crash(
         self, attached_bridge: ProcessBridge, main_thread_tid: int
     ) -> None:
-        """Verify SEH chain returns a list (may be empty on x64)."""
+        """Verify SEH chain returns a list (may be empty on x64).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            main_thread_tid: Windows thread id of the first thread enumerated in the current process.
+        """
         chain = await attached_bridge.get_seh_chain(main_thread_tid)
         assert isinstance(chain, list)
 
     async def test_get_fiber_data_returns_dict(
         self, attached_bridge: ProcessBridge, main_thread_tid: int
     ) -> None:
-        """Verify fiber data has expected keys."""
+        """Verify fiber data has expected keys.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            main_thread_tid: Windows thread id of the first thread enumerated in the current process.
+        """
         result = await attached_bridge.get_fiber_data(main_thread_tid)
         assert "fiber_data" in result
         assert "has_fiber" in result
@@ -702,7 +1027,12 @@ class TestSehFiberTls:
     async def test_get_tls_values_returns_list(
         self, attached_bridge: ProcessBridge, main_thread_tid: int
     ) -> None:
-        """Verify TLS values returns a list."""
+        """Verify TLS values returns a list.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            main_thread_tid: Windows thread id of the first thread enumerated in the current process.
+        """
         result = await attached_bridge.get_tls_values(main_thread_tid)
         assert isinstance(result, list)
 
@@ -768,25 +1098,41 @@ class TestErrorConditions:
     """Verify error handling for unattached operations."""
 
     async def test_read_memory_not_attached(self, process_bridge: ProcessBridge) -> None:
-        """Verify read_memory raises when not attached."""
+        """Verify read_memory raises when not attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process attached"):
             await process_bridge.read_memory(0x1000, 16)
 
     async def test_write_memory_not_attached(self, process_bridge: ProcessBridge) -> None:
-        """Verify write_memory raises when not attached."""
+        """Verify write_memory raises when not attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process attached"):
             await process_bridge.write_memory(0x1000, b"\x90")
 
     async def test_terminate_not_attached(self, process_bridge: ProcessBridge) -> None:
-        """Verify terminate raises when not attached."""
+        """Verify terminate raises when not attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process attached"):
             await process_bridge.terminate()
 
     async def test_get_modules_no_pid(self, process_bridge: ProcessBridge) -> None:
-        """Verify get_modules raises when no PID available."""
+        """Verify get_modules raises when no PID available.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process"):
             await process_bridge.get_modules()

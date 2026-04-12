@@ -50,6 +50,11 @@ class _CommandRecorder:
     Captures every command sent through `cmd()` so tests can verify
     the exact Rizin commands the bridge constructs.
 
+    Attributes:
+        commands: Running list of every command string passed to ``cmd()``.
+        responses: Mapping of command prefix to response string used by
+            ``cmd()`` to select a canned reply.
+
     Args:
         responses: Mapping of command prefix to response string.
             If a command starts with a key, the corresponding value
