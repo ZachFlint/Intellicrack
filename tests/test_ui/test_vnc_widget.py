@@ -314,7 +314,11 @@ class TestVNCWidget:
 
     @staticmethod
     def test_connect_to_unreachable_emits_false(qapp: QApplication) -> None:
-        """Verify failed connection emits connection_status_changed(False)."""
+        """Verify failed connection emits connection_status_changed(False).
+
+        Args:
+            qapp: Qt application fixture used to pump pending events.
+        """
         widget = VNCWidget()
         statuses: list[bool] = []
         widget.connection_status_changed.connect(statuses.append)

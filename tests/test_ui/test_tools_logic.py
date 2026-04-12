@@ -98,7 +98,13 @@ class TestMainWindowIntegration:
         real_orchestrator: object,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify MainWindow handles address_clicked signal."""
+        """Verify MainWindow handles address_clicked signal.
+
+        Args:
+            real_config: Real Config fixture used to construct MainWindow.
+            real_orchestrator: Real Orchestrator fixture used to construct MainWindow.
+            monkeypatch: Pytest monkeypatch fixture for replacing SandboxManager.
+        """
         monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
         window = MainWindow(real_config, real_orchestrator)
 
