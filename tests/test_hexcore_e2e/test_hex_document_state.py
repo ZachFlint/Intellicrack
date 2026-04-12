@@ -28,6 +28,105 @@ type _StateTrigger = Callable[[HexDocumentState], None]
 type _EventList = list[tuple[HexDocumentEvent, dict[str, Any]]]
 
 
+class _DummyDoc:
+    """Minimal concrete implementation of HexDocumentFull for state tests.
+
+    Implements all methods required by the HexDocumentFull Protocol with
+    stub bodies.  State tests only use this as a non-None document sentinel;
+    no real document operations are performed.
+    """
+
+    def read(self, offset: int, length: int) -> list[int]:
+        """Return an empty byte list (stub).
+
+        Args:
+            offset: Byte offset to start reading from.
+            length: Number of bytes to read.
+
+        Returns:
+            list[int]: Empty list.
+        """
+        _ = (self, offset, length)
+        return []
+
+    def length(self) -> int:
+        """Return zero length (stub).
+
+        Returns:
+            int: Always zero.
+        """
+        _ = self
+        return 0
+
+    def write(self, offset: int, data: bytes) -> None:
+        """No-op write (stub).
+
+        Args:
+            offset: Byte offset to write at.
+            data: Bytes to write.
+        """
+        _ = (self, offset, data)
+
+    def list_templates(self) -> list[tuple[str, str]]:
+        """Return an empty template list (stub).
+
+        Returns:
+            list[tuple[str, str]]: Empty list.
+        """
+        _ = self
+        return []
+
+    def list_templates_detailed(self) -> list[object]:
+        """Return an empty detailed template list (stub).
+
+        Returns:
+            list[object]: Empty list.
+        """
+        _ = self
+        return []
+
+    def register_json_template(self, name: str, json_str: str) -> None:
+        """No-op register (stub).
+
+        Args:
+            name: Template name.
+            json_str: JSON string.
+        """
+        _ = (self, name, json_str)
+
+    def remove_template(self, name: str) -> None:
+        """No-op remove (stub).
+
+        Args:
+            name: Template name.
+        """
+        _ = (self, name)
+
+    def export_template_json(self, name: str) -> str:
+        """Return an empty JSON string (stub).
+
+        Args:
+            name: Template name.
+
+        Returns:
+            str: Empty string.
+        """
+        _ = (self, name)
+        return ""
+
+    def inspect_at(self, offset: int) -> dict[str, object]:
+        """Return an empty inspection dict (stub).
+
+        Args:
+            offset: Byte offset to inspect.
+
+        Returns:
+            dict[str, object]: Empty dict.
+        """
+        _ = (self, offset)
+        return {}
+
+
 def _make_collector() -> tuple[_EventList, StateCallbackFn]:
     """Build a fresh event collector and its bound callback.
 
@@ -77,7 +176,7 @@ class TestDocumentEvents:
         events, cb = _make_collector()
         state.register_callback(cb)
 
-        dummy_doc = object()
+        dummy_doc = _DummyDoc()
         state.set_document(dummy_doc, Path("/nonexistent/test.bin"))
 
         assert len(events) == 1
@@ -90,7 +189,7 @@ class TestDocumentEvents:
         state.register_callback(cb)
 
         p = Path("/nonexistent/sample.bin")
-        state.set_document(object(), p)
+        state.set_document(_DummyDoc(), p)
 
         assert events[0][1]["file_path"] == str(p)
 
@@ -109,20 +208,20 @@ class TestDocumentEvents:
         """set_document resets cursor_offset to 0."""
         state = HexDocumentState()
         state.set_cursor(999)
-        state.set_document(object(), None)
+        state.set_document(_DummyDoc(), None)
         assert state.cursor_offset == 0
 
     def test_set_document_resets_selection(self) -> None:
         """set_document clears any existing selection."""
         state = HexDocumentState()
         state.set_selection(10, 20)
-        state.set_document(object(), None)
+        state.set_document(_DummyDoc(), None)
         assert state.selection is None
 
     def test_set_document_reflects_on_property(self) -> None:
         """Document property returns the object passed to set_document."""
         state = HexDocumentState()
-        dummy = object()
+        dummy = _DummyDoc()
         state.set_document(dummy, None)
         assert state.document is dummy
 
@@ -130,7 +229,7 @@ class TestDocumentEvents:
         """file_path property reflects the Path passed to set_document."""
         state = HexDocumentState()
         p = Path("/nonexistent/abc.bin")
-        state.set_document(object(), p)
+        state.set_document(_DummyDoc(), p)
         assert state.file_path == p
 
 
@@ -685,50 +784,110 @@ class TestThreadSafety:
 
 
 def _trigger_document_opened(s: HexDocumentState) -> None:
-    s.set_document(object(), None)
+    """Fire DOCUMENT_OPENED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
+    s.set_document(_DummyDoc(), None)
 
 
 def _trigger_document_closed(s: HexDocumentState) -> None:
+    """Fire DOCUMENT_CLOSED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.set_document(None, None)
 
 
 def _trigger_cursor_moved(s: HexDocumentState) -> None:
+    """Fire CURSOR_MOVED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.set_cursor(1)
 
 
 def _trigger_selection_changed(s: HexDocumentState) -> None:
+    """Fire SELECTION_CHANGED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.set_selection(0, 10)
 
 
 def _trigger_data_modified(s: HexDocumentState) -> None:
+    """Fire DATA_MODIFIED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_data_modified(0, 8)
 
 
 def _trigger_document_saved(s: HexDocumentState) -> None:
+    """Fire DOCUMENT_SAVED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_document_saved("/nonexistent/x.bin")
 
 
 def _trigger_template_registered(s: HexDocumentState) -> None:
+    """Fire TEMPLATE_REGISTERED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_template_registered("t")
 
 
 def _trigger_template_removed(s: HexDocumentState) -> None:
+    """Fire TEMPLATE_REMOVED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_template_removed("t")
 
 
 def _trigger_highlight_rule_added(s: HexDocumentState) -> None:
+    """Fire HIGHLIGHT_RULE_ADDED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_highlight_rule_added({"id": "r1"})
 
 
 def _trigger_highlight_rule_removed(s: HexDocumentState) -> None:
+    """Fire HIGHLIGHT_RULE_REMOVED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_highlight_rule_removed("r1")
 
 
 def _trigger_display_mode_changed(s: HexDocumentState) -> None:
+    """Fire DISPLAY_MODE_CHANGED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_display_mode_changed("hex8")
 
 
 def _trigger_pattern_executed(s: HexDocumentState) -> None:
+    """Fire PATTERN_EXECUTED on the given state.
+
+    Args:
+        s: HexDocumentState to trigger the event on.
+    """
     s.notify_pattern_executed("pe.hexpat", 3)
 
 

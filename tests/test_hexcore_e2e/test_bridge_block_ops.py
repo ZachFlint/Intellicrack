@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -58,7 +58,7 @@ class TestFillBlock:
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
         _run(bridge.fill_block(8, 16, "90"))
-        result = cast(str, _run(bridge.read_bytes(8, 16)))
+        result = _run(bridge.read_bytes(8, 16))
         raw = bytes.fromhex(result.replace(" ", ""))
         assert raw == b"\x90" * 16
 
@@ -73,7 +73,7 @@ class TestFillBlock:
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
         _run(bridge.fill_block(0, 12, "DEADBEEF"))
-        result = cast(str, _run(bridge.read_bytes(0, 12)))
+        result = _run(bridge.read_bytes(0, 12))
         raw = bytes.fromhex(result.replace(" ", ""))
         assert raw == b"\xDE\xAD\xBE\xEF" * 3
 
@@ -115,7 +115,7 @@ class TestCopyBlock:
         _run(bridge.open_file(str(f)))
         _run(bridge.write_bytes(0, "CA FE BA BE DE AD BE EF"))
         _run(bridge.copy_block(0, 8, 32))
-        result = cast(str, _run(bridge.read_bytes(32, 8)))
+        result = _run(bridge.read_bytes(32, 8))
         assert result.replace(" ", "").lower() == "cafebabedeadbeef"
 
     def test_copy_block_overlapping_forward(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -130,7 +130,7 @@ class TestCopyBlock:
         _run(bridge.open_file(str(f)))
         _run(bridge.write_bytes(0, "01 02 03 04 05 06 07 08"))
         _run(bridge.copy_block(0, 8, 4))
-        result = cast(str, _run(bridge.read_bytes(4, 8)))
+        result = _run(bridge.read_bytes(4, 8))
         raw = bytes.fromhex(result.replace(" ", ""))
         assert len(raw) == 8
 
@@ -150,8 +150,8 @@ class TestMoveBlock:
         _run(bridge.open_file(str(f)))
         _run(bridge.write_bytes(0, "CA FE BA BE DE AD BE EF"))
         _run(bridge.move_block(0, 8, 32))
-        src = cast(str, _run(bridge.read_bytes(0, 8)))
-        dst = cast(str, _run(bridge.read_bytes(32, 8)))
+        src = _run(bridge.read_bytes(0, 8))
+        dst = _run(bridge.read_bytes(32, 8))
         assert bytes.fromhex(src.replace(" ", "")) == b"\x00" * 8
         assert dst.replace(" ", "").lower() == "cafebabedeadbeef"
 
@@ -172,8 +172,8 @@ class TestSwapBlocks:
         _run(bridge.write_bytes(0, "41 41 41 41"))
         _run(bridge.write_bytes(32, "42 42 42 42"))
         _run(bridge.swap_blocks(0, 4, 32, 4))
-        block_a = cast(str, _run(bridge.read_bytes(0, 4)))
-        block_b = cast(str, _run(bridge.read_bytes(32, 4)))
+        block_a = _run(bridge.read_bytes(0, 4))
+        block_b = _run(bridge.read_bytes(32, 4))
         assert bytes.fromhex(block_a.replace(" ", "")) == b"BBBB"
         assert bytes.fromhex(block_b.replace(" ", "")) == b"AAAA"
 
@@ -190,8 +190,8 @@ class TestSwapBlocks:
         _run(bridge.write_bytes(0, "AA BB CC DD"))
         _run(bridge.write_bytes(32, "11 22 33 44 55 66 77 88"))
         _run(bridge.swap_blocks(0, 4, 32, 8))
-        at_0 = cast(str, _run(bridge.read_bytes(0, 8)))
-        at_32 = cast(str, _run(bridge.read_bytes(32, 4)))
+        at_0 = _run(bridge.read_bytes(0, 8))
+        at_32 = _run(bridge.read_bytes(32, 4))
         assert at_0.replace(" ", "").lower() == "1122334455667788"
         assert at_32.replace(" ", "").lower() == "aabbccdd"
 

@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -58,10 +58,7 @@ class TestDIESignatures:
             sig_db_dir: Path to the directory with test signature databases.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_die_signatures(str(sig_db_dir / "die_test.json"))),
-        )
+        results = _run(bridge.scan_die_signatures(str(sig_db_dir / "die_test.json")))
         assert results
         assert any(r["name"] == "MZ Executable" for r in results)
 
@@ -78,10 +75,7 @@ class TestDIESignatures:
         f = tmp_path / "not_pe.bin"
         f.write_bytes(b"\x00" * 128)
         _run(bridge.open_file(str(f)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_die_signatures(str(sig_db_dir / "die_test.json"))),
-        )
+        results = _run(bridge.scan_die_signatures(str(sig_db_dir / "die_test.json")))
         assert results == []
 
 
@@ -102,10 +96,7 @@ class TestClamAVSignatures:
         f = tmp_path / "hdb_target.bin"
         f.write_bytes(known_data)
         _run(bridge.open_file(str(f)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.hdb"))),
-        )
+        results = _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.hdb")))
         assert results
         assert results[0]["type"] == "hash"
 
@@ -122,10 +113,7 @@ class TestClamAVSignatures:
         f = tmp_path / "hdb_nomatch.bin"
         f.write_bytes(b"\xFF" * 128)
         _run(bridge.open_file(str(f)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.hdb"))),
-        )
+        results = _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.hdb")))
         assert results == []
 
     def test_clamav_ndb_pattern_match(
@@ -139,10 +127,7 @@ class TestClamAVSignatures:
             sig_db_dir: Path to the directory with test signature databases.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.ndb"))),
-        )
+        results = _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.ndb")))
         assert results
         assert results[0]["type"] == "ndb"
 
@@ -161,10 +146,7 @@ class TestCustomSignatures:
             sig_db_dir: Path to the directory with test signature databases.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_custom_signatures(str(sig_db_dir / "custom.json"))),
-        )
+        results = _run(bridge.scan_custom_signatures(str(sig_db_dir / "custom.json")))
         ep_matches = [r for r in results if r["name"] == "MZ EP Match"]
         assert ep_matches
         assert ep_matches[0]["offset"] == 0
@@ -183,10 +165,7 @@ class TestCustomSignatures:
         f = tmp_path / "custom_any.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_custom_signatures(str(sig_db_dir / "custom.json"))),
-        )
+        results = _run(bridge.scan_custom_signatures(str(sig_db_dir / "custom.json")))
         any_matches = [r for r in results if r["name"] == "Any Byte Match"]
         assert any_matches
         assert any_matches[0]["offset"] == 32
@@ -205,10 +184,7 @@ class TestCustomSignatures:
         f = tmp_path / "custom_fixed.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_custom_signatures(str(sig_db_dir / "custom.json"))),
-        )
+        results = _run(bridge.scan_custom_signatures(str(sig_db_dir / "custom.json")))
         fixed_matches = [r for r in results if r["name"] == "Fixed Offset Match"]
         assert fixed_matches
         assert fixed_matches[0]["offset"] == 0
@@ -228,10 +204,7 @@ class TestSignatureResultStructure:
             sig_db_dir: Path to the directory with test signature databases.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        results = cast(
-            "list[dict[str, Any]]",
-            _run(bridge.scan_die_signatures(str(sig_db_dir / "die_test.json"))),
-        )
+        results = _run(bridge.scan_die_signatures(str(sig_db_dir / "die_test.json")))
         assert results
         for r in results:
             assert "name" in r
