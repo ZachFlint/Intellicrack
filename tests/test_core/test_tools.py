@@ -45,78 +45,130 @@ def registry(tmp_path: Path) -> ToolRegistry:
 
 
 def test_tools_directory(registry: ToolRegistry) -> None:
-    """Verify tools_directory returns configured path."""
+    """Verify tools_directory returns configured path.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     assert registry.tools_directory.exists()
 
 
 def test_get_available_tools_empty(registry: ToolRegistry) -> None:
-    """Verify get_available_tools is empty before initialize."""
+    """Verify get_available_tools is empty before initialize.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     assert registry.get_available_tools() == []
 
 
 def test_get_tool_definitions_empty(registry: ToolRegistry) -> None:
-    """Verify get_tool_definitions is empty before initialize."""
+    """Verify get_tool_definitions is empty before initialize.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     assert registry.get_tool_definitions() == []
 
 
 def test_get_returns_none_before_init(registry: ToolRegistry) -> None:
-    """Verify get returns None for unregistered tool."""
+    """Verify get returns None for unregistered tool.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     assert registry.get(ToolName.PROCESS) is None
 
 
 def test_get_process_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_process_bridge raises when not registered."""
+    """Verify get_process_bridge raises when not registered.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         registry.get_process_bridge()
 
 
 def test_get_frida_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_frida_bridge raises when not registered."""
+    """Verify get_frida_bridge raises when not registered.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         registry.get_frida_bridge()
 
 
 def test_get_ghidra_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_ghidra_bridge raises when not registered."""
+    """Verify get_ghidra_bridge raises when not registered.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         registry.get_ghidra_bridge()
 
 
 def test_get_cutter_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_cutter_bridge raises when not registered."""
+    """Verify get_cutter_bridge raises when not registered.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         registry.get_cutter_bridge()
 
 
 def test_get_x64dbg_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_x64dbg_bridge raises when not registered."""
+    """Verify get_x64dbg_bridge raises when not registered.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         registry.get_x64dbg_bridge()
 
 
 def test_get_sandbox_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_sandbox_bridge raises when not registered."""
+    """Verify get_sandbox_bridge raises when not registered.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         registry.get_sandbox_bridge()
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_unknown_tool(registry: ToolRegistry) -> None:
-    """Verify execute_tool_call raises for unknown tool name."""
+    """Verify execute_tool_call raises for unknown tool name.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         await registry.execute_tool_call("nonexistent", "func", {})
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_not_registered(registry: ToolRegistry) -> None:
-    """Verify execute_tool_call raises for unregistered tool."""
+    """Verify execute_tool_call raises for unregistered tool.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     with pytest.raises(ToolError):
         await registry.execute_tool_call("binary", "load_file", {})
 
 
 @pytest.mark.asyncio
 async def test_get_status_not_registered(registry: ToolRegistry) -> None:
-    """Verify get_status returns unavailable for unregistered tool."""
+    """Verify get_status returns unavailable for unregistered tool.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     status = await registry.get_status(ToolName.GHIDRA)
     assert isinstance(status, ToolStatus)
     assert status.available is False
@@ -125,21 +177,33 @@ async def test_get_status_not_registered(registry: ToolRegistry) -> None:
 
 @pytest.mark.asyncio
 async def test_get_all_status_empty(registry: ToolRegistry) -> None:
-    """Verify get_all_status returns empty list before init."""
+    """Verify get_all_status returns empty list before init.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     statuses = await registry.get_all_status()
     assert statuses == []
 
 
 @pytest.mark.asyncio
 async def test_ensure_tool_ready_not_found(registry: ToolRegistry) -> None:
-    """Verify ensure_tool_ready returns False for unregistered tool."""
+    """Verify ensure_tool_ready returns False for unregistered tool.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     result = await registry.ensure_tool_ready(ToolName.GHIDRA)
     assert result is False
 
 
 @pytest.mark.asyncio
 async def test_shutdown_empty(registry: ToolRegistry) -> None:
-    """Verify shutdown succeeds on empty registry."""
+    """Verify shutdown succeeds on empty registry.
+
+    Args:
+        registry: ToolRegistry fixture under test.
+    """
     await registry.shutdown()
 
 

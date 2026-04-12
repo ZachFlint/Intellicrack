@@ -34,7 +34,11 @@ class TestSessionStoreInitialization:
 
     @staticmethod
     def test_session_store_creates_database_file(tmp_path: Path) -> None:
-        """Verify SessionStore creates the database file on init."""
+        """Verify SessionStore creates the database file on init.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         db_path = tmp_path / "sessions.db"
         assert not db_path.exists()
 
@@ -45,7 +49,11 @@ class TestSessionStoreInitialization:
 
     @staticmethod
     def test_session_store_creates_parent_directories(tmp_path: Path) -> None:
-        """Verify SessionStore creates parent directories if missing."""
+        """Verify SessionStore creates parent directories if missing.
+
+        Args:
+            tmp_path: Pytest temporary directory used as the parent root.
+        """
         db_path = tmp_path / "data" / "subdir" / "sessions.db"
         assert not db_path.parent.exists()
 
@@ -56,7 +64,11 @@ class TestSessionStoreInitialization:
 
     @staticmethod
     def test_session_store_initializes_schema(tmp_path: Path) -> None:
-        """Verify SessionStore creates required database tables."""
+        """Verify SessionStore creates required database tables.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
 
@@ -73,7 +85,11 @@ class TestSessionManagerInitialization:
 
     @staticmethod
     def test_session_manager_requires_session_store(tmp_path: Path) -> None:
-        """Verify SessionManager is initialized with SessionStore instance."""
+        """Verify SessionManager is initialized with SessionStore instance.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
 
@@ -100,7 +116,11 @@ class TestSessionManagerInitialization:
 
     @staticmethod
     def test_session_manager_auto_save_default(tmp_path: Path) -> None:
-        """Verify SessionManager has auto_save enabled by default."""
+        """Verify SessionManager has auto_save enabled by default.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store)
 
@@ -108,7 +128,11 @@ class TestSessionManagerInitialization:
 
     @staticmethod
     def test_session_manager_auto_save_can_be_disabled(tmp_path: Path) -> None:
-        """Verify SessionManager auto_save can be disabled."""
+        """Verify SessionManager auto_save can be disabled.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, auto_save=False)
 
@@ -116,7 +140,11 @@ class TestSessionManagerInitialization:
 
     @staticmethod
     def test_session_manager_save_interval_default(tmp_path: Path) -> None:
-        """Verify SessionManager has default save interval of 300 seconds."""
+        """Verify SessionManager has default save interval of 300 seconds.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store)
 
@@ -124,7 +152,11 @@ class TestSessionManagerInitialization:
 
     @staticmethod
     def test_session_manager_save_interval_configurable(tmp_path: Path) -> None:
-        """Verify SessionManager save interval is configurable."""
+        """Verify SessionManager save interval is configurable.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
+        """
         store = SessionStore(tmp_path / "sessions.db")
         manager = SessionManager(store, save_interval=CUSTOM_SAVE_INTERVAL)
 
@@ -151,7 +183,11 @@ class TestSessionManagerOperations:
     @staticmethod
     @pytest.mark.asyncio
     async def test_create_session(manager: SessionManager) -> None:
-        """Verify SessionManager can create a new session."""
+        """Verify SessionManager can create a new session.
+
+        Args:
+            manager: SessionManager fixture backed by a temporary database.
+        """
         session = await manager.create(
             provider=ProviderName.ANTHROPIC,
             model="claude-3-opus-20240229",
@@ -166,7 +202,11 @@ class TestSessionManagerOperations:
     @staticmethod
     @pytest.mark.asyncio
     async def test_save_and_load_session(manager: SessionManager) -> None:
-        """Verify SessionManager can save and load sessions."""
+        """Verify SessionManager can save and load sessions.
+
+        Args:
+            manager: SessionManager fixture backed by a temporary database.
+        """
         session = await manager.create(
             provider=ProviderName.OPENAI,
             model="gpt-4",
@@ -188,7 +228,11 @@ class TestSessionManagerOperations:
     @staticmethod
     @pytest.mark.asyncio
     async def test_list_sessions(manager: SessionManager) -> None:
-        """Verify SessionManager can list all sessions."""
+        """Verify SessionManager can list all sessions.
+
+        Args:
+            manager: SessionManager fixture backed by a temporary database.
+        """
         await manager.create(
             provider=ProviderName.ANTHROPIC,
             model="claude-3-opus-20240229",
@@ -229,7 +273,11 @@ class TestSessionDataIntegrity:
 
     @staticmethod
     def test_session_roundtrip(store: SessionStore) -> None:
-        """Verify session data survives save/load cycle."""
+        """Verify session data survives save/load cycle.
+
+        Args:
+            store: SessionStore fixture backed by a temporary database.
+        """
         session = Session.create(
             provider=ProviderName.GOOGLE,
             model="gemini-pro",
@@ -251,13 +299,21 @@ class TestSessionDataIntegrity:
 
     @staticmethod
     def test_session_not_found_returns_none(store: SessionStore) -> None:
-        """Verify loading non-existent session returns None."""
+        """Verify loading non-existent session returns None.
+
+        Args:
+            store: SessionStore fixture backed by a temporary database.
+        """
         result = store.load("nonexistent-session-id")
         assert result is None
 
     @staticmethod
     def test_session_delete(store: SessionStore) -> None:
-        """Verify session can be deleted."""
+        """Verify session can be deleted.
+
+        Args:
+            store: SessionStore fixture backed by a temporary database.
+        """
         session = Session.create(
             provider=ProviderName.OLLAMA,
             model="llama2",
@@ -274,6 +330,10 @@ class TestSessionDataIntegrity:
 
     @staticmethod
     def test_delete_nonexistent_session_returns_false(store: SessionStore) -> None:
-        """Verify deleting non-existent session returns False."""
+        """Verify deleting non-existent session returns False.
+
+        Args:
+            store: SessionStore fixture backed by a temporary database.
+        """
         result = store.delete("nonexistent-session-id")
         assert result is False

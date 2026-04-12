@@ -108,7 +108,11 @@ class TestRunTracked:
     def test_run_tracked_captures_stdout(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked captures stdout from subprocess."""
+        """Verify run_tracked captures stdout from subprocess.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         result = process_manager.run_tracked(
             [sys.executable, "-c", "print('hello world')"],
             name="test-stdout",
@@ -121,7 +125,11 @@ class TestRunTracked:
     def test_run_tracked_captures_stderr(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked captures stderr from subprocess."""
+        """Verify run_tracked captures stderr from subprocess.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         result = process_manager.run_tracked(
             [sys.executable, "-c", "import sys; sys.stderr.write('error msg')"],
             name="test-stderr",
@@ -133,7 +141,11 @@ class TestRunTracked:
     def test_run_tracked_returns_nonzero_exit_code(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked returns correct exit code for failing process."""
+        """Verify run_tracked returns correct exit code for failing process.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         result = process_manager.run_tracked(
             [sys.executable, "-c", "import sys; sys.exit(42)"],
             name="test-exit-code",
@@ -145,7 +157,11 @@ class TestRunTracked:
     def test_run_tracked_check_raises_on_failure(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked raises CalledProcessError when check=True."""
+        """Verify run_tracked raises CalledProcessError when check=True.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         with pytest.raises(subprocess.CalledProcessError) as exc_info:
             process_manager.run_tracked(
                 [sys.executable, "-c", "import sys; sys.exit(1)"],
@@ -159,7 +175,11 @@ class TestRunTracked:
     def test_run_tracked_timeout_terminates_process(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked terminates process on timeout."""
+        """Verify run_tracked terminates process on timeout.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         with pytest.raises(subprocess.TimeoutExpired):
             process_manager.run_tracked(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
@@ -171,7 +191,11 @@ class TestRunTracked:
     def test_run_tracked_unregisters_after_completion(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify process is unregistered after successful completion."""
+        """Verify process is unregistered after successful completion.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         initial_count = process_manager.process_count
 
         process_manager.run_tracked(
@@ -186,7 +210,12 @@ class TestRunTracked:
         process_manager: ProcessManager,
         tmp_path: Path,
     ) -> None:
-        """Verify run_tracked respects cwd parameter."""
+        """Verify run_tracked respects cwd parameter.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+            tmp_path: Pytest temporary directory for the test.
+        """
         result = process_manager.run_tracked(
             [sys.executable, "-c", "import os; print(os.getcwd())"],
             name="test-cwd",
@@ -206,7 +235,11 @@ class TestRunTracked:
     def test_run_tracked_with_env(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked passes environment variables."""
+        """Verify run_tracked passes environment variables.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         custom_env = os.environ.copy()
         custom_env["INTELLICRACK_TEST_VAR"] = "test_value_12345"
 
@@ -226,7 +259,11 @@ class TestRunTracked:
     def test_run_tracked_text_false_returns_bytes(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked returns bytes when text=False."""
+        """Verify run_tracked returns bytes when text=False.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         result = process_manager.run_tracked(
             [sys.executable, "-c", "print('bytes test')"],
             name="test-bytes",
@@ -245,7 +282,11 @@ class TestRunTrackedAsync:
     async def test_run_tracked_async_captures_output(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked_async captures stdout asynchronously."""
+        """Verify run_tracked_async captures stdout asynchronously.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         result = await process_manager.run_tracked_async(
             [sys.executable, "-c", "print('async hello')"],
             name="test-async-stdout",
@@ -259,7 +300,11 @@ class TestRunTrackedAsync:
     async def test_run_tracked_async_timeout(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked_async handles timeout correctly."""
+        """Verify run_tracked_async handles timeout correctly.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         with pytest.raises(subprocess.TimeoutExpired):
             await process_manager.run_tracked_async(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
@@ -272,7 +317,11 @@ class TestRunTrackedAsync:
     async def test_run_tracked_async_check_raises(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked_async raises on failure with check=True."""
+        """Verify run_tracked_async raises on failure with check=True.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         with pytest.raises(subprocess.CalledProcessError):
             await process_manager.run_tracked_async(
                 [sys.executable, "-c", "import sys; sys.exit(1)"],
@@ -285,7 +334,11 @@ class TestRunTrackedAsync:
     async def test_run_tracked_async_concurrent_execution(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify multiple async processes can run concurrently."""
+        """Verify multiple async processes can run concurrently.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         start_time = time.time()
 
         results = await asyncio.gather(
@@ -313,7 +366,11 @@ class TestExternalPidRegistration:
     def test_register_external_pid_stores_info(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify register_external_pid stores process information."""
+        """Verify register_external_pid stores process information.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.register_external_pid(
             TEST_PID_EXTERNAL,
             name="test-external",
@@ -330,7 +387,11 @@ class TestExternalPidRegistration:
     def test_unregister_external_pid_removes_entry(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify unregister_external_pid removes the registered PID."""
+        """Verify unregister_external_pid removes the registered PID.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.register_external_pid(TEST_PID_UNREGISTER, name="test-unregister")
 
         assert TEST_PID_UNREGISTER in process_manager.external_pids
@@ -344,7 +405,11 @@ class TestExternalPidRegistration:
     def test_unregister_external_pid_returns_false_for_unknown(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify unregister_external_pid returns False for unknown PID."""
+        """Verify unregister_external_pid returns False for unknown PID.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         result = process_manager.unregister_external_pid(TEST_PID_UNKNOWN)
 
         assert result is False
@@ -353,7 +418,11 @@ class TestExternalPidRegistration:
     def test_register_external_pid_skips_duplicate(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify register_external_pid does not overwrite existing entry."""
+        """Verify register_external_pid does not overwrite existing entry.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.register_external_pid(TEST_PID_DUPLICATE, name="original-name")
         process_manager.register_external_pid(TEST_PID_DUPLICATE, name="new-name")
 
@@ -367,7 +436,11 @@ class TestTerminateExternalPid:
     def test_terminate_external_pid_handles_nonexistent_process(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify terminate_external_pid handles non-existent PID gracefully."""
+        """Verify terminate_external_pid handles non-existent PID gracefully.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.register_external_pid(NONEXISTENT_PID, name="nonexistent")
 
         result = process_manager.terminate_external_pid(NONEXISTENT_PID)
@@ -380,7 +453,11 @@ class TestTerminateExternalPid:
     def test_terminate_external_pid_kills_real_process_windows(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify terminate_external_pid kills a real process on Windows."""
+        """Verify terminate_external_pid kills a real process on Windows.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdout=subprocess.PIPE,
@@ -404,7 +481,11 @@ class TestTerminateExternalPid:
     def test_terminate_external_pid_kills_real_process_unix(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify terminate_external_pid kills a real process on Unix."""
+        """Verify terminate_external_pid kills a real process on Unix.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdout=subprocess.PIPE,
@@ -431,7 +512,11 @@ class TestProcessCleanup:
     def test_sync_cleanup_terminates_tracked_processes(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify _sync_cleanup terminates all tracked processes."""
+        """Verify _sync_cleanup terminates all tracked processes.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc1 = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdout=subprocess.PIPE,
@@ -463,7 +548,11 @@ class TestProcessCleanup:
     def test_sync_cleanup_terminates_external_pids(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify _sync_cleanup terminates registered external PIDs."""
+        """Verify _sync_cleanup terminates registered external PIDs.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdout=subprocess.PIPE,
@@ -486,7 +575,11 @@ class TestProcessCleanup:
     async def test_async_cleanup_terminates_all_processes(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify cleanup_all_async terminates all tracked processes."""
+        """Verify cleanup_all_async terminates all tracked processes.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc = await asyncio.to_thread(
             subprocess.Popen,
             [sys.executable, "-c", "import time; time.sleep(60)"],
@@ -559,7 +652,11 @@ class TestHandlerInstallation:
     def test_install_handlers_registers_atexit(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify install_handlers registers atexit callback."""
+        """Verify install_handlers registers atexit callback.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         assert process_manager.atexit_registered is False
 
         process_manager.install_handlers()
@@ -570,7 +667,11 @@ class TestHandlerInstallation:
     def test_install_handlers_idempotent(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify install_handlers can be called multiple times safely."""
+        """Verify install_handlers can be called multiple times safely.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.install_handlers()
         process_manager.install_handlers()
         process_manager.install_handlers()
@@ -581,7 +682,11 @@ class TestHandlerInstallation:
     def test_uninstall_handlers_clears_registration(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify uninstall_handlers clears atexit registration."""
+        """Verify uninstall_handlers clears atexit registration.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.install_handlers()
         assert process_manager.atexit_registered is True
 
@@ -593,14 +698,22 @@ class TestHandlerInstallation:
     def test_shutdown_event_initially_clear(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify shutdown event is initially not set."""
+        """Verify shutdown event is initially not set.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         assert process_manager.is_shutdown_requested() is False
 
     @staticmethod
     def test_shutdown_event_can_be_set_and_cleared(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify shutdown event can be set and cleared."""
+        """Verify shutdown event can be set and cleared.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         process_manager.shutdown_event.set()
         assert process_manager.is_shutdown_requested() is True
 
@@ -615,7 +728,11 @@ class TestProcessManagerProperties:
     def test_process_count_reflects_registered_processes(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify process_count returns correct count."""
+        """Verify process_count returns correct count.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         assert process_manager.process_count == EXPECTED_TRACKED_COUNT_ZERO
 
         proc = subprocess.Popen(
@@ -636,7 +753,11 @@ class TestProcessManagerProperties:
     def test_running_count_reflects_active_processes(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify running_count returns count of active processes."""
+        """Verify running_count returns count of active processes.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc1 = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
             stdout=subprocess.PIPE,
@@ -663,7 +784,11 @@ class TestProcessManagerProperties:
     def test_repr_includes_counts(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify __repr__ includes process counts."""
+        """Verify __repr__ includes process counts.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         repr_str = repr(process_manager)
 
         assert "ProcessManager" in repr_str
@@ -674,7 +799,11 @@ class TestProcessManagerProperties:
     def test_get_all_tracked_returns_list(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify get_all_tracked returns list of tracked processes."""
+        """Verify get_all_tracked returns list of tracked processes.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
             stdout=subprocess.PIPE,
@@ -695,7 +824,11 @@ class TestProcessManagerProperties:
     def test_get_running_processes_filters_completed(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify get_running_processes excludes completed processes."""
+        """Verify get_running_processes excludes completed processes.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
         proc1 = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
             stdout=subprocess.PIPE,

@@ -149,6 +149,9 @@ def test_sandbox_temp_wsb_file_cleaned_up(tmp_path: Path) -> None:
 
     The SandboxTestWorker.run() finally block now calls wsb_file.unlink().
     Before the fix, the temp file was never removed.
+
+    Args:
+        tmp_path: Pytest temporary directory for the test.
     """
     wsb_file = tmp_path / "test_sandbox.wsb"
     _ = wsb_file.write_text("<Configuration><VGpu>Enable</VGpu></Configuration>")
@@ -291,6 +294,9 @@ async def test_qemu_pidfile_retry_reads_immediate_file(tmp_path: Path) -> None:
     """Pidfile retry loop reads a pidfile that exists on the first attempt.
 
     Replicates the exact retry loop from QemuSandbox.start().
+
+    Args:
+        tmp_path: Pytest temporary directory for the test.
     """
     pidfile = tmp_path / "qemu.pid"
     _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
@@ -315,10 +321,14 @@ async def test_qemu_pidfile_retry_reads_delayed_file(tmp_path: Path) -> None:
 
     Before the fix, a single read attempt after a fixed sleep would miss
     pidfiles written at unpredictable times. The retry loop handles this.
+
+    Args:
+        tmp_path: Pytest temporary directory for the test.
     """
     pidfile = tmp_path / "qemu.pid"
 
     async def write_pidfile_after_delay() -> None:
+        """Write the expected pidfile after a short delay."""
         await asyncio.sleep(_SLEEP_DELAY_PIDFILE_WRITE)
         _ = pidfile.write_text(str(_EXPECTED_PID_DELAYED))
 
@@ -348,6 +358,9 @@ async def test_qemu_pidfile_retry_exhausted_returns_none(
     Before the fix, a single failed read would leave qemu_pid as None
     but execution continued without raising an error. Now the code raises
     SandboxError when all retries are exhausted.
+
+    Args:
+        tmp_path: Pytest temporary directory for the test.
     """
     pidfile = tmp_path / "nonexistent_qemu.pid"
 
@@ -372,12 +385,16 @@ async def test_qemu_pidfile_retry_handles_corrupt_content(
     """Pidfile retry loop retries on corrupt content then succeeds.
 
     Simulates QEMU partially writing the pidfile (race condition).
+
+    Args:
+        tmp_path: Pytest temporary directory for the test.
     """
     pidfile = tmp_path / "qemu.pid"
 
     _ = pidfile.write_text("not_a_number\n")
 
     async def fix_pidfile_after_delay() -> None:
+        """Rewrite the pidfile with valid content after a short delay."""
         await asyncio.sleep(_SLEEP_DELAY_PIDFILE_WRITE)
         _ = pidfile.write_text(str(_EXPECTED_PID_CORRUPT))
 
