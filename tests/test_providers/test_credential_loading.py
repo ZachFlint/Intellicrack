@@ -30,7 +30,11 @@ class TestCredentialLoaderInitialization:
     def test_loader_initializes_with_env_path(
         env_file_path: Path,
     ) -> None:
-        """Test CredentialLoader can be initialized with explicit path."""
+        """Test CredentialLoader can be initialized with explicit path.
+
+        Args:
+            env_file_path: Path to the .env file used for credential loading.
+        """
         loader = CredentialLoader(env_path=env_file_path)
         assert loader.env_path == env_file_path
 
@@ -44,7 +48,11 @@ class TestCredentialLoaderInitialization:
     def test_loader_finds_env_file(
         env_file_path: Path,
     ) -> None:
-        """Test loader finds .env file when it exists."""
+        """Test loader finds .env file when it exists.
+
+        Args:
+            env_file_path: Path to the .env file used for credential loading.
+        """
         loader = CredentialLoader(env_path=env_file_path)
         assert loader.env_path.exists()
 
@@ -59,7 +67,11 @@ class TestCredentialValidation:
     def test_validate_credentials_returns_tuple(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test validate_credentials returns (bool, str|None) tuple."""
+        """Test validate_credentials returns (bool, str|None) tuple.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         for provider in ProviderName:
             result = credential_loader.validate_credentials(provider)
             assert isinstance(result, tuple), f"Expected tuple for {provider}"
@@ -71,7 +83,11 @@ class TestCredentialValidation:
     def test_get_credentials_returns_credentials_or_none(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test get_credentials returns ProviderCredentials or None."""
+        """Test get_credentials returns ProviderCredentials or None.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         for provider in ProviderName:
             creds = credential_loader.get_credentials(provider)
             if creds is not None:
@@ -85,7 +101,11 @@ class TestProviderListing:
     def test_list_configured_providers_returns_list(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test list_configured_providers returns list of ProviderName."""
+        """Test list_configured_providers returns list of ProviderName.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         configured = credential_loader.list_configured_providers()
         assert isinstance(configured, list)
         for provider in configured:
@@ -95,7 +115,11 @@ class TestProviderListing:
     def test_list_missing_providers_returns_list(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test list_missing_providers returns list of ProviderName."""
+        """Test list_missing_providers returns list of ProviderName.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         missing = credential_loader.list_missing_providers()
         assert isinstance(missing, list)
         for provider in missing:
@@ -105,7 +129,11 @@ class TestProviderListing:
     def test_configured_and_missing_cover_all_providers(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test configured + missing covers all providers."""
+        """Test configured + missing covers all providers.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         configured = set(credential_loader.list_configured_providers())
         missing = set(credential_loader.list_missing_providers())
 
@@ -126,7 +154,12 @@ class TestApiKeyFormatValidation:
         *,
         has_anthropic_key: bool,
     ) -> None:
-        """Test Anthropic API key format starts with sk-ant-."""
+        """Test Anthropic API key format starts with sk-ant-.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_anthropic_key: Whether an Anthropic API key is configured.
+        """
         if not has_anthropic_key:
             pytest.skip("ANTHROPIC_API_KEY not configured")
 
@@ -141,7 +174,12 @@ class TestApiKeyFormatValidation:
         *,
         has_openai_key: bool,
     ) -> None:
-        """Test OpenAI API key format starts with sk-."""
+        """Test OpenAI API key format starts with sk-.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_openai_key: Whether an OpenAI API key is configured.
+        """
         if not has_openai_key:
             pytest.skip("OPENAI_API_KEY not configured")
 
@@ -156,7 +194,12 @@ class TestApiKeyFormatValidation:
         *,
         has_openrouter_key: bool,
     ) -> None:
-        """Test OpenRouter API key format starts with sk-or-."""
+        """Test OpenRouter API key format starts with sk-or-.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_openrouter_key: Whether an OpenRouter API key is configured.
+        """
         if not has_openrouter_key:
             pytest.skip("OPENROUTER_API_KEY not configured")
 
@@ -171,7 +214,12 @@ class TestApiKeyFormatValidation:
         *,
         has_google_key: bool,
     ) -> None:
-        """Test Google API key is non-empty when configured."""
+        """Test Google API key is non-empty when configured.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_google_key: Whether a Google API key is configured.
+        """
         if not has_google_key:
             pytest.skip("GOOGLE_API_KEY not configured")
 
@@ -188,7 +236,11 @@ class TestEnvironmentVariableAccess:
     def test_get_env_var_returns_value_or_default(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test get_env_var returns value if set, default otherwise."""
+        """Test get_env_var returns value if set, default otherwise.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         result = credential_loader.get_env_var("NONEXISTENT_VAR", "default_value")
         assert result == "default_value"
 
@@ -196,7 +248,11 @@ class TestEnvironmentVariableAccess:
     def test_get_env_var_returns_none_without_default(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test get_env_var returns None if not set and no default."""
+        """Test get_env_var returns None if not set and no default.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         result = credential_loader.get_env_var("NONEXISTENT_VAR")
         assert result is None
 
@@ -204,7 +260,11 @@ class TestEnvironmentVariableAccess:
     def test_set_env_var_updates_value(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test set_env_var updates the environment variable."""
+        """Test set_env_var updates the environment variable.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         test_key = "TEST_INTELLICRACK_VAR"
         test_value = "test_value_123"
 
@@ -221,7 +281,11 @@ class TestReload:
     def test_reload_maintains_configured_providers(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test reload() maintains the same configured providers."""
+        """Test reload() maintains the same configured providers.
+
+        Args:
+            credential_loader: Credential loader fixture.
+        """
         before = set(credential_loader.list_configured_providers())
         credential_loader.reload()
         after = set(credential_loader.list_configured_providers())

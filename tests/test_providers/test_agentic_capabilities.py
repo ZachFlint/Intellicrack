@@ -160,7 +160,11 @@ class TestToolChoiceRequired:
         self,
         google_provider: GoogleProvider,
     ) -> None:
-        """Google should handle tool_choice=AUTO without error."""
+        """Google should handle tool_choice=AUTO without error.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("What is the size of notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.AUTO)
@@ -178,7 +182,11 @@ class TestToolChoiceRequired:
         self,
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """OpenRouter should return a tool call when tool_choice is REQUIRED."""
+        """OpenRouter should return a tool call when tool_choice is REQUIRED.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("What is the size of notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)
@@ -201,7 +209,11 @@ class TestStreamingToolCalls:
         self,
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """HuggingFace stream should capture tool calls via ToolCallBufferManager."""
+        """HuggingFace stream should capture tool calls via ToolCallBufferManager.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("Use the binary.get_file_size tool to check notepad.exe")
 
@@ -222,7 +234,11 @@ class TestStreamingToolCalls:
         self,
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Ollama stream should capture tool calls via non-streaming fallback."""
+        """Ollama stream should capture tool calls via non-streaming fallback.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("Use binary.get_file_size to get the size of C:\\Windows\\notepad.exe")
 
@@ -247,7 +263,11 @@ class TestAccurateToolSupport:
         self,
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Ollama model list should have varying supports_tools values."""
+        """Ollama model list should have varying supports_tools values.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
         if not models:
             pytest.skip("No Ollama models installed locally")
@@ -259,7 +279,11 @@ class TestAccurateToolSupport:
         self,
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """OpenRouter model list should include models without tool support."""
+        """OpenRouter model list should include models without tool support.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
         assert len(models) > 0
 
@@ -325,7 +349,11 @@ class TestExtendedThinking:
         self,
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Anthropic should return thinking_content when thinking is enabled."""
+        """Anthropic should return thinking_content when thinking is enabled.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         messages = _make_messages("What are the first 5 prime numbers? Think step by step.")
         thinking = ThinkingConfig(enabled=True, budget_tokens=5000)
 
@@ -342,7 +370,11 @@ class TestExtendedThinking:
         self,
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Non-Anthropic providers should not error when thinking param passed."""
+        """Non-Anthropic providers should not error when thinking param passed.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         messages = _make_messages("Hello")
         thinking = ThinkingConfig(enabled=True, budget_tokens=5000)
 
@@ -362,7 +394,11 @@ class TestPromptCaching:
         self,
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Anthropic caching should not error on API calls."""
+        """Anthropic caching should not error on API calls.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         messages = _make_messages("Hello, respond briefly.")
 
         response1, _ = await anthropic_provider.chat(

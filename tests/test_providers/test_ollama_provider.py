@@ -37,7 +37,11 @@ class TestOllamaModelListing:
     async def test_list_models_returns_list(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test list_models returns a list (may be empty if no models installed)."""
+        """Test list_models returns a list (may be empty if no models installed).
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         assert isinstance(models, list), f"Expected list, got {type(models)}"
@@ -47,7 +51,11 @@ class TestOllamaModelListing:
     async def test_list_models_returns_model_info_instances(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         for model in models:
@@ -58,7 +66,11 @@ class TestOllamaModelListing:
     async def test_model_info_has_valid_id_when_present(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         for model in models:
@@ -70,7 +82,11 @@ class TestOllamaModelListing:
     async def test_model_info_has_valid_name_when_present(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         for model in models:
@@ -82,7 +98,11 @@ class TestOllamaModelListing:
     async def test_model_info_has_correct_provider(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test all models report OLLAMA as provider."""
+        """Test all models report OLLAMA as provider.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         for model in models:
@@ -93,7 +113,11 @@ class TestOllamaModelListing:
     async def test_model_info_has_positive_context_window(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         for model in models:
@@ -105,7 +129,11 @@ class TestOllamaModelListing:
     async def test_model_info_has_boolean_capabilities(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         for model in models:
@@ -118,7 +146,11 @@ class TestOllamaModelListing:
     async def test_multiple_calls_return_consistent_results(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models1 = await ollama_provider.list_models()
         models2 = await ollama_provider.list_models()
 
@@ -137,7 +169,11 @@ class TestOllamaConnection:
     async def test_is_connected_after_connect(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         assert ollama_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -145,7 +181,11 @@ class TestOllamaConnection:
     async def test_provider_name_is_ollama(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test provider name property returns OLLAMA."""
+        """Test provider name property returns OLLAMA.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         assert ollama_provider.name == ProviderName.OLLAMA
 
     @pytest.mark.asyncio
@@ -154,7 +194,11 @@ class TestOllamaConnection:
         *,
         has_ollama_available: bool,
     ) -> None:
-        """Test connection with custom base URL."""
+        """Test connection with custom base URL.
+
+        Args:
+            has_ollama_available: Whether a local Ollama server is running.
+        """
         if not has_ollama_available:
             pytest.skip("Ollama not running locally")
 
@@ -196,7 +240,11 @@ class TestOllamaConnection:
         *,
         has_ollama_available: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            has_ollama_available: Whether a local Ollama server is running.
+        """
         if not has_ollama_available:
             pytest.skip("Ollama not running locally")
 
