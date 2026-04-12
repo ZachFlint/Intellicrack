@@ -36,7 +36,7 @@ _hexpat_available: bool = find_spec("intellicrack.core.hexpat") is not None
 pytest.importorskip("intellicrack_hexcore")
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:

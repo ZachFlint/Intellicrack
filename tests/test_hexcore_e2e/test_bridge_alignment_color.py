@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -58,7 +58,7 @@ class TestSnapToAlignment:
         f.write_bytes(b"\x00" * 4096)
         _run(bridge.open_file(str(f)))
         _run(bridge.goto_offset(1000))
-        result = cast(int, _run(bridge.snap_to_alignment(512)))
+        result = _run(bridge.snap_to_alignment(512))
         assert result == 512
 
     def test_snap_to_alignment_4096(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -72,7 +72,7 @@ class TestSnapToAlignment:
         f.write_bytes(b"\x00" * 8192)
         _run(bridge.open_file(str(f)))
         _run(bridge.goto_offset(5000))
-        result = cast(int, _run(bridge.snap_to_alignment(4096)))
+        result = _run(bridge.snap_to_alignment(4096))
         assert result == 4096
 
     def test_snap_at_boundary_unchanged(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -86,7 +86,7 @@ class TestSnapToAlignment:
         f.write_bytes(b"\x00" * 4096)
         _run(bridge.open_file(str(f)))
         _run(bridge.goto_offset(1024))
-        result = cast(int, _run(bridge.snap_to_alignment(512)))
+        result = _run(bridge.snap_to_alignment(512))
         assert result == 1024
 
     def test_snap_at_zero(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -100,7 +100,7 @@ class TestSnapToAlignment:
         f.write_bytes(b"\x00" * 4096)
         _run(bridge.open_file(str(f)))
         _run(bridge.goto_offset(0))
-        result = cast(int, _run(bridge.snap_to_alignment(512)))
+        result = _run(bridge.snap_to_alignment(512))
         assert result == 0
 
 
@@ -117,7 +117,7 @@ class TestAlignmentGrid:
         f = tmp_path / "grid.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast(bool, _run(bridge.set_alignment_grid(4096)))
+        result = _run(bridge.set_alignment_grid(4096))
         assert result is True
 
 
@@ -134,7 +134,7 @@ class TestColorMode:
         f = tmp_path / "color.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast(bool, _run(bridge.set_color_mode("entropy")))
+        result = _run(bridge.set_color_mode("entropy"))
         assert result is True
 
     def test_get_color_mode_default(self, bridge: HexEditorBridge) -> None:
@@ -143,7 +143,7 @@ class TestColorMode:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        result = cast(str, _run(bridge.get_color_mode()))
+        result = _run(bridge.get_color_mode())
         assert result == "none"
 
     def test_color_mode_roundtrip(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -157,7 +157,7 @@ class TestColorMode:
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
         _run(bridge.set_color_mode("byte_value"))
-        result = cast(str, _run(bridge.get_color_mode()))
+        result = _run(bridge.get_color_mode())
         assert result == "byte_value"
 
     def test_all_color_modes_accepted(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -172,5 +172,5 @@ class TestColorMode:
         _run(bridge.open_file(str(f)))
         modes = ["none", "entropy", "byte_value", "template", "content_type"]
         for mode in modes:
-            result = cast(bool, _run(bridge.set_color_mode(mode)))
+            result = _run(bridge.set_color_mode(mode))
             assert result is True

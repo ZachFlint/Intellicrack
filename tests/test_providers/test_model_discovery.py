@@ -163,6 +163,7 @@ class TestAllProvidersModelCount:
         if has_openai_key:
             openai_prov = OpenAIProvider()
             creds = credential_loader.get_credentials(ProviderName.OPENAI)
+            assert creds is not None, "has_openai_key is True but credentials are missing"
             await openai_prov.connect(creds)
             models = await openai_prov.list_models()
             results["OpenAI"] = len(models)
@@ -173,6 +174,7 @@ class TestAllProvidersModelCount:
         if has_google_key:
             google_prov = GoogleProvider()
             creds = credential_loader.get_credentials(ProviderName.GOOGLE)
+            assert creds is not None, "has_google_key is True but credentials are missing"
             await google_prov.connect(creds)
             models = await google_prov.list_models()
             results["Google"] = len(models)
@@ -183,6 +185,7 @@ class TestAllProvidersModelCount:
         if has_openrouter_key:
             openrouter_prov = OpenRouterProvider()
             creds = credential_loader.get_credentials(ProviderName.OPENROUTER)
+            assert creds is not None, "has_openrouter_key is True but credentials are missing"
             await openrouter_prov.connect(creds)
             models = await openrouter_prov.list_models()
             results["OpenRouter"] = len(models)
@@ -193,6 +196,7 @@ class TestAllProvidersModelCount:
         if has_anthropic_key:
             anthropic_prov = AnthropicProvider()
             creds = credential_loader.get_credentials(ProviderName.ANTHROPIC)
+            assert creds is not None, "has_anthropic_key is True but credentials are missing"
             await anthropic_prov.connect(creds)
             models = await anthropic_prov.list_models()
             results["Anthropic"] = len(models)
