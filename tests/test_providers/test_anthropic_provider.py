@@ -48,6 +48,9 @@ class TestAnthropicModelListing:
 
         This validates that the API call works and returns actual data.
         We don't hardcode model names - just verify we get models.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
         """
         models = await anthropic_provider.list_models()
 
@@ -59,7 +62,11 @@ class TestAnthropicModelListing:
     async def test_list_models_returns_model_info_instances(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         for model in models:
@@ -70,7 +77,11 @@ class TestAnthropicModelListing:
     async def test_model_info_has_valid_id(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         for model in models:
@@ -82,7 +93,11 @@ class TestAnthropicModelListing:
     async def test_model_info_has_valid_name(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         for model in models:
@@ -94,7 +109,11 @@ class TestAnthropicModelListing:
     async def test_model_info_has_correct_provider(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test all models report ANTHROPIC as provider."""
+        """Test all models report ANTHROPIC as provider.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         for model in models:
@@ -105,7 +124,11 @@ class TestAnthropicModelListing:
     async def test_model_info_has_positive_context_window(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         for model in models:
@@ -117,7 +140,11 @@ class TestAnthropicModelListing:
     async def test_model_info_has_boolean_capabilities(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         for model in models:
@@ -130,7 +157,11 @@ class TestAnthropicModelListing:
     async def test_multiple_calls_return_consistent_results(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models1 = await anthropic_provider.list_models()
         models2 = await anthropic_provider.list_models()
 
@@ -149,7 +180,11 @@ class TestAnthropicConnection:
     async def test_is_connected_after_connect(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         assert anthropic_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -157,7 +192,11 @@ class TestAnthropicConnection:
     async def test_provider_name_is_anthropic(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Test provider name property returns ANTHROPIC."""
+        """Test provider name property returns ANTHROPIC.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         assert anthropic_provider.name == ProviderName.ANTHROPIC
 
     @pytest.mark.asyncio
@@ -206,7 +245,12 @@ class TestAnthropicConnection:
         *,
         has_anthropic_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_anthropic_key: Whether an Anthropic API key is configured.
+        """
         if not has_anthropic_key:
             pytest.skip("ANTHROPIC_API_KEY not configured")
 

@@ -48,6 +48,9 @@ class TestGoogleModelListing:
 
         This validates that the API call works and returns actual data.
         We don't hardcode model names - just verify we get models.
+
+        Args:
+            google_provider: Connected Google provider fixture.
         """
         models = await google_provider.list_models()
 
@@ -59,7 +62,11 @@ class TestGoogleModelListing:
     async def test_list_models_returns_model_info_instances(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -70,7 +77,11 @@ class TestGoogleModelListing:
     async def test_model_info_has_valid_id(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -82,7 +93,11 @@ class TestGoogleModelListing:
     async def test_model_info_has_valid_name(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -94,7 +109,11 @@ class TestGoogleModelListing:
     async def test_model_info_has_correct_provider(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all models report GOOGLE as provider."""
+        """Test all models report GOOGLE as provider.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -105,7 +124,11 @@ class TestGoogleModelListing:
     async def test_model_info_has_positive_context_window(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -117,7 +140,11 @@ class TestGoogleModelListing:
     async def test_model_info_has_boolean_capabilities(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -130,7 +157,11 @@ class TestGoogleModelListing:
     async def test_models_are_gemini_models(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test that returned models are Gemini generative models."""
+        """Test that returned models are Gemini generative models.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         for model in models:
@@ -141,7 +172,11 @@ class TestGoogleModelListing:
     async def test_multiple_calls_return_consistent_results(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models1 = await google_provider.list_models()
         models2 = await google_provider.list_models()
 
@@ -160,7 +195,11 @@ class TestGoogleConnection:
     async def test_is_connected_after_connect(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         assert google_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -168,7 +207,11 @@ class TestGoogleConnection:
     async def test_provider_name_is_google(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test provider name property returns GOOGLE."""
+        """Test provider name property returns GOOGLE.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         assert google_provider.name == ProviderName.GOOGLE
 
     @pytest.mark.asyncio
@@ -207,7 +250,12 @@ class TestGoogleConnection:
         *,
         has_google_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_google_key: Whether a Google API key is configured.
+        """
         if not has_google_key:
             pytest.skip("GOOGLE_API_KEY not configured")
 
