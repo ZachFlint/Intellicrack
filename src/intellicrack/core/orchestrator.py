@@ -162,10 +162,10 @@ class Orchestrator:
     Coordinates tool execution and handles confirmations.
 
     Args:
-        provider_registry: Registry of LLM providers.
-        tool_registry: Registry of tool bridges.
-        session_manager: Session state manager.
-        config: Optional configuration override.
+        provider_registry: Registry of LLM providers used for routing chat requests.
+        tool_registry: Registry of tool bridges available for execution.
+        session_manager: Session state manager that persists conversation state.
+        config: Optional configuration override; defaults to ``OrchestratorConfig()``.
 
     Attributes:
         DESTRUCTIVE_PATTERNS: Substrings identifying tool calls that modify state and require user confirmation.
