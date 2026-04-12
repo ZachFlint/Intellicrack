@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -55,7 +55,7 @@ class TestVerifyPEChecksum:
             pe_binary_full: Path to a PE binary with full Optional Header.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        result = cast("dict[str, Any]", _run(bridge.verify_pe_checksum()))
+        result: dict[str, Any] = _run(bridge.verify_pe_checksum())
         assert "stored" in result
         assert "calculated" in result
         assert "offset" in result
@@ -69,7 +69,7 @@ class TestVerifyPEChecksum:
             pe_binary_full: Path to a PE binary with zero CheckSum field.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        result = cast("dict[str, Any]", _run(bridge.verify_pe_checksum()))
+        result: dict[str, Any] = _run(bridge.verify_pe_checksum())
         assert result["stored"] == 0
         assert result["calculated"] > 0
         assert result["valid"] is False
@@ -107,7 +107,7 @@ class TestRepairPEChecksum:
         """
         _run(bridge.open_file(str(pe_binary_full)))
         _run(bridge.repair_pe_checksum())
-        verify = cast("dict[str, Any]", _run(bridge.verify_pe_checksum()))
+        verify: dict[str, Any] = _run(bridge.verify_pe_checksum())
         assert verify["valid"] is True
 
     def test_repair_roundtrip(self, bridge: HexEditorBridge, pe_binary_full: Path) -> None:
@@ -119,7 +119,7 @@ class TestRepairPEChecksum:
         """
         _run(bridge.open_file(str(pe_binary_full)))
         _run(bridge.repair_pe_checksum())
-        verify = cast("dict[str, Any]", _run(bridge.verify_pe_checksum()))
+        verify: dict[str, Any] = _run(bridge.verify_pe_checksum())
         assert verify["stored"] == verify["calculated"]
 
 
@@ -134,8 +134,8 @@ class TestPEChecksumAlgorithm:
             pe_binary_full: Path to a PE binary with full Optional Header.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        result1 = cast("dict[str, Any]", _run(bridge.verify_pe_checksum()))
-        result2 = cast("dict[str, Any]", _run(bridge.verify_pe_checksum()))
+        result1: dict[str, Any] = _run(bridge.verify_pe_checksum())
+        result2: dict[str, Any] = _run(bridge.verify_pe_checksum())
         assert result1["calculated"] > 0
         assert result1["calculated"] == result2["calculated"]
         assert isinstance(result1["calculated"], int)

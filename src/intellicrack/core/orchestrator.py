@@ -161,12 +161,6 @@ class Orchestrator:
     Manages the conversation loop between the user, LLM, and tools.
     Coordinates tool execution and handles confirmations.
 
-    Args:
-        provider_registry: Registry of LLM providers.
-        tool_registry: Registry of tool bridges.
-        session_manager: Session state manager.
-        config: Optional configuration override.
-
     Attributes:
         DESTRUCTIVE_PATTERNS: Substrings identifying tool calls that modify state and require user confirmation.
     """
@@ -193,6 +187,14 @@ class Orchestrator:
         session_manager: SessionManager,
         config: OrchestratorConfig | None = None,
     ) -> None:
+        """Initialize the orchestrator with registries and session manager.
+
+        Args:
+            provider_registry: Registry of LLM providers used for routing chat requests.
+            tool_registry: Registry of tool bridges available for execution.
+            session_manager: Session state manager that persists conversation state.
+            config: Optional configuration override; defaults to ``OrchestratorConfig()``.
+        """
         self._providers = provider_registry
         self._tools = tool_registry
         self._sessions = session_manager
@@ -429,7 +431,7 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If provider is not available.
-            asyncio.CancelledError: If the operation is cancelled.
+            CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
             return
@@ -962,7 +964,7 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If no active session.
-            asyncio.CancelledError: If the operation is cancelled.
+            CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
             error_message = "No active session"
@@ -1067,7 +1069,7 @@ class Orchestrator:
             list[ToolResult]: List of tool results.
 
         Raises:
-            asyncio.CancelledError: If the operation is cancelled.
+            CancelledError: If the operation is cancelled.
         """
         results: list[ToolResult] = []
 
@@ -1943,7 +1945,11 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
         hashlib.md5(raw, usedforsecurity=False).hexdigest(),
         hashlib.sha256(raw).hexdigest(),
     )
-    binary = lief.parse(str(resolved))
+    lief_parse = cast(
+        "Callable[[str], lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None]",
+        vars(lief)["parse"],
+    )
+    binary = lief_parse(str(resolved))
 
     if binary is None:
         return _BinaryInfo(

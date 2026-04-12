@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -24,7 +24,7 @@ hexcore_mod: Any = pytest.importorskip(
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
@@ -46,7 +46,7 @@ def _run(coro: Coroutine[object, object, object]) -> object:
 
 def _setup_and_apply(
     bridge: HexEditorBridge,
-    tmp_path: Any,
+    tmp_path: Path,
     hex_data: str,
     operation: str,
     key_hex: str = "",
@@ -73,7 +73,7 @@ def _setup_and_apply(
     _run(bridge.write_bytes(0, hex_data))
     _run(bridge.select_range(0, data_len - 1))
     _run(bridge.apply_arithmetic_to_selection(operation, key_hex=key_hex, count=count))
-    result_hex = cast(str, _run(bridge.read_bytes(0, data_len)))
+    result_hex = _run(bridge.read_bytes(0, data_len))
     return bytes.fromhex(result_hex.replace(" ", ""))
 
 
@@ -221,7 +221,7 @@ class TestArithmeticEdgeCases:
         _run(bridge.open_file(str(f)))
         _run(bridge.write_bytes(0, "AA BB CC DD"))
         _run(bridge.select_range(0, 3))
-        result = cast("dict[str, Any]", _run(bridge.apply_arithmetic_to_selection("not")))
+        result = _run(bridge.apply_arithmetic_to_selection("not"))
         assert "offset" in result
         assert "length" in result
         assert "operation" in result

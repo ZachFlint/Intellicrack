@@ -6,26 +6,34 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+
+from intellicrack.core.tools import ToolRegistry
 
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
 
+    from intellicrack.bridges.base import ToolBridgeBase
     from intellicrack.bridges.hex_editor import HexEditorBridge
+    from intellicrack.core.types import ToolName
+
+
 pytest.importorskip("intellicrack_hexcore")
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -38,16 +46,24 @@ def _run(coro: Coroutine[object, object, object]) -> object:
     return loop.run_until_complete(coro)
 
 
-class _MinimalRegistry:
+class _MinimalRegistry(ToolRegistry):
     """Minimal stub registry that returns None for all bridge lookups."""
 
-    def get(self, _name: str) -> None:
+    def __init__(self) -> None:
+        """Initialize with a temporary tools directory."""
+        super().__init__(Path(tempfile.gettempdir()))
+
+    def get(self, name: ToolName) -> ToolBridgeBase | None:
         """Return None for any bridge name.
 
         Args:
-            _name: Bridge name to look up.
+            name: Bridge name to look up (always treated as absent).
+
+        Returns:
+            ToolBridgeBase | None: Always None.
         """
-        return
+        _ = name
+        return None
 
 
 class TestSaveToSandboxErrorPaths:
@@ -146,7 +162,7 @@ class TestTestInSandboxErrorPaths:
             bridge: An initialized HexEditorBridge fixture.
         """
         with pytest.raises(RuntimeError, match="no document open"):
-            _run(bridge.test_in_sandbox(args="--flag", sandbox_type="docker", timeout=10))
+            _run(bridge.test_in_sandbox(args="--flag", sandbox_type="docker", time_limit=10))
 
 
 class TestSetToolRegistry:

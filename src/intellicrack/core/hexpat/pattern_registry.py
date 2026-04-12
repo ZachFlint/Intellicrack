@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import operator
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from intellicrack.core.hexpat.preprocessor import extract_pragmas_fast
@@ -16,6 +15,8 @@ from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from intellicrack.core.hexpat.data_reader import DataReader
 
 
