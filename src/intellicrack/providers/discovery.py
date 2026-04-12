@@ -351,6 +351,16 @@ class ModelDiscovery:
         async def discover_one(
             provider_name: ProviderName,
         ) -> tuple[ProviderName, list[ModelInfo], DiscoveryEvent]:
+            """Discover models for a single provider with caching.
+
+            Args:
+                provider_name: The provider whose models should be listed.
+
+            Returns:
+                tuple[ProviderName, list[ModelInfo], DiscoveryEvent]: The
+                provider name, the discovered models, and a discovery event
+                capturing timing and success metadata.
+            """
             start_time = time.time()
 
             if use_cache and not force_refresh:
@@ -703,6 +713,15 @@ class ModelDiscovery:
             if gen_candidates:
 
                 def cost_key(m: ModelInfo) -> float:
+                    """Return the per-million-token output cost for sorting.
+
+                    Args:
+                        m: Model whose cost should be used as the sort key.
+
+                    Returns:
+                        float: The output cost, or ``inf`` when unknown so
+                        models without pricing sort last.
+                    """
                     if m.output_cost_per_1m_tokens is not None:
                         return m.output_cost_per_1m_tokens
                     return float("inf")

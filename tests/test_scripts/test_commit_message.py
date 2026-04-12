@@ -194,7 +194,7 @@ class TestSubsplitLargeFileDiff:
         """Verify that oversized diffs are split on @@ markers.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to lower the chunk token target.
         """
         diff = _make_file_diff("big_file.py", num_hunks=10, lines_per_hunk=500)
 
@@ -209,7 +209,7 @@ class TestSubsplitLargeFileDiff:
         """Verify that each sub-chunk retains the file header.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to lower the chunk token target.
         """
         diff = _make_file_diff("src/main.py", num_hunks=6, lines_per_hunk=300)
 
@@ -226,7 +226,7 @@ class TestSubsplitLargeFileDiff:
         """Verify fallback to line-based splitting when only one hunk exists.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to lower the chunk token target.
         """
         diff = _make_file_diff("huge.bin", num_hunks=1, lines_per_hunk=5000)
 
@@ -261,7 +261,7 @@ class TestSplitDiffOnFileBoundaries:
         """Verify that a file exceeding CHUNK_TOKEN_TARGET is sub-split.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to lower the chunk token target.
         """
         small = _make_file_diff("small.py", num_hunks=1, lines_per_hunk=5)
         big = _make_file_diff("big.py", num_hunks=20, lines_per_hunk=500)
@@ -276,7 +276,7 @@ class TestSplitDiffOnFileBoundaries:
         """Verify every chunk from splitting stays under the model limit.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to override chunk/model limits.
         """
         diffs = [
             _make_file_diff(f"mod_{i}.py", num_hunks=5, lines_per_hunk=200)
@@ -303,7 +303,7 @@ class TestSplitDiffOnFileBoundaries:
         files totaling ~3x the chunk target, expecting 3 balanced chunks.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to override chunk/model limits.
         """
         small_files = [
             _make_file_diff(f"small_{i}.py", num_hunks=2, lines_per_hunk=50)
@@ -375,13 +375,11 @@ class TestCountTokensFallback:
         result = _count_tokens(client, "c" * 900)
         assert result == 300
 
-    def test_throttle_prevents_rapid_calls(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_throttle_prevents_rapid_calls(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify that rapid calls are throttled with a delay.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture.
+            monkeypatch: Pytest fixture used to set the throttle interval.
         """
         interval = 0.15
         monkeypatch.setattr(gcm, "_COUNT_TOKENS_INTERVAL", interval)
