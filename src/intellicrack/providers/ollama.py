@@ -378,6 +378,16 @@ class OllamaProvider(LLMProviderBase):
         """
 
         async def _query_single(name: str) -> tuple[str, int, bool]:
+            """Fetch ``num_ctx`` and tool-support flags for a single model.
+
+            Args:
+                name: Ollama model name to query via ``/api/show``.
+
+            Returns:
+                tuple[str, int, bool]: The model name, its detected context
+                window (defaulting to 4096 on failure), and whether its
+                template declares a ``.Tools`` directive.
+            """
             ctx_window = 4096
             has_tools = False
             try:
