@@ -371,7 +371,12 @@ def test_google_uppercase_conversion(
     param_type: str,
     expected_google_type: str,
 ) -> None:
-    """Google format must uppercase all JSON Schema type names."""
+    """Google format must uppercase all JSON Schema type names.
+
+    Args:
+        param_type: Input parameter type string to convert.
+        expected_google_type: Expected Google-format type string after conversion.
+    """
     tool = ToolDefinition(
         tool_name=ToolName.GHIDRA,
         description="Test",

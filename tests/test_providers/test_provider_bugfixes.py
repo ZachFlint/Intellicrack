@@ -89,7 +89,11 @@ class TestCredentialSourceDetectorPath:
 
     @staticmethod
     def test_credential_source_detector_instantiation(tmp_path: Path) -> None:
-        """Verify CredentialSourceDetector can be created with any path."""
+        """Verify CredentialSourceDetector can be created with any path.
+
+        Args:
+            tmp_path: Pytest tmp_path fixture providing a per-test temporary directory.
+        """
         detector = CredentialSourceDetector(tmp_path / "config.json")
         assert detector is not None
 

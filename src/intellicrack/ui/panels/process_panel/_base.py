@@ -63,8 +63,6 @@ class ProcessPanel(AnalysisPanelBase):
         parent: Parent widget.
 
     Attributes:
-        tool_started: Signal emitted when the process panel starts.
-        tool_closed: Signal emitted when the process panel closes.
         process_selected: Signal emitted with PID when a process row is selected.
         process_attached: Signal emitted with PID when a process is attached.
         process_detached: Signal emitted when a process is detached.

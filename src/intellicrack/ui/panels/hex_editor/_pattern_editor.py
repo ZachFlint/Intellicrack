@@ -67,9 +67,22 @@ class PatternEditorMixin:
     _template_combo: QComboBox | None
     _state_holder: HexDocumentState | None
 
-    def _populate_template_tree(self, fields: list[dict[str, object]]) -> None: ...
-    def _highlight_template_fields(self, fields: list[dict[str, object]]) -> None: ...
-    def _populate_template_combo(self) -> None: ...
+    def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
+        """Populate the template preview tree from decoded structure fields.
+
+        Args:
+            fields: Interpreted template field entries with metadata.
+        """
+
+    def _highlight_template_fields(self, fields: list[dict[str, object]]) -> None:
+        """Apply region highlights in the hex view for template fields.
+
+        Args:
+            fields: Interpreted template field entries with offsets and sizes.
+        """
+
+    def _populate_template_combo(self) -> None:
+        """Populate the template selector combo with available structures."""
 
     def _build_pattern_editor(self) -> QFrame:
         """Build the collapsible pattern editor panel.

@@ -52,6 +52,9 @@ class TestHuggingFaceModelListing:
 
         This validates that the API call works and returns actual data.
         HuggingFace Hub has many text-generation models available.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
         """
         models = await huggingface_provider.list_models()
 
@@ -63,7 +66,11 @@ class TestHuggingFaceModelListing:
     async def test_list_models_returns_many_models(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test HuggingFace returns many text-generation models."""
+        """Test HuggingFace returns many text-generation models.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         assert len(models) >= _MIN_HUGGINGFACE_MODELS, f"Expected at least 10 models from HuggingFace, got {len(models)}"
@@ -73,7 +80,11 @@ class TestHuggingFaceModelListing:
     async def test_list_models_returns_model_info_instances(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -84,7 +95,11 @@ class TestHuggingFaceModelListing:
     async def test_model_info_has_valid_id(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -96,7 +111,11 @@ class TestHuggingFaceModelListing:
     async def test_model_info_has_valid_name(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -108,7 +127,11 @@ class TestHuggingFaceModelListing:
     async def test_model_info_has_correct_provider(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test all models report HUGGINGFACE as provider."""
+        """Test all models report HUGGINGFACE as provider.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -119,7 +142,11 @@ class TestHuggingFaceModelListing:
     async def test_model_info_has_positive_context_window(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -131,7 +158,11 @@ class TestHuggingFaceModelListing:
     async def test_model_info_has_boolean_capabilities(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -144,7 +175,11 @@ class TestHuggingFaceModelListing:
     async def test_multiple_calls_return_consistent_results(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models1 = await huggingface_provider.list_models()
         models2 = await huggingface_provider.list_models()
 
@@ -158,7 +193,11 @@ class TestHuggingFaceModelListing:
     async def test_display_all_available_models(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Verify all available HuggingFace models can be listed for GUI selection."""
+        """Verify all available HuggingFace models can be listed for GUI selection.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         models = await huggingface_provider.list_models()
 
         assert len(models) > 0, "Should have at least one model to display"
@@ -178,7 +217,11 @@ class TestHuggingFaceConnection:
     async def test_is_connected_after_connect(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         assert huggingface_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -186,7 +229,11 @@ class TestHuggingFaceConnection:
     async def test_provider_name_is_huggingface(
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """Test provider name property returns HUGGINGFACE."""
+        """Test provider name property returns HUGGINGFACE.
+
+        Args:
+            huggingface_provider: Connected HuggingFace provider fixture.
+        """
         assert huggingface_provider.name == ProviderName.HUGGINGFACE
 
     @pytest.mark.asyncio
@@ -215,7 +262,12 @@ class TestHuggingFaceConnection:
         *,
         has_huggingface_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_huggingface_key: Whether a HuggingFace API token is configured.
+        """
         if not has_huggingface_key:
             pytest.skip("HUGGINGFACE_API_TOKEN not configured")
 

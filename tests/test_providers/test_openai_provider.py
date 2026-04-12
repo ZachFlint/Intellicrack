@@ -48,6 +48,9 @@ class TestOpenAIModelListing:
 
         This validates that the API call works and returns actual data.
         We don't hardcode model names - just verify we get models.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
         """
         models = await openai_provider.list_models()
 
@@ -59,7 +62,11 @@ class TestOpenAIModelListing:
     async def test_list_models_returns_model_info_instances(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -70,7 +77,11 @@ class TestOpenAIModelListing:
     async def test_model_info_has_valid_id(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -82,7 +93,11 @@ class TestOpenAIModelListing:
     async def test_model_info_has_valid_name(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -94,7 +109,11 @@ class TestOpenAIModelListing:
     async def test_model_info_has_correct_provider(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test all models report OPENAI as provider."""
+        """Test all models report OPENAI as provider.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -105,7 +124,11 @@ class TestOpenAIModelListing:
     async def test_model_info_has_positive_context_window(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -117,7 +140,11 @@ class TestOpenAIModelListing:
     async def test_model_info_has_boolean_capabilities(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -130,7 +157,11 @@ class TestOpenAIModelListing:
     async def test_models_have_valid_provider(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test that all returned models have the correct provider set."""
+        """Test that all returned models have the correct provider set.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         for model in models:
@@ -143,7 +174,11 @@ class TestOpenAIModelListing:
     async def test_multiple_calls_return_consistent_results(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models1 = await openai_provider.list_models()
         models2 = await openai_provider.list_models()
 
@@ -162,7 +197,11 @@ class TestOpenAIConnection:
     async def test_is_connected_after_connect(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         assert openai_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -170,7 +209,11 @@ class TestOpenAIConnection:
     async def test_provider_name_is_openai(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Test provider name property returns OPENAI."""
+        """Test provider name property returns OPENAI.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         assert openai_provider.name == ProviderName.OPENAI
 
     @pytest.mark.asyncio
@@ -209,7 +252,12 @@ class TestOpenAIConnection:
         *,
         has_openai_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_openai_key: Whether an OpenAI API key is configured.
+        """
         if not has_openai_key:
             pytest.skip("OPENAI_API_KEY not configured")
 
