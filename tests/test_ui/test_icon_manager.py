@@ -65,25 +65,41 @@ class TestIconLoading:
 
     @staticmethod
     def test_get_icon_returns_qicon(icon_manager: IconManager) -> None:
-        """get_icon returns a QIcon instance."""
+        """get_icon returns a QIcon instance.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_icon("status_success")
         assert isinstance(icon, QIcon)
 
     @staticmethod
     def test_loads_svg_icon_successfully(icon_manager: IconManager) -> None:
-        """SVG icons load successfully and are not null."""
+        """SVG icons load successfully and are not null.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_icon("status_success")
         assert not icon.isNull(), "status_success.svg failed to load"
 
     @staticmethod
     def test_loads_png_icon_successfully(icon_manager: IconManager) -> None:
-        """PNG icons load successfully and are not null."""
+        """PNG icons load successfully and are not null.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_icon("analyze")
         assert not icon.isNull(), "analyze.png failed to load"
 
     @staticmethod
     def test_all_mapped_icons_load(icon_manager: IconManager) -> None:
-        """All icons in ICON_MAP can be loaded."""
+        """All icons in ICON_MAP can be loaded.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         failed_icons = []
 
         for icon_name in ICON_MAP:
@@ -95,7 +111,11 @@ class TestIconLoading:
 
     @staticmethod
     def test_icon_has_valid_pixmap(icon_manager: IconManager) -> None:
-        """Loaded icon contains valid pixmap data."""
+        """Loaded icon contains valid pixmap data.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_icon("status_success", size=_ICON_SIZE_24)
         pixmap = icon.pixmap(_ICON_SIZE_24, _ICON_SIZE_24)
         assert not pixmap.isNull()
@@ -108,21 +128,33 @@ class TestIconCaching:
 
     @staticmethod
     def test_icon_is_cached(icon_manager: IconManager) -> None:
-        """Icons are cached after first load."""
+        """Icons are cached after first load.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon1 = icon_manager.get_icon("status_success", size=_ICON_SIZE_24)
         icon2 = icon_manager.get_icon("status_success", size=_ICON_SIZE_24)
         assert icon1 is icon2
 
     @staticmethod
     def test_different_sizes_cached_separately(icon_manager: IconManager) -> None:
-        """Different sizes are cached as separate entries."""
+        """Different sizes are cached as separate entries.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon_24 = icon_manager.get_icon("status_success", size=_ICON_SIZE_24)
         icon_48 = icon_manager.get_icon("status_success", size=_ICON_SIZE_48)
         assert icon_24 is not icon_48
 
     @staticmethod
     def test_clear_cache_removes_cached_icons(icon_manager: IconManager) -> None:
-        """clear_cache removes all cached icons."""
+        """clear_cache removes all cached icons.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon_manager.get_icon("status_success")
         icon_manager.get_icon("status_error")
         icon_manager.clear_cache()
@@ -136,26 +168,42 @@ class TestPixmapLoading:
 
     @staticmethod
     def test_get_pixmap_returns_qpixmap(icon_manager: IconManager) -> None:
-        """get_pixmap returns a QPixmap instance."""
+        """get_pixmap returns a QPixmap instance.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         pixmap = icon_manager.get_pixmap("status_success")
         assert isinstance(pixmap, QPixmap)
 
     @staticmethod
     def test_pixmap_not_null(icon_manager: IconManager) -> None:
-        """Loaded pixmap is not null."""
+        """Loaded pixmap is not null.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         pixmap = icon_manager.get_pixmap("status_success")
         assert not pixmap.isNull()
 
     @staticmethod
     def test_pixmap_has_requested_size(icon_manager: IconManager) -> None:
-        """Pixmap has approximately the requested size."""
+        """Pixmap has approximately the requested size.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         pixmap = icon_manager.get_pixmap("status_success", size=_ICON_SIZE_32)
         assert pixmap.width() <= _ICON_SIZE_32
         assert pixmap.height() <= _ICON_SIZE_32
 
     @staticmethod
     def test_pixmap_is_cached(icon_manager: IconManager) -> None:
-        """Pixmaps are cached after first load."""
+        """Pixmaps are cached after first load.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         pixmap1 = icon_manager.get_pixmap("status_success", size=_ICON_SIZE_24)
         pixmap2 = icon_manager.get_pixmap("status_success", size=_ICON_SIZE_24)
         assert pixmap1 is pixmap2
@@ -166,26 +214,42 @@ class TestApplicationIcon:
 
     @staticmethod
     def test_get_app_icon_returns_qicon(icon_manager: IconManager) -> None:
-        """get_app_icon returns a QIcon instance."""
+        """get_app_icon returns a QIcon instance.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_app_icon()
         assert isinstance(icon, QIcon)
 
     @staticmethod
     def test_app_icon_not_null(icon_manager: IconManager) -> None:
-        """Application icon loads successfully."""
+        """Application icon loads successfully.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_app_icon()
         assert not icon.isNull(), "Application icon failed to load"
 
     @staticmethod
     def test_app_icon_has_multiple_sizes(icon_manager: IconManager) -> None:
-        """Application icon contains multiple size variants."""
+        """Application icon contains multiple size variants.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_app_icon()
         sizes = icon.availableSizes()
         assert len(sizes) > 0, "App icon has no available sizes"
 
     @staticmethod
     def test_app_icon_is_cached(icon_manager: IconManager) -> None:
-        """Application icon is cached after first load."""
+        """Application icon is cached after first load.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon1 = icon_manager.get_app_icon()
         icon2 = icon_manager.get_app_icon()
         assert icon1 is icon2
@@ -196,28 +260,44 @@ class TestStatusIcons:
 
     @staticmethod
     def test_get_status_icon_success(icon_manager: IconManager) -> None:
-        """get_status_icon returns success icon correctly."""
+        """get_status_icon returns success icon correctly.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_status_icon(success=True)
         assert isinstance(icon, QIcon)
         assert not icon.isNull()
 
     @staticmethod
     def test_get_status_icon_error(icon_manager: IconManager) -> None:
-        """get_status_icon returns error icon correctly."""
+        """get_status_icon returns error icon correctly.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_status_icon(success=False)
         assert isinstance(icon, QIcon)
         assert not icon.isNull()
 
     @staticmethod
     def test_get_status_pixmap_success(icon_manager: IconManager) -> None:
-        """get_status_pixmap returns success pixmap correctly."""
+        """get_status_pixmap returns success pixmap correctly.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         pixmap = icon_manager.get_status_pixmap(success=True, size=_ICON_SIZE_16)
         assert isinstance(pixmap, QPixmap)
         assert not pixmap.isNull()
 
     @staticmethod
     def test_get_status_pixmap_error(icon_manager: IconManager) -> None:
-        """get_status_pixmap returns error pixmap correctly."""
+        """get_status_pixmap returns error pixmap correctly.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         pixmap = icon_manager.get_status_pixmap(success=False, size=_ICON_SIZE_16)
         assert isinstance(pixmap, QPixmap)
         assert not pixmap.isNull()
@@ -250,7 +330,11 @@ class TestFallbackIcons:
 
     @staticmethod
     def test_missing_icon_returns_icon_object(icon_manager: IconManager) -> None:
-        """Missing icons still return a QIcon object."""
+        """Missing icons still return a QIcon object.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon = icon_manager.get_icon("nonexistent_icon_12345")
         assert isinstance(icon, QIcon)
 
@@ -270,17 +354,29 @@ class TestIconExists:
 
     @staticmethod
     def test_icon_exists_for_svg_icon(icon_manager: IconManager) -> None:
-        """icon_exists returns True for existing SVG icon."""
+        """icon_exists returns True for existing SVG icon.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         assert icon_manager.icon_exists("status_success")
 
     @staticmethod
     def test_icon_exists_for_png_icon(icon_manager: IconManager) -> None:
-        """icon_exists returns True for existing PNG icon."""
+        """icon_exists returns True for existing PNG icon.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         assert icon_manager.icon_exists("analyze")
 
     @staticmethod
     def test_icon_not_exists_for_missing(icon_manager: IconManager) -> None:
-        """icon_exists returns False for missing icon."""
+        """icon_exists returns False for missing icon.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         assert not icon_manager.icon_exists("nonexistent_icon_12345")
 
 
@@ -313,7 +409,11 @@ class TestPreloadIcons:
 
     @staticmethod
     def test_preload_default_icons(icon_manager: IconManager) -> None:
-        """Preloading default icons populates cache."""
+        """Preloading default icons populates cache.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon_manager.clear_cache()
         icon_manager.preload_icons()
 
@@ -321,7 +421,11 @@ class TestPreloadIcons:
 
     @staticmethod
     def test_preload_specific_icons(icon_manager: IconManager) -> None:
-        """Preloading specific icons populates cache."""
+        """Preloading specific icons populates cache.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         icon_manager.clear_cache()
         icons_to_load = ["status_success", "status_error"]
         icon_manager.preload_icons(icons_to_load)
@@ -334,13 +438,21 @@ class TestIconIntegrity:
 
     @staticmethod
     def test_all_icon_map_entries_have_files(icon_manager: IconManager) -> None:
-        """Every entry in ICON_MAP corresponds to an existing file."""
+        """Every entry in ICON_MAP corresponds to an existing file.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         missing_files = [name for name in ICON_MAP if not icon_manager.icon_exists(name)]
         assert not missing_files, f"ICON_MAP entries without files: {missing_files}"
 
     @staticmethod
     def test_icons_load_without_errors(icon_manager: IconManager) -> None:
-        """All icons load without raising exceptions."""
+        """All icons load without raising exceptions.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         for name in list(ICON_MAP.keys())[:_MAX_PREVIEW_ICONS]:
             try:
                 icon = icon_manager.get_icon(name)
@@ -350,5 +462,9 @@ class TestIconIntegrity:
 
     @staticmethod
     def test_icon_manager_available_flag(icon_manager: IconManager) -> None:
-        """IconManager correctly detects icons availability."""
+        """IconManager correctly detects icons availability.
+
+        Args:
+            icon_manager: Fresh IconManager fixture instance.
+        """
         assert icon_manager.icons_available, "Icons should be available"

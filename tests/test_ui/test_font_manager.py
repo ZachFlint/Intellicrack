@@ -53,7 +53,7 @@ def font_manager(
         qapp: Qt application fixture.
 
     Yields:
-        Generator[FontManager]:: A fresh FontManager instance.
+        Generator[FontManager]: A fresh FontManager instance with singleton state reset.
     """
     del qapp
     FontManager.reset_instance()
@@ -91,32 +91,52 @@ class TestFontLoading:
 
     @staticmethod
     def test_load_fonts_returns_bool(font_manager: FontManager) -> None:
-        """load_fonts returns a boolean."""
+        """load_fonts returns a boolean.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         result = font_manager.load_fonts()
         assert isinstance(result, bool)
 
     @staticmethod
     def test_load_fonts_succeeds(font_manager: FontManager) -> None:
-        """Font loading succeeds with available fonts."""
+        """Font loading succeeds with available fonts.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         result = font_manager.load_fonts()
         assert result, "Font loading should succeed with assets available"
 
     @staticmethod
     def test_fonts_loaded_flag_set(font_manager: FontManager) -> None:
-        """_fonts_loaded flag is set after loading."""
+        """_fonts_loaded flag is set after loading.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         assert font_manager.fonts_loaded
 
     @staticmethod
     def test_loaded_families_populated(font_manager: FontManager) -> None:
-        """loaded_families is populated after loading."""
+        """loaded_families is populated after loading.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         families = font_manager.loaded_families
         assert len(families) > 0, "No font families were loaded"
 
     @staticmethod
     def test_jetbrains_mono_loaded(font_manager: FontManager) -> None:
-        """JetBrains Mono font is loaded."""
+        """JetBrains Mono font is loaded.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         families = font_manager.loaded_families
         has_jetbrains = any("JetBrains" in f for f in families)
@@ -124,7 +144,11 @@ class TestFontLoading:
 
     @staticmethod
     def test_load_fonts_idempotent(font_manager: FontManager) -> None:
-        """Calling load_fonts multiple times is safe."""
+        """Calling load_fonts multiple times is safe.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         result1 = font_manager.load_fonts()
         result2 = font_manager.load_fonts()
         assert result1 == result2
@@ -135,37 +159,61 @@ class TestCodeFont:
 
     @staticmethod
     def test_get_code_font_returns_qfont(font_manager: FontManager) -> None:
-        """get_code_font returns a QFont instance."""
+        """get_code_font returns a QFont instance.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_code_font()
         assert isinstance(font, QFont)
 
     @staticmethod
     def test_code_font_is_monospace(font_manager: FontManager) -> None:
-        """Code font has monospace style hint."""
+        """Code font has monospace style hint.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_code_font()
         assert font.styleHint().value == _STYLE_HINT_MONOSPACE_VALUE
 
     @staticmethod
     def test_code_font_is_fixed_pitch(font_manager: FontManager) -> None:
-        """Code font is fixed pitch."""
+        """Code font is fixed pitch.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_code_font()
         assert font.fixedPitch()
 
     @staticmethod
     def test_code_font_respects_size(font_manager: FontManager) -> None:
-        """Code font uses requested size."""
+        """Code font uses requested size.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_code_font(size=_EXPECTED_FONT_SIZE_14)
         assert font.pointSize() == _EXPECTED_FONT_SIZE_14
 
     @staticmethod
     def test_get_code_font_bold(font_manager: FontManager) -> None:
-        """get_code_font_bold returns bold font."""
+        """get_code_font_bold returns bold font.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_code_font_bold()
         assert font.bold()
 
     @staticmethod
     def test_code_font_family_set(font_manager: FontManager) -> None:
-        """Code font family is properly set."""
+        """Code font family is properly set.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         family = font_manager.code_font_family
         assert len(family) > 0, "Code font family is empty"
@@ -176,31 +224,51 @@ class TestUIFont:
 
     @staticmethod
     def test_get_ui_font_returns_qfont(font_manager: FontManager) -> None:
-        """get_ui_font returns a QFont instance."""
+        """get_ui_font returns a QFont instance.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_ui_font()
         assert isinstance(font, QFont)
 
     @staticmethod
     def test_ui_font_is_sans_serif(font_manager: FontManager) -> None:
-        """UI font has sans-serif style hint."""
+        """UI font has sans-serif style hint.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_ui_font()
         assert font.styleHint().value == _STYLE_HINT_SANS_SERIF_VALUE
 
     @staticmethod
     def test_ui_font_respects_size(font_manager: FontManager) -> None:
-        """UI font uses requested size."""
+        """UI font uses requested size.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_ui_font(size=_EXPECTED_FONT_SIZE_12)
         assert font.pointSize() == _EXPECTED_FONT_SIZE_12
 
     @staticmethod
     def test_get_ui_font_bold(font_manager: FontManager) -> None:
-        """get_ui_font_bold returns bold font."""
+        """get_ui_font_bold returns bold font.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_ui_font_bold()
         assert font.bold()
 
     @staticmethod
     def test_ui_font_family_set(font_manager: FontManager) -> None:
-        """UI font family is properly set."""
+        """UI font family is properly set.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         family = font_manager.ui_font_family
         assert len(family) > 0, "UI font family is empty"
@@ -211,19 +279,31 @@ class TestHeadingFont:
 
     @staticmethod
     def test_get_heading_font_returns_qfont(font_manager: FontManager) -> None:
-        """get_heading_font returns a QFont instance."""
+        """get_heading_font returns a QFont instance.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_heading_font()
         assert isinstance(font, QFont)
 
     @staticmethod
     def test_heading_font_is_bold(font_manager: FontManager) -> None:
-        """Heading font is bold."""
+        """Heading font is bold.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_heading_font()
         assert font.bold()
 
     @staticmethod
     def test_heading_font_respects_size(font_manager: FontManager) -> None:
-        """Heading font uses requested size."""
+        """Heading font uses requested size.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font = font_manager.get_heading_font(size=_EXPECTED_FONT_SIZE_16)
         assert font.pointSize() == _EXPECTED_FONT_SIZE_16
 
@@ -251,7 +331,11 @@ class TestFontFamilyProperties:
 
     @staticmethod
     def test_loaded_families_is_copy(font_manager: FontManager) -> None:
-        """loaded_families returns a copy, not the internal list."""
+        """loaded_families returns a copy, not the internal list.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         families1 = font_manager.loaded_families
         families2 = font_manager.loaded_families
@@ -264,7 +348,11 @@ class TestCustomFontStatus:
 
     @staticmethod
     def test_is_custom_font_loaded_after_load(font_manager: FontManager) -> None:
-        """is_custom_font_loaded returns True after successful loading."""
+        """is_custom_font_loaded returns True after successful loading.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         assert font_manager.is_custom_font_loaded()
 
@@ -283,13 +371,21 @@ class TestFontInfo:
 
     @staticmethod
     def test_get_font_info_returns_dict(font_manager: FontManager) -> None:
-        """get_font_info returns a dictionary."""
+        """get_font_info returns a dictionary.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         info = font_manager.get_font_info()
         assert isinstance(info, dict)
 
     @staticmethod
     def test_font_info_contains_required_keys(font_manager: FontManager) -> None:
-        """Font info contains all required keys."""
+        """Font info contains all required keys.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         info = font_manager.get_font_info()
 
@@ -306,7 +402,11 @@ class TestFontInfo:
 
     @staticmethod
     def test_font_info_values_correct_types(font_manager: FontManager) -> None:
-        """Font info values have correct types."""
+        """Font info values have correct types.
+
+        Args:
+            font_manager: Fresh FontManager fixture instance.
+        """
         font_manager.load_fonts()
         info = font_manager.get_font_info()
 
