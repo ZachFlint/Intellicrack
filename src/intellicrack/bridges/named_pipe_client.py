@@ -48,6 +48,11 @@ class PipeConfig:
 class NamedPipeClient:
     """Async named pipe client for x64dbg plugin IPC.
 
+    Stores the provided pipe configuration (falling back to defaults
+    when omitted), the optional event handler used for asynchronous
+    plugin events, and sets up the pipe handle slot, the concurrency
+    lock serialising I/O, and the request identifier counter.
+
     Args:
         config: Pipe configuration.
         event_handler: Optional event handler.
@@ -266,6 +271,21 @@ class NamedPipeClient:
     }
 
     def _open_handle(self) -> int:
+        """Open a handle to the configured named pipe on Windows.
+
+        Waits up to the configured connect timeout for the pipe to become
+        available and then opens it for duplex I/O. Maps common
+        ``GetLastError`` codes to human-readable hints so orchestration
+        code can surface actionable failures.
+
+        Returns:
+            int: Native handle value for the open pipe.
+
+        Raises:
+            ToolError: If called on a non-Windows platform, if
+                ``WaitNamedPipeW`` fails, or if ``CreateFileW`` returns an
+                invalid handle.
+        """
         if os.name != "nt":
             error_message = "Named pipes are only supported on Windows"
             raise ToolError(error_message)
@@ -317,11 +337,33 @@ class NamedPipeClient:
         return int(handle)
 
     def _close_handle(self) -> None:
+        """Close the underlying Windows pipe handle, if any.
+
+        Calls ``CloseHandle`` on the stored handle so operating-system
+        resources associated with the pipe are released. Does nothing if
+        the client is not currently connected.
+        """
         if self._handle is None:
             return
         ctypes.windll.kernel32.CloseHandle(self._handle)
 
     def _read_exact_sync(self, size: int) -> bytes:
+        """Read exactly ``size`` bytes from the pipe synchronously.
+
+        Performs blocking ``ReadFile`` calls in ``_CHUNK_SIZE`` increments
+        until the requested number of bytes has been collected. Designed
+        to be driven on a worker thread via ``asyncio.to_thread``.
+
+        Args:
+            size: Exact number of bytes that must be read.
+
+        Returns:
+            bytes: The full payload read from the pipe.
+
+        Raises:
+            ToolError: If the pipe is not connected, if ``ReadFile`` fails,
+                or if the pipe closes before all bytes are received.
+        """
         if self._handle is None:
             error_message = "Pipe not connected"
             raise ToolError(error_message)
@@ -371,6 +413,19 @@ class NamedPipeClient:
         return bytes(data)
 
     def _write_sync(self, data: bytes) -> None:
+        """Write ``data`` to the pipe synchronously.
+
+        Performs blocking ``WriteFile`` calls in ``_CHUNK_SIZE`` increments
+        until the entire buffer has been transmitted. Designed to be
+        driven on a worker thread via ``asyncio.to_thread``.
+
+        Args:
+            data: Payload bytes to transmit.
+
+        Raises:
+            ToolError: If the pipe is not connected or if ``WriteFile``
+                fails before the buffer has been fully written.
+        """
         if self._handle is None:
             error_message = "Pipe not connected"
             raise ToolError(error_message)
@@ -409,6 +464,14 @@ class NamedPipeClient:
         _logger.debug("pipe_write_complete", total_bytes=total)
 
     def _cancel_io(self) -> None:
+        """Cancel any in-flight pipe I/O on supported Windows builds.
+
+        Invokes ``CancelIoEx`` against the current pipe handle when the
+        Windows API is available so that a blocked ``ReadFile`` or
+        ``WriteFile`` on another thread unblocks with a cancellation
+        error. Does nothing if the client is not connected or if the
+        API entry point is unavailable.
+        """
         if self._handle is None:
             return
         _logger.debug("pipe_cancelling_io", handle=self._handle)

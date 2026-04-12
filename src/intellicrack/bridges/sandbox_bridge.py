@@ -84,7 +84,11 @@ _ERR_DIFF_FAILED = "Failed to diff reports"
 class SandboxBridge(ToolBridgeBase):
     """Bridge for sandbox operations.
 
-    Provides AI-accessible interface to the SandboxManager for creating isolated execution environments and running binaries.
+    Provides an AI-accessible interface to the ``SandboxManager`` for
+    creating isolated execution environments and running binaries.
+    Instances own a lazy slot for the shared ``SandboxManager``
+    singleton and record the advertised ``BridgeCapabilities``
+    describing the dynamic-analysis features this bridge can provide.
     """
 
     def __init__(self) -> None:

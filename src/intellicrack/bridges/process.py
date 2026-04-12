@@ -662,7 +662,12 @@ class ProcessBridge(ToolBridgeBase):
     handle enumeration, window enumeration, service inspection,
     PEB/TEB access, heap enumeration, thread context manipulation,
     stack walking, SEH chain traversal, mitigation policy queries,
-    and many other Win32 capabilities.
+    and many other Win32 capabilities. Instances own slots for the
+    attached process identifier and handle, cached lazy-loaded Windows
+    DLL references (``kernel32``, ``psapi``, ``ntdll``, ``advapi32``,
+    ``user32``, ``dbghelp``), the debug-privilege flag that records
+    whether ``SeDebugPrivilege`` has been elevated, and the advertised
+    ``BridgeCapabilities``.
 
     Attributes:
         PROCESS_ALL_ACCESS: Win32 access mask granting all process permissions.
@@ -2090,6 +2095,21 @@ class ProcessBridge(ToolBridgeBase):
         enum_proc_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
         def _enum_impl(hwnd: int, _lparam: int) -> bool:
+            """Collect window metadata for windows owned by the target PID.
+
+            Invoked once per top-level window by ``EnumWindows``. Windows
+            that belong to the attached process are captured into the
+            ``windows`` list with their title, class name, and visibility.
+
+            Args:
+                hwnd: Handle of the enumerated top-level window.
+                _lparam: User-supplied parameter from ``EnumWindows``;
+                    unused by this implementation.
+
+            Returns:
+                bool: ``True`` unconditionally so enumeration continues
+                until the Windows API has visited every top-level window.
+            """
             window_pid = wintypes.DWORD()
             user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
 

@@ -140,6 +140,10 @@ class GoogleFunctionDeclaration(TypedDict):
 class ValidationError:
     """Represents a validation error in a tool definition.
 
+    Stores the human-readable description, the dotted path where the
+    issue was detected, and the severity that downstream reporting uses
+    to decide whether the tool definition should be rejected.
+
     Args:
         message: Error description.
         location: Where the error occurred (e.g., "func.param").
