@@ -9,33 +9,27 @@
           "version": "1.0.0",
           "rules": [
             {
-              "id": "B404:blacklist",
+              "id": "B102:exec_used",
               "shortDescription": {
-                "text": "Consider possible security implications associated with the subprocess module."
+                "text": "Use of exec detected."
               }
             },
             {
-              "id": "B106:hardcoded_password_funcarg",
+              "id": "B324:hashlib",
               "shortDescription": {
-                "text": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
+                "text": "Use of weak MD5 hash for security. Consider usedforsecurity=False"
               }
             },
             {
-              "id": "B615:huggingface_unsafe_download",
+              "id": "B104:hardcoded_bind_all_interfaces",
               "shortDescription": {
-                "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+                "text": "Possible binding to all interfaces."
               }
             },
             {
-              "id": "B405:blacklist",
+              "id": "B108:hardcoded_tmp_directory",
               "shortDescription": {
-                "text": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
-              }
-            },
-            {
-              "id": "B105:hardcoded_password_string",
-              "shortDescription": {
-                "text": "Possible hardcoded password: 'dialog-password.png'"
+                "text": "Probable insecure usage of temp file/directory."
               }
             }
           ]
@@ -43,83 +37,20 @@
       },
       "results": [
         {
-          "ruleId": "B404:blacklist",
-          "level": "note",
-          "message": {
-            "text": "Consider possible security implications associated with the subprocess module."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/_subprocess.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 14,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "B404:blacklist",
-          "level": "note",
-          "message": {
-            "text": "Consider possible security implications associated with the subprocess module."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/script_gen.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 401,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "B106:hardcoded_password_funcarg",
-          "level": "note",
-          "message": {
-            "text": "Possible hardcoded password: 'https://oauth2.googleapis.com/token'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/oauth.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 220,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "B615:huggingface_unsafe_download",
+          "ruleId": "B102:exec_used",
           "level": "warning",
           "message": {
-            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+            "text": "Use of exec detected."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 522,
+                  "startLine": 5134,
                   "startColumn": 1
                 }
               }
@@ -127,20 +58,41 @@
           ]
         },
         {
-          "ruleId": "B615:huggingface_unsafe_download",
+          "ruleId": "B324:hashlib",
+          "level": "error",
+          "message": {
+            "text": "Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5375,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B104:hardcoded_bind_all_interfaces",
           "level": "warning",
           "message": {
-            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+            "text": "Possible binding to all interfaces."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uri": "src/intellicrack/sandbox/analysis.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 541,
+                  "startLine": 47,
                   "startColumn": 1
                 }
               }
@@ -148,20 +100,20 @@
           ]
         },
         {
-          "ruleId": "B615:huggingface_unsafe_download",
+          "ruleId": "B108:hardcoded_tmp_directory",
           "level": "warning",
           "message": {
-            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+            "text": "Probable insecure usage of temp file/directory."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uri": "src/intellicrack/sandbox/qemu.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 625,
+                  "startLine": 2618,
                   "startColumn": 1
                 }
               }
@@ -169,20 +121,20 @@
           ]
         },
         {
-          "ruleId": "B615:huggingface_unsafe_download",
+          "ruleId": "B108:hardcoded_tmp_directory",
           "level": "warning",
           "message": {
-            "text": "Unsafe Hugging Face Hub download without revision pinning in from_pretrained()"
+            "text": "Probable insecure usage of temp file/directory."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uri": "src/intellicrack/sandbox/qemu.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 644,
+                  "startLine": 2619,
                   "startColumn": 1
                 }
               }
@@ -190,20 +142,20 @@
           ]
         },
         {
-          "ruleId": "B405:blacklist",
-          "level": "note",
+          "ruleId": "B102:exec_used",
+          "level": "warning",
           "message": {
-            "text": "Using xml.etree.ElementTree to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree with the equivalent defusedxml package, or make sure defusedxml.defuse_stdlib() is called."
+            "text": "Use of exec detected."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_scripting.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13,
+                  "startLine": 547,
                   "startColumn": 1
                 }
               }
@@ -211,20 +163,20 @@
           ]
         },
         {
-          "ruleId": "B105:hardcoded_password_string",
-          "level": "note",
+          "ruleId": "B324:hashlib",
+          "level": "error",
           "message": {
-            "text": "Possible hardcoded password: 'dialog-password.png'"
+            "text": "Use of weak MD5 hash for security. Consider usedforsecurity=False"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/resources/icon_manager.py",
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_signatures.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 99,
+                  "startLine": 176,
                   "startColumn": 1
                 }
               }
@@ -236,7 +188,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:35:42.641051"
+          "endTimeUtc": "2026-04-11T07:08:13.898986+00:00"
         }
       ]
     }

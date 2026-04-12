@@ -1,7 +1,56 @@
 {
   "tool": "ruff",
-  "generated": "2026-04-05T20:12:23.531859+00:00",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-04-11T07:05:56.378396+00:00",
+  "total_findings": 6,
+  "total_files": 1,
+  "files": [
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 1172,
+          "column": 133,
+          "code": "COM812",
+          "message": "Trailing comma missing",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py:1172:133: COM812 Trailing comma missing"
+        },
+        {
+          "line": 1183,
+          "column": 135,
+          "code": "COM812",
+          "message": "Trailing comma missing",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py:1183:135: COM812 Trailing comma missing"
+        },
+        {
+          "line": 1278,
+          "column": 133,
+          "code": "COM812",
+          "message": "Trailing comma missing",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py:1278:133: COM812 Trailing comma missing"
+        },
+        {
+          "line": 1320,
+          "column": 137,
+          "code": "COM812",
+          "message": "Trailing comma missing",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py:1320:137: COM812 Trailing comma missing"
+        },
+        {
+          "line": 1421,
+          "column": 132,
+          "code": "COM812",
+          "message": "Trailing comma missing",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py:1421:132: COM812 Trailing comma missing"
+        },
+        {
+          "line": 3129,
+          "column": 9,
+          "code": "PLR1730",
+          "message": "Replace `if` statement with `alignment = max(alignment, 1)`",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\bridges\\x64dbg.py:3129:9: PLR1730 Replace `if` statement with `alignment = max(alignment, 1)`"
+        }
+      ]
+    }
+  ]
 }

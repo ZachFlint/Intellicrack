@@ -34,8 +34,8 @@ _logger = get_logger("core.analysis_aggregator")
 class AnalysisAggregator:
     """Aggregates analysis data from connected bridges.
 
-    Queries BinaryBridge, GhidraBridge, and CutterBridge for strings,
-    imports, exports, functions, and sections, then packages everything
+    Queries GhidraBridge and CutterBridge for strings, imports,
+    exports, functions, and sections, then packages everything
     into a single BridgeAnalysisSummary.
 
     Args:
@@ -71,8 +71,6 @@ class AnalysisAggregator:
         functions: list[FunctionInfo] = []
         source_bridges: list[str] = []
         notes: list[str] = []
-
-        await self._collect_from_binary_bridge(strings, source_bridges, notes)
 
         await self._collect_from_static_bridge(
             "ghidra",
@@ -119,45 +117,6 @@ class AnalysisAggregator:
             source_bridges=source_bridges,
             analysis_notes=notes,
         )
-
-    async def _collect_from_binary_bridge(
-        self,
-        strings: list[StringInfo],
-        source_bridges: list[str],
-        notes: list[str],
-    ) -> None:
-        """Collect string data from the BinaryBridge.
-
-        Args:
-            strings: Accumulator list for discovered strings.
-            source_bridges: Accumulator list for contributing bridge names.
-            notes: Accumulator list for analysis notes.
-        """
-        try:
-            binary_bridge = self._tools.get_binary_bridge()
-        except ToolError:
-            _logger.debug("binary_bridge_unavailable")
-            notes.append("BinaryBridge not available")
-            return
-
-        try:
-            raw_strings = await binary_bridge.get_strings()
-            strings.extend(
-                StringInfo(
-                    address=addr,
-                    value=value,
-                    encoding="utf-8",
-                    section="",
-                )
-                for addr, value in raw_strings
-            )
-            source_bridges.append("binary")
-        except (OSError, RuntimeError, ToolError) as exc:
-            _logger.warning(
-                "binary_bridge_strings_failed",
-                error=str(exc),
-            )
-            notes.append(f"BinaryBridge string extraction failed: {exc}")
 
     async def _collect_from_static_bridge(
         self,

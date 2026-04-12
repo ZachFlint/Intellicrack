@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut, QStandardItemModel
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QFileDialog,
@@ -22,6 +23,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QMenu,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
@@ -31,6 +33,7 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QToolBar,
     QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -48,13 +51,20 @@ from intellicrack.ui.panels.hex_editor._base import (
     logger,
 )
 from intellicrack.ui.panels.hex_editor._bookmarks import BookmarksMixin
+from intellicrack.ui.panels.hex_editor._calculator import CalculatorMixin
+from intellicrack.ui.panels.hex_editor._comparison import ComparisonMixin
 from intellicrack.ui.panels.hex_editor._data_inspector import DataInspectorMixin
 from intellicrack.ui.panels.hex_editor._disassembly import DisassemblyMixin
 from intellicrack.ui.panels.hex_editor._hashing import HashingMixin
+from intellicrack.ui.panels.hex_editor._highlighting import HighlightingMixin
 from intellicrack.ui.panels.hex_editor._patches import PatchesMixin
 from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
+from intellicrack.ui.panels.hex_editor._process_memory import ProcessMemoryMixin
+from intellicrack.ui.panels.hex_editor._sandbox import SandboxMixin
+from intellicrack.ui.panels.hex_editor._scripting import ScriptingMixin
 from intellicrack.ui.panels.hex_editor._search import NumericSearchWorker, SearchMixin, SearchWorker
 from intellicrack.ui.panels.hex_editor._sections import SectionsMixin
+from intellicrack.ui.panels.hex_editor._signatures import SignaturesMixin
 from intellicrack.ui.panels.hex_editor._statistics import StatisticsMixin, StatisticsWorker
 from intellicrack.ui.panels.hex_editor._templates import TemplatesMixin
 from intellicrack.ui.panels.hex_editor._transforms import TransformsMixin
@@ -67,6 +77,8 @@ from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from intellicrack.bridges.hex_state import HexDocumentState
 
 _MODE_LABEL_WIDTH: Final[int] = 30
@@ -93,6 +105,13 @@ class HexEditorPanel(
     PatchesMixin,
     SectionsMixin,
     TemplatesMixin,
+    CalculatorMixin,
+    ScriptingMixin,
+    SignaturesMixin,
+    HighlightingMixin,
+    SandboxMixin,
+    ComparisonMixin,
+    ProcessMemoryMixin,
     AnalysisPanelBase,
 ):
     """Hex editor panel with integrated side panels.
@@ -199,6 +218,13 @@ class HexEditorPanel(
         self._numeric_range_check: QCheckBox | None = None
         self._numeric_max_input: QLineEdit | None = None
 
+        self._display_mode_combo: QComboBox | None = None
+        self._alignment_combo: QComboBox | None = None
+        self._color_mode_combo: QComboBox | None = None
+        self._arith_op_combo: QComboBox | None = None
+        self._arith_key_edit: QLineEdit | None = None
+        self._arith_count_spin: QSpinBox | None = None
+
         super().__init__(parent)
 
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -251,11 +277,45 @@ class HexEditorPanel(
                     item = model.item(idx)
                     if item is not None:
                         item.setEnabled(False)
+        self._encoding_combo.currentIndexChanged.connect(self._on_encoding_index_changed)
         toolbar.addWidget(self._encoding_combo)
 
         self._add_secondary_button(toolbar, "Send to AI", self._on_send_to_ai)
         toolbar.addSeparator()
         self._add_secondary_button(toolbar, "Pattern Editor", self._toggle_pattern_editor)
+        toolbar.addSeparator()
+
+        self._display_mode_combo = QComboBox()
+        self._display_mode_combo.addItems(HexEditorWidget.DISPLAY_MODES)
+        self._display_mode_combo.setToolTip("Display mode")
+        self._display_mode_combo.currentTextChanged.connect(self._on_display_mode_changed)
+        toolbar.addWidget(self._display_mode_combo)
+
+        copy_as_btn = QPushButton("Copy As")
+        copy_as_menu_obj = self._build_copy_as_menu()
+        set_menu_fn = getattr(copy_as_btn, "setMenu", None)
+        if callable(set_menu_fn):
+            set_menu_fn(copy_as_menu_obj)
+        toolbar.addWidget(copy_as_btn)
+
+        self._alignment_combo = QComboBox()
+        self._alignment_combo.addItems(["No Align", "512 (Sector)", "4096 (Page)", "8192", "65536"])
+        self._alignment_combo.setToolTip("Alignment grid")
+        self._alignment_combo.currentTextChanged.connect(self._on_alignment_changed)
+        toolbar.addWidget(self._alignment_combo)
+
+        snap_btn = QPushButton("Snap")
+        snap_btn.setToolTip("Snap cursor to alignment boundary")
+        snap_btn.clicked.connect(self._on_snap_alignment)
+        toolbar.addWidget(snap_btn)
+
+        self._color_mode_combo = QComboBox()
+        self._color_mode_combo.addItems(["No Coloring", "Entropy Heatmap", "Byte Value", "Content Type"])
+        self._color_mode_combo.setToolTip("Color mapping mode")
+        self._color_mode_combo.currentTextChanged.connect(self._on_color_mode_changed)
+        toolbar.addWidget(self._color_mode_combo)
+
+        self._add_secondary_button(toolbar, "Process...", self._on_open_process_memory)
 
         self._file_info_label = QLabel("")
         toolbar.addWidget(self._file_info_label)
@@ -340,8 +400,15 @@ class HexEditorPanel(
         if self._side_tabs is None:
             return
 
+        inspector_container = QWidget()
+        insp_layout = QVBoxLayout(inspector_container)
+        insp_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
         self._data_inspector_tree = self._make_tree(["Type", "Value"])
-        self._side_tabs.addTab(self._data_inspector_tree, "Inspector")
+        insp_layout.addWidget(self._data_inspector_tree)
+        insp_layout.addWidget(self._create_bit_editor_group())
+        insp_layout.addWidget(self._create_text_decode_group())
+        insp_layout.addWidget(self._create_highlighting_controls())
+        self._side_tabs.addTab(inspector_container, "Inspector")
 
         bookmarks_container = QWidget()
         bm_layout = QVBoxLayout(bookmarks_container)
@@ -413,6 +480,14 @@ class HexEditorPanel(
         stats_layout.addWidget(summary_box)
         self._statistics_tree = self._make_tree(["Byte", "Count", "Percentage"])
         stats_layout.addWidget(self._statistics_tree)
+        stats_btn_row = QHBoxLayout()
+        stats_refresh_btn = QPushButton("Refresh")
+        stats_refresh_btn.clicked.connect(self._on_refresh_statistics)
+        stats_btn_row.addWidget(stats_refresh_btn)
+        stats_digram_btn = QPushButton("Digram Matrix")
+        stats_digram_btn.clicked.connect(self._on_show_digram_matrix)
+        stats_btn_row.addWidget(stats_digram_btn)
+        stats_layout.addLayout(stats_btn_row)
         self._side_tabs.addTab(stats_container, "Statistics")
 
         templates_container = QWidget()
@@ -425,6 +500,20 @@ class HexEditorPanel(
         tmpl_apply_btn.clicked.connect(self._on_apply_template)
         tmpl_top.addWidget(tmpl_apply_btn)
         tmpl_layout.addLayout(tmpl_top)
+        tmpl_btn_row = QHBoxLayout()
+        tmpl_import_btn = QPushButton("Import JSON...")
+        tmpl_import_btn.clicked.connect(self._on_import_template)
+        tmpl_btn_row.addWidget(tmpl_import_btn)
+        tmpl_export_btn = QPushButton("Export...")
+        tmpl_export_btn.clicked.connect(self._on_export_template)
+        tmpl_btn_row.addWidget(tmpl_export_btn)
+        tmpl_remove_btn = QPushButton("Remove")
+        tmpl_remove_btn.clicked.connect(self._on_remove_template)
+        tmpl_btn_row.addWidget(tmpl_remove_btn)
+        tmpl_layout.addLayout(tmpl_btn_row)
+        tmpl_auto_bm_btn = QPushButton("Auto-Bookmark Structure")
+        tmpl_auto_bm_btn.clicked.connect(self._on_auto_bookmark_structure)
+        tmpl_layout.addWidget(tmpl_auto_bm_btn)
         self._templates_tree = self._make_tree(["Field", "Offset", "Size", "Value"])
         tmpl_layout.addWidget(self._templates_tree)
         self._side_tabs.addTab(templates_container, "Templates")
@@ -463,12 +552,21 @@ class HexEditorPanel(
         self._hash_result_label.setWordWrap(on=True)
         self._hash_result_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         hashes_layout.addWidget(self._hash_result_label)
+        hash_sel_btn = QPushButton("Hash Selection")
+        hash_sel_btn.clicked.connect(self._on_hash_selection)
+        hashes_layout.addWidget(hash_sel_btn)
+        hashes_layout.addWidget(self._create_pe_checksum_group())
         hashes_layout.addStretch()
         self._side_tabs.addTab(hashes_container, "Hashes")
 
         self._side_tabs.addTab(self._create_disassembly_tab(), "Disassembly")
         self._side_tabs.addTab(self._create_yara_tab(), "YARA")
         self._side_tabs.addTab(self._create_transforms_tab(), "Transforms")
+        self._side_tabs.addTab(self._create_calculator_tab(), "Calculator")
+        self._side_tabs.addTab(self._create_scripting_tab(), "Python")
+        self._side_tabs.addTab(self._create_signatures_tab(), "Signatures")
+        self._side_tabs.addTab(self._create_sandbox_tab(), "Sandbox")
+        self._side_tabs.addTab(self._create_comparison_tab(), "Diff")
 
     @staticmethod
     def _make_tree(headers: list[str]) -> QTreeWidget:
@@ -522,6 +620,8 @@ class HexEditorPanel(
                 self._file_info_label.setText(f"  {path.name} ({format_size(doc_len)})")
 
             self._populate_template_combo()
+            if self._encoding_combo is not None:
+                self._encoding_combo.setCurrentIndex(0)
             self._auto_detect_file_type()
             self._populate_sections()
             self._populate_imports()
@@ -570,6 +670,8 @@ class HexEditorPanel(
             QMessageBox.warning(self, "Save Failed", f"Failed to save:\n{exc}")
         else:
             self._on_data_changed()
+            if self.state_holder is not None and file_path is not None:
+                self.state_holder.notify_document_saved(str(file_path), source="panel")
             logger.info("file_saved", path=file_path)
 
     def _on_save_as(self) -> None:
@@ -586,6 +688,8 @@ class HexEditorPanel(
             else:
                 self.file_path = Path(save_path)
                 self._on_data_changed()
+                if self.state_holder is not None:
+                    self.state_holder.notify_document_saved(save_path, source="panel")
                 logger.info("file_saved_as", path=save_path)
 
     def _on_goto_offset(self) -> None:
@@ -775,6 +879,20 @@ class HexEditorPanel(
         if self._hex_widget is not None:
             self._hex_widget.set_encoding(text.lower().replace("-", ""))
 
+    def _on_encoding_index_changed(self, idx: int) -> None:
+        """Skip separator entries when navigating the encoding combo via keyboard.
+
+        Args:
+            idx: The newly selected combo box index.
+        """
+        if self._encoding_combo is None:
+            return
+        text = self._encoding_combo.itemText(idx)
+        if text.startswith("---"):
+            count = self._encoding_combo.count()
+            next_idx = idx + 1 if idx + 1 < count else idx - 1
+            self._encoding_combo.setCurrentIndex(next_idx)
+
     def has_unsaved_changes(self) -> bool:
         """Check whether the current document has unsaved modifications.
 
@@ -799,6 +917,128 @@ class HexEditorPanel(
         except OSError:
             return False
         return True
+
+    def _on_display_mode_changed(self, mode: str) -> None:
+        """Handle display mode combo box changes.
+
+        Args:
+            mode: Selected display mode string.
+        """
+        if self._hex_widget is not None:
+            set_mode_fn = getattr(self._hex_widget, "set_display_mode", None)
+            if callable(set_mode_fn):
+                set_mode_fn(mode)
+
+    def _build_copy_as_menu(self) -> QMenu:
+        """Build a popup menu for the Copy As button.
+
+        Returns:
+            QMenu: QMenu widget with format choices.
+        """
+        menu = QMenu(self)
+        formats = [
+            "hex",
+            "c_array",
+            "python",
+            "base64",
+            "rust_array",
+            "csharp_array",
+            "java_array",
+            "javascript_array",
+            "go_slice",
+            "hex_string_no_spaces",
+            "nasm_db",
+            "markdown_table",
+        ]
+        for fmt in formats:
+            action = menu.addAction(fmt)
+            if action is not None:
+
+                def _make_handler(f: str) -> Callable[[object], None]:
+                    def _handler(_checked: object = None) -> None:
+                        self._do_copy_as(f)
+
+                    return _handler
+
+                action.triggered.connect(_make_handler(fmt))
+        return menu
+
+    def _do_copy_as(self, fmt: str) -> None:
+        """Copy the current selection in the specified format.
+
+        Args:
+            fmt: Output format name.
+        """
+        if self._hex_widget is None:
+            return
+        copy_fn = getattr(self._hex_widget, "copy_as", None)
+        if callable(copy_fn):
+            result = str(copy_fn(fmt))
+            clipboard = QApplication.clipboard()
+            if clipboard is not None:
+                clipboard.setText(result)
+
+    def _on_alignment_changed(self, text: str) -> None:
+        """Handle alignment combo box changes.
+
+        Args:
+            text: Selected alignment text.
+        """
+        if text == "No Align":
+            size = 0
+        else:
+            try:
+                size = int(text.split("(", maxsplit=1)[0].strip().replace(",", ""))
+            except ValueError:
+                size = 0
+        if self._hex_widget is not None:
+            set_align_fn = getattr(self._hex_widget, "set_alignment_grid_size", None)
+            if callable(set_align_fn):
+                set_align_fn(size)
+
+    def _on_snap_alignment(self) -> None:
+        """Snap the cursor to the nearest alignment boundary."""
+        if self._hex_widget is None:
+            return
+        alignment = getattr(self._hex_widget, "_alignment_grid_size", 0)
+        if alignment <= 0:
+            return
+        cursor = getattr(self._hex_widget, "_cursor_offset", 0)
+        snapped = (cursor // alignment) * alignment
+        goto_fn = getattr(self._hex_widget, "goto_offset", None)
+        if callable(goto_fn):
+            goto_fn(snapped)
+
+    def _on_color_mode_changed(self, text: str) -> None:
+        """Handle color mode combo box changes.
+
+        Args:
+            text: Selected color mode text.
+        """
+        mode_map: dict[str, str] = {
+            "No Coloring": "none",
+            "Entropy Heatmap": "entropy",
+            "Byte Value": "byte_value",
+            "Content Type": "content_type",
+        }
+        mode = mode_map.get(text, "none")
+        if self._hex_widget is not None:
+            set_color = getattr(self._hex_widget, "set_color_mode", None)
+            if callable(set_color):
+                set_color(mode)
+
+    def _refresh_bookmarks_tree(self) -> None:
+        """Refresh the bookmarks tree after auto-bookmark operations."""
+        if self._bookmarks_tree is None or self.document is None:
+            return
+        self._bookmarks_tree.clear()
+        try:
+            bookmarks: list[tuple[int, int, str, str]] = self.document.list_bookmarks()
+            for offset, length, label, _color in bookmarks:
+                item = QTreeWidgetItem([f"0x{offset:08X}", str(length), label])
+                self._bookmarks_tree.addTopLevelItem(item)
+        except (AttributeError, ValueError):
+            pass
 
     def _cleanup(self) -> None:
         """Release resources when the panel is closed."""

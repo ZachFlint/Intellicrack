@@ -32,7 +32,7 @@ try {
     $shFiles | ForEach-Object {
         Invoke-Expression "$Pixi shellcheck $Flags --format=gcc $_ 2>&1"
     } | Out-File -FilePath $tmpFile -Encoding utf8
-    Invoke-Expression "$Pixi python scripts/process_lint_json.py shellcheck --text $tmpFile"
+    Invoke-Expression "$Pixi python scripts/lint_report.py shellcheck --text $tmpFile"
 } finally {
     Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
 }

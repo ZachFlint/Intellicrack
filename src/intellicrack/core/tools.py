@@ -11,12 +11,13 @@ for LLM function calling.
 
 Bridge imports are deferred to method bodies to break a circular
 dependency: bridges.base -> core.logging -> core.__init__ -> core.tools
--> bridges.binary -> bridges.base.
+-> bridges.<bridge> -> bridges.base.
 """
 
 from __future__ import annotations
 
 import asyncio
+import importlib
 import inspect
 import time
 from dataclasses import dataclass
@@ -30,7 +31,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from intellicrack.bridges.base import ToolBridgeBase
-    from intellicrack.bridges.binary import BinaryBridge
     from intellicrack.bridges.cutter import CutterBridge
     from intellicrack.bridges.frida_bridge import FridaBridge
     from intellicrack.bridges.ghidra import GhidraBridge
@@ -109,35 +109,39 @@ class ToolRegistry:
             _logger.debug("tool_registry_initialize_early_return", reason="already_initialized")
             return
 
-        from intellicrack.bridges.binary import BinaryBridge as _BinaryBridge
-        from intellicrack.bridges.cutter import CutterBridge as _CutterBridge
-        from intellicrack.bridges.frida_bridge import FridaBridge as _FridaBridge
-        from intellicrack.bridges.ghidra import GhidraBridge as _GhidraBridge
-        from intellicrack.bridges.process import ProcessBridge as _ProcessBridge
-        from intellicrack.bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
-        from intellicrack.bridges.x64dbg import X64DbgBridge as _X64DbgBridge
-
-        self._bridges[ToolName.BINARY] = _BinaryBridge()
-        self._bridges[ToolName.PROCESS] = _ProcessBridge()
-        self._bridges[ToolName.FRIDA] = _FridaBridge()
-        self._bridges[ToolName.GHIDRA] = _GhidraBridge()
-        self._bridges[ToolName.CUTTER] = _CutterBridge()
-        self._bridges[ToolName.X64DBG] = _X64DbgBridge()
-        self._bridges[ToolName.SANDBOX] = _SandboxBridge()
-
-        from intellicrack.bridges.hex_editor import HexEditorBridge as _HexEditorBridge
-
-        self._bridges[ToolName.HEX_EDITOR] = _HexEditorBridge()
+        bridge_specs: list[tuple[ToolName, str, str]] = [
+            (ToolName.PROCESS, "intellicrack.bridges.process", "ProcessBridge"),
+            (ToolName.FRIDA, "intellicrack.bridges.frida_bridge", "FridaBridge"),
+            (ToolName.GHIDRA, "intellicrack.bridges.ghidra", "GhidraBridge"),
+            (ToolName.CUTTER, "intellicrack.bridges.cutter", "CutterBridge"),
+            (ToolName.X64DBG, "intellicrack.bridges.x64dbg", "X64DbgBridge"),
+            (ToolName.SANDBOX, "intellicrack.bridges.sandbox_bridge", "SandboxBridge"),
+            (ToolName.HEX_EDITOR, "intellicrack.bridges.hex_editor", "HexEditorBridge"),
+        ]
+        for tool_name, module_path, class_name in bridge_specs:
+            try:
+                mod = importlib.import_module(module_path)
+                cls = getattr(mod, class_name)
+                self._bridges[tool_name] = cls()
+            except Exception:
+                _logger.exception("bridge_import_failed", bridge=tool_name.value)
         _logger.debug(
             "bridges_instantiated",
             bridge_names=[n.value for n in self._bridges],
         )
 
-        await self._bridges[ToolName.BINARY].initialize()
-        await self._bridges[ToolName.PROCESS].initialize()
-        await self._bridges[ToolName.FRIDA].initialize()
-        await self._bridges[ToolName.SANDBOX].initialize()
-        await self._bridges[ToolName.HEX_EDITOR].initialize()
+        init_targets = (
+            ToolName.PROCESS,
+            ToolName.FRIDA,
+            ToolName.SANDBOX,
+            ToolName.HEX_EDITOR,
+        )
+        for tool_name in init_targets:
+            if tool_name in self._bridges:
+                try:
+                    await self._bridges[tool_name].initialize()
+                except Exception:
+                    _logger.exception("bridge_init_failed", bridge=tool_name.value)
 
         _logger.info("tool_registry_initialized", bridge_count=len(self._bridges))
         self._initialized = True
@@ -164,7 +168,7 @@ class ToolRegistry:
 
         bridge = self._bridges[name]
 
-        if name in {ToolName.BINARY, ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
+        if name in {ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
             if not await bridge.is_available():
                 await bridge.initialize()
             return await bridge.is_available()
@@ -174,7 +178,8 @@ class ToolRegistry:
             tool_path = await self._installer.ensure_tool(name)
             if name == ToolName.GHIDRA and port is not None:
                 ghidra = cast("GhidraBridge", bridge)
-                await ghidra.initialize(tool_path, port=port)
+                ghidra.set_port(port)
+                await ghidra.initialize(tool_path)
             else:
                 await bridge.initialize(tool_path)
             _logger.info("tool_initialized", tool_name=name.value, tool_path=str(tool_path))
@@ -210,23 +215,6 @@ class ToolRegistry:
             _logger.debug("bridge_cache_hit", tool_name=name.value)
         else:
             _logger.debug("bridge_cache_miss", tool_name=name.value)
-        return bridge
-
-    def get_binary_bridge(self) -> BinaryBridge:
-        """Get the binary operations bridge.
-
-        Returns:
-            BinaryBridge: BinaryBridge instance.
-
-        Raises:
-            ToolError: If bridge not available.
-        """
-        from intellicrack.bridges.binary import BinaryBridge as _BinaryBridge
-
-        bridge = self._bridges.get(ToolName.BINARY)
-        if bridge is None or not isinstance(bridge, _BinaryBridge):
-            raise ToolError(_ERR_BRIDGE_NA)
-        _logger.debug("get_binary_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
     def get_process_bridge(self) -> ProcessBridge:
@@ -375,7 +363,7 @@ class ToolRegistry:
             version = None
             path = None
 
-            if name not in {ToolName.BINARY, ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
+            if name not in {ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
                 try:
                     path = await self._installer.find_tool(name)
                     if path is not None:

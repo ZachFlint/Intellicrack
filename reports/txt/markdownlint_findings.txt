@@ -1,1 +1,1133 @@
-No findings.
+172 findings in tool_bridge_audit_2026-04-10.md
+
+tool_bridge_audit_2026-04-10.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 140]
+
+tool_bridge_audit_2026-04-10.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 136]
+
+tool_bridge_audit_2026-04-10.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 121]
+
+tool_bridge_audit_2026-04-10.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+tool_bridge_audit_2026-04-10.md:15:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
+
+tool_bridge_audit_2026-04-10.md:23:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:23 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:45 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:61 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:76 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:10 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:23 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:45 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:23:61 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 516]
+
+tool_bridge_audit_2026-04-10.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 283]
+
+tool_bridge_audit_2026-04-10.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 232]
+
+tool_bridge_audit_2026-04-10.md:55:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:30 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:39 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:55:30 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:56:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+
+tool_bridge_audit_2026-04-10.md:57:81 error MD013/line-length Line length [Expected: 80; Actual: 121]
+
+tool_bridge_audit_2026-04-10.md:58:81 error MD013/line-length Line length [Expected: 80; Actual: 113]
+
+tool_bridge_audit_2026-04-10.md:59:81 error MD013/line-length Line length [Expected: 80; Actual: 123]
+
+tool_bridge_audit_2026-04-10.md:60:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
+
+tool_bridge_audit_2026-04-10.md:61:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
+
+tool_bridge_audit_2026-04-10.md:62:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
+
+tool_bridge_audit_2026-04-10.md:63:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
+
+tool_bridge_audit_2026-04-10.md:64:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+tool_bridge_audit_2026-04-10.md:69:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:69:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:69:30 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:69:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:69:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:69:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 85]
+
+tool_bridge_audit_2026-04-10.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
+
+tool_bridge_audit_2026-04-10.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+tool_bridge_audit_2026-04-10.md:92:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:92:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:92:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:92:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 439]
+
+tool_bridge_audit_2026-04-10.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 571]
+
+tool_bridge_audit_2026-04-10.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 270]
+
+tool_bridge_audit_2026-04-10.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 182]
+
+tool_bridge_audit_2026-04-10.md:127:81 error MD013/line-length Line length [Expected: 80; Actual: 318]
+
+tool_bridge_audit_2026-04-10.md:129:81 error MD013/line-length Line length [Expected: 80; Actual: 218]
+
+tool_bridge_audit_2026-04-10.md:131:81 error MD013/line-length Line length [Expected: 80; Actual: 181]
+
+tool_bridge_audit_2026-04-10.md:133:81 error MD013/line-length Line length [Expected: 80; Actual: 154]
+
+tool_bridge_audit_2026-04-10.md:140:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:140:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:140:33 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:140:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:140:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:140:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 87]
+
+tool_bridge_audit_2026-04-10.md:149:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
+
+tool_bridge_audit_2026-04-10.md:151:81 error MD013/line-length Line length [Expected: 80; Actual: 123]
+
+tool_bridge_audit_2026-04-10.md:152:81 error MD013/line-length Line length [Expected: 80; Actual: 84]
+
+tool_bridge_audit_2026-04-10.md:157:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:157:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:157:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:157:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:184:81 error MD013/line-length Line length [Expected: 80; Actual: 549]
+
+tool_bridge_audit_2026-04-10.md:190:81 error MD013/line-length Line length [Expected: 80; Actual: 644]
+
+tool_bridge_audit_2026-04-10.md:199:81 error MD013/line-length Line length [Expected: 80; Actual: 220]
+
+tool_bridge_audit_2026-04-10.md:201:81 error MD013/line-length Line length [Expected: 80; Actual: 177]
+
+tool_bridge_audit_2026-04-10.md:208:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:208:27 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:208:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:208:13 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:209:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
+
+tool_bridge_audit_2026-04-10.md:210:81 error MD013/line-length Line length [Expected: 80; Actual: 188]
+
+tool_bridge_audit_2026-04-10.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 131]
+
+tool_bridge_audit_2026-04-10.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 121]
+
+tool_bridge_audit_2026-04-10.md:213:81 error MD013/line-length Line length [Expected: 80; Actual: 93]
+
+tool_bridge_audit_2026-04-10.md:214:81 error MD013/line-length Line length [Expected: 80; Actual: 89]
+
+tool_bridge_audit_2026-04-10.md:215:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
+
+tool_bridge_audit_2026-04-10.md:216:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+
+tool_bridge_audit_2026-04-10.md:218:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+tool_bridge_audit_2026-04-10.md:224:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:224:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:224:26 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:224:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:224:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:224:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:225:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
+
+tool_bridge_audit_2026-04-10.md:228:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
+
+tool_bridge_audit_2026-04-10.md:242:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
+
+tool_bridge_audit_2026-04-10.md:245:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
+
+tool_bridge_audit_2026-04-10.md:251:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
+
+tool_bridge_audit_2026-04-10.md:259:81 error MD013/line-length Line length [Expected: 80; Actual: 529]
+
+tool_bridge_audit_2026-04-10.md:268:81 error MD013/line-length Line length [Expected: 80; Actual: 188]
+
+tool_bridge_audit_2026-04-10.md:270:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
+
+tool_bridge_audit_2026-04-10.md:272:81 error MD013/line-length Line length [Expected: 80; Actual: 182]
+
+tool_bridge_audit_2026-04-10.md:279:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:279:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:279:33 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:279:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:279:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:279:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:280:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+tool_bridge_audit_2026-04-10.md:301:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:301:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:301:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:301:13 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:302:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
+
+tool_bridge_audit_2026-04-10.md:308:81 error MD013/line-length Line length [Expected: 80; Actual: 141]
+
+tool_bridge_audit_2026-04-10.md:318:81 error MD013/line-length Line length [Expected: 80; Actual: 185]
+
+tool_bridge_audit_2026-04-10.md:326:81 error MD013/line-length Line length [Expected: 80; Actual: 540]
+
+tool_bridge_audit_2026-04-10.md:341:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:341:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:341:31 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:341:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:341:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:341:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:344:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+tool_bridge_audit_2026-04-10.md:346:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+tool_bridge_audit_2026-04-10.md:351:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+tool_bridge_audit_2026-04-10.md:354:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
+
+tool_bridge_audit_2026-04-10.md:355:81 error MD013/line-length Line length [Expected: 80; Actual: 81]
+
+tool_bridge_audit_2026-04-10.md:362:81 error MD013/line-length Line length [Expected: 80; Actual: 694]
+
+tool_bridge_audit_2026-04-10.md:368:81 error MD013/line-length Line length [Expected: 80; Actual: 643]
+
+tool_bridge_audit_2026-04-10.md:373:81 error MD013/line-length Line length [Expected: 80; Actual: 241]
+
+tool_bridge_audit_2026-04-10.md:377:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+tool_bridge_audit_2026-04-10.md:382:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:382:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:382:28 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:382:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:382:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:382:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:383:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
+
+tool_bridge_audit_2026-04-10.md:391:81 error MD013/line-length Line length [Expected: 80; Actual: 81]
+
+tool_bridge_audit_2026-04-10.md:413:81 error MD013/line-length Line length [Expected: 80; Actual: 332]
+
+tool_bridge_audit_2026-04-10.md:415:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+
+tool_bridge_audit_2026-04-10.md:421:81 error MD013/line-length Line length [Expected: 80; Actual: 681]
+
+tool_bridge_audit_2026-04-10.md:426:81 error MD013/line-length Line length [Expected: 80; Actual: 219]
+
+tool_bridge_audit_2026-04-10.md:430:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
+
+tool_bridge_audit_2026-04-10.md:432:81 error MD013/line-length Line length [Expected: 80; Actual: 256]
+
+tool_bridge_audit_2026-04-10.md:437:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:437:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:437:31 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:437:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:437:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:437:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:453:81 error MD013/line-length Line length [Expected: 80; Actual: 85]
+
+tool_bridge_audit_2026-04-10.md:462:81 error MD013/line-length Line length [Expected: 80; Actual: 324]
+
+tool_bridge_audit_2026-04-10.md:468:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+
+tool_bridge_audit_2026-04-10.md:469:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:26 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:46 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:60 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:70 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:77 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:98 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:10 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:26 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:46 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:60 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:70 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:469:77 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+tool_bridge_audit_2026-04-10.md:474:81 error MD013/line-length Line length [Expected: 80; Actual: 90]
+
+tool_bridge_audit_2026-04-10.md:478:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
+
+tool_bridge_audit_2026-04-10.md:480:81 error MD013/line-length Line length [Expected: 80; Actual: 133]
+
+
+101 findings in prompts.md
+
+prompts.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 179]
+
+prompts.md:9 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 350]
+
+prompts.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+
+prompts.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
+
+prompts.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+prompts.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+prompts.md:32:81 error MD013/line-length Line length [Expected: 80; Actual: 176]
+
+prompts.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 106]
+
+prompts.md:39:81 error MD013/line-length Line length [Expected: 80; Actual: 158]
+
+prompts.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 131]
+
+prompts.md:62:81 error MD013/line-length Line length [Expected: 80; Actual: 133]
+
+prompts.md:65:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:72 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:73:81 error MD013/line-length Line length [Expected: 80; Actual: 366]
+
+prompts.md:77:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+prompts.md:80:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+prompts.md:82:81 error MD013/line-length Line length [Expected: 80; Actual: 88]
+
+prompts.md:83:81 error MD013/line-length Line length [Expected: 80; Actual: 166]
+
+prompts.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+prompts.md:104:81 error MD013/line-length Line length [Expected: 80; Actual: 217]
+
+prompts.md:105:81 error MD013/line-length Line length [Expected: 80; Actual: 127]
+
+prompts.md:112:81 error MD013/line-length Line length [Expected: 80; Actual: 110]
+
+prompts.md:139:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:146 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:147:81 error MD013/line-length Line length [Expected: 80; Actual: 356]
+
+prompts.md:154:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+prompts.md:159:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+prompts.md:168:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
+
+prompts.md:169:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
+
+prompts.md:174:81 error MD013/line-length Line length [Expected: 80; Actual: 109]
+
+prompts.md:177:81 error MD013/line-length Line length [Expected: 80; Actual: 161]
+
+prompts.md:186:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+prompts.md:203:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:210 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 373]
+
+prompts.md:215:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+
+prompts.md:224:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+prompts.md:225:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+prompts.md:235:81 error MD013/line-length Line length [Expected: 80; Actual: 162]
+
+prompts.md:242:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+
+prompts.md:245:81 error MD013/line-length Line length [Expected: 80; Actual: 171]
+
+prompts.md:246:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
+
+prompts.md:265:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+prompts.md:275:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:282 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:283:81 error MD013/line-length Line length [Expected: 80; Actual: 362]
+
+prompts.md:296:81 error MD013/line-length Line length [Expected: 80; Actual: 106]
+
+prompts.md:297:81 error MD013/line-length Line length [Expected: 80; Actual: 128]
+
+prompts.md:304:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+prompts.md:305:81 error MD013/line-length Line length [Expected: 80; Actual: 131]
+
+prompts.md:323:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+prompts.md:328:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+prompts.md:330:81 error MD013/line-length Line length [Expected: 80; Actual: 93]
+
+prompts.md:333:81 error MD013/line-length Line length [Expected: 80; Actual: 130]
+
+prompts.md:338:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+prompts.md:342:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+
+prompts.md:345:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+prompts.md:361:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:368 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:369:81 error MD013/line-length Line length [Expected: 80; Actual: 267]
+
+prompts.md:374:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+prompts.md:376:81 error MD013/line-length Line length [Expected: 80; Actual: 89]
+
+prompts.md:377:81 error MD013/line-length Line length [Expected: 80; Actual: 90]
+
+prompts.md:385:81 error MD013/line-length Line length [Expected: 80; Actual: 172]
+
+prompts.md:388:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+
+prompts.md:391:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
+
+prompts.md:399:81 error MD013/line-length Line length [Expected: 80; Actual: 87]
+
+prompts.md:417:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:424 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:425:81 error MD013/line-length Line length [Expected: 80; Actual: 315]
+
+prompts.md:434:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+
+prompts.md:436:81 error MD013/line-length Line length [Expected: 80; Actual: 87]
+
+prompts.md:438:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+prompts.md:449:81 error MD013/line-length Line length [Expected: 80; Actual: 111]
+
+prompts.md:456:81 error MD013/line-length Line length [Expected: 80; Actual: 122]
+
+prompts.md:458:81 error MD013/line-length Line length [Expected: 80; Actual: 88]
+
+prompts.md:461:81 error MD013/line-length Line length [Expected: 80; Actual: 111]
+
+prompts.md:462:81 error MD013/line-length Line length [Expected: 80; Actual: 120]
+
+prompts.md:490:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:497 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:498:81 error MD013/line-length Line length [Expected: 80; Actual: 332]
+
+prompts.md:505:81 error MD013/line-length Line length [Expected: 80; Actual: 87]
+
+prompts.md:509:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+prompts.md:520:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
+
+prompts.md:533:81 error MD013/line-length Line length [Expected: 80; Actual: 136]
+
+prompts.md:538:81 error MD013/line-length Line length [Expected: 80; Actual: 145]
+
+prompts.md:539:81 error MD013/line-length Line length [Expected: 80; Actual: 88]
+
+prompts.md:540:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+prompts.md:569:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:576 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+prompts.md:577:81 error MD013/line-length Line length [Expected: 80; Actual: 330]
+
+prompts.md:591:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+
+prompts.md:597:81 error MD013/line-length Line length [Expected: 80; Actual: 138]
+
+prompts.md:604:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
+
+prompts.md:608:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
+
+prompts.md:616:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:640:81 error MD013/line-length Line length [Expected: 80; Actual: 149]
+
+prompts.md:641:81 error MD013/line-length Line length [Expected: 80; Actual: 155]
+
+prompts.md:676:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+prompts.md:685:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
+
+
+91 findings in vendor/community-patterns/README.md
+
+vendor/community-patterns/README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 138]
+
+vendor/community-patterns/README.md:6:81 error MD013/line-length Line length [Expected: 80; Actual: 88]
+
+vendor/community-patterns/README.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 130]
+
+vendor/community-patterns/README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 109]
+
+vendor/community-patterns/README.md:25:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:25:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:25:22 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:25:36 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:25:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:25:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:25:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:25:22 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:45:81 error MD013/line-length Line length [Expected: 80; Actual: 178]
+
+vendor/community-patterns/README.md:50:10 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:52:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:53:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:54:10 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:75:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
+
+vendor/community-patterns/README.md:80:33 error MD060/table-column-style Table column style [Table pipe has extra space to the right for style "compact"]
+
+vendor/community-patterns/README.md:87:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:112:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:112:12 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:113:16 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:113:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:114:21 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:114:20 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:115:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:115:9 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:116:9 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:116:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:119:9 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:119:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:120:14 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:177:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:207:41 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:230:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:230:25 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:230:73 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:231:134 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]
+
+vendor/community-patterns/README.md:239:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:240:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:252:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:252:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:252:123 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:253:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:253:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:253:116 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:258:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:258:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:267:18 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:267:67 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:267:100 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:272:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:272:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:275:130 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]
+
+vendor/community-patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:280:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:280:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:289:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:289:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:317:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:318:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/community-patterns/README.md:330:17 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:330:66 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:330:115 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:331:14 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:331:57 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:331:97 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:336:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/community-patterns/README.md:336:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/community-patterns/README.md:350:63 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/community-patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+
+91 findings in vendor/ImHex-Patterns/README.md
+
+vendor/ImHex-Patterns/README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 138]
+
+vendor/ImHex-Patterns/README.md:6:81 error MD013/line-length Line length [Expected: 80; Actual: 88]
+
+vendor/ImHex-Patterns/README.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 130]
+
+vendor/ImHex-Patterns/README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 109]
+
+vendor/ImHex-Patterns/README.md:25:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:22 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:36 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:25:22 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:45:81 error MD013/line-length Line length [Expected: 80; Actual: 178]
+
+vendor/ImHex-Patterns/README.md:50:10 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:52:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:53:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:54:10 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:75:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
+
+vendor/ImHex-Patterns/README.md:80:33 error MD060/table-column-style Table column style [Table pipe has extra space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:87:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:112:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:112:12 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:113:16 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:113:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:114:21 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:114:20 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:115:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:115:9 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:116:9 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:116:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:119:9 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:119:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:120:14 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:177:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:207:41 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:230:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:230:25 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:230:73 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:231:134 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]
+
+vendor/ImHex-Patterns/README.md:239:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:240:8 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:252:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:252:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:252:123 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:253:11 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:253:56 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:253:116 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:258:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:258:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:258:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:258:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:267:18 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:267:67 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:267:100 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:272:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:272:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:272:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:272:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:275:130 error MD055/table-pipe-style Table pipe style [Expected: leading_and_trailing; Actual: leading_only; Missing trailing pipe]
+
+vendor/ImHex-Patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:280:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:280:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:280:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:280:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:289:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:289:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:289:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:289:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:317:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:318:163 error MD060/table-column-style Table column style [Table pipe has extra space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:330:17 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:330:66 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:330:115 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:331:14 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:331:57 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:331:97 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:336:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
+
+vendor/ImHex-Patterns/README.md:336:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:336:8 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:336:15 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
+
+vendor/ImHex-Patterns/README.md:350:63 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+vendor/ImHex-Patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
+
+
+30 findings in GEMINI.md
+
+GEMINI.md:1:81 error MD013/line-length Line length [Expected: 80; Actual: 158]
+
+GEMINI.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: "This document provides an over..."]
+
+GEMINI.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 296]
+
+GEMINI.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 109]
+
+GEMINI.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 111]
+
+GEMINI.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+GEMINI.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 93]
+
+GEMINI.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+GEMINI.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
+
+GEMINI.md:21:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+GEMINI.md:23:81 error MD013/line-length Line length [Expected: 80; Actual: 225]
+
+GEMINI.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 221]
+
+GEMINI.md:30:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+
+GEMINI.md:31:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
+
+GEMINI.md:32:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+GEMINI.md:34:81 error MD013/line-length Line length [Expected: 80; Actual: 347]
+
+GEMINI.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 220]
+
+GEMINI.md:40:1 error MD033/no-inline-html Inline HTML [Element: system-reminder]
+
+GEMINI.md:41:81 error MD013/line-length Line length [Expected: 80; Actual: 211]
+
+GEMINI.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 192]
+
+GEMINI.md:43:81 error MD013/line-length Line length [Expected: 80; Actual: 191]
+
+GEMINI.md:45:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
+
+GEMINI.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
+
+GEMINI.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+GEMINI.md:92:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+GEMINI.md:95:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+GEMINI.md:96:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+GEMINI.md:119:81 error MD013/line-length Line length [Expected: 80; Actual: 90]
+
+GEMINI.md:127:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+GEMINI.md:133:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+
+15 findings in README.md
+
+README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 179]
+
+README.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 267]
+
+README.md:15:81 error MD013/line-length Line length [Expected: 80; Actual: 161]
+
+README.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 128]
+
+README.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 123]
+
+README.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
+
+README.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+
+README.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 141]
+
+README.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 128]
+
+README.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+
+README.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+README.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+README.md:119 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+README.md:137:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
+
+README.md:150:81 error MD013/line-length Line length [Expected: 80; Actual: 349]
+
+
+11 findings in vendor/PatternLanguage/fuzz/README.md
+
+vendor/PatternLanguage/fuzz/README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: "## Pattern Language Fuzzing"]
+
+vendor/PatternLanguage/fuzz/README.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+vendor/PatternLanguage/fuzz/README.md:7:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
+
+vendor/PatternLanguage/fuzz/README.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 93]
+
+vendor/PatternLanguage/fuzz/README.md:9:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+vendor/PatternLanguage/fuzz/README.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
+
+vendor/PatternLanguage/fuzz/README.md:30:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+vendor/PatternLanguage/fuzz/README.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+
+vendor/PatternLanguage/fuzz/README.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+vendor/PatternLanguage/fuzz/README.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 87]
+
+vendor/PatternLanguage/fuzz/README.md:57:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+
+10 findings in QWEN.md
+
+QWEN.md:1:81 error MD013/line-length Line length [Expected: 80; Actual: 156]
+
+QWEN.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: "This document provides an over..."]
+
+QWEN.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 438]
+
+QWEN.md:9:1 error MD033/no-inline-html Inline HTML [Element: system-reminder]
+
+QWEN.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 223]
+
+QWEN.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 192]
+
+QWEN.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 191]
+
+QWEN.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
+
+QWEN.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 722]
+
+QWEN.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+
+5 findings in vendor/community-patterns/CONTRIBUTING.md
+
+vendor/community-patterns/CONTRIBUTING.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 154]
+
+vendor/community-patterns/CONTRIBUTING.md:4:81 error MD013/line-length Line length [Expected: 80; Actual: 174]
+
+vendor/community-patterns/CONTRIBUTING.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 313]
+
+vendor/community-patterns/CONTRIBUTING.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+vendor/community-patterns/CONTRIBUTING.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 184]
+
+
+5 findings in vendor/ImHex-Patterns/CONTRIBUTING.md
+
+vendor/ImHex-Patterns/CONTRIBUTING.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 154]
+
+vendor/ImHex-Patterns/CONTRIBUTING.md:4:81 error MD013/line-length Line length [Expected: 80; Actual: 174]
+
+vendor/ImHex-Patterns/CONTRIBUTING.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 313]
+
+vendor/ImHex-Patterns/CONTRIBUTING.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+vendor/ImHex-Patterns/CONTRIBUTING.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 184]
+
+
+4 findings in AGENTS.md
+
+AGENTS.md:43 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
+
+AGENTS.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+AGENTS.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+AGENTS.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+
+3 findings in CLAUDE.md
+
+CLAUDE.md:43 error MD036/no-emphasis-as-heading Emphasis used instead of a heading [Context: "TOOLS"]
+
+CLAUDE.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+CLAUDE.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+
+3 findings in vendor/PatternLanguage/README.md
+
+vendor/PatternLanguage/README.md:3:154 error MD033/no-inline-html Inline HTML [Element: br]
+
+vendor/PatternLanguage/README.md:8:81 error MD013/line-length Line length [Expected: 80; Actual: 131]
+
+vendor/PatternLanguage/README.md:39:81 error MD013/line-length Line length [Expected: 80; Actual: 175]
+
+
+2 findings in vendor/community-patterns/patterns/DFIR/DFIR_README.md
+
+vendor/community-patterns/patterns/DFIR/DFIR_README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: "ImHex Pattern Files - Digital ..."]
+
+vendor/community-patterns/patterns/DFIR/DFIR_README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+
+2 findings in vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md
+
+vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:1 error MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading [Context: "ImHex Pattern Files - Digital ..."]
+
+vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 97]

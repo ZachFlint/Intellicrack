@@ -1,3 +1,44 @@
+19 findings in src\intellicrack\bridges\hex_editor.py
+
+src\intellicrack\bridges\hex_editor.py:2114:4: method 'HexEditorBridge.copy_as' - complexity 31 (rank E)
+
+src\intellicrack\bridges\hex_editor.py:4393:4: method 'HexEditorBridge._extract_strings_fallback' - complexity 20 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5833:4: method 'HexEditorBridge._exec_bps_command' - complexity 19 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:3243:4: method 'HexEditorBridge.search_numeric' - complexity 18 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:4977:4: method 'HexEditorBridge.base_convert' - complexity 17 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5711:4: method 'HexEditorBridge._build_bps_patch' - complexity 16 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:3440:4: method 'HexEditorBridge._search_float_fallback' - complexity 14 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:3819:4: method 'HexEditorBridge.apply_arithmetic_to_selection' - complexity 14 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:3891:4: method 'HexEditorBridge._apply_arithmetic_fallback' - complexity 13 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:3023:4: method 'HexEditorBridge.calculate_hash_custom_crc' - complexity 12 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:3320:4: method 'HexEditorBridge.search_numeric_range' - complexity 12 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5049:4: method 'HexEditorBridge.run_python_script' - complexity 12 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5273:4: method 'HexEditorBridge._match_die_pattern' - complexity 12 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5402:4: method 'HexEditorBridge._scan_clamav_ndb' - complexity 12 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5939:4: method 'HexEditorBridge._apply_ups_patch' - complexity 12 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:2405:4: method 'HexEditorBridge.save_to_sandbox' - complexity 11 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:2776:4: method 'HexEditorBridge.yara_scan_files' - complexity 11 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:4324:4: method 'HexEditorBridge.get_strings' - complexity 11 (rank C)
+
+src\intellicrack\bridges\hex_editor.py:5466:4: method 'HexEditorBridge.scan_custom_signatures' - complexity 11 (rank C)
+
+
 12 findings in src\intellicrack\core\hexpat\evaluator.py
 
 src\intellicrack\core\hexpat\evaluator.py:1435:4: method 'HexPatEvaluator._apply_numeric_op' - complexity 22 (rank D)
@@ -25,62 +66,131 @@ src\intellicrack\core\hexpat\evaluator.py:986:4: method 'HexPatEvaluator._eval_a
 src\intellicrack\core\hexpat\evaluator.py:1744:4: method 'HexPatEvaluator._sizeof_type_node' - complexity 11 (rank C)
 
 
+9 findings in src\intellicrack\bridges\frida_bridge.py
+
+src\intellicrack\bridges\frida_bridge.py:1147:4: method 'FridaBridge.shutdown' - complexity 23 (rank D)
+
+src\intellicrack\bridges\frida_bridge.py:1982:4: method 'FridaBridge.call_function' - complexity 16 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:3766:4: method 'FridaBridge.call_system_function' - complexity 15 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:3595:4: method 'FridaBridge.get_backtrace' - complexity 13 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:4176:4: method 'FridaBridge.objc_hook_method' - complexity 12 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:1779:4: method 'FridaBridge.hook_function' - complexity 11 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:2460:4: method 'FridaBridge.find_functions_named' - complexity 11 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:2583:4: method 'FridaBridge.replace_function' - complexity 11 (rank C)
+
+src\intellicrack\bridges\frida_bridge.py:4393:4: method 'FridaBridge.java_hook_method' - complexity 11 (rank C)
+
+
+9 findings in src\intellicrack\bridges\process.py
+
+src\intellicrack\bridges\process.py:1392:4: method 'ProcessBridge.get_memory_map' - complexity 14 (rank C)
+
+src\intellicrack\bridges\process.py:1455:4: method 'ProcessBridge.search_pattern' - complexity 14 (rank C)
+
+src\intellicrack\bridges\process.py:1998:4: method 'ProcessBridge.get_handles' - complexity 14 (rank C)
+
+src\intellicrack\bridges\process.py:2239:4: method 'ProcessBridge.read_peb' - complexity 13 (rank C)
+
+src\intellicrack\bridges\process.py:2874:4: method 'ProcessBridge.get_mitigation_policies' - complexity 13 (rank C)
+
+src\intellicrack\bridges\process.py:1912:4: method 'ProcessBridge.adjust_token_privilege' - complexity 12 (rank C)
+
+src\intellicrack\bridges\process.py:2599:4: method 'ProcessBridge.set_thread_context' - complexity 12 (rank C)
+
+src\intellicrack\bridges\process.py:2946:4: method 'ProcessBridge.get_environment' - complexity 12 (rank C)
+
+src\intellicrack\bridges\process.py:2698:4: method 'ProcessBridge.stack_walk' - complexity 11 (rank C)
+
+
+8 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:3113:4: method 'X64DbgBridge.find_pattern' - complexity 18 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:2152:4: method 'X64DbgBridge.get_breakpoints' - complexity 15 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:2259:4: method 'X64DbgBridge.get_watchpoints' - complexity 14 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:2775:4: method 'X64DbgBridge.get_stack_trace' - complexity 13 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:4215:4: method 'X64DbgBridge.yara_scan' - complexity 13 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:2687:4: method 'X64DbgBridge.disassemble_at' - complexity 12 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:320:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)
+
+src\intellicrack\bridges\x64dbg.py:2597:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)
+
+
+7 findings in src\intellicrack\ui\panels\hex_editor_widget.py
+
+src\intellicrack\ui\panels\hex_editor_widget.py:741:4: method 'HexEditorWidget._format_group' - complexity 34 (rank E)
+
+src\intellicrack\ui\panels\hex_editor_widget.py:1193:4: method 'HexEditorWidget.keyPressEvent' - complexity 34 (rank E)
+
+src\intellicrack\ui\panels\hex_editor_widget.py:1759:4: method 'HexEditorWidget.copy_as_format' - complexity 27 (rank D)
+
+src\intellicrack\ui\panels\hex_editor_widget.py:1444:4: method 'HexEditorWidget._do_paste' - complexity 17 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_widget.py:1025:4: method 'HexEditorWidget._paint_ascii_byte' - complexity 15 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_widget.py:1841:4: method 'HexEditorWidget.contextMenuEvent' - complexity 12 (rank C)
+
+src\intellicrack\ui\panels\hex_editor_widget.py:477:4: method 'HexEditorWidget.set_color_mode' - complexity 11 (rank C)
+
+
 7 findings in src\intellicrack\ui\panels\hex_editor\_pattern_editor.py
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:172:4: method 'PatternEditorMixin._on_pattern_compile' - complexity 17 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:171:4: method 'PatternEditorMixin._on_pattern_compile' - complexity 17 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:222:4: method 'PatternEditorMixin._on_pattern_apply' - complexity 17 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:221:4: method 'PatternEditorMixin._on_pattern_apply' - complexity 17 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:274:4: method 'PatternEditorMixin._apply_via_interpreter' - complexity 14 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:273:4: method 'PatternEditorMixin._apply_via_interpreter' - complexity 14 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:318:4: method 'PatternEditorMixin._on_pattern_save' - complexity 14 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:317:4: method 'PatternEditorMixin._on_pattern_save' - complexity 14 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:462:4: method 'PatternEditorMixin._populate_pattern_library' - complexity 13 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:461:4: method 'PatternEditorMixin._populate_pattern_library' - complexity 13 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:354:4: method 'PatternEditorMixin._on_pattern_open' - complexity 12 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:353:4: method 'PatternEditorMixin._on_pattern_open' - complexity 12 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:513:4: method 'PatternEditorMixin._populate_hexpat_library_entries' - complexity 12 (rank C)
-
-
-6 findings in src\intellicrack\ui\panels\hex_editor_widget.py
-
-src\intellicrack\ui\panels\hex_editor_widget.py:697:4: method 'HexEditorWidget._format_group' - complexity 34 (rank E)
-
-src\intellicrack\ui\panels\hex_editor_widget.py:1149:4: method 'HexEditorWidget.keyPressEvent' - complexity 34 (rank E)
-
-src\intellicrack\ui\panels\hex_editor_widget.py:1715:4: method 'HexEditorWidget.copy_as_format' - complexity 27 (rank D)
-
-src\intellicrack\ui\panels\hex_editor_widget.py:1400:4: method 'HexEditorWidget._do_paste' - complexity 17 (rank C)
-
-src\intellicrack\ui\panels\hex_editor_widget.py:981:4: method 'HexEditorWidget._paint_ascii_byte' - complexity 15 (rank C)
-
-src\intellicrack\ui\panels\hex_editor_widget.py:1797:4: method 'HexEditorWidget.contextMenuEvent' - complexity 12 (rank C)
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:512:4: method 'PatternEditorMixin._populate_hexpat_library_entries' - complexity 12 (rank C)
 
 
-5 findings in src\intellicrack\bridges\hex_editor.py
+7 findings in src\intellicrack\ui\panels\hex_editor\_transforms.py
 
-src\intellicrack\bridges\hex_editor.py:1698:4: method 'HexEditorBridge.copy_as' - complexity 31 (rank E)
+src\intellicrack\ui\panels\hex_editor\_transforms.py:536:4: method 'TransformsMixin._on_pipeline_execute' - complexity 23 (rank D)
 
-src\intellicrack\bridges\hex_editor.py:2794:4: method 'HexEditorBridge.search_numeric' - complexity 16 (rank C)
+src\intellicrack\ui\panels\hex_editor\_transforms.py:401:4: method 'TransformsMixin._on_transform_apply' - complexity 18 (rank C)
 
-src\intellicrack\bridges\hex_editor.py:2574:4: method 'HexEditorBridge.calculate_hash_custom_crc' - complexity 12 (rank C)
+src\intellicrack\ui\panels\hex_editor\_transforms.py:715:4: method 'TransformsMixin._on_apply_arithmetic' - complexity 18 (rank C)
 
-src\intellicrack\bridges\hex_editor.py:2859:4: method 'HexEditorBridge.search_numeric_range' - complexity 12 (rank C)
+src\intellicrack\ui\panels\hex_editor\_transforms.py:767:4: method 'TransformsMixin._apply_arithmetic_op' - complexity 17 (rank C)
 
-src\intellicrack\bridges\hex_editor.py:2327:4: method 'HexEditorBridge.yara_scan_files' - complexity 11 (rank C)
+src\intellicrack\ui\panels\hex_editor\_transforms.py:362:4: method 'TransformsMixin._on_transform_preview' - complexity 14 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_transforms.py:266:4: method 'TransformsMixin._on_transform_node_changed' - complexity 11 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_transforms.py:680:4: method 'TransformsMixin._on_block_swap' - complexity 11 (rank C)
 
 
-5 findings in src\intellicrack\bridges\x64dbg.py
+6 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\bridges\x64dbg.py:1632:4: method 'X64DbgBridge.get_breakpoints' - complexity 15 (rank C)
+src\intellicrack\sandbox\qemu.py:873:4: method 'QEMUSandbox._build_qemu_command' - complexity 16 (rank C)
 
-src\intellicrack\bridges\x64dbg.py:2577:4: method 'X64DbgBridge.find_pattern' - complexity 15 (rank C)
+src\intellicrack\sandbox\qemu.py:2463:4: method 'QEMUSandbox.apply_anti_evasion' - complexity 16 (rank C)
 
-src\intellicrack\bridges\x64dbg.py:1739:4: method 'X64DbgBridge.get_watchpoints' - complexity 14 (rank C)
+src\intellicrack\sandbox\qemu.py:1707:4: method 'QEMUSandbox.run_binary' - complexity 14 (rank C)
 
-src\intellicrack\bridges\x64dbg.py:302:0: function '_read_unicode_string_from_params' - complexity 11 (rank C)
+src\intellicrack\sandbox\qemu.py:2660:4: method 'QEMUSandbox.yara_scan' - complexity 13 (rank C)
 
-src\intellicrack\bridges\x64dbg.py:2077:4: method 'X64DbgBridge.get_memory_regions' - complexity 11 (rank C)
+src\intellicrack\sandbox\qemu.py:1872:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)
+
+src\intellicrack\sandbox\qemu.py:2085:4: method 'QEMUSandbox._parse_resource_log' - complexity 12 (rank C)
 
 
 5 findings in src\intellicrack\core\hexpat_compiler.py
@@ -96,17 +206,30 @@ src\intellicrack\core\hexpat_compiler.py:587:4: method 'HexPatLexer._skip_whites
 src\intellicrack\core\hexpat_compiler.py:1458:4: method 'HexPatCodegen._eval_const_expr' - complexity 12 (rank C)
 
 
+5 findings in src\intellicrack\sandbox\analysis.py
+
+src\intellicrack\sandbox\analysis.py:1184:0: function '_match_custom_rules' - complexity 14 (rank C)
+
+src\intellicrack\sandbox\analysis.py:521:0: function 'generate_timeline' - complexity 12 (rank C)
+
+src\intellicrack\sandbox\analysis.py:251:0: function '_detect_beaconing' - complexity 11 (rank C)
+
+src\intellicrack\sandbox\analysis.py:932:0: function '_match_persistence' - complexity 11 (rank C)
+
+src\intellicrack\sandbox\analysis.py:998:0: function '_match_defense_evasion' - complexity 11 (rank C)
+
+
 5 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:285:4: method 'MainWindow._restore_window_state' - complexity 14 (rank C)
+src\intellicrack\ui\app.py:286:4: method 'MainWindow._restore_window_state' - complexity 14 (rank C)
 
-src\intellicrack\ui\app.py:1493:4: method 'MainWindow._on_refresh_models' - complexity 12 (rank C)
+src\intellicrack\ui\app.py:1482:4: method 'MainWindow._on_refresh_models' - complexity 12 (rank C)
 
-src\intellicrack\ui\app.py:1885:4: method 'MainWindow._on_process_attached' - complexity 12 (rank C)
+src\intellicrack\ui\app.py:1884:4: method 'MainWindow._on_process_attached' - complexity 12 (rank C)
 
-src\intellicrack\ui\app.py:990:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)
+src\intellicrack\ui\app.py:992:4: method 'MainWindow._on_tool_result' - complexity 11 (rank C)
 
-src\intellicrack\ui\app.py:2108:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)
+src\intellicrack\ui\app.py:2103:4: method 'MainWindow.closeEvent' - complexity 11 (rank C)
 
 
 5 findings in src\intellicrack\ui\session_manager.py
@@ -190,24 +313,13 @@ src\intellicrack\ui\panels\hex_editor\_patches.py:95:4: method 'PatchesMixin._on
 src\intellicrack\ui\panels\hex_editor\_patches.py:24:0: class 'PatchesMixin' - complexity 13 (rank C)
 
 
-4 findings in src\intellicrack\ui\panels\hex_editor\_transforms.py
+3 findings in src\intellicrack\core\orchestrator.py
 
-src\intellicrack\ui\panels\hex_editor\_transforms.py:423:4: method 'TransformsMixin._on_pipeline_execute' - complexity 23 (rank D)
+src\intellicrack\core\orchestrator.py:427:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_transforms.py:288:4: method 'TransformsMixin._on_transform_apply' - complexity 18 (rank C)
+src\intellicrack\core\orchestrator.py:1700:4: method 'Orchestrator.shutdown' - complexity 12 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\_transforms.py:249:4: method 'TransformsMixin._on_transform_preview' - complexity 14 (rank C)
-
-src\intellicrack\ui\panels\hex_editor\_transforms.py:153:4: method 'TransformsMixin._on_transform_node_changed' - complexity 11 (rank C)
-
-
-3 findings in src\intellicrack\bridges\frida_bridge.py
-
-src\intellicrack\bridges\frida_bridge.py:541:4: method 'FridaBridge.shutdown' - complexity 16 (rank C)
-
-src\intellicrack\bridges\frida_bridge.py:1131:4: method 'FridaBridge.hook_function' - complexity 11 (rank C)
-
-src\intellicrack\bridges\frida_bridge.py:1770:4: method 'FridaBridge.find_functions_named' - complexity 11 (rank C)
+src\intellicrack\core\orchestrator.py:1822:0: function '_extract_imports' - complexity 11 (rank C)
 
 
 3 findings in src\intellicrack\core\hexpat\lexer.py
@@ -246,13 +358,13 @@ src\intellicrack\providers\openrouter.py:218:4: method 'OpenRouterProvider.chat'
 src\intellicrack\providers\openrouter.py:141:4: method 'OpenRouterProvider.list_models' - complexity 15 (rank C)
 
 
-3 findings in src\intellicrack\sandbox\qemu.py
+3 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\qemu.py:827:4: method 'QEMUSandbox._build_qemu_command' - complexity 16 (rank C)
+src\intellicrack\sandbox\windows.py:1222:4: method 'WindowsSandbox.yara_scan' - complexity 13 (rank C)
 
-src\intellicrack\sandbox\qemu.py:1661:4: method 'QEMUSandbox.run_binary' - complexity 14 (rank C)
+src\intellicrack\sandbox\windows.py:327:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)
 
-src\intellicrack\sandbox\qemu.py:1826:4: method 'QEMUSandbox._parse_network_log' - complexity 12 (rank C)
+src\intellicrack\sandbox\windows.py:581:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)
 
 
 3 findings in src\intellicrack\ui\provider_config.py
@@ -264,27 +376,38 @@ src\intellicrack\ui\provider_config.py:551:4: method 'ModelRefreshWorker._fetch_
 src\intellicrack\ui\provider_config.py:1871:4: method 'ProviderSettingsWidget._load_settings' - complexity 11 (rank C)
 
 
-3 findings in src\intellicrack\ui\panels\binary_panel.py
+3 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
-src\intellicrack\ui\panels\binary_panel.py:812:4: method 'BinaryPanel._parse_elf_sections' - complexity 13 (rank C)
+src\intellicrack\ui\panels\ghidra_panel.py:1867:4: method 'GhidraPanel._dispatch_func_menu_action' - complexity 24 (rank D)
 
-src\intellicrack\ui\panels\binary_panel.py:576:4: method 'BinaryPanel._parse_pe_sections' - complexity 11 (rank C)
+src\intellicrack\ui\panels\ghidra_panel.py:1720:4: method 'GhidraPanel._apply_cfg' - complexity 14 (rank C)
 
-src\intellicrack\ui\panels\binary_panel.py:769:4: method 'BinaryPanel._parse_pe_ilt_entries' - complexity 11 (rank C)
+src\intellicrack\ui\panels\ghidra_panel.py:2420:4: method 'GhidraPanel._apply_read_bytes' - complexity 11 (rank C)
 
 
-2 findings in src\intellicrack\bridges\binary.py
+3 findings in src\intellicrack\ui\panels\hex_editor\_search.py
 
-src\intellicrack\bridges\binary.py:550:4: method 'BinaryBridge._detect_architecture' - complexity 11 (rank C)
+src\intellicrack\ui\panels\hex_editor\_search.py:491:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)
 
-src\intellicrack\bridges\binary.py:661:4: method 'BinaryBridge._get_imports_internal' - complexity 11 (rank C)
+src\intellicrack\ui\panels\hex_editor\_search.py:321:4: method 'SearchMixin._on_search_finished' - complexity 11 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_search.py:570:4: method 'SearchMixin._on_numeric_search_finished' - complexity 11 (rank C)
+
+
+3 findings in src\intellicrack\ui\panels\hex_editor\_signatures.py
+
+src\intellicrack\ui\panels\hex_editor\_signatures.py:81:4: method 'SignatureScanWorker._scan_die' - complexity 13 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_signatures.py:199:4: method 'SignatureScanWorker._scan_clamav_ndb' - complexity 12 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_signatures.py:395:4: method 'SignaturesMixin._on_scan_signatures' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\bridges\installer.py
 
-src\intellicrack\bridges\installer.py:231:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)
+src\intellicrack\bridges\installer.py:222:4: method 'ToolInstaller.find_tool' - complexity 16 (rank C)
 
-src\intellicrack\bridges\installer.py:571:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)
+src\intellicrack\bridges\installer.py:562:4: method 'ToolInstaller._get_latest_release_url' - complexity 16 (rank C)
 
 
 2 findings in src\intellicrack\bridges\schemas.py
@@ -299,13 +422,6 @@ src\intellicrack\bridges\schemas.py:303:0: function 'validate_tool_parameter' - 
 src\intellicrack\core\disassembler.py:279:4: method 'HexDisassembler.auto_detect_arch' - complexity 29 (rank D)
 
 src\intellicrack\core\disassembler.py:133:4: method 'HexDisassembler._resolve_arch_mode' - complexity 19 (rank C)
-
-
-2 findings in src\intellicrack\core\orchestrator.py
-
-src\intellicrack\core\orchestrator.py:415:4: method 'Orchestrator._run_agent_loop' - complexity 13 (rank C)
-
-src\intellicrack\core\orchestrator.py:1654:4: method 'Orchestrator.shutdown' - complexity 12 (rank C)
 
 
 2 findings in src\intellicrack\core\transform_pipeline.py
@@ -357,37 +473,51 @@ src\intellicrack\providers\xpu_utils.py:212:0: function 'get_xpu_device_info' - 
 src\intellicrack\providers\xpu_utils.py:417:0: function 'get_xpu_memory_info' - complexity 11 (rank C)
 
 
-2 findings in src\intellicrack\sandbox\windows.py
-
-src\intellicrack\sandbox\windows.py:313:4: method 'WindowsSandbox._generate_wsb_config' - complexity 12 (rank C)
-
-src\intellicrack\sandbox\windows.py:567:4: method 'WindowsSandbox.run_binary' - complexity 12 (rank C)
-
-
 2 findings in src\intellicrack\ui\tools.py
 
 src\intellicrack\ui\tools.py:1584:4: method 'ToolOutputPanel._on_tab_close_requested' - complexity 18 (rank C)
 
-src\intellicrack\ui\tools.py:1647:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 14 (rank C)
+src\intellicrack\ui\tools.py:1646:4: method 'ToolOutputPanel.close_embedded_tools' - complexity 13 (rank C)
 
 
 2 findings in src\intellicrack\ui\tool_config.py
 
-src\intellicrack\ui\tool_config.py:432:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)
+src\intellicrack\ui\tool_config.py:444:4: method 'ToolStatusCheckWorker._check_ghidra' - complexity 11 (rank C)
 
-src\intellicrack\ui\tool_config.py:499:4: method 'ToolStatusCheckWorker._check_cutter' - complexity 11 (rank C)
+src\intellicrack\ui\tool_config.py:511:4: method 'ToolStatusCheckWorker._check_cutter' - complexity 11 (rank C)
 
 
 2 findings in src\intellicrack\ui\panels\hex_editor\panel.py
 
-src\intellicrack\ui\panels\hex_editor\panel.py:646:4: method 'HexEditorPanel._on_send_to_ai' - complexity 13 (rank C)
+src\intellicrack\ui\panels\hex_editor\panel.py:750:4: method 'HexEditorPanel._on_send_to_ai' - complexity 13 (rank C)
 
-src\intellicrack\ui\panels\hex_editor\panel.py:489:4: method 'HexEditorPanel.load_file' - complexity 11 (rank C)
+src\intellicrack\ui\panels\hex_editor\panel.py:587:4: method 'HexEditorPanel.load_file' - complexity 12 (rank C)
 
 
-1 findings in src\intellicrack\bridges\process.py
+2 findings in src\intellicrack\ui\panels\hex_editor\_data_inspector.py
 
-src\intellicrack\bridges\process.py:1136:4: method 'ProcessBridge.search_pattern' - complexity 14 (rank C)
+src\intellicrack\ui\panels\hex_editor\_data_inspector.py:174:4: method 'DataInspectorMixin._on_bit_toggled' - complexity 16 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_data_inspector.py:142:4: method 'DataInspectorMixin._update_bit_buttons' - complexity 12 (rank C)
+
+
+2 findings in src\intellicrack\ui\panels\hex_editor\_hashing.py
+
+src\intellicrack\ui\panels\hex_editor\_hashing.py:161:4: method 'HashingMixin._on_repair_pe_checksum' - complexity 13 (rank C)
+
+src\intellicrack\ui\panels\hex_editor\_hashing.py:122:4: method 'HashingMixin._on_verify_pe_checksum' - complexity 12 (rank C)
+
+
+2 findings in src\intellicrack\ui\panels\hex_editor\_templates.py
+
+src\intellicrack\ui\panels\hex_editor\_templates.py:403:4: method 'TemplatesMixin._bookmark_elf_structure' - complexity 21 (rank D)
+
+src\intellicrack\ui\panels\hex_editor\_templates.py:307:4: method 'TemplatesMixin._bookmark_pe_structure' - complexity 17 (rank C)
+
+
+1 findings in src\intellicrack\bridges\ghidra.py
+
+src\intellicrack\bridges\ghidra.py:1961:4: method 'GhidraBridge.search_bytes' - complexity 21 (rank D)
 
 
 1 findings in src\intellicrack\core\logging.py
@@ -407,7 +537,7 @@ src\intellicrack\core\script_gen.py:185:4: method 'ScriptContext.to_prompt_conte
 
 1 findings in src\intellicrack\core\tools.py
 
-src\intellicrack\core\tools.py:452:4: method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)
+src\intellicrack\core\tools.py:440:4: method 'ToolRegistry.execute_tool_call' - complexity 13 (rank C)
 
 
 1 findings in src\intellicrack\core\hexpat\pattern_registry.py
@@ -432,7 +562,7 @@ src\intellicrack\providers\base.py:510:4: method 'LLMProviderBase._convert_messa
 
 1 findings in src\intellicrack\sandbox\manager.py
 
-src\intellicrack\sandbox\manager.py:136:4: method 'SandboxManager.create' - complexity 11 (rank C)
+src\intellicrack\sandbox\manager.py:137:4: method 'SandboxManager.create' - complexity 11 (rank C)
 
 
 1 findings in src\intellicrack\ui\highlighter.py
@@ -450,14 +580,19 @@ src\intellicrack\ui\sandbox_config.py:98:4: method 'SandboxTestWorker.run' - com
 src\intellicrack\ui\panels\graph_view.py:429:4: method 'CFGGraphScene._compute_layers' - complexity 16 (rank C)
 
 
-1 findings in src\intellicrack\ui\panels\hex_tools_panel.py
-
-src\intellicrack\ui\panels\hex_tools_panel.py:181:0: function '_ast_eval_node' - complexity 14 (rank C)
-
-
 1 findings in src\intellicrack\ui\panels\hxd_panel.py
 
 src\intellicrack\ui\panels\hxd_panel.py:53:0: function '_find_hxd_executable' - complexity 12 (rank C)
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_calculator.py
+
+src\intellicrack\ui\panels\hex_editor\_calculator.py:95:4: method 'CalculatorMixin._on_convert' - complexity 15 (rank C)
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_comparison.py
+
+src\intellicrack\ui\panels\hex_editor\_comparison.py:188:4: method 'ComparisonMixin._on_compare' - complexity 14 (rank C)
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_disassembly.py
@@ -465,9 +600,14 @@ src\intellicrack\ui\panels\hxd_panel.py:53:0: function '_find_hxd_executable' - 
 src\intellicrack\ui\panels\hex_editor\_disassembly.py:118:4: method 'DisassemblyMixin._on_disassemble' - complexity 21 (rank D)
 
 
-1 findings in src\intellicrack\ui\panels\hex_editor\_search.py
+1 findings in src\intellicrack\ui\panels\hex_editor\_highlighting.py
 
-src\intellicrack\ui\panels\hex_editor\_search.py:488:4: method 'SearchMixin._on_numeric_search' - complexity 20 (rank C)
+src\intellicrack\ui\panels\hex_editor\_highlighting.py:157:4: method 'HighlightingMixin._on_add_highlight_rule' - complexity 16 (rank C)
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_process_memory.py
+
+src\intellicrack\ui\panels\hex_editor\_process_memory.py:271:0: class 'ProcessMemoryMixin' - complexity 11 (rank C)
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_yara.py

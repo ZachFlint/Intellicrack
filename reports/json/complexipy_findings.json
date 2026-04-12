@@ -1,9 +1,143 @@
 {
   "tool": "complexipy",
-  "generated": "2026-04-10T20:00:17.232486+00:00",
-  "total_findings": 131,
-  "total_files": 52,
+  "generated": "2026-04-11T07:07:43.663743+00:00",
+  "total_findings": 178,
+  "total_files": 62,
   "files": [
+    {
+      "path": "src\\intellicrack\\bridges\\hex_editor.py",
+      "count": 16,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_apply_ups_patch",
+          "complexity": 16,
+          "message": "HexEditorBridge::_apply_ups_patch - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_apply_ups_patch - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_apply_ips_patches",
+          "complexity": 18,
+          "message": "HexEditorBridge::_apply_ips_patches - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_apply_ips_patches - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_match_die_pattern",
+          "complexity": 18,
+          "message": "HexEditorBridge::_match_die_pattern - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_match_die_pattern - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::apply_arithmetic_to_selection",
+          "complexity": 18,
+          "message": "HexEditorBridge::apply_arithmetic_to_selection - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::apply_arithmetic_to_selection - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::calculate_hash_custom_crc",
+          "complexity": 18,
+          "message": "HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::save_to_sandbox",
+          "complexity": 18,
+          "message": "HexEditorBridge::save_to_sandbox - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::save_to_sandbox - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::scan_custom_signatures",
+          "complexity": 18,
+          "message": "HexEditorBridge::scan_custom_signatures - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::scan_custom_signatures - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_scan_clamav_ndb",
+          "complexity": 20,
+          "message": "HexEditorBridge::_scan_clamav_ndb - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_scan_clamav_ndb - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_search_float_fallback",
+          "complexity": 20,
+          "message": "HexEditorBridge::_search_float_fallback - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_search_float_fallback - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_build_ups_patch",
+          "complexity": 23,
+          "message": "HexEditorBridge::_build_ups_patch - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_build_ups_patch - cognitive complexity 23 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::search_numeric",
+          "complexity": 24,
+          "message": "HexEditorBridge::search_numeric - cognitive complexity 24 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::search_numeric - cognitive complexity 24 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::base_convert",
+          "complexity": 25,
+          "message": "HexEditorBridge::base_convert - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::base_convert - cognitive complexity 25 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_build_bps_patch",
+          "complexity": 26,
+          "message": "HexEditorBridge::_build_bps_patch - cognitive complexity 26 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_build_bps_patch - cognitive complexity 26 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::copy_as",
+          "complexity": 30,
+          "message": "HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_exec_bps_command",
+          "complexity": 32,
+          "message": "HexEditorBridge::_exec_bps_command - cognitive complexity 32 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_exec_bps_command - cognitive complexity 32 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorBridge::_extract_strings_fallback",
+          "complexity": 48,
+          "message": "HexEditorBridge::_extract_strings_fallback - cognitive complexity 48 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_extract_strings_fallback - cognitive complexity 48 (exceeds threshold)"
+        }
+      ]
+    },
     {
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py",
       "count": 13,
@@ -115,8 +249,188 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\process.py",
+      "count": 11,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::_query_thread_state",
+          "complexity": 16,
+          "message": "ProcessBridge::_query_thread_state - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::_query_thread_state - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::list_processes",
+          "complexity": 16,
+          "message": "ProcessBridge::list_processes - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::list_processes - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::list_processes_detailed",
+          "complexity": 16,
+          "message": "ProcessBridge::list_processes_detailed - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::list_processes_detailed - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::read_peb",
+          "complexity": 16,
+          "message": "ProcessBridge::read_peb - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::read_peb - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::get_threads",
+          "complexity": 17,
+          "message": "ProcessBridge::get_threads - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::get_threads - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::get_memory_map",
+          "complexity": 18,
+          "message": "ProcessBridge::get_memory_map - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::get_memory_map - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::adjust_token_privilege",
+          "complexity": 20,
+          "message": "ProcessBridge::adjust_token_privilege - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::adjust_token_privilege - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::get_mitigation_policies",
+          "complexity": 20,
+          "message": "ProcessBridge::get_mitigation_policies - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::get_mitigation_policies - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::search_pattern",
+          "complexity": 21,
+          "message": "ProcessBridge::search_pattern - cognitive complexity 21 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::search_pattern - cognitive complexity 21 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::stack_walk",
+          "complexity": 26,
+          "message": "ProcessBridge::stack_walk - cognitive complexity 26 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::stack_walk - cognitive complexity 26 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessBridge::set_thread_context",
+          "complexity": 40,
+          "message": "ProcessBridge::set_thread_context - cognitive complexity 40 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::set_thread_context - cognitive complexity 40 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py",
+      "count": 10,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::call_system_function",
+          "complexity": 16,
+          "message": "FridaBridge::call_system_function - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::call_system_function - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::java_hook_method",
+          "complexity": 16,
+          "message": "FridaBridge::java_hook_method - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::java_hook_method - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::allocate_memory",
+          "complexity": 18,
+          "message": "FridaBridge::allocate_memory - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::allocate_memory - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::call_function",
+          "complexity": 18,
+          "message": "FridaBridge::call_function - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::call_function - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::allocate_string",
+          "complexity": 19,
+          "message": "FridaBridge::allocate_string - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::allocate_string - cognitive complexity 19 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::stalker_follow",
+          "complexity": 19,
+          "message": "FridaBridge::stalker_follow - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::stalker_follow - cognitive complexity 19 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::hook_function",
+          "complexity": 25,
+          "message": "FridaBridge::hook_function - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::hook_function - cognitive complexity 25 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::replace_function",
+          "complexity": 25,
+          "message": "FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::shutdown",
+          "complexity": 25,
+          "message": "FridaBridge::shutdown - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::shutdown - cognitive complexity 25 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "FridaBridge::objc_hook_method",
+          "complexity": 29,
+          "message": "FridaBridge::objc_hook_method - cognitive complexity 29 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::objc_hook_method - cognitive complexity 29 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 6,
+      "count": 9,
       "findings": [
         {
           "line": null,
@@ -129,26 +443,50 @@
         {
           "line": null,
           "column": null,
-          "name": "X64DbgBridge::find_pattern",
-          "complexity": 16,
-          "message": "X64DbgBridge::find_pattern - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::find_pattern - cognitive complexity 16 (exceeds threshold)"
+          "name": "X64DbgBridge::_get_threads",
+          "complexity": 17,
+          "message": "X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "X64DbgBridge::yara_scan",
+          "complexity": 18,
+          "message": "X64DbgBridge::yara_scan - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::yara_scan - cognitive complexity 18 (exceeds threshold)"
         },
         {
           "line": null,
           "column": null,
           "name": "X64DbgBridge::get_stack_trace",
-          "complexity": 16,
-          "message": "X64DbgBridge::get_stack_trace - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::get_stack_trace - cognitive complexity 16 (exceeds threshold)"
+          "complexity": 19,
+          "message": "X64DbgBridge::get_stack_trace - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::get_stack_trace - cognitive complexity 19 (exceeds threshold)"
         },
         {
           "line": null,
           "column": null,
-          "name": "X64DbgBridge::_get_threads",
-          "complexity": 17,
-          "message": "X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)"
+          "name": "X64DbgBridge::get_comments",
+          "complexity": 20,
+          "message": "X64DbgBridge::get_comments - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::get_comments - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "X64DbgBridge::get_labels",
+          "complexity": 20,
+          "message": "X64DbgBridge::get_labels - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::get_labels - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "X64DbgBridge::find_pattern",
+          "complexity": 21,
+          "message": "X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)"
         },
         {
           "line": null,
@@ -165,6 +503,60 @@
           "complexity": 43,
           "message": "X64DbgBridge::get_breakpoints - cognitive complexity 43 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::get_breakpoints - cognitive complexity 43 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "QEMUSandbox::_detect_accelerator",
+          "complexity": 16,
+          "message": "QEMUSandbox::_detect_accelerator - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::_detect_accelerator - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "QEMUSandbox::_build_qemu_command",
+          "complexity": 17,
+          "message": "QEMUSandbox::_build_qemu_command - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::_build_qemu_command - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "QEMUSandbox::apply_anti_evasion",
+          "complexity": 18,
+          "message": "QEMUSandbox::apply_anti_evasion - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::apply_anti_evasion - cognitive complexity 18 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "GuestAgentClient::send_command",
+          "complexity": 20,
+          "message": "GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "QEMUSandbox::yara_scan",
+          "complexity": 22,
+          "message": "QEMUSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "QEMUSandbox::extract_dropped_files",
+          "complexity": 26,
+          "message": "QEMUSandbox::extract_dropped_files - cognitive complexity 26 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::extract_dropped_files - cognitive complexity 26 (exceeds threshold)"
         }
       ]
     },
@@ -219,52 +611,6 @@
           "complexity": 48,
           "message": "HexEditorWidget::_format_group - cognitive complexity 48 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: HexEditorWidget::_format_group - cognitive complexity 48 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py",
-      "count": 5,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "FridaBridge::shutdown",
-          "complexity": 16,
-          "message": "FridaBridge::shutdown - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::shutdown - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "FridaBridge::allocate_memory",
-          "complexity": 20,
-          "message": "FridaBridge::allocate_memory - cognitive complexity 20 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::allocate_memory - cognitive complexity 20 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "FridaBridge::stalker_follow",
-          "complexity": 21,
-          "message": "FridaBridge::stalker_follow - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::stalker_follow - cognitive complexity 21 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "FridaBridge::replace_function",
-          "complexity": 25,
-          "message": "FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "FridaBridge::hook_function",
-          "complexity": 27,
-          "message": "FridaBridge::hook_function - cognitive complexity 27 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\frida_bridge.py: FridaBridge::hook_function - cognitive complexity 27 (exceeds threshold)"
         }
       ]
     },
@@ -361,44 +707,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\hex_editor.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "HexEditorBridge::_apply_ips_patches",
-          "complexity": 18,
-          "message": "HexEditorBridge::_apply_ips_patches - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::_apply_ips_patches - cognitive complexity 18 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "HexEditorBridge::calculate_hash_custom_crc",
-          "complexity": 18,
-          "message": "HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "HexEditorBridge::search_numeric",
-          "complexity": 22,
-          "message": "HexEditorBridge::search_numeric - cognitive complexity 22 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::search_numeric - cognitive complexity 22 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "HexEditorBridge::copy_as",
-          "complexity": 30,
-          "message": "HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py: HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py",
       "count": 4,
       "findings": [
@@ -437,44 +745,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_extract_strings",
-          "complexity": 16,
-          "message": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_pe_ilt_entries",
-          "complexity": 17,
-          "message": "BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_ilt_entries - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_elf_sections",
-          "complexity": 23,
-          "message": "BinaryPanel::_parse_elf_sections - cognitive complexity 23 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_elf_sections - cognitive complexity 23 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryPanel::_parse_pe_sections",
-          "complexity": 23,
-          "message": "BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: BinaryPanel::_parse_pe_sections - cognitive complexity 23 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py",
       "count": 4,
       "findings": [
@@ -509,6 +779,44 @@
           "complexity": 30,
           "message": "SectionsMixin::_populate_exports - cognitive complexity 30 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py: SectionsMixin::_populate_exports - cognitive complexity 30 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "TransformsMixin::_on_apply_arithmetic",
+          "complexity": 21,
+          "message": "TransformsMixin::_on_apply_arithmetic - cognitive complexity 21 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py: TransformsMixin::_on_apply_arithmetic - cognitive complexity 21 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "TransformsMixin::_apply_arithmetic_op",
+          "complexity": 25,
+          "message": "TransformsMixin::_apply_arithmetic_op - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py: TransformsMixin::_apply_arithmetic_op - cognitive complexity 25 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "TransformsMixin::_on_transform_apply",
+          "complexity": 25,
+          "message": "TransformsMixin::_on_transform_apply - cognitive complexity 25 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py: TransformsMixin::_on_transform_apply - cognitive complexity 25 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "TransformsMixin::_on_pipeline_execute",
+          "complexity": 32,
+          "message": "TransformsMixin::_on_pipeline_execute - cognitive complexity 32 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py: TransformsMixin::_on_pipeline_execute - cognitive complexity 32 (exceeds threshold)"
         }
       ]
     },
@@ -577,36 +885,6 @@
           "complexity": 34,
           "message": "ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\installer.py: ToolInstaller::find_tool - cognitive complexity 34 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\process.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "ProcessBridge::list_processes",
-          "complexity": 16,
-          "message": "ProcessBridge::list_processes - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::list_processes - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "ProcessBridge::get_threads",
-          "complexity": 17,
-          "message": "ProcessBridge::get_threads - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::get_threads - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "ProcessBridge::search_pattern",
-          "complexity": 21,
-          "message": "ProcessBridge::search_pattern - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\process.py: ProcessBridge::search_pattern - cognitive complexity 21 (exceeds threshold)"
         }
       ]
     },
@@ -731,36 +1009,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\sandbox\\qemu.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "QEMUSandbox::_detect_accelerator",
-          "complexity": 16,
-          "message": "QEMUSandbox::_detect_accelerator - cognitive complexity 16 (exceeds threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::_detect_accelerator - cognitive complexity 16 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "QEMUSandbox::_build_qemu_command",
-          "complexity": 17,
-          "message": "QEMUSandbox::_build_qemu_command - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py: QEMUSandbox::_build_qemu_command - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "GuestAgentClient::send_command",
-          "complexity": 20,
-          "message": "GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py: GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_patches.py",
       "count": 3,
       "findings": [
@@ -791,6 +1039,36 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "SignatureScanWorker::_scan_custom",
+          "complexity": 17,
+          "message": "SignatureScanWorker::_scan_custom - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py: SignatureScanWorker::_scan_custom - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "SignatureScanWorker::_scan_clamav_ndb",
+          "complexity": 20,
+          "message": "SignatureScanWorker::_scan_clamav_ndb - cognitive complexity 20 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py: SignatureScanWorker::_scan_clamav_ndb - cognitive complexity 20 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "SignatureScanWorker::_scan_die",
+          "complexity": 32,
+          "message": "SignatureScanWorker::_scan_die - cognitive complexity 32 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py: SignatureScanWorker::_scan_die - cognitive complexity 32 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\session_manager.py",
       "count": 3,
       "findings": [
@@ -817,28 +1095,6 @@
           "complexity": 25,
           "message": "SessionManagerDialog::_update_details - cognitive complexity 25 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\session_manager.py: SessionManagerDialog::_update_details - cognitive complexity 25 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\bridges\\binary.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryBridge::_detect_architecture",
-          "complexity": 18,
-          "message": "BinaryBridge::_detect_architecture - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py: BinaryBridge::_detect_architecture - cognitive complexity 18 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "BinaryBridge::_get_imports_internal",
-          "complexity": 18,
-          "message": "BinaryBridge::_get_imports_internal - cognitive complexity 18 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\binary.py: BinaryBridge::_get_imports_internal - cognitive complexity 18 (exceeds threshold)"
         }
       ]
     },
@@ -883,6 +1139,28 @@
           "complexity": 83,
           "message": "HexPatLexer::_scan_operator - cognitive complexity 83 (exceeds threshold)",
           "raw": "src\\intellicrack\\core\\hexpat\\lexer.py: HexPatLexer::_scan_operator - cognitive complexity 83 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\orchestrator.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "Orchestrator::_run_agent_loop",
+          "complexity": 17,
+          "message": "Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "_extract_imports",
+          "complexity": 19,
+          "message": "_extract_imports - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\core\\orchestrator.py: _extract_imports - cognitive complexity 19 (exceeds threshold)"
         }
       ]
     },
@@ -997,6 +1275,72 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\sandbox\\analysis.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "_detect_beaconing",
+          "complexity": 16,
+          "message": "_detect_beaconing - cognitive complexity 16 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\analysis.py: _detect_beaconing - cognitive complexity 16 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "extract_iocs",
+          "complexity": 43,
+          "message": "extract_iocs - cognitive complexity 43 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\analysis.py: extract_iocs - cognitive complexity 43 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\windows.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "WindowsSandbox::extract_dropped_files",
+          "complexity": 17,
+          "message": "WindowsSandbox::extract_dropped_files - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\windows.py: WindowsSandbox::extract_dropped_files - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "WindowsSandbox::yara_scan",
+          "complexity": 22,
+          "message": "WindowsSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)",
+          "raw": "src\\intellicrack\\sandbox\\windows.py: WindowsSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "GhidraPanel::_apply_cfg",
+          "complexity": 17,
+          "message": "GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py: GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "GhidraPanel::_dispatch_func_menu_action",
+          "complexity": 27,
+          "message": "GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py: GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py",
       "count": 2,
       "findings": [
@@ -1019,24 +1363,46 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py",
       "count": 2,
       "findings": [
         {
           "line": null,
           "column": null,
-          "name": "TransformsMixin::_on_transform_apply",
-          "complexity": 25,
-          "message": "TransformsMixin::_on_transform_apply - cognitive complexity 25 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py: TransformsMixin::_on_transform_apply - cognitive complexity 25 (exceeds threshold)"
+          "name": "TemplatesMixin::_bookmark_pe_structure",
+          "complexity": 24,
+          "message": "TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py: TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)"
         },
         {
           "line": null,
           "column": null,
-          "name": "TransformsMixin::_on_pipeline_execute",
-          "complexity": 32,
-          "message": "TransformsMixin::_on_pipeline_execute - cognitive complexity 32 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py: TransformsMixin::_on_pipeline_execute - cognitive complexity 32 (exceeds threshold)"
+          "name": "TemplatesMixin::_bookmark_elf_structure",
+          "complexity": 34,
+          "message": "TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py: TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorPanel::load_file",
+          "complexity": 17,
+          "message": "HexEditorPanel::load_file - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py: HexEditorPanel::load_file - cognitive complexity 17 (exceeds threshold)"
+        },
+        {
+          "line": null,
+          "column": null,
+          "name": "HexEditorPanel::set_state_holder",
+          "complexity": 38,
+          "message": "HexEditorPanel::set_state_holder - cognitive complexity 38 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py: HexEditorPanel::set_state_holder - cognitive complexity 38 (exceeds threshold)"
         }
       ]
     },
@@ -1085,6 +1451,20 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\ghidra.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "GhidraBridge::search_bytes",
+          "complexity": 27,
+          "message": "GhidraBridge::search_bytes - cognitive complexity 27 (exceeds threshold)",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py: GhidraBridge::search_bytes - cognitive complexity 27 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\hexpat\\pattern_registry.py",
       "count": 1,
       "findings": [
@@ -1109,20 +1489,6 @@
           "complexity": 21,
           "message": "_sanitize_arguments - cognitive complexity 21 (exceeds threshold)",
           "raw": "src\\intellicrack\\core\\logging.py: _sanitize_arguments - cognitive complexity 21 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\orchestrator.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "Orchestrator::_run_agent_loop",
-          "complexity": 17,
-          "message": "Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\core\\orchestrator.py: Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)"
         }
       ]
     },
@@ -1253,20 +1619,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\app.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "MainWindow::_on_open_frida",
-          "complexity": 26,
-          "message": "MainWindow::_on_open_frida - cognitive complexity 26 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\app.py: MainWindow::_on_open_frida - cognitive complexity 26 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\highlighter.py",
       "count": 1,
       "findings": [
@@ -1295,6 +1647,34 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_calculator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "CalculatorMixin::_on_convert",
+          "complexity": 19,
+          "message": "CalculatorMixin::_on_convert - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_calculator.py: CalculatorMixin::_on_convert - cognitive complexity 19 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "DataInspectorMixin::_on_bit_toggled",
+          "complexity": 19,
+          "message": "DataInspectorMixin::_on_bit_toggled - cognitive complexity 19 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py: DataInspectorMixin::_on_bit_toggled - cognitive complexity 19 (exceeds threshold)"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py",
       "count": 1,
       "findings": [
@@ -1305,6 +1685,48 @@
           "complexity": 27,
           "message": "DisassemblyMixin::_on_disassemble - cognitive complexity 27 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py: DisassemblyMixin::_on_disassemble - cognitive complexity 27 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HashingMixin::_on_verify_pe_checksum",
+          "complexity": 17,
+          "message": "HashingMixin::_on_verify_pe_checksum - cognitive complexity 17 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_hashing.py: HashingMixin::_on_verify_pe_checksum - cognitive complexity 17 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_highlighting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "HighlightingMixin::_on_add_highlight_rule",
+          "complexity": 23,
+          "message": "HighlightingMixin::_on_add_highlight_rule - cognitive complexity 23 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_highlighting.py: HighlightingMixin::_on_add_highlight_rule - cognitive complexity 23 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_process_memory.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "ProcessMemoryDialog::_list_regions_procfs",
+          "complexity": 22,
+          "message": "ProcessMemoryDialog::_list_regions_procfs - cognitive complexity 22 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_process_memory.py: ProcessMemoryDialog::_list_regions_procfs - cognitive complexity 22 (exceeds threshold)"
         }
       ]
     },
@@ -1323,20 +1745,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "HexEditorPanel::set_state_holder",
-          "complexity": 38,
-          "message": "HexEditorPanel::set_state_holder - cognitive complexity 38 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py: HexEditorPanel::set_state_holder - cognitive complexity 38 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py",
       "count": 1,
       "findings": [
@@ -1347,6 +1755,34 @@
           "complexity": 16,
           "message": "_find_hxd_executable - cognitive complexity 16 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\panels\\hxd_panel.py: _find_hxd_executable - cognitive complexity 16 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\process_panel\\_modules_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "ModulesTab::_refresh_handles",
+          "complexity": 18,
+          "message": "ModulesTab::_refresh_handles - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel\\_modules_tab.py: ModulesTab::_refresh_handles - cognitive complexity 18 (exceeds threshold)"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\process_panel\\_threads_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "name": "ThreadsTab::_on_seh_enumerate",
+          "complexity": 18,
+          "message": "ThreadsTab::_on_seh_enumerate - cognitive complexity 18 (exceeds threshold)",
+          "raw": "src\\intellicrack\\ui\\panels\\process_panel\\_threads_tab.py: ThreadsTab::_on_seh_enumerate - cognitive complexity 18 (exceeds threshold)"
         }
       ]
     },

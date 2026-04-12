@@ -1,10 +1,10 @@
 7 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
-src\intellicrack\ui\panels\hex_editor_widget.py: Unused function clear_highlight_rules
-
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function clear_highlights
 
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function contextMenuEvent
+
+src\intellicrack\ui\panels\hex_editor_widget.py: Unused function keyPressEvent
 
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseMoveEvent
 
@@ -13,6 +13,23 @@ src\intellicrack\ui\panels\hex_editor_widget.py: Unused function mouseReleaseEve
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function paintEvent
 
 src\intellicrack\ui\panels\hex_editor_widget.py: Unused function wheelEvent
+
+
+7 findings in src\intellicrack\ui\tools.py
+
+src\intellicrack\ui\tools.py: Unused function add_frida_hook_entry
+
+src\intellicrack\ui\tools.py: Unused function get_bridge_for_tool
+
+src\intellicrack\ui\tools.py: Unused function get_highlighter
+
+src\intellicrack\ui\tools.py: Unused function get_sandbox_backend
+
+src\intellicrack\ui\tools.py: Unused function load_sandbox_report
+
+src\intellicrack\ui\tools.py: Unused function log_frida_message
+
+src\intellicrack\ui\tools.py: Unused function wire_sandbox_backend
 
 
 6 findings in src\intellicrack\core\template_manager.py
@@ -30,6 +47,21 @@ src\intellicrack\core\template_manager.py: Unused function load_template
 src\intellicrack\core\template_manager.py: Unused function save_user_template
 
 
+6 findings in src\intellicrack\ui\panels\hex_editor\_widgets.py
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function chunk_size_kb
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function memory_budget_mb
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function minimumSizeHint
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function mouseMoveEvent
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function paintEvent
+
+src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function prefetch_on_scroll
+
+
 5 findings in src\intellicrack\core\types.py
 
 src\intellicrack\core\types.py: Unused function display_type
@@ -43,7 +75,22 @@ src\intellicrack\core\types.py: Unused function is_readable
 src\intellicrack\core\types.py: Unused function is_writable
 
 
-4 findings in src\intellicrack\ui\panels\vnc_widget.py
+5 findings in src\intellicrack\ui\panels\qt_compat.py
+
+src\intellicrack\ui\panels\qt_compat.py: Unused function edit_table_item
+
+src\intellicrack\ui\panels\qt_compat.py: Unused function key_event_key
+
+src\intellicrack\ui\panels\qt_compat.py: Unused function qt_key_page_down
+
+src\intellicrack\ui\panels\qt_compat.py: Unused function qt_key_page_up
+
+src\intellicrack\ui\panels\qt_compat.py: Unused function wheel_angle_delta_y
+
+
+5 findings in src\intellicrack\ui\panels\vnc_widget.py
+
+src\intellicrack\ui\panels\vnc_widget.py: Unused function keyPressEvent
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function keyReleaseEvent
 
@@ -81,6 +128,13 @@ src\intellicrack\credentials\oauth.py: Unused function log_request
 src\intellicrack\credentials\oauth.py: Unused function needs_refresh
 
 
+2 findings in src\intellicrack\bridges\_win32_types.py
+
+src\intellicrack\bridges\_win32_types.py: Unused function get_kernel32
+
+src\intellicrack\bridges\_win32_types.py: Unused function get_psapi
+
+
 2 findings in src\intellicrack\bridges\base.py
 
 src\intellicrack\bridges\base.py: Unused function supports_arch
@@ -102,6 +156,13 @@ src\intellicrack\core\hexpat\pattern_registry.py: Unused function get_pattern
 src\intellicrack\core\hexpat\pattern_registry.py: Unused function load_source
 
 
+2 findings in src\intellicrack\core\logging.py
+
+src\intellicrack\core\logging.py: Unused function get_structlog_logger
+
+src\intellicrack\core\logging.py: Unused function log_binary_operation
+
+
 2 findings in src\intellicrack\providers\local_transformers.py
 
 src\intellicrack\providers\local_transformers.py: Unused function current_model_id
@@ -121,20 +182,6 @@ src\intellicrack\providers\ollama.py: Unused function local_available
 src\intellicrack\ui\dialogs\splash_screen.py: Unused function mark_stage_failed
 
 src\intellicrack\ui\dialogs\splash_screen.py: Unused function paintEvent
-
-
-2 findings in src\intellicrack\ui\panels\hex_editor\_widgets.py
-
-src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function mouseMoveEvent
-
-src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function paintEvent
-
-
-2 findings in src\intellicrack\ui\panels\hex_tools_panel.py
-
-src\intellicrack\ui\panels\hex_tools_panel.py: Unused function paintEvent
-
-src\intellicrack\ui\panels\hex_tools_panel.py: Unused function sizeHint
 
 
 2 findings in src\intellicrack\ui\resources\font_manager.py
@@ -173,19 +220,9 @@ src\intellicrack\core\hexpat\data_reader.py: Unused function read_fixed_string
 src\intellicrack\core\hexpat\type_system.py: Unused function all_names
 
 
-1 findings in src\intellicrack\core\logging.py
-
-src\intellicrack\core\logging.py: Unused function get_structlog_logger
-
-
 1 findings in src\intellicrack\core\script_gen.py
 
 src\intellicrack\core\script_gen.py: Unused function prepare_ai_prompt
-
-
-1 findings in src\intellicrack\core\transform_pipeline.py
-
-src\intellicrack\core\transform_pipeline.py: Unused function preview
 
 
 1 findings in src\intellicrack\ui\confirmation_dialog.py
@@ -198,26 +235,16 @@ src\intellicrack\ui\confirmation_dialog.py: Unused function remember_similar
 src\intellicrack\ui\highlighter.py: Unused function highlightBlock
 
 
-1 findings in src\intellicrack\ui\panels\binary_panel.py
-
-src\intellicrack\ui\panels\binary_panel.py: Unused function wheelEvent
-
-
 1 findings in src\intellicrack\ui\panels\graph_view.py
 
 src\intellicrack\ui\panels\graph_view.py: Unused function wheelEvent
 
 
-1 findings in src\intellicrack\ui\panels\qt_compat.py
+1 findings in src\intellicrack\ui\panels\hex_editor\_scripting.py
 
-src\intellicrack\ui\panels\qt_compat.py: Unused function edit_table_item
+src\intellicrack\ui\panels\hex_editor\_scripting.py: Unused function highlightBlock
 
 
 1 findings in src\intellicrack\ui\panels\stack_viewer.py
 
 src\intellicrack\ui\panels\stack_viewer.py: Unused function get_source_name
-
-
-1 findings in src\intellicrack\ui\tools.py
-
-src\intellicrack\ui\tools.py: Unused function get_highlighter

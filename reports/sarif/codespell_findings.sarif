@@ -11,7 +11,7 @@
             {
               "id": "SPELL",
               "shortDescription": {
-                "text": "'lief' ==> 'leaf, life'"
+                "text": "'SEH' ==> 'SHE'"
               }
             }
           ]
@@ -22,17 +22,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "docs/source/conf.py",
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 40,
+                  "startLine": 622,
                   "startColumn": 1
                 }
               }
@@ -43,17 +43,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 666,
+                  "startLine": 627,
                   "startColumn": 1
                 }
               }
@@ -64,17 +64,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 667,
+                  "startLine": 9,
                   "startColumn": 1
                 }
               }
@@ -85,17 +85,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 668,
+                  "startLine": 469,
                   "startColumn": 1
                 }
               }
@@ -106,17 +106,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 669,
+                  "startLine": 473,
                   "startColumn": 1
                 }
               }
@@ -127,17 +127,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 670,
+                  "startLine": 664,
                   "startColumn": 1
                 }
               }
@@ -148,17 +148,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 671,
+                  "startLine": 750,
                   "startColumn": 1
                 }
               }
@@ -169,17 +169,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4671,
+                  "startLine": 2814,
                   "startColumn": 1
                 }
               }
@@ -190,17 +190,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4674,
+                  "startLine": 2818,
                   "startColumn": 1
                 }
               }
@@ -211,17 +211,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13033,
+                  "startLine": 2828,
                   "startColumn": 1
                 }
               }
@@ -232,17 +232,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13192,
+                  "startLine": 1265,
                   "startColumn": 1
                 }
               }
@@ -253,17 +253,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13195,
+                  "startLine": 3910,
                   "startColumn": 1
                 }
               }
@@ -274,17 +274,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/ui/panels/process_panel/_threads_tab.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13198,
+                  "startLine": 7,
                   "startColumn": 1
                 }
               }
@@ -295,17 +295,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/ui/panels/process_panel/_threads_tab.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13201,
+                  "startLine": 48,
                   "startColumn": 1
                 }
               }
@@ -316,17 +316,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/ui/panels/process_panel/_threads_tab.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13204,
+                  "startLine": 237,
                   "startColumn": 1
                 }
               }
@@ -337,17 +337,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/ui/panels/process_panel/_threads_tab.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13207,
+                  "startLine": 240,
                   "startColumn": 1
                 }
               }
@@ -358,17 +358,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'SEH' ==> 'SHE'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml",
+                  "uri": "src/intellicrack/ui/panels/process_panel/_threads_tab.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 14872,
+                  "startLine": 469,
                   "startColumn": 1
                 }
               }
@@ -379,13 +379,223 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'LOD' ==> 'LOAD, LOUD, LODE'"
+            "text": "'fo' ==> 'of, for, to, do, go'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/visualize_architecture.py",
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'fo' ==> 'of, for, to, do, go'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ue' ==> 'use, due'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ue' ==> 'use, due'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'hsi' ==> 'his'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'hsi' ==> 'his'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/_typos.toml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-184b7e41a5dc3483.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-184b7e41a5dc3483.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-184b7e41a5dc3483.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
@@ -400,17 +610,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'LOD' ==> 'LOAD, LOUD, LODE'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/visualize_architecture.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-184b7e41a5dc3483.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 41,
+                  "startLine": 9,
                   "startColumn": 1
                 }
               }
@@ -421,17 +631,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'connIn' ==> 'conning'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/visualize_architecture.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-34bd8eddb48cf7f4.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 858,
+                  "startLine": 1,
                   "startColumn": 1
                 }
               }
@@ -442,17 +652,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'connIn' ==> 'conning'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "scripts/knowledge-graph/visualize_architecture.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-34bd8eddb48cf7f4.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 865,
+                  "startLine": 3,
                   "startColumn": 1
                 }
               }
@@ -463,17 +673,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/base.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-34bd8eddb48cf7f4.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 25,
+                  "startLine": 7,
                   "startColumn": 1
                 }
               }
@@ -484,17 +694,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/base.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-bf44c4e3ebd981c3.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 437,
+                  "startLine": 1,
                   "startColumn": 1
                 }
               }
@@ -505,17 +715,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/base.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-bf44c4e3ebd981c3.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 452,
+                  "startLine": 3,
                   "startColumn": 1
                 }
               }
@@ -526,17 +736,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-bf44c4e3ebd981c3.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4,
+                  "startLine": 7,
                   "startColumn": 1
                 }
               }
@@ -547,13 +757,1210 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'inout' ==> 'input, in out'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-ff478cd917ff9fbd.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-ff478cd917ff9fbd.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-ff478cd917ff9fbd.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/inout-ff478cd917ff9fbd.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-6efc8e3e44124257.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-6efc8e3e44124257.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-6efc8e3e44124257.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-6efc8e3e44124257.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-b4ec85fafc863481.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-b4ec85fafc863481.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-b4ec85fafc863481.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-de53a3dd87f81052.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-de53a3dd87f81052.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde-de53a3dd87f81052.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-2028d3412432f3f9.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-41c4da796a7ac8f6.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-4fc3a9a4bb9c9a32.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
@@ -568,13 +1975,622 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_derive-4d3dc0a78c25b9b0.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_derive-4d3dc0a78c25b9b0.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_derive-4d3dc0a78c25b9b0.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_derive-f8f79c2a108af0eb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_derive-f8f79c2a108af0eb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_derive-f8f79c2a108af0eb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-2e8323744a019080.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
@@ -589,17 +2605,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 19,
+                  "startLine": 1,
                   "startColumn": 1
                 }
               }
@@ -610,17 +2626,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 20,
+                  "startLine": 1,
                   "startColumn": 1
                 }
               }
@@ -631,17 +2647,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 21,
+                  "startLine": 3,
                   "startColumn": 1
                 }
               }
@@ -652,17 +2668,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 22,
+                  "startLine": 3,
                   "startColumn": 1
                 }
               }
@@ -673,17 +2689,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 44,
+                  "startLine": 5,
                   "startColumn": 1
                 }
               }
@@ -694,17 +2710,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 44,
+                  "startLine": 5,
                   "startColumn": 1
                 }
               }
@@ -715,17 +2731,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 44,
+                  "startLine": 12,
                   "startColumn": 1
                 }
               }
@@ -736,17 +2752,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-4b4d298195031be2.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 44,
+                  "startLine": 18,
                   "startColumn": 1
                 }
               }
@@ -757,17 +2773,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-9c1e4cfcd0d5b9b1.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 44,
+                  "startLine": 1,
                   "startColumn": 1
                 }
               }
@@ -778,17 +2794,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-9c1e4cfcd0d5b9b1.d",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 47,
+                  "startLine": 1,
                   "startColumn": 1
                 }
               }
@@ -799,13 +2815,1882 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'ser' ==> 'set'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-9c1e4cfcd0d5b9b1.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-9c1e4cfcd0d5b9b1.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-9c1e4cfcd0d5b9b1.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-9c1e4cfcd0d5b9b1.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-ff3da71971c64cbb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-ff3da71971c64cbb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-ff3da71971c64cbb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-ff3da71971c64cbb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-ff3da71971c64cbb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/debug/deps/serde_json-ff3da71971c64cbb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/inout-184b7e41a5dc3483.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/inout-184b7e41a5dc3483.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/inout-184b7e41a5dc3483.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/inout-184b7e41a5dc3483.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde-7d0f1529218a447f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_core-d86809d9b0b73174.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_derive-f8f79c2a108af0eb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_derive-f8f79c2a108af0eb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_derive-f8f79c2a108af0eb.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/llvm-cov-target/debug/deps/serde_json-2e8323744a019080.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/inout-1bc1f231b1054c07.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/inout-1bc1f231b1054c07.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/inout-1bc1f231b1054c07.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'inout' ==> 'input, in out'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/inout-1bc1f231b1054c07.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde-e93b3533851d4d9f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde-e93b3533851d4d9f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde-e93b3533851d4d9f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde-e93b3533851d4d9f.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_core-7bd8eecab8417789.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_derive-4b52e8912be6d020.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_derive-4b52e8912be6d020.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_derive-4b52e8912be6d020.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'ser' ==> 'set'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack-hexcore/target/release/deps/serde_json-618a504fdd57c763.d",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'SEH' ==> 'SHE'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_process_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 685,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'SEH' ==> 'SHE'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_process_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 690,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'caf' ==> 'calf'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 77,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'caf' ==> 'calf'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 94,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'Caf' ==> 'Calf'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 110,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'nore' ==> 'nor, note, more, node'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_search.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 208,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'VAs' ==> 'was'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_va_mapping.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 161,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'vas' ==> 'was'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_va_mapping.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 170,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'vas' ==> 'was'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_va_mapping.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 171,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SPELL",
+          "level": "warning",
+          "message": {
+            "text": "'caf' ==> 'calf'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_encodings.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
@@ -820,17 +4705,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'caf' ==> 'calf'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "tests/test_hexcore_e2e/test_encodings.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 86,
+                  "startLine": 151,
                   "startColumn": 1
                 }
               }
@@ -841,17 +4726,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'te' ==> 'the, be, we, to'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "tests/test_sandbox/test_base_types.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 91,
+                  "startLine": 226,
                   "startColumn": 1
                 }
               }
@@ -862,941 +4747,17 @@
           "ruleId": "SPELL",
           "level": "warning",
           "message": {
-            "text": "'lief' ==> 'leaf, life'"
+            "text": "'te' ==> 'the, be, we, to'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "tests/test_sandbox/test_base_types.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 101,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 542,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 543,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 549,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 554,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 574,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 575,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 576,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 578,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 580,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 582,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1065,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1087,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 26,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 201,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 214,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1080,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1110,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1124,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1154,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 20,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 955,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 974,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 986,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 997,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1016,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/radare2.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1028,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/__init__.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 54,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/__init__.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 89,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 37,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'LIEF' ==> 'LEAF, LIFE'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 157,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'LIEF' ==> 'LEAF, LIFE'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 160,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'LIEF' ==> 'LEAF, LIFE'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 192,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'LIEF' ==> 'LEAF, LIFE'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 195,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'lief' ==> 'leaf, life'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 790,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'LIEF' ==> 'LEAF, LIFE'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 859,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'LIEF' ==> 'LEAF, LIFE'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 868,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 27,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'CrossReference' ==> 'cross-reference'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 534,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'thirdparty' ==> 'third party, third-party'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/plugins/x64dbg_plugin/third_party/nlohmann/json.hpp",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 329,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'ND' ==> 'AND, 2ND'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/plugins/x64dbg_plugin/third_party/nlohmann/json.hpp",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 11797,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'ND' ==> 'AND, 2ND'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/plugins/x64dbg_plugin/third_party/nlohmann/json.hpp",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 11798,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'ND' ==> 'AND, 2ND'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/plugins/x64dbg_plugin/third_party/nlohmann/json.hpp",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 12092,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'thirdparty' ==> 'third party, third-party'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/plugins/x64dbg_plugin/third_party/nlohmann/json.hpp",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 25560,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "SPELL",
-          "level": "warning",
-          "message": {
-            "text": "'regist' ==> 'register'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/script_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 114,
+                  "startLine": 232,
                   "startColumn": 1
                 }
               }
@@ -1808,7 +4769,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:40:52.769392"
+          "endTimeUtc": "2026-04-11T07:09:03.338876+00:00"
         }
       ]
     }

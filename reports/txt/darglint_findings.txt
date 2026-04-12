@@ -101,14 +101,27 @@ src\intellicrack\bridges\base.py:calculate_checksum:1178: DAR202: + return
 
 6 findings in src\intellicrack\core\orchestrator.py
 
-src\intellicrack\core\orchestrator.py:_run_agent_loop:415: DAR401: -r CancelledError
+src\intellicrack\core\orchestrator.py:_run_agent_loop:427: DAR401: -r CancelledError
 
-src\intellicrack\core\orchestrator.py:_run_agent_loop:420: DAR402: +r asyncio.CancelledError
+src\intellicrack\core\orchestrator.py:_run_agent_loop:432: DAR402: +r asyncio.CancelledError
 
-src\intellicrack\core\orchestrator.py:_stream_response:896: DAR401: -r CancelledError
+src\intellicrack\core\orchestrator.py:_stream_response:942: DAR401: -r CancelledError
 
-src\intellicrack\core\orchestrator.py:_stream_response:916: DAR402: +r asyncio.CancelledError
+src\intellicrack\core\orchestrator.py:_stream_response:962: DAR402: +r asyncio.CancelledError
 
-src\intellicrack\core\orchestrator.py:_execute_tool_calls:1013: DAR401: -r CancelledError
+src\intellicrack\core\orchestrator.py:_execute_tool_calls:1059: DAR401: -r CancelledError
 
-src\intellicrack\core\orchestrator.py:_execute_tool_calls:1023: DAR402: +r asyncio.CancelledError
+src\intellicrack\core\orchestrator.py:_execute_tool_calls:1069: DAR402: +r asyncio.CancelledError
+
+
+5 findings in src\intellicrack\ui\panels\hex_editor\_scripting.py
+
+src\intellicrack\ui\panels\hex_editor\_scripting.py:length:132: DAR202: + return
+
+src\intellicrack\ui\panels\hex_editor\_scripting.py:read:144: DAR202: + return
+
+src\intellicrack\ui\panels\hex_editor\_scripting.py:search_hex:183: DAR202: + return
+
+src\intellicrack\ui\panels\hex_editor\_scripting.py:search_text:200: DAR202: + return
+
+src\intellicrack\ui\panels\hex_editor\_scripting.py:add_bookmark:223: DAR202: + return

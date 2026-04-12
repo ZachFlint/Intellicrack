@@ -11,13 +11,16 @@ import math
 from typing import TYPE_CHECKING, Any, cast, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.ui.panels.hex_editor._base import (
     BYTE_TYPE_DIST_MIN_LEN,
     BYTE_VALUES_COUNT,
     ENTROPY_BLOCK_SIZE,
     logger,
+)
+from intellicrack.ui.panels.hex_editor._widgets import (
+    DigramMatrixDialog,
 )
 
 
@@ -400,3 +403,28 @@ class StatisticsMixin:
         parts: list[str] = [f"{k}: {v}" for k, v in counts.items()]
         if self._classification_label is not None:
             self._classification_label.setText(", ".join(parts))
+
+    def _on_refresh_statistics(self) -> None:
+        """Manually trigger a statistics refresh."""
+        self._update_statistics()
+
+    def _on_show_digram_matrix(self) -> None:
+        """Open a dialog displaying the 256x256 byte digram matrix."""
+        if self.document is None:
+            return
+
+        digram_fn: Any = getattr(self.document, "digram_matrix", None)
+        if not callable(digram_fn):
+            logger.debug("digram_matrix_not_available")
+            return
+
+        try:
+            digram_result: Any = digram_fn()
+            raw_matrix: list[int] = [int(v) for v in digram_result]
+        except (AttributeError, ValueError, TypeError) as exc:
+            logger.debug("digram_matrix_failed", error=str(exc))
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        dlg = DigramMatrixDialog(raw_matrix, parent)
+        dlg.exec()

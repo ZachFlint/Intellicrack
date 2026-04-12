@@ -8,6 +8,6 @@ Line 1: Unix line endings detected (E018)
 Line 1: Unix line endings detected (E018)
 
 
-1 findings in scripts/build-cli-launcher.cmd
+1 findings in scripts\build-cli-launcher.cmd
 
 Line 1: Unix line endings detected (E018)

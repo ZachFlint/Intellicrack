@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 from typing import override
 
-from PyQt6.QtCore import QRect, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
@@ -365,3 +365,231 @@ class CustomCrcDialog(QDialog):
         else:
             hex_digits = (width + 3) // 4
             self._result_label.setText(f"Result: 0x{result:0{hex_digits}X}")
+
+
+_DIGRAM_SIZE: int = 256
+_DIGRAM_MIN_WIDGET_SIZE: int = 512
+_DIGRAM_DIALOG_MIN: int = 600
+
+
+class _DigramMatrixWidget(QWidget):
+    """Custom widget rendering a 256x256 byte pair frequency heatmap.
+
+    Each pixel at (row, col) represents the frequency of the byte
+    pair ``row -> col`` in the analyzed document.
+
+    Args:
+        matrix_data: Flat list of 65536 integers (256 x 256 bigram counts).
+        parent: Parent widget.
+    """
+
+    def __init__(
+        self,
+        matrix_data: list[int],
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._matrix = matrix_data
+        self._max_val = max(matrix_data) if matrix_data else 1
+        self.setMinimumSize(QSize(_DIGRAM_MIN_WIDGET_SIZE, _DIGRAM_MIN_WIDGET_SIZE))
+        self.setMouseTracking(enable=True)
+
+    @override
+    def minimumSizeHint(self) -> QSize:
+        """Return the minimum recommended size for the widget.
+
+        Returns:
+            QSize: Minimum size of 512x512 pixels.
+        """
+        return QSize(_DIGRAM_MIN_WIDGET_SIZE, _DIGRAM_MIN_WIDGET_SIZE)
+
+    @staticmethod
+    def _cell_color(count: int, max_val: int) -> QColor:
+        """Compute the heatmap color for a digram cell count.
+
+        Args:
+            count: The digram frequency count for this cell.
+            max_val: Maximum count across all cells, used for normalization.
+
+        Returns:
+            QColor: Black for zero counts; HSV-interpolated color otherwise.
+        """
+        if count == 0:
+            return QColor(0, 0, 0)
+        intensity = count / max_val
+        hue = int((1.0 - intensity) * 240)
+        val = int(55 + intensity * 200)
+        return QColor.fromHsv(hue, 255, val)
+
+    @override
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
+        """Render the 256x256 digram heatmap.
+
+        Colors range from black (zero) through blue/yellow to white
+        (maximum frequency) using HSV interpolation.
+
+        Args:
+            a0: The paint event.
+        """
+        _ = a0
+        painter = QPainter(self)
+        w = self.width()
+        h = self.height()
+        cell_w = w / _DIGRAM_SIZE
+        cell_h = h / _DIGRAM_SIZE
+        max_val = max(self._max_val, 1)
+
+        for row in range(_DIGRAM_SIZE):
+            for col in range(_DIGRAM_SIZE):
+                count = self._matrix[row * _DIGRAM_SIZE + col]
+                colour = self._cell_color(count, max_val)
+                x = int(col * cell_w)
+                y = int(row * cell_h)
+                cw = max(1, int((col + 1) * cell_w) - x)
+                ch = max(1, int((row + 1) * cell_h) - y)
+                painter.fillRect(x, y, cw, ch, QBrush(colour))
+
+        painter.end()
+
+    @override
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        """Show a tooltip with the byte pair and count at the cursor position.
+
+        Args:
+            a0: The mouse move event.
+        """
+        if a0 is None:
+            return
+        w = self.width()
+        h = self.height()
+        col = int(a0.position().x() / max(w, 1) * _DIGRAM_SIZE)
+        row = int(a0.position().y() / max(h, 1) * _DIGRAM_SIZE)
+        col = max(0, min(_DIGRAM_SIZE - 1, col))
+        row = max(0, min(_DIGRAM_SIZE - 1, row))
+        count = self._matrix[row * _DIGRAM_SIZE + col]
+        QToolTip.showText(
+            a0.globalPosition().toPoint(),
+            f"0x{row:02X} -> 0x{col:02X}: {count} occurrences",
+            self,
+        )
+
+
+class DigramMatrixDialog(QDialog):
+    """Dialog displaying a 256x256 byte pair frequency heatmap.
+
+    Visualises the digram matrix as a color-coded 2D grid where
+    each cell represents how often one byte follows another.
+
+    Args:
+        matrix_data: Flat list of 65536 integers (256 x 256 bigram counts).
+        parent: Parent widget.
+    """
+
+    def __init__(
+        self,
+        matrix_data: list[int],
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Digram Matrix")
+        self.setMinimumSize(QSize(_DIGRAM_DIALOG_MIN, _DIGRAM_DIALOG_MIN))
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(_DigramMatrixWidget(matrix_data, self))
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+
+_DEFAULT_CHUNK_KB: int = 4096
+_MIN_CHUNK_KB: int = 64
+_MAX_CHUNK_KB: int = 65536
+_DEFAULT_BUDGET_MB: int = 512
+_MIN_BUDGET_MB: int = 64
+_MAX_BUDGET_MB: int = 4096
+
+
+class LargeFileSettingsDialog(QDialog):
+    """Dialog for configuring large file memory and chunk settings.
+
+    Provides controls for chunk size, memory budget, and prefetch
+    behavior used when working with memory-mapped large files.
+
+    Args:
+        current_chunk_kb: Current chunk size in kilobytes.
+        current_budget_mb: Current memory budget in megabytes.
+        current_usage_mb: Current memory usage in megabytes.
+        parent: Parent widget.
+    """
+
+    def __init__(
+        self,
+        current_chunk_kb: int,
+        current_budget_mb: int,
+        current_usage_mb: float,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Large File Settings")
+        self.setMinimumWidth(400)
+
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+
+        self._chunk_spin = QSpinBox()
+        self._chunk_spin.setRange(_MIN_CHUNK_KB, _MAX_CHUNK_KB)
+        self._chunk_spin.setValue(current_chunk_kb)
+        self._chunk_spin.setSuffix(" KB")
+        self._chunk_spin.setSingleStep(256)
+        form.addRow("Chunk size:", self._chunk_spin)
+
+        self._budget_spin = QSpinBox()
+        self._budget_spin.setRange(_MIN_BUDGET_MB, _MAX_BUDGET_MB)
+        self._budget_spin.setValue(current_budget_mb)
+        self._budget_spin.setSuffix(" MB")
+        self._budget_spin.setSingleStep(64)
+        form.addRow("Memory budget:", self._budget_spin)
+
+        self._prefetch_check = QCheckBox("Prefetch on scroll")
+        self._prefetch_check.setChecked(True)
+        form.addRow(self._prefetch_check)
+
+        usage_label = QLabel(f"{current_usage_mb:.1f} MB")
+        form.addRow("Current usage:", usage_label)
+
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    @property
+    def chunk_size_kb(self) -> int:
+        """Get the selected chunk size in kilobytes.
+
+        Returns:
+            int: Chunk size in KB.
+        """
+        return self._chunk_spin.value()
+
+    @property
+    def memory_budget_mb(self) -> int:
+        """Get the selected memory budget in megabytes.
+
+        Returns:
+            int: Memory budget in MB.
+        """
+        return self._budget_spin.value()
+
+    @property
+    def prefetch_on_scroll(self) -> bool:
+        """Get the prefetch on scroll setting.
+
+        Returns:
+            bool: True if prefetch on scroll is enabled.
+        """
+        return self._prefetch_check.isChecked()

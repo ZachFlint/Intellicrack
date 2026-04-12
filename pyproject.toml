@@ -44,6 +44,12 @@ dependencies = [
   "keyring>=25.7.0,<26",
   "psutil>=7.2.2,<8",
   "yara-python>=4.5.4,<5",
+  "check-wheel-contents",
+  "docformatter",
+  "pyproject-fmt",
+  "vermin",
+  "wily",
+  "torch",
   "astor",
   "autopep8",
   "bandit",
@@ -52,7 +58,6 @@ dependencies = [
   "blinter",
   "build",
   "bumpversion",
-  "check-wheel-contents",
   "codespell",
   "commitizen",
   "darglint",
@@ -60,7 +65,6 @@ dependencies = [
   "deadcode",
   "deptry",
   "detect-secrets",
-  "docformatter",
   "flake8",
   "flake8-pyproject",
   "interrogate",
@@ -83,7 +87,6 @@ dependencies = [
   "pydocstyle",
   "pygount",
   "pylint",
-  "pyproject-fmt",
   "pyroma",
   "pyupgrade",
   "radon",
@@ -99,10 +102,8 @@ dependencies = [
   "validate-pyproject",
   "skylos",
   "validate-pyproject-schema-store",
-  "vermin",
   "vulture",
   "wemake-python-styleguide",
-  "wily",
   "xenon",
   "yamllint",
   "yapf",
@@ -121,7 +122,6 @@ dependencies = [
   "bitsandbytes",
   "safetensors",
   "sentencepiece",
-  "torch",
   "transformers",
   "ipdb",
   "line-profiler",
@@ -410,8 +410,12 @@ lint.ignore = [
 ]
 lint.per-file-ignores.".claude/**" = [ "S404" ]
 lint.per-file-ignores."scripts/**" = [ "S404", "S603", "T201" ]
+lint.per-file-ignores."src/intellicrack/bridges/_win32_types.py" = [ "N801" ]
+lint.per-file-ignores."src/intellicrack/bridges/frida_bridge.py" = [ "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/ghidra.py" = [ "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/hex_editor.py" = [ "PLR0904" ]
+lint.per-file-ignores."src/intellicrack/bridges/cutter.py" = [ "PLR0904" ]
+lint.per-file-ignores."src/intellicrack/bridges/process.py" = [ "N801", "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/x64dbg.py" = [ "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/ast_nodes.py" = [ "UP040" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
@@ -426,10 +430,12 @@ lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = [ "C901", "PLR0
 lint.per-file-ignores."src/intellicrack/core/hexpat/pattern_registry.py" = [ "TC003" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = [ "PLR0914", "TC003" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = [ "PLR2004", "TRY003" ]
+lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/core/tools.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/main.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/ui/app.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/async_bridge.py" = [ "UP047" ]
+lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = [ "PLR0914" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = [ "PLR0914" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = [ "PLR0914" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_widgets.py" = [ "N802" ]
@@ -954,18 +960,19 @@ exclude = [
   "stubs",
 ]
 
-[tool.ty]
+[tool.ty.src]
 exclude = [ "notebooks/" ]
 
 [tool.pixi]
 dependencies.python = "3.13.*"
 dependencies.git = ">=2.53.0,<3"
-dependencies.just = ">=1.48.1,<2"
+dependencies.just = ">=1.49.0,<2"
 dependencies.shellcheck = ">=0.11.0,<0.12"
 dependencies.nodejs = ">=24.14.1,<24.15"
 dependencies.yarn = ">=4.13.0,<5"
 dependencies.markdownlint-cli = ">=0.48.0,<0.49"
 dependencies.taplo = ">=0.10.0,<0.11"
+dependencies.git-cliff = "*"
 dependencies.yamlfmt = ">=0.21.0,<0.22"
 dependencies.pixi-pycharm = ">=0.0.11,<0.0.12"
 dependencies.capstone = ">=5.0.7,<6"
@@ -974,9 +981,9 @@ dependencies.rust-src = ">=1.94.0,<2"
 pypi-dependencies.intellicrack = { path = ".", editable = true }
 # Build/packaging
 pypi-dependencies.pip = ">=26.0.1, <27"
-pypi-dependencies.maturin = ">=1.12.6, <2"
+pypi-dependencies.maturin = ">=1.13.1, <2"
 pypi-dependencies.wheel = ">=0.46.3, <0.47"
-pypi-dependencies.build = ">=1.4.2, <2"
+pypi-dependencies.build = ">=1.4.3, <2"
 pypi-dependencies.pyclean = ">=3.6.0, <4"
 # Runtime deps (version-bounded)
 pypi-dependencies.PyQt6 = ">=6.11.0, <7"
@@ -988,9 +995,9 @@ pypi-dependencies.frida = ">=17.9.1, <18"
 pypi-dependencies.frida-tools = ">=14.8.1, <15"
 pypi-dependencies.r2pipe = ">=1.9.8, <2"
 pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
-pypi-dependencies.anthropic = ">=0.89.0, <0.90"
-pypi-dependencies.openai = ">=2.30.0, <3"
-pypi-dependencies.google-genai = ">=1.70.0, <2"
+pypi-dependencies.anthropic = ">=0.94.0, <0.95"
+pypi-dependencies.openai = ">=2.31.0, <3"
+pypi-dependencies.google-genai = ">=1.72.0, <2"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
 pypi-dependencies.structlog = ">=25.5.0, <26"
 pypi-dependencies.pydantic = ">=2.12.5, <3"
@@ -1001,30 +1008,30 @@ pypi-dependencies.networkx = ">=3.6.1, <4"
 pypi-dependencies.anyio = ">=4.13.0, <5"
 pypi-dependencies.markdown-it-py = ">=4.0.0, <5"
 pypi-dependencies.pygments = ">=2.20.0, <3"
-pypi-dependencies.rich = ">=14.3.3, <15"
+pypi-dependencies.rich = ">=14.3.4, <15"
 pypi-dependencies.python-dotenv = ">=1.2.2, <2"
 pypi-dependencies.aiofiles = ">=25.1.0, <26"
 pypi-dependencies.aiosqlite = ">=0.22.1, <0.23"
 pypi-dependencies.mcp = ">=1.27.0, <2"
 pypi-dependencies.ollama = ">=0.6.1, <0.7"
 # ML deps (bounded)
-pypi-dependencies.transformers = ">=5.5.0, <6"
+pypi-dependencies.transformers = ">=5.5.3, <6"
 pypi-dependencies.accelerate = ">=1.13.0, <2"
 pypi-dependencies.bitsandbytes = ">=0.49.2, <0.50"
 pypi-dependencies.sentencepiece = ">=0.2.1, <0.3"
 pypi-dependencies.safetensors = ">=0.7.0, <0.8"
 # Dev tools (unbounded - float to latest)
 pypi-dependencies.validate-pyproject = ">=0.25, <0.26"
-pypi-dependencies.validate-pyproject-schema-store = ">=2026.4.3, <2027"
-pypi-dependencies.types-requests = ">=2.33.0.20260402, <3"
-pypi-dependencies.types-pyyaml = ">=6.0.12.20250915, <7"
-pypi-dependencies.pytest = ">=9.0.2, <10"
+pypi-dependencies.validate-pyproject-schema-store = ">=2026.4.10, <2027"
+pypi-dependencies.types-requests = ">=2.33.0.20260408, <3"
+pypi-dependencies.types-pyyaml = ">=6.0.12.20260408, <7"
+pypi-dependencies.pytest = ">=9.0.3, <10"
 pypi-dependencies.mypy = ">=1.20.0, <2"
 pypi-dependencies.black = ">=26.3.1, <27"
 pypi-dependencies.pylint = ">=4.0.5, <5"
 pypi-dependencies.autopep8 = ">=2.3.2, <3"
 pypi-dependencies.flake8 = ">=7.3.0, <8"
-pypi-dependencies.ruff = ">=0.15.9, <0.16"
+pypi-dependencies.ruff = ">=0.15.10, <0.16"
 pypi-dependencies.isort = ">=8.0.1, <9"
 pypi-dependencies.pycodestyle = ">=2.14.0, <3"
 pypi-dependencies.bandit = ">=1.9.4, <2"
@@ -1039,14 +1046,14 @@ pypi-dependencies.pydoclint = ">=0.8.3, <0.9"
 pypi-dependencies.pyroma = ">=5.0.1, <6"
 pypi-dependencies.mypy-extensions = ">=1.1.0, <2"
 pypi-dependencies.dead = ">=2.1.0, <3"
-pypi-dependencies.skylos = ">=4.2.1, <5"
+pypi-dependencies.skylos = ">=4.3.2, <5"
 pypi-dependencies.uncalled = ">=0.1.8, <0.2"
 pypi-dependencies.deadcode = ">=2.4.1, <3"
-pypi-dependencies.pygount = ">=3.1.1, <4"
+pypi-dependencies.pygount = ">=3.2.0, <4"
 pypi-dependencies.pytest-deadfixtures = ">=3.1.0, <4"
 pypi-dependencies.basedpyright = ">=1.39.0, <2"
 pypi-dependencies.monkeytype = ">=23.3.0, <24"
-pypi-dependencies.ty = ">=0.0.28, <0.0.29"
+pypi-dependencies.ty = ">=0.0.29, <0.0.30"
 pypi-dependencies.mccabe = ">=0.7.0, <0.8"
 pypi-dependencies.xenon = ">=0.9.3, <0.10"
 pypi-dependencies.safety = ">=3.7.0, <4"
@@ -1064,17 +1071,17 @@ pypi-dependencies.pytest-randomly = ">=4.0.1, <5"
 pypi-dependencies.pytest-sugar = ">=1.1.1, <2"
 pypi-dependencies.pytest-env = ">=1.6.0, <2"
 pypi-dependencies.pytest-instafail = ">=0.5.0, <0.6"
-pypi-dependencies.hypothesis = ">=6.151.10, <7"
-pypi-dependencies.tox = ">=4.52.0, <5"
-pypi-dependencies.nox = ">=2026.2.9, <2027"
+pypi-dependencies.hypothesis = ">=6.151.12, <7"
+pypi-dependencies.tox = ">=4.52.1, <5"
+pypi-dependencies.nox = ">=2026.4.10, <2027"
 pypi-dependencies.coverage = ">=7.13.5, <8"
 pypi-dependencies.freezegun = ">=1.5.5, <2"
 pypi-dependencies.responses = ">=0.26.0, <0.27"
-pypi-dependencies.faker = ">=40.12.0, <41"
-pypi-dependencies.radon = ">=6.0.1, <7"
+pypi-dependencies.faker = ">=40.13.0, <41"
+pypi-dependencies.radon = ">=5.1.0, <6"
 pypi-dependencies.sphinx = ">=9.1.0, <10"
 pypi-dependencies.sphinx-rtd-theme = ">=3.1.0, <4"
-pypi-dependencies.sphinx-autodoc-typehints = ">=3.9.11, <4"
+pypi-dependencies.sphinx-autodoc-typehints = ">=3.10.0, <4"
 pypi-dependencies.sphinx-copybutton = ">=0.5.2, <0.6"
 pypi-dependencies.sphinx-tabs = ">=3.5.0, <4"
 pypi-dependencies.sphinxcontrib-mermaid = ">=2.0.1, <3"
@@ -1091,9 +1098,9 @@ pypi-dependencies.snakeviz = ">=2.2.2, <3"
 pypi-dependencies.pyinstrument = ">=5.1.2, <6"
 pypi-dependencies.scalene = ">=2.2.1, <3"
 pypi-dependencies.pre-commit = ">=4.5.1, <5"
-pypi-dependencies.commitizen = ">=4.13.9, <5"
+pypi-dependencies.commitizen = ">=4.13.10, <5"
 pypi-dependencies.bumpversion = ">=0.6.0, <0.7"
-pypi-dependencies.pipdeptree = ">=2.34.0, <3"
+pypi-dependencies.pipdeptree = ">=2.35.1, <3"
 pypi-dependencies.rope = ">=1.14.0, <2"
 pypi-dependencies.astor = ">=0.8.1, <0.9"
 pypi-dependencies.yapf = ">=0.43.0, <0.44"

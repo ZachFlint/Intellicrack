@@ -1,7 +1,241 @@
 {
   "tool": "pydoclint",
-  "generated": "2026-04-05T20:15:48.185189+00:00",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-04-11T07:07:09.282511+00:00",
+  "total_findings": 29,
+  "total_files": 5,
+  "files": [
+    {
+      "path": "src/intellicrack/sandbox/base.py",
+      "count": 22,
+      "findings": [
+        {
+          "line": 440,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.run_command` does not have a return section in docstring",
+          "raw": "440: DOC201: Method `SandboxBase.run_command` does not have a return section in docstring"
+        },
+        {
+          "line": 440,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.run_command` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "440: DOC203: Method `SandboxBase.run_command` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 467,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.run_binary` does not have a return section in docstring",
+          "raw": "467: DOC201: Method `SandboxBase.run_binary` does not have a return section in docstring"
+        },
+        {
+          "line": 467,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.run_binary` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "467: DOC203: Method `SandboxBase.run_binary` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 539,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.take_snapshot` does not have a return section in docstring",
+          "raw": "539: DOC201: Method `SandboxBase.take_snapshot` does not have a return section in docstring"
+        },
+        {
+          "line": 539,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.take_snapshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "539: DOC203: Method `SandboxBase.take_snapshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 571,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.list_snapshots` does not have a return section in docstring",
+          "raw": "571: DOC201: Method `SandboxBase.list_snapshots` does not have a return section in docstring"
+        },
+        {
+          "line": 571,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.list_snapshots` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "571: DOC203: Method `SandboxBase.list_snapshots` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 599,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.start_pcap_capture` does not have a return section in docstring",
+          "raw": "599: DOC201: Method `SandboxBase.start_pcap_capture` does not have a return section in docstring"
+        },
+        {
+          "line": 599,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.start_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "599: DOC203: Method `SandboxBase.start_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 608,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.stop_pcap_capture` does not have a return section in docstring",
+          "raw": "608: DOC201: Method `SandboxBase.stop_pcap_capture` does not have a return section in docstring"
+        },
+        {
+          "line": 608,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.stop_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "608: DOC203: Method `SandboxBase.stop_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 626,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.capture_screenshot` does not have a return section in docstring",
+          "raw": "626: DOC201: Method `SandboxBase.capture_screenshot` does not have a return section in docstring"
+        },
+        {
+          "line": 626,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.capture_screenshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "626: DOC203: Method `SandboxBase.capture_screenshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 642,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.apply_anti_evasion` does not have a return section in docstring",
+          "raw": "642: DOC201: Method `SandboxBase.apply_anti_evasion` does not have a return section in docstring"
+        },
+        {
+          "line": 642,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.apply_anti_evasion` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "642: DOC203: Method `SandboxBase.apply_anti_evasion` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 658,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.dump_memory` does not have a return section in docstring",
+          "raw": "658: DOC201: Method `SandboxBase.dump_memory` does not have a return section in docstring"
+        },
+        {
+          "line": 658,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.dump_memory` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "658: DOC203: Method `SandboxBase.dump_memory` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 674,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.extract_dropped_files` does not have a return section in docstring",
+          "raw": "674: DOC201: Method `SandboxBase.extract_dropped_files` does not have a return section in docstring"
+        },
+        {
+          "line": 674,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.extract_dropped_files` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "674: DOC203: Method `SandboxBase.extract_dropped_files` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        },
+        {
+          "line": 690,
+          "column": null,
+          "code": "DOC201",
+          "message": "Method `SandboxBase.yara_scan` does not have a return section in docstring",
+          "raw": "690: DOC201: Method `SandboxBase.yara_scan` does not have a return section in docstring"
+        },
+        {
+          "line": 690,
+          "column": null,
+          "code": "DOC203",
+          "message": "Method `SandboxBase.yara_scan` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "690: DOC203: Method `SandboxBase.yara_scan` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/schemas.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 28,
+          "column": null,
+          "code": "DOC201",
+          "message": "Function `_assert_never` does not have a return section in docstring",
+          "raw": "28: DOC201: Function `_assert_never` does not have a return section in docstring"
+        },
+        {
+          "line": 28,
+          "column": null,
+          "code": "DOC203",
+          "message": "Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
+          "raw": "28: DOC203: Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_process_memory.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 65,
+          "column": null,
+          "code": "DOC602",
+          "message": "Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
+          "raw": "65: DOC602: Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+        },
+        {
+          "line": 65,
+          "column": null,
+          "code": "DOC603",
+          "message": "Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
+          "raw": "65: DOC603: Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_base.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 55,
+          "column": null,
+          "code": "DOC602",
+          "message": "Class `ProcessPanel`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
+          "raw": "55: DOC602: Class `ProcessPanel`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+        },
+        {
+          "line": 55,
+          "column": null,
+          "code": "DOC603",
+          "message": "Class `ProcessPanel`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [tool_closed: , tool_started: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
+          "raw": "55: DOC603: Class `ProcessPanel`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [tool_closed: , tool_started: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 304,
+          "column": null,
+          "code": "DOC503",
+          "message": "Method `LLMProviderBase._retry_with_backoff` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions'].",
+          "raw": "304: DOC503: Method `LLMProviderBase._retry_with_backoff` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions']."
+        }
+      ]
+    }
+  ]
 }

@@ -24,7 +24,6 @@ from intellicrack.bridges.base import (
     ToolBridgeBase,
     WatchpointInfo,
 )
-from intellicrack.bridges.binary import BinaryBridge
 from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.bridges.frida_bridge import FridaBridge
 from intellicrack.bridges.ghidra import GhidraBridge
@@ -36,7 +35,6 @@ from intellicrack.bridges.x64dbg import X64DbgBridge
 
 
 __all__: list[str] = [
-    "BinaryBridge",
     "BinaryOperationsBridge",
     "BridgeCapabilities",
     "BridgeState",

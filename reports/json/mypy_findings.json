@@ -1,8 +1,8 @@
 {
   "tool": "mypy",
-  "generated": "2026-04-05T20:13:52.908672+00:00",
-  "total_findings": 623,
-  "total_files": 75,
+  "generated": "2026-04-11T07:06:48.542924+00:00",
+  "total_findings": 645,
+  "total_files": 88,
   "files": [
     {
       "path": "tests\\test_hexcore_e2e\\test_bridge_transforms_deep.py",
@@ -355,308 +355,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\cutter.py",
-      "count": 37,
-      "findings": [
-        {
-          "line": 168,
-          "column": null,
-          "severity": "error",
-          "code": "redundant-cast",
-          "message": "Redundant cast to \"list[Any]\"",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:168: error: Redundant cast to \"list[Any]\"  [redundant-cast]"
-        },
-        {
-          "line": 179,
-          "column": null,
-          "severity": "error",
-          "code": "valid-type",
-          "message": "Function \"r2pipe.open\" is not valid as a type",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:179: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
-        },
-        {
-          "line": 179,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:179: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
-        },
-        {
-          "line": 195,
-          "column": null,
-          "severity": "error",
-          "code": "valid-type",
-          "message": "Function \"r2pipe.open\" is not valid as a type",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:195: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
-        },
-        {
-          "line": 195,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:195: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
-        },
-        {
-          "line": 204,
-          "column": null,
-          "severity": "error",
-          "code": "valid-type",
-          "message": "Function \"r2pipe.open\" is not valid as a type",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:204: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
-        },
-        {
-          "line": 204,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:204: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
-        },
-        {
-          "line": 240,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:240: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 607,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:607: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 630,
-          "column": null,
-          "severity": "error",
-          "code": "valid-type",
-          "message": "Function \"r2pipe.open\" is not valid as a type",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:630: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
-        },
-        {
-          "line": 630,
-          "column": null,
-          "severity": "note",
-          "code": "",
-          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:630: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
-        },
-        {
-          "line": 632,
-          "column": null,
-          "severity": "error",
-          "code": "func-returns-value",
-          "message": "Function does not return a value (it only ever returns None)",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:632: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
-        },
-        {
-          "line": 632,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:632: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
-        },
-        {
-          "line": 633,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"None\" has no attribute \"cmd\"",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:633: error: \"None\" has no attribute \"cmd\"  [attr-defined]"
-        },
-        {
-          "line": 641,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:641: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 649,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:649: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 742,
-          "column": null,
-          "severity": "error",
-          "code": "func-returns-value",
-          "message": "Function does not return a value (it only ever returns None)",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:742: error: Function does not return a value (it only ever returns None)  [func-returns-value]"
-        },
-        {
-          "line": 742,
-          "column": null,
-          "severity": "error",
-          "code": "arg-type",
-          "message": "Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:742: error: Argument 1 to \"to_thread\" has incompatible type \"Callable[[str, list[str] | None], open_sync]\"; expected \"Callable[[str, list[str] | None], None]\"  [arg-type]"
-        },
-        {
-          "line": 794,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:794: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 823,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:823: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 867,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:867: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 941,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:941: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 975,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:975: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1015,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1015: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1058,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1058: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1101,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1101: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1149,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1149: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1173,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1173: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1193,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1193: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1217,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1217: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1239,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1239: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1296,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1296: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1325,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1325: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1346,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1346: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1366,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1366: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1404,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1404: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 1446,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\bridges\\cutter.py:1446: error: Statement is unreachable  [unreachable]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_hexcore_e2e\\test_bridge_new_capabilities.py",
       "count": 31,
       "findings": [
@@ -907,6 +605,228 @@
           "code": "assignment",
           "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
           "raw": "tests\\test_hexcore_e2e\\test_bridge_new_capabilities.py:561: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_bridges\\test_cutter.py",
+      "count": 27,
+      "findings": [
+        {
+          "line": 161,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:161: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 195,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:195: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 657,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:657: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 678,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:678: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 700,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:700: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 718,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:718: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 831,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:831: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 839,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_FailingQuitR2\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:839: error: Incompatible types in assignment (expression has type \"_FailingQuitR2\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 847,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_FailingQuitR2\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:847: error: Incompatible types in assignment (expression has type \"_FailingQuitR2\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 920,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:920: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 994,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:994: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1007,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1007: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1077,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1077: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1098,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1098: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1117,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1117: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1137,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1137: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1164,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1164: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1175,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1175: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1193,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1193: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1209,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1209: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1228,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1228: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1245,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1245: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1263,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1263: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1281,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1281: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1292,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1292: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1308,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1308: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
+        },
+        {
+          "line": 1317,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")",
+          "raw": "tests\\test_bridges\\test_cutter.py:1317: error: Incompatible types in assignment (expression has type \"_CommandRecorder\", variable has type \"None\")  [assignment]"
         }
       ]
     },
@@ -1371,8 +1291,8 @@
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"HexEditorBridge\" has no attribute \"selection\"; maybe \"_selection\" or \"get_selection\"?",
-          "raw": "tests\\test_hexcore_e2e\\test_bridge_concurrent.py:153: error: \"HexEditorBridge\" has no attribute \"selection\"; maybe \"_selection\" or \"get_selection\"?  [attr-defined]"
+          "message": "\"HexEditorBridge\" has no attribute \"selection\"; maybe \"_selection\"?",
+          "raw": "tests\\test_hexcore_e2e\\test_bridge_concurrent.py:153: error: \"HexEditorBridge\" has no attribute \"selection\"; maybe \"_selection\"?  [attr-defined]"
         },
         {
           "line": 178,
@@ -1815,8 +1735,8 @@
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "\"SandboxPanel\" has no attribute \"on_destroy_success\"; maybe \"_on_destroy_success\" or \"_on_restart_success\"?",
-          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:170: error: \"SandboxPanel\" has no attribute \"on_destroy_success\"; maybe \"_on_destroy_success\" or \"_on_restart_success\"?  [attr-defined]"
+          "message": "\"SandboxPanel\" has no attribute \"on_destroy_success\"; maybe \"_on_destroy_success\"?",
+          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:170: error: \"SandboxPanel\" has no attribute \"on_destroy_success\"; maybe \"_on_destroy_success\"?  [attr-defined]"
         },
         {
           "line": 172,
@@ -2705,6 +2625,132 @@
       ]
     },
     {
+      "path": "tests\\test_bridges\\test_frida_bridge.py",
+      "count": 15,
+      "findings": [
+        {
+          "line": 401,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:401: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
+        },
+        {
+          "line": 432,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[FridaProcessEntry]\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:432: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[FridaProcessEntry]\")  [assignment]"
+        },
+        {
+          "line": 582,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"int\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:582: error: Incompatible types in assignment (expression has type \"object\", variable has type \"int\")  [assignment]"
+        },
+        {
+          "line": 587,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:587: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")  [assignment]"
+        },
+        {
+          "line": 594,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"int\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:594: error: Incompatible types in assignment (expression has type \"object\", variable has type \"int\")  [assignment]"
+        },
+        {
+          "line": 595,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:595: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")  [assignment]"
+        },
+        {
+          "line": 602,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"int\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:602: error: Incompatible types in assignment (expression has type \"object\", variable has type \"int\")  [assignment]"
+        },
+        {
+          "line": 607,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:607: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")  [assignment]"
+        },
+        {
+          "line": 614,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"HookInfo\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:614: error: Incompatible types in assignment (expression has type \"object\", variable has type \"HookInfo\")  [assignment]"
+        },
+        {
+          "line": 619,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:619: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")  [assignment]"
+        },
+        {
+          "line": 629,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:629: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
+        },
+        {
+          "line": 641,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"StalkerTrace\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:641: error: Incompatible types in assignment (expression has type \"object\", variable has type \"StalkerTrace\")  [assignment]"
+        },
+        {
+          "line": 662,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[ChildProcessInfo]\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:662: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[ChildProcessInfo]\")  [assignment]"
+        },
+        {
+          "line": 674,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[CrashInfo]\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:674: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[CrashInfo]\")  [assignment]"
+        },
+        {
+          "line": 687,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[FridaProcessEntry]\")",
+          "raw": "tests\\test_bridges\\test_frida_bridge.py:687: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[FridaProcessEntry]\")  [assignment]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_hexcore_e2e\\test_bridge_yara_deep.py",
       "count": 15,
       "findings": [
@@ -2945,124 +2991,6 @@
           "code": "attr-defined",
           "message": "\"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?",
           "raw": "tests\\test_core\\test_process_manager.py:508: error: \"ProcessManager\" has no attribute \"external_pids\"; maybe \"_external_pids\"?  [attr-defined]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_bridges\\test_frida_bridge.py",
-      "count": 14,
-      "findings": [
-        {
-          "line": 400,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:400: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
-        },
-        {
-          "line": 583,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"int\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:583: error: Incompatible types in assignment (expression has type \"object\", variable has type \"int\")  [assignment]"
-        },
-        {
-          "line": 588,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:588: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")  [assignment]"
-        },
-        {
-          "line": 595,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"int\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:595: error: Incompatible types in assignment (expression has type \"object\", variable has type \"int\")  [assignment]"
-        },
-        {
-          "line": 596,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:596: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")  [assignment]"
-        },
-        {
-          "line": 603,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"int\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:603: error: Incompatible types in assignment (expression has type \"object\", variable has type \"int\")  [assignment]"
-        },
-        {
-          "line": 608,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:608: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bytes\")  [assignment]"
-        },
-        {
-          "line": 615,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"HookInfo\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:615: error: Incompatible types in assignment (expression has type \"object\", variable has type \"HookInfo\")  [assignment]"
-        },
-        {
-          "line": 620,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:620: error: Incompatible types in assignment (expression has type \"object\", variable has type \"bool\")  [assignment]"
-        },
-        {
-          "line": 630,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:630: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
-        },
-        {
-          "line": 642,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"StalkerTrace\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:642: error: Incompatible types in assignment (expression has type \"object\", variable has type \"StalkerTrace\")  [assignment]"
-        },
-        {
-          "line": 663,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[ChildProcessInfo]\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:663: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[ChildProcessInfo]\")  [assignment]"
-        },
-        {
-          "line": 675,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[CrashInfo]\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:675: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[CrashInfo]\")  [assignment]"
-        },
-        {
-          "line": 688,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"list[dict[str, object]]\")",
-          "raw": "tests\\test_bridges\\test_frida_bridge.py:688: error: Incompatible types in assignment (expression has type \"object\", variable has type \"list[dict[str, object]]\")  [assignment]"
         }
       ]
     },
@@ -3765,92 +3693,6 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_binary_panel_fixes.py",
-      "count": 10,
-      "findings": [
-        {
-          "line": 283,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:283: error: \"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?  [attr-defined]"
-        },
-        {
-          "line": 290,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_prev_page\"; maybe \"_on_prev_page\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:290: error: \"BinaryPanel\" has no attribute \"on_prev_page\"; maybe \"_on_prev_page\"?  [attr-defined]"
-        },
-        {
-          "line": 297,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:297: error: \"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?  [attr-defined]"
-        },
-        {
-          "line": 298,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_prev_page\"; maybe \"_on_prev_page\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:298: error: \"BinaryPanel\" has no attribute \"on_prev_page\"; maybe \"_on_prev_page\"?  [attr-defined]"
-        },
-        {
-          "line": 312,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:312: error: \"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?  [attr-defined]"
-        },
-        {
-          "line": 321,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:321: error: \"BinaryPanel\" has no attribute \"on_next_page\"; maybe \"_on_next_page\"?  [attr-defined]"
-        },
-        {
-          "line": 360,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_hex_cell_changed\"; maybe \"_on_hex_cell_changed\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:360: error: \"BinaryPanel\" has no attribute \"on_hex_cell_changed\"; maybe \"_on_hex_cell_changed\"?  [attr-defined]"
-        },
-        {
-          "line": 379,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_hex_cell_changed\"; maybe \"_on_hex_cell_changed\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:379: error: \"BinaryPanel\" has no attribute \"on_hex_cell_changed\"; maybe \"_on_hex_cell_changed\"?  [attr-defined]"
-        },
-        {
-          "line": 416,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_apply_patch\"; maybe \"_on_apply_patch\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:416: error: \"BinaryPanel\" has no attribute \"on_apply_patch\"; maybe \"_on_apply_patch\"?  [attr-defined]"
-        },
-        {
-          "line": 432,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "\"BinaryPanel\" has no attribute \"on_hex_cell_changed\"; maybe \"_on_hex_cell_changed\"?",
-          "raw": "tests\\test_ui\\test_binary_panel_fixes.py:432: error: \"BinaryPanel\" has no attribute \"on_hex_cell_changed\"; maybe \"_on_hex_cell_changed\"?  [attr-defined]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_hexcore_e2e\\test_bridge_lifecycle.py",
       "count": 9,
       "findings": [
@@ -4003,6 +3845,84 @@
           "code": "assignment",
           "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
           "raw": "tests\\test_hexcore_e2e\\test_bridge_copy_as.py:164: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py",
+      "count": 9,
+      "findings": [
+        {
+          "line": 1128,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"itemAt\" of \"QTreeWidget\" matches argument type \"object\"",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1128: error: No overload variant of \"itemAt\" of \"QTreeWidget\" matches argument type \"object\"  [call-overload]"
+        },
+        {
+          "line": 1128,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1128: note: Possible overload variants:"
+        },
+        {
+          "line": 1128,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def itemAt(self, p: QPoint) -> QTreeWidgetItem | None",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1128: note:     def itemAt(self, p: QPoint) -> QTreeWidgetItem | None"
+        },
+        {
+          "line": 1128,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def itemAt(self, ax: int, ay: int) -> QTreeWidgetItem | None",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1128: note:     def itemAt(self, ax: int, ay: int) -> QTreeWidgetItem | None"
+        },
+        {
+          "line": 1162,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"QWidget | None\" has no attribute \"mapToGlobal\"",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1162: error: Item \"None\" of \"QWidget | None\" has no attribute \"mapToGlobal\"  [union-attr]"
+        },
+        {
+          "line": 1162,
+          "column": null,
+          "severity": "error",
+          "code": "call-overload",
+          "message": "No overload variant of \"mapToGlobal\" of \"QWidget\" matches argument type \"object\"",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1162: error: No overload variant of \"mapToGlobal\" of \"QWidget\" matches argument type \"object\"  [call-overload]"
+        },
+        {
+          "line": 1162,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Possible overload variants:",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1162: note: Possible overload variants:"
+        },
+        {
+          "line": 1162,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def mapToGlobal(self, a0: QPoint) -> QPoint",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1162: note:     def mapToGlobal(self, a0: QPoint) -> QPoint"
+        },
+        {
+          "line": 1162,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "def mapToGlobal(self, a0: QPointF) -> QPointF",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1162: note:     def mapToGlobal(self, a0: QPointF) -> QPointF"
         }
       ]
     },
@@ -4365,6 +4285,68 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\cutter.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": 180,
+          "column": null,
+          "severity": "error",
+          "code": "redundant-cast",
+          "message": "Redundant cast to \"list[Any]\"",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:180: error: Redundant cast to \"list[Any]\"  [redundant-cast]"
+        },
+        {
+          "line": 746,
+          "column": null,
+          "severity": "error",
+          "code": "valid-type",
+          "message": "Function \"r2pipe.open\" is not valid as a type",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:746: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
+        },
+        {
+          "line": 746,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:746: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
+        },
+        {
+          "line": 752,
+          "column": null,
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"r2pipe.open? | None\"",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:752: error: Returning Any from function declared to return \"r2pipe.open? | None\"  [no-any-return]"
+        },
+        {
+          "line": 755,
+          "column": null,
+          "severity": "error",
+          "code": "valid-type",
+          "message": "Function \"r2pipe.open\" is not valid as a type",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:755: error: Function \"r2pipe.open\" is not valid as a type  [valid-type]"
+        },
+        {
+          "line": 755,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:755: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
+        },
+        {
+          "line": 1828,
+          "column": null,
+          "severity": "error",
+          "code": "redundant-cast",
+          "message": "Redundant cast to \"list[Any]\"",
+          "raw": "src\\intellicrack\\bridges\\cutter.py:1828: error: Redundant cast to \"list[Any]\"  [redundant-cast]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_bridges\\test_x64dbg_events.py",
       "count": 7,
       "findings": [
@@ -4613,6 +4595,98 @@
       ]
     },
     {
+      "path": "tests\\test_bridges\\test_schemas.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 115,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_bridges\\test_schemas.py:115: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        },
+        {
+          "line": 329,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_bridges\\test_schemas.py:329: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        },
+        {
+          "line": 336,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_bridges\\test_schemas.py:336: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        },
+        {
+          "line": 476,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_bridges\\test_schemas.py:476: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        },
+        {
+          "line": 485,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_bridges\\test_schemas.py:485: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_bridges\\test_process_bridge.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 226,
+          "column": null,
+          "severity": "error",
+          "code": "operator",
+          "message": "Unsupported operand types for > (\"str\" and \"int\")",
+          "raw": "tests\\test_bridges\\test_process_bridge.py:226: error: Unsupported operand types for > (\"str\" and \"int\")  [operator]"
+        },
+        {
+          "line": 226,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Left operand is of type \"int | str | float\"",
+          "raw": "tests\\test_bridges\\test_process_bridge.py:226: note: Left operand is of type \"int | str | float\""
+        },
+        {
+          "line": 490,
+          "column": null,
+          "severity": "error",
+          "code": "operator",
+          "message": "Unsupported operand types for < (\"int\" and \"object\")",
+          "raw": "tests\\test_bridges\\test_process_bridge.py:490: error: Unsupported operand types for < (\"int\" and \"object\")  [operator]"
+        },
+        {
+          "line": 495,
+          "column": null,
+          "severity": "error",
+          "code": "operator",
+          "message": "Unsupported operand types for < (\"int\" and \"object\")",
+          "raw": "tests\\test_bridges\\test_process_bridge.py:495: error: Unsupported operand types for < (\"int\" and \"object\")  [operator]"
+        },
+        {
+          "line": 502,
+          "column": null,
+          "severity": "error",
+          "code": "operator",
+          "message": "Unsupported operand types for < (\"int\" and \"object\")",
+          "raw": "tests\\test_bridges\\test_process_bridge.py:502: error: Unsupported operand types for < (\"int\" and \"object\")  [operator]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_providers\\test_model_discovery.py",
       "count": 5,
       "findings": [
@@ -4701,74 +4775,36 @@
       "count": 4,
       "findings": [
         {
-          "line": 78,
+          "line": 80,
           "column": null,
           "severity": "error",
           "code": "no-any-return",
           "message": "Returning Any from function declared to return Module",
-          "raw": "tests\\test_hexcore_e2e\\conftest.py:78: error: Returning Any from function declared to return Module  [no-any-return]"
+          "raw": "tests\\test_hexcore_e2e\\conftest.py:80: error: Returning Any from function declared to return Module  [no-any-return]"
         },
         {
-          "line": 91,
+          "line": 93,
           "column": null,
           "severity": "error",
           "code": "no-any-return",
           "message": "Returning Any from function declared to return \"HexDocument\"",
-          "raw": "tests\\test_hexcore_e2e\\conftest.py:91: error: Returning Any from function declared to return \"HexDocument\"  [no-any-return]"
+          "raw": "tests\\test_hexcore_e2e\\conftest.py:93: error: Returning Any from function declared to return \"HexDocument\"  [no-any-return]"
         },
         {
-          "line": 118,
+          "line": 120,
           "column": null,
           "severity": "error",
           "code": "no-any-return",
           "message": "Returning Any from function declared to return \"HexDocument\"",
-          "raw": "tests\\test_hexcore_e2e\\conftest.py:118: error: Returning Any from function declared to return \"HexDocument\"  [no-any-return]"
+          "raw": "tests\\test_hexcore_e2e\\conftest.py:120: error: Returning Any from function declared to return \"HexDocument\"  [no-any-return]"
         },
         {
-          "line": 132,
+          "line": 134,
           "column": null,
           "severity": "error",
           "code": "no-any-return",
           "message": "Returning Any from function declared to return \"HexDocument\"",
-          "raw": "tests\\test_hexcore_e2e\\conftest.py:132: error: Returning Any from function declared to return \"HexDocument\"  [no-any-return]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 4,
-      "findings": [
-        {
-          "line": 45,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:45: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        },
-        {
-          "line": 634,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:634: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 815,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:815: error: Statement is unreachable  [unreachable]"
-        },
-        {
-          "line": 869,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py:869: error: Statement is unreachable  [unreachable]"
+          "raw": "tests\\test_hexcore_e2e\\conftest.py:134: error: Returning Any from function declared to return \"HexDocument\"  [no-any-return]"
         }
       ]
     },
@@ -4831,20 +4867,20 @@
           "raw": "src\\intellicrack\\ui\\app.py:69: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")  [assignment]"
         },
         {
-          "line": 352,
+          "line": 353,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:352: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:353: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 804,
+          "line": 805,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:804: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:805: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -4879,6 +4915,36 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\sandbox\\analysis.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 503,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")",
+          "raw": "src\\intellicrack\\sandbox\\analysis.py:503: error: Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")  [assignment]"
+        },
+        {
+          "line": 504,
+          "column": null,
+          "severity": "error",
+          "code": "typeddict-item",
+          "message": "TypedDict \"FileChange\" has no key \"key\"",
+          "raw": "src\\intellicrack\\sandbox\\analysis.py:504: error: TypedDict \"FileChange\" has no key \"key\"  [typeddict-item]"
+        },
+        {
+          "line": 507,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"_scan_text\" has incompatible type \"object\"; expected \"str\"",
+          "raw": "src\\intellicrack\\sandbox\\analysis.py:507: error: Argument 1 to \"_scan_text\" has incompatible type \"object\"; expected \"str\"  [arg-type]"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_hexcore_e2e\\test_bridge_state_integration.py",
       "count": 3,
       "findings": [
@@ -4905,6 +4971,66 @@
           "code": "assignment",
           "message": "Incompatible types in assignment (expression has type \"object\", variable has type \"str\")",
           "raw": "tests\\test_hexcore_e2e\\test_bridge_state_integration.py:300: error: Incompatible types in assignment (expression has type \"object\", variable has type \"str\")  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1865,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 2 to \"_dispatch_func_menu_action\" of \"GhidraPanel\" has incompatible type \"dict[str, QAction | None]\"; expected \"dict[str, object]\"",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:1865: error: Argument 2 to \"_dispatch_func_menu_action\" of \"GhidraPanel\" has incompatible type \"dict[str, QAction | None]\"; expected \"dict[str, object]\"  [arg-type]"
+        },
+        {
+          "line": 1865,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "\"dict\" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:1865: note: \"dict\" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance"
+        },
+        {
+          "line": 1865,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Consider using \"Mapping\" instead, which is covariant in the value type",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:1865: note: Consider using \"Mapping\" instead, which is covariant in the value type"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 224,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"QComboBox | None\", base class \"TransformsMixin\" defined the type as \"QComboBox\")",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:224: error: Incompatible types in assignment (expression has type \"QComboBox | None\", base class \"TransformsMixin\" defined the type as \"QComboBox\")  [assignment]"
+        },
+        {
+          "line": 225,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"QLineEdit | None\", base class \"TransformsMixin\" defined the type as \"QLineEdit\")",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:225: error: Incompatible types in assignment (expression has type \"QLineEdit | None\", base class \"TransformsMixin\" defined the type as \"QLineEdit\")  [assignment]"
+        },
+        {
+          "line": 226,
+          "column": null,
+          "severity": "error",
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"QSpinBox | None\", base class \"TransformsMixin\" defined the type as \"QSpinBox\")",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\panel.py:226: error: Incompatible types in assignment (expression has type \"QSpinBox | None\", base class \"TransformsMixin\" defined the type as \"QSpinBox\")  [assignment]"
         }
       ]
     },
@@ -5109,6 +5235,28 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1572,
+          "column": null,
+          "severity": "error",
+          "code": "valid-type",
+          "message": "Function \"intellicrack.bridges.sandbox_bridge.SandboxBridge.list\" is not valid as a type",
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:1572: error: Function \"intellicrack.bridges.sandbox_bridge.SandboxBridge.list\" is not valid as a type  [valid-type]"
+        },
+        {
+          "line": 1572,
+          "column": null,
+          "severity": "note",
+          "code": "",
+          "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
+          "raw": "src\\intellicrack\\bridges\\sandbox_bridge.py:1572: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
+        }
+      ]
+    },
+    {
       "path": "tests\\test_ui\\test_font_manager.py",
       "count": 2,
       "findings": [
@@ -5127,6 +5275,28 @@
           "code": "comparison-overlap",
           "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
           "raw": "tests\\test_ui\\test_font_manager.py:187: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 2499,
+          "column": null,
+          "severity": "error",
+          "code": "func-returns-value",
+          "message": "\"appendPlainText\" of \"QPlainTextEdit\" does not return a value (it only ever returns None)",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:2499: error: \"appendPlainText\" of \"QPlainTextEdit\" does not return a value (it only ever returns None)  [func-returns-value]"
+        },
+        {
+          "line": 2499,
+          "column": null,
+          "severity": "error",
+          "code": "func-returns-value",
+          "message": "\"_refresh_state\" of \"X64DbgPanel\" does not return a value (it only ever returns None)",
+          "raw": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py:2499: error: \"_refresh_state\" of \"X64DbgPanel\" does not return a value (it only ever returns None)  [func-returns-value]"
         }
       ]
     },
@@ -5205,12 +5375,40 @@
       "count": 1,
       "findings": [
         {
-          "line": 205,
+          "line": 230,
           "column": null,
           "severity": "error",
           "code": "union-attr",
           "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:205: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:230: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\process.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1015,
+          "column": null,
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"float\"",
+          "raw": "src\\intellicrack\\bridges\\process.py:1015: error: Returning Any from function declared to return \"float\"  [no-any-return]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\ghidra.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 1951,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument \"encoding\" to \"StringInfo\" has incompatible type \"str\"; expected \"Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']\"",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py:1951: error: Argument \"encoding\" to \"StringInfo\" has incompatible type \"str\"; expected \"Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']\"  [arg-type]"
         }
       ]
     },
@@ -5341,16 +5539,30 @@
       ]
     },
     {
+      "path": "tests\\test_providers\\test_local_xpu_e2e.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 77,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_providers\\test_local_xpu_e2e.py:77: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\hex_editor.py",
       "count": 1,
       "findings": [
         {
-          "line": 1733,
+          "line": 2149,
           "column": null,
           "severity": "error",
           "code": "no-redef",
-          "message": "Name \"data\" already defined on line 1727",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:1733: error: Name \"data\" already defined on line 1727  [no-redef]"
+          "message": "Name \"data\" already defined on line 2143",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2149: error: Name \"data\" already defined on line 2143  [no-redef]"
         }
       ]
     },
@@ -5383,6 +5595,34 @@
       ]
     },
     {
+      "path": "tests\\test_providers\\test_e2e_chat.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 90,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_providers\\test_e2e_chat.py:90: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_agentic_capabilities.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 54,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "\"type[ToolName]\" has no attribute \"BINARY\"",
+          "raw": "tests\\test_providers\\test_agentic_capabilities.py:54: error: \"type[ToolName]\" has no attribute \"BINARY\"  [attr-defined]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\win32_embed.py",
       "count": 1,
       "findings": [
@@ -5393,6 +5633,20 @@
           "code": "arg-type",
           "message": "Argument 1 to \"createWindowContainer\" of \"QWidget\" has incompatible type \"object\"; expected \"QWindow | None\"",
           "raw": "src\\intellicrack\\ui\\win32_embed.py:119: error: Argument 1 to \"createWindowContainer\" of \"QWidget\" has incompatible type \"object\"; expected \"QWindow | None\"  [arg-type]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 590,
+          "column": null,
+          "severity": "error",
+          "code": "arg-type",
+          "message": "Argument 1 to \"_PythonSyntaxHighlighter\" has incompatible type \"QTextDocument | None\"; expected \"QTextDocument\"",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py:590: error: Argument 1 to \"_PythonSyntaxHighlighter\" has incompatible type \"QTextDocument | None\"; expected \"QTextDocument\"  [arg-type]"
         }
       ]
     },

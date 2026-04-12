@@ -7,43 +7,15 @@
         "driver": {
           "name": "semgrep",
           "version": "1.0.0",
-          "rules": [
-            {
-              "id": "Syntax error",
-              "shortDescription": {
-                "text": "Syntax error at line src\\intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:1:\n `//     __ _____ _____ _____\n//  __|  |   __|     |   | |  JSON for Modern C++\n// |  |  |__   |  |  | | | |  version 3.12.0\n// |_____|_____|_____|_|___|  https://github.com/nlohmann/json\n//\n// SPDX-FileCopyrightText: 2013-2026 Niels Lohmann <https://nlohmann.me>\n// SPDX-License-Identifier: MIT\n\n/****************************************************************************\\\n * Note on documentation: The source files contain links to the online      *\n * documentation of the public API at https://json.nlohmann.me. This URL    *\n * contains the most recent documentation and should also be applicable to  *\n * previous versions; documentation for deprecated functions is not         *\n * removed, but marked deprecated. See \"Generate documentation\" section in  *\n * file docs/README.md.                                                     *\n\\****************************************************************************/\n\n#ifndef INCLUDE_NLOHMANN_JSON_HPP_\n#define INCLUDE_NLOHMANN_JSON_HPP_\n\n#include <algorithm> // all_of, find, for_each\n#include <cstddef> // nullptr_t, ptrdiff_t, size_t\n#include <functional> // hash, less\n#include <initializer_list> // initializer_list\n#ifndef JSON_NO_IO\n    #include <iosfwd> // istream, ostream\n#endif  // JSON_NO_IO\n#include <iterator> // random_access_iterator_tag\n#include <memory> // unique_ptr\n#include <string> // string, stoi, to_string\n#include <utility> // declval, forward, move, pair, swap\n#include <vector> // vector\n\n// #include <nlohmann/adl_serializer.hpp>\n//     __ _____ _____ _____\n//  __|  |   __|     |   | |  JSON for Modern C++\n// |  |  |__   |  |  | | | |  version 3.12.0\n// |_____|_____|_____|_|___|  https://github.com/nlohmann/json\n//\n// SPDX-FileCopyrightText: 2013-2026 Niels Lohmann <https://nlohmann.me>\n// SPDX-License-Identifier: MIT\n\n\n\n#include <utility>\n\n// #include <nlohmann/detail/abi_macros.hpp>\n//     __ _____ _____ _____\n//  __|  |   __|     |   | |  JSON for Modern C++\n// |  |  |__   |  |  | | | |  version 3.12.0\n// |_____|_____|_____|_|___|  https://github.com/... (truncated 960680 more characters)"
-              }
-            },
-            {
-              "id": "['PartialParsing', [{'path': 'src\\\\intellicrack\\\\plugins\\\\x64dbg_plugin\\\\intellicrack_x64dbg.cpp', 'start': {'line': 33, 'col': 13, 'offset': 0}, 'end': {'line': 33, 'col': 17, 'offset': 4}}, {'path': 'src\\\\intellicrack\\\\plugins\\\\x64dbg_plugin\\\\intellicrack_x64dbg.cpp', 'start': {'line': 49, 'col': 13, 'offset': 0}, 'end': {'line': 49, 'col': 17, 'offset': 4}}, {'path': 'src\\\\intellicrack\\\\plugins\\\\x64dbg_plugin\\\\intellicrack_x64dbg.cpp', 'start': {'line': 57, 'col': 13, 'offset': 0}, 'end': {'line': 57, 'col': 17, 'offset': 4}}]]",
-              "shortDescription": {
-                "text": "Syntax error at line src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp:33:\n `bool` was unexpected"
-              }
-            }
-          ]
+          "rules": []
         }
       },
-      "results": [
-        {
-          "ruleId": "Syntax error",
-          "level": "error",
-          "message": {
-            "text": "Syntax error at line src\\intellicrack\\plugins\\x64dbg_plugin\\third_party\\nlohmann\\json.hpp:1:\n `//     __ _____ _____ _____\n//  __|  |   __|     |   | |  JSON for Modern C++\n// |  |  |__   |  |  | | | |  version 3.12.0\n// |_____|_____|_____|_|___|  https://github.com/nlohmann/json\n//\n// SPDX-FileCopyrightText: 2013-2026 Niels Lohmann <https://nlohmann.me>\n// SPDX-License-Identifier: MIT\n\n/****************************************************************************\\\n * Note on documentation: The source files contain links to the online      *\n * documentation of the public API at https://json.nlohmann.me. This URL    *\n * contains the most recent documentation and should also be applicable to  *\n * previous versions; documentation for deprecated functions is not         *\n * removed, but marked deprecated. See \"Generate documentation\" section in  *\n * file docs/README.md.                                                     *\n\\****************************************************************************/\n\n#ifndef INCLUDE_NLOHMANN_JSON_HPP_\n#define INCLUDE_NLOHMANN_JSON_HPP_\n\n#include <algorithm> // all_of, find, for_each\n#include <cstddef> // nullptr_t, ptrdiff_t, size_t\n#include <functional> // hash, less\n#include <initializer_list> // initializer_list\n#ifndef JSON_NO_IO\n    #include <iosfwd> // istream, ostream\n#endif  // JSON_NO_IO\n#include <iterator> // random_access_iterator_tag\n#include <memory> // unique_ptr\n#include <string> // string, stoi, to_string\n#include <utility> // declval, forward, move, pair, swap\n#include <vector> // vector\n\n// #include <nlohmann/adl_serializer.hpp>\n//     __ _____ _____ _____\n//  __|  |   __|     |   | |  JSON for Modern C++\n// |  |  |__   |  |  | | | |  version 3.12.0\n// |_____|_____|_____|_|___|  https://github.com/nlohmann/json\n//\n// SPDX-FileCopyrightText: 2013-2026 Niels Lohmann <https://nlohmann.me>\n// SPDX-License-Identifier: MIT\n\n\n\n#include <utility>\n\n// #include <nlohmann/detail/abi_macros.hpp>\n//     __ _____ _____ _____\n//  __|  |   __|     |   | |  JSON for Modern C++\n// |  |  |__   |  |  | | | |  version 3.12.0\n// |_____|_____|_____|_|___|  https://github.com/... (truncated 960680 more characters)"
-          }
-        },
-        {
-          "ruleId": "['PartialParsing', [{'path': 'src\\\\intellicrack\\\\plugins\\\\x64dbg_plugin\\\\intellicrack_x64dbg.cpp', 'start': {'line': 33, 'col': 13, 'offset': 0}, 'end': {'line': 33, 'col': 17, 'offset': 4}}, {'path': 'src\\\\intellicrack\\\\plugins\\\\x64dbg_plugin\\\\intellicrack_x64dbg.cpp', 'start': {'line': 49, 'col': 13, 'offset': 0}, 'end': {'line': 49, 'col': 17, 'offset': 4}}, {'path': 'src\\\\intellicrack\\\\plugins\\\\x64dbg_plugin\\\\intellicrack_x64dbg.cpp', 'start': {'line': 57, 'col': 13, 'offset': 0}, 'end': {'line': 57, 'col': 17, 'offset': 4}}]]",
-          "level": "error",
-          "message": {
-            "text": "Syntax error at line src\\intellicrack\\plugins\\x64dbg_plugin\\intellicrack_x64dbg.cpp:33:\n `bool` was unexpected"
-          }
-        }
-      ],
+      "results": [],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:37:51.402957"
+          "endTimeUtc": "2026-04-11T07:09:32.365455+00:00"
         }
       ]
     }

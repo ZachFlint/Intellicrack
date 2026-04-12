@@ -1,3 +1,4 @@
+pub mod bps_ups;
 pub mod data_inspector;
 pub mod data_source;
 pub mod diff;
@@ -8,6 +9,7 @@ pub mod mmap_io;
 pub mod patch_export;
 pub mod piece_table;
 pub mod search;
+pub mod strings;
 pub mod templates;
 pub mod transforms;
 pub mod undo;
@@ -60,6 +62,9 @@ pub struct HexDocument {
     undo_mgr: UndoManager,
     bookmarks: Vec<Bookmark>,
     template_registry: TemplateRegistry,
+    va_mappings: Vec<(usize, u64, usize)>,
+    chunk_size_hint: usize,
+    memory_budget_hint: usize,
 }
 
 #[pymethods]
@@ -71,6 +76,9 @@ impl HexDocument {
             undo_mgr: UndoManager::new(),
             bookmarks: Vec::new(),
             template_registry: TemplateRegistry::new(),
+            va_mappings: Vec::new(),
+            chunk_size_hint: 4 * 1024 * 1024,
+            memory_budget_hint: 512 * 1024 * 1024,
         }
     }
 
@@ -83,6 +91,9 @@ impl HexDocument {
             undo_mgr: UndoManager::new(),
             bookmarks: Vec::new(),
             template_registry: TemplateRegistry::new(),
+            va_mappings: Vec::new(),
+            chunk_size_hint: 4 * 1024 * 1024,
+            memory_budget_hint: 512 * 1024 * 1024,
         })
     }
 
@@ -93,6 +104,9 @@ impl HexDocument {
             undo_mgr: UndoManager::new(),
             bookmarks: Vec::new(),
             template_registry: TemplateRegistry::new(),
+            va_mappings: Vec::new(),
+            chunk_size_hint: 4 * 1024 * 1024,
+            memory_budget_hint: 512 * 1024 * 1024,
         }
     }
 
@@ -698,6 +712,9 @@ impl HexDocument {
                 undo_mgr: UndoManager::new(),
                 bookmarks: Vec::new(),
                 template_registry: TemplateRegistry::new(),
+                va_mappings: Vec::new(),
+                chunk_size_hint: 4 * 1024 * 1024,
+                memory_budget_hint: 512 * 1024 * 1024,
             })
         }
         #[cfg(not(windows))]
@@ -731,6 +748,281 @@ impl HexDocument {
                 "process memory only supported on Windows",
             ))
         }
+    }
+
+    // --- BPS/UPS Patch Formats ---
+
+    fn export_patches_bps(&self, source_data: &[u8]) -> PyResult<Vec<u8>> {
+        let target = self.inner.read_all();
+        bps_ups::export_bps(source_data, &target)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+
+    fn import_patches_bps(&mut self, patch_data: &[u8], source_data: &[u8]) -> PyResult<usize> {
+        let target = bps_ups::import_bps(patch_data, source_data)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        let target_len = target.len();
+        self.inner = MmapDocument::from_bytes(&target);
+        self.undo_mgr = UndoManager::new();
+        Ok(target_len)
+    }
+
+    fn export_patches_ups(&self, source_data: &[u8]) -> PyResult<Vec<u8>> {
+        let target = self.inner.read_all();
+        bps_ups::export_ups(source_data, &target)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+
+    fn import_patches_ups(&mut self, patch_data: &[u8], source_data: &[u8]) -> PyResult<usize> {
+        let target = bps_ups::import_ups(patch_data, source_data)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        let target_len = target.len();
+        self.inner = MmapDocument::from_bytes(&target);
+        self.undo_mgr = UndoManager::new();
+        Ok(target_len)
+    }
+
+    // --- Block Operations ---
+
+    fn fill_block(&mut self, offset: usize, length: usize, pattern: Vec<u8>) -> PyResult<()> {
+        if pattern.is_empty() {
+            return Err(pyo3::exceptions::PyValueError::new_err("pattern cannot be empty"));
+        }
+        let doc_len = self.inner.document_size();
+        if offset + length > doc_len {
+            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+        }
+        let fill: Vec<u8> = pattern.iter().cycle().take(length).copied().collect();
+        let old_data = self.inner.read(offset, length);
+        self.inner.overwrite(offset, &fill);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset,
+            old_data,
+            new_data: fill,
+        });
+        Ok(())
+    }
+
+    fn copy_block(&mut self, src_offset: usize, length: usize, dst_offset: usize) -> PyResult<()> {
+        let doc_len = self.inner.document_size();
+        if src_offset + length > doc_len || dst_offset + length > doc_len {
+            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+        }
+        let data = self.inner.read(src_offset, length);
+        let old_dst = self.inner.read(dst_offset, length);
+        self.inner.overwrite(dst_offset, &data);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset: dst_offset,
+            old_data: old_dst,
+            new_data: data,
+        });
+        Ok(())
+    }
+
+    fn move_block(&mut self, src_offset: usize, length: usize, dst_offset: usize) -> PyResult<()> {
+        let doc_len = self.inner.document_size();
+        if src_offset + length > doc_len || dst_offset + length > doc_len {
+            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+        }
+        let data = self.inner.read(src_offset, length);
+        let old_dst = self.inner.read(dst_offset, length);
+        let zeros = vec![0u8; length];
+        self.inner.overwrite(src_offset, &zeros);
+        self.inner.overwrite(dst_offset, &data);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset: dst_offset,
+            old_data: old_dst,
+            new_data: data,
+        });
+        Ok(())
+    }
+
+    fn swap_blocks(
+        &mut self,
+        offset_a: usize,
+        len_a: usize,
+        offset_b: usize,
+        len_b: usize,
+    ) -> PyResult<()> {
+        let doc_len = self.inner.document_size();
+        if offset_a + len_a > doc_len || offset_b + len_b > doc_len {
+            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+        }
+        if (offset_a < offset_b + len_b) && (offset_b < offset_a + len_a) {
+            return Err(pyo3::exceptions::PyValueError::new_err("blocks overlap"));
+        }
+        let data_a = self.inner.read(offset_a, len_a);
+        let data_b = self.inner.read(offset_b, len_b);
+        let mut write_a: Vec<u8> = data_b.clone();
+        write_a.resize(len_a, 0);
+        let mut write_b: Vec<u8> = data_a.clone();
+        write_b.resize(len_b, 0);
+        self.inner.overwrite(offset_a, &write_a);
+        self.inner.overwrite(offset_b, &write_b);
+        Ok(())
+    }
+
+    // --- Bit Operations ---
+
+    fn get_bit(&self, offset: usize, bit_index: u8) -> PyResult<bool> {
+        if bit_index > 7 {
+            return Err(pyo3::exceptions::PyValueError::new_err("bit_index must be 0-7"));
+        }
+        let byte = self
+            .inner
+            .read_byte(offset)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        Ok(byte & (1 << bit_index) != 0)
+    }
+
+    fn set_bit(&mut self, offset: usize, bit_index: u8, value: bool) -> PyResult<()> {
+        if bit_index > 7 {
+            return Err(pyo3::exceptions::PyValueError::new_err("bit_index must be 0-7"));
+        }
+        let old_byte = self
+            .inner
+            .read_byte(offset)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        let new_byte = if value {
+            old_byte | (1 << bit_index)
+        } else {
+            old_byte & !(1 << bit_index)
+        };
+        self.inner.overwrite(offset, &[new_byte]);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset,
+            old_data: vec![old_byte],
+            new_data: vec![new_byte],
+        });
+        Ok(())
+    }
+
+    fn toggle_bit(&mut self, offset: usize, bit_index: u8) -> PyResult<bool> {
+        if bit_index > 7 {
+            return Err(pyo3::exceptions::PyValueError::new_err("bit_index must be 0-7"));
+        }
+        let old_byte = self
+            .inner
+            .read_byte(offset)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        let new_byte = old_byte ^ (1 << bit_index);
+        self.inner.overwrite(offset, &[new_byte]);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset,
+            old_data: vec![old_byte],
+            new_data: vec![new_byte],
+        });
+        Ok(new_byte & (1 << bit_index) != 0)
+    }
+
+    // --- VA Mapping ---
+
+    fn add_va_mapping(&mut self, file_offset: usize, virtual_address: u64, length: usize) {
+        self.va_mappings.push((file_offset, virtual_address, length));
+        self.va_mappings.sort_by_key(|m| m.0);
+    }
+
+    fn remove_va_mapping(&mut self, index: usize) -> bool {
+        if index < self.va_mappings.len() {
+            self.va_mappings.remove(index);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn list_va_mappings(&self) -> Vec<(usize, u64, usize)> {
+        self.va_mappings.clone()
+    }
+
+    fn file_offset_to_va(&self, offset: usize) -> Option<u64> {
+        for &(file_off, va, length) in &self.va_mappings {
+            if offset >= file_off && offset < file_off + length {
+                return Some(va + (offset - file_off) as u64);
+            }
+        }
+        None
+    }
+
+    fn va_to_file_offset(&self, va: u64) -> Option<usize> {
+        for &(file_off, base_va, length) in &self.va_mappings {
+            let end_va = base_va + length as u64;
+            if va >= base_va && va < end_va {
+                return Some(file_off + (va - base_va) as usize);
+            }
+        }
+        None
+    }
+
+    // --- String Extraction ---
+
+    fn extract_strings(
+        &self,
+        py: Python<'_>,
+        min_length: usize,
+        include_ascii: bool,
+        include_utf16: bool,
+        max_results: usize,
+    ) -> PyResult<PyObject> {
+        let data = self.inner.read_all();
+        let matches = strings::extract_strings(&data, min_length, include_ascii, include_utf16, max_results);
+
+        let list = PyList::empty(py);
+        for m in &matches {
+            let dict = PyDict::new(py);
+            dict.set_item("offset", m.offset)?;
+            dict.set_item("length", m.length)?;
+            dict.set_item("encoding", &m.encoding)?;
+            dict.set_item("content", &m.content)?;
+            list.append(dict)?;
+        }
+        Ok(list.into())
+    }
+
+    // --- PE Checksum ---
+
+    fn verify_pe_checksum(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let data = self.inner.read_all();
+        let result = hash::verify_pe_checksum(&data)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e:?}")))?;
+        let dict = PyDict::new(py);
+        dict.set_item("stored", result.stored)?;
+        dict.set_item("calculated", result.calculated)?;
+        dict.set_item("offset", result.offset)?;
+        dict.set_item("valid", result.valid)?;
+        Ok(dict.into())
+    }
+
+    fn repair_pe_checksum(&mut self) -> PyResult<()> {
+        let data = self.inner.read_all();
+        let result = hash::verify_pe_checksum(&data)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e:?}")))?;
+        let new_checksum = result.calculated;
+        let checksum_bytes = new_checksum.to_le_bytes();
+        self.inner.overwrite(result.offset, &checksum_bytes);
+        Ok(())
+    }
+
+    // --- Large File Controls ---
+
+    fn get_document_memory_usage(&self) -> usize {
+        self.inner.document_size()
+    }
+
+    fn set_chunk_size_hint(&mut self, size: usize) {
+        self.chunk_size_hint = size;
+    }
+
+    fn get_chunk_size_hint(&self) -> usize {
+        self.chunk_size_hint
+    }
+
+    fn set_memory_budget_hint(&mut self, budget: usize) {
+        self.memory_budget_hint = budget;
+    }
+
+    fn get_memory_budget_hint(&self) -> usize {
+        self.memory_budget_hint
     }
 }
 

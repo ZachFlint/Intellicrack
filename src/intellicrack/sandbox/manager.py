@@ -56,6 +56,7 @@ class SandboxInstance:
         self.created_at = datetime.now(UTC)
         self.last_used = datetime.now(UTC)
         self.binary_path = binary_path
+        self.last_report: ExecutionReport | None = None
 
     @property
     def state(self) -> SandboxState:
@@ -311,6 +312,7 @@ class SandboxManager:
             _logger.warning("binary_execution_failed", instance_id=instance.id)
             raise
 
+        instance.last_report = report
         return (instance, report)
 
     async def _find_idle_instance(

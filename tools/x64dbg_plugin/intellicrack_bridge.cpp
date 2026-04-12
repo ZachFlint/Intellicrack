@@ -20,6 +20,34 @@
 
 #include <cstdio>
 #include <cstring>
+#include <sstream>
+
+namespace {
+
+std::string escape_json_path(const char* s) {
+    std::ostringstream ss;
+    if (!s) return "unknown";
+    for (const char* p = s; *p; ++p) {
+        switch (*p) {
+            case '"': ss << "\\\""; break;
+            case '\\': ss << "\\\\"; break;
+            case '\n': ss << "\\n"; break;
+            case '\r': ss << "\\r"; break;
+            case '\t': ss << "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(*p) < 0x20) {
+                    char buf[8];
+                    snprintf(buf, sizeof(buf), "\\u%04x", static_cast<int>(*p));
+                    ss << buf;
+                } else {
+                    ss << *p;
+                }
+        }
+    }
+    return ss.str();
+}
+
+}
 
 namespace intellicrack {
 
@@ -98,23 +126,23 @@ void on_exception(uint32_t exception_code, uint64_t exception_address) {
 void on_dll_load(const char* dll_name, uint64_t base_address) {
     if (!g_state.pipe_server_running) return;
 
-    char event_json[512];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"dll_load","name":"%s","base":"0x%llX"})",
-        dll_name ? dll_name : "unknown",
-        static_cast<unsigned long long>(base_address));
-    g_pipe_server.broadcast_event(event_json);
+    std::ostringstream ss;
+    ss << R"({"type":"event","event":"dll_load","name":")"
+       << escape_json_path(dll_name)
+       << R"(","base":"0x)" << std::hex << std::uppercase << base_address
+       << R"("})";
+    g_pipe_server.broadcast_event(ss.str());
 }
 
 void on_dll_unload(const char* dll_name, uint64_t base_address) {
     if (!g_state.pipe_server_running) return;
 
-    char event_json[512];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"dll_unload","name":"%s","base":"0x%llX"})",
-        dll_name ? dll_name : "unknown",
-        static_cast<unsigned long long>(base_address));
-    g_pipe_server.broadcast_event(event_json);
+    std::ostringstream ss;
+    ss << R"({"type":"event","event":"dll_unload","name":")"
+       << escape_json_path(dll_name)
+       << R"(","base":"0x)" << std::hex << std::uppercase << base_address
+       << R"("})";
+    g_pipe_server.broadcast_event(ss.str());
 }
 
 void on_process_start(const char* exe_path, uint32_t pid) {
@@ -123,11 +151,11 @@ void on_process_start(const char* exe_path, uint32_t pid) {
     g_state.debugging = true;
     g_state.paused = true;
 
-    char event_json[1024];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"process_start","path":"%s","pid":%u})",
-        exe_path ? exe_path : "unknown", pid);
-    g_pipe_server.broadcast_event(event_json);
+    std::ostringstream ss;
+    ss << R"({"type":"event","event":"process_start","path":")"
+       << escape_json_path(exe_path)
+       << R"(","pid":)" << pid << '}';
+    g_pipe_server.broadcast_event(ss.str());
 }
 
 void on_process_exit(uint32_t exit_code) {

@@ -71,6 +71,7 @@ _ELF_CLASS_64 = 2
 _MIN_ELF_HEADER = 64
 _MACHINE_AMD64 = 0x8664
 _MACHINE_I386 = 0x14C
+_JAVA_SIGNED_THRESHOLD = 127
 
 
 class GhidraBridge(StaticAnalysisBridge):
@@ -81,9 +82,11 @@ class GhidraBridge(StaticAnalysisBridge):
 
     Attributes:
         DEFAULT_PORT: TCP port for the ghidra_bridge RPC connection.
+        DECOMPILE_TIMEOUT_SECONDS: Timeout for Ghidra decompilation in seconds.
     """
 
     DEFAULT_PORT = 4768
+    DECOMPILE_TIMEOUT_SECONDS: int = 60
 
     def __init__(self) -> None:
         super().__init__()
@@ -249,6 +252,14 @@ class GhidraBridge(StaticAnalysisBridge):
                             type="string",
                             description="Regex pattern to match",
                             required=True,
+                        ),
+                        ToolParameter(
+                            name="encoding",
+                            type="string",
+                            description="String encoding to filter",
+                            required=False,
+                            default="ascii",
+                            enum=["ascii", "utf-16", "utf-16-le", "utf-16-be", "utf-32"],
                         ),
                     ],
                     returns="List of StringInfo objects",
@@ -427,6 +438,14 @@ class GhidraBridge(StaticAnalysisBridge):
                         ToolParameter(name="address", type="integer", description="Address to bookmark", required=True),
                         ToolParameter(name="category", type="string", description="Bookmark category", required=True),
                         ToolParameter(name="comment", type="string", description="Bookmark comment", required=True),
+                        ToolParameter(
+                            name="bookmark_type",
+                            type="string",
+                            description="Bookmark type",
+                            required=False,
+                            default="Note",
+                            enum=["Note", "Analysis", "Error", "Warning", "Info"],
+                        ),
                     ],
                     returns="Bookmark creation result",
                 ),
@@ -566,22 +585,413 @@ class GhidraBridge(StaticAnalysisBridge):
                     parameters=[],
                     returns="Redo result",
                 ),
+                ToolFunction(
+                    name="ghidra.read_bytes",
+                    description="Read bytes from an address in the program",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to read from", required=True),
+                        ToolParameter(name="length", type="integer", description="Number of bytes to read", required=True),
+                    ],
+                    returns="Dict with address, hex string, bytes list, and length",
+                ),
+                ToolFunction(
+                    name="ghidra.get_pcode",
+                    description="Get P-code IR operations for the function at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address within the function", required=True),
+                        ToolParameter(
+                            name="max_ops",
+                            type="integer",
+                            description="Maximum P-code ops to return",
+                            required=False,
+                            default=500,
+                        ),
+                    ],
+                    returns="Dict with function name and list of P-code operations",
+                ),
+                ToolFunction(
+                    name="ghidra.get_basic_blocks",
+                    description="Get basic block structure of the function at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address within the function", required=True),
+                        ToolParameter(
+                            name="max_blocks",
+                            type="integer",
+                            description="Maximum blocks to return",
+                            required=False,
+                            default=100,
+                        ),
+                    ],
+                    returns="Dict with function name and list of basic blocks",
+                ),
+                ToolFunction(
+                    name="ghidra.get_slice",
+                    description="Compute a backward or forward program slice from an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Slice origin address", required=True),
+                        ToolParameter(
+                            name="direction",
+                            type="string",
+                            description="Slice direction",
+                            required=False,
+                            default="backward",
+                            enum=["backward", "forward"],
+                        ),
+                    ],
+                    returns="Dict with slice addresses and P-code ops",
+                ),
+                ToolFunction(
+                    name="ghidra.get_callers",
+                    description="Get all functions that call the function at the given address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Callee function address", required=True),
+                    ],
+                    returns="List of caller dicts with caller_address, caller_function, call_site, ref_type",
+                ),
+                ToolFunction(
+                    name="ghidra.get_register_value",
+                    description="Get the context-tracked register value at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to query", required=True),
+                        ToolParameter(name="register", type="string", description="Register name (e.g. EAX, RSP)", required=True),
+                    ],
+                    returns="Dict with address, register name, value, and has_value flag",
+                ),
+                ToolFunction(
+                    name="ghidra.import_debug_info",
+                    description="Import debug symbols from a PDB or DWARF file",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Path to .pdb or .debug file", required=True),
+                    ],
+                    returns="Dict with path, success, and debug info type",
+                ),
+                ToolFunction(
+                    name="ghidra.add_reference",
+                    description="Add a memory reference between two addresses",
+                    parameters=[
+                        ToolParameter(name="from_addr", type="integer", description="Source address", required=True),
+                        ToolParameter(name="to_addr", type="integer", description="Destination address", required=True),
+                        ToolParameter(
+                            name="ref_type",
+                            type="string",
+                            description="Reference type",
+                            required=False,
+                            default="DATA",
+                            enum=["DATA", "READ", "WRITE", "CALL", "UNCONDITIONAL_JUMP", "CONDITIONAL_JUMP"],
+                        ),
+                    ],
+                    returns="Dict with from, to, type, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.delete_reference",
+                    description="Delete a memory reference between two addresses",
+                    parameters=[
+                        ToolParameter(name="from_addr", type="integer", description="Source address", required=True),
+                        ToolParameter(name="to_addr", type="integer", description="Destination address", required=True),
+                    ],
+                    returns="Dict with from, to, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_relocations",
+                    description="Get all relocations from the program relocation table",
+                    parameters=[],
+                    returns="List of relocation dicts with address, type, symbol, and values",
+                ),
+                ToolFunction(
+                    name="ghidra.create_namespace",
+                    description="Create a namespace in the Ghidra symbol table",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Namespace name", required=True),
+                        ToolParameter(name="parent", type="string", description="Parent namespace path", required=False),
+                    ],
+                    returns="Dict with name, path, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_namespaces",
+                    description="List all namespaces defined in the program",
+                    parameters=[],
+                    returns="List of namespace dicts with name and path",
+                ),
+                ToolFunction(
+                    name="ghidra.create_equate",
+                    description="Create an equate (named constant) and attach it to an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the scalar operand", required=True),
+                        ToolParameter(name="value", type="integer", description="Numeric value of the equate", required=True),
+                        ToolParameter(name="name", type="string", description="Equate name", required=True),
+                    ],
+                    returns="Dict with name, value, address, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_equates",
+                    description="List all equates defined in the program",
+                    parameters=[],
+                    returns="List of equate dicts with name, value, and reference count",
+                ),
+                ToolFunction(
+                    name="ghidra.search_symbols",
+                    description="Search symbols by name pattern with optional type filter",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Symbol name pattern", required=True),
+                        ToolParameter(
+                            name="symbol_type",
+                            type="string",
+                            description="Symbol type filter (e.g. FUNCTION, LABEL)",
+                            required=False,
+                        ),
+                    ],
+                    returns="List of symbol dicts with name, address, type, and namespace",
+                ),
+                ToolFunction(
+                    name="ghidra.get_stack_frame",
+                    description="Get stack frame layout for the function at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address within the function", required=True),
+                    ],
+                    returns="Dict with function name, frame_size, and list of stack variables",
+                ),
+                ToolFunction(
+                    name="ghidra.get_function_body",
+                    description="Get address ranges, thunk status, and size for a function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address within the function", required=True),
+                    ],
+                    returns="Dict with name, address, is_thunk, thunked_function, ranges, and total_size",
+                ),
+                ToolFunction(
+                    name="ghidra.get_call_tree",
+                    description="Get recursive call tree for callees, callers, or both",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Root function address", required=True),
+                        ToolParameter(
+                            name="direction",
+                            type="string",
+                            description="Tree direction",
+                            required=False,
+                            default="callees",
+                            enum=["callees", "callers", "both"],
+                        ),
+                        ToolParameter(name="depth", type="integer", description="Maximum recursion depth", required=False, default=3),
+                    ],
+                    returns="Recursive call tree dict",
+                ),
+                ToolFunction(
+                    name="ghidra.get_calling_conventions",
+                    description="List all calling conventions defined in the compiler spec",
+                    parameters=[],
+                    returns="List of calling convention name strings",
+                ),
+                ToolFunction(
+                    name="ghidra.get_instruction_flow",
+                    description="Get control flow information for a single instruction",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Instruction address", required=True),
+                    ],
+                    returns="Dict with address, mnemonic, flow_type, fall_through, and flows",
+                ),
+                ToolFunction(
+                    name="ghidra.create_data_type",
+                    description="Create a new data type (enum, union, typedef, or function_def) in the type manager",
+                    parameters=[
+                        ToolParameter(name="category", type="string", description="Category path (e.g. /MyTypes)", required=True),
+                        ToolParameter(name="name", type="string", description="Data type name", required=True),
+                        ToolParameter(
+                            name="type_kind",
+                            type="string",
+                            description="Kind of data type to create",
+                            required=True,
+                            enum=["enum", "union", "typedef", "function_def"],
+                        ),
+                        ToolParameter(
+                            name="fields",
+                            type="array",
+                            description="Field definitions for enum/union (list of {name, value/type, size} dicts)",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with name, kind, size, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_data",
+                    description="Create a data item at an address using a named data type",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to create data at", required=True),
+                        ToolParameter(name="data_type", type="string", description="Data type name", required=True),
+                    ],
+                    returns="Dict with address, type, size, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.configure_analysis",
+                    description="Enable or disable a Ghidra analyzer and optionally set options",
+                    parameters=[
+                        ToolParameter(name="analyzer_name", type="string", description="Analyzer name", required=True),
+                        ToolParameter(name="enabled", type="boolean", description="Enable or disable the analyzer", required=True),
+                        ToolParameter(name="options", type="object", description="Analyzer option overrides", required=False),
+                    ],
+                    returns="Dict with analyzer, enabled, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.set_decompiler_options",
+                    description="Configure decompiler simplification style or instruction limit",
+                    parameters=[
+                        ToolParameter(name="simplification", type="string", description="Simplification style name", required=False),
+                        ToolParameter(
+                            name="max_instructions",
+                            type="integer",
+                            description="Maximum instructions per function",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with simplification, max_instructions, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_memory_block",
+                    description="Create a new initialized memory block",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Block name", required=True),
+                        ToolParameter(name="start", type="integer", description="Start address", required=True),
+                        ToolParameter(name="size", type="integer", description="Block size in bytes", required=True),
+                        ToolParameter(
+                            name="permissions",
+                            type="string",
+                            description="Permission string (r/w/x combinations)",
+                            required=False,
+                            default="r",
+                        ),
+                    ],
+                    returns="Dict with name, start, size, permissions, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.get_comments",
+                    description="Get all comments in an address range",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Start address", required=True),
+                        ToolParameter(
+                            name="range_size",
+                            type="integer",
+                            description="Number of bytes to scan",
+                            required=False,
+                            default=256,
+                        ),
+                    ],
+                    returns="List of comment dicts with address, type, and comment text",
+                ),
+                ToolFunction(
+                    name="ghidra.get_all_comments",
+                    description="Get all comments in the entire program",
+                    parameters=[],
+                    returns="List of comment dicts with address, type, and comment text",
+                ),
+                ToolFunction(
+                    name="ghidra.get_program_tree",
+                    description="Get the program tree module/fragment hierarchy",
+                    parameters=[],
+                    returns="Dict with trees list containing module and fragment names",
+                ),
+                ToolFunction(
+                    name="ghidra.get_properties",
+                    description="Get user-defined properties stored at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to query", required=True),
+                    ],
+                    returns="Dict with address and properties map",
+                ),
+                ToolFunction(
+                    name="ghidra.diff_programs",
+                    description="Compare the current program with another program file",
+                    parameters=[
+                        ToolParameter(
+                            name="other_program_path",
+                            type="string",
+                            description="Path to the other program file",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with difference count and details",
+                ),
+                ToolFunction(
+                    name="ghidra.set_color",
+                    description="Set a background color on a code unit at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to colorize", required=True),
+                        ToolParameter(name="color", type="integer", description="RGB color as integer (0xRRGGBB)", required=True),
+                    ],
+                    returns="Dict with address, color, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.set_program_metadata",
+                    description="Set program name and/or image base address",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="New program name", required=False),
+                        ToolParameter(name="image_base", type="integer", description="New image base address", required=False),
+                    ],
+                    returns="Dict with name, image_base, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.execute_script_with_params",
+                    description="Execute Jython code with a JSON params dict injected as a local variable",
+                    parameters=[
+                        ToolParameter(name="code", type="string", description="Jython code to execute", required=True),
+                        ToolParameter(name="params", type="object", description="Parameters injected as 'params' variable", required=False),
+                    ],
+                    returns="String result of the script",
+                ),
+                ToolFunction(
+                    name="ghidra.manage_thunks",
+                    description="Query thunk status and resolved target for a function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Function address", required=True),
+                    ],
+                    returns="Dict with address, is_thunk, thunked_function, and thunked_address",
+                ),
+                ToolFunction(
+                    name="ghidra.manage_external_references",
+                    description="Get external (imported) references from an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to query", required=True),
+                    ],
+                    returns="List of external reference dicts with address, external_name, library, and type",
+                ),
+                ToolFunction(
+                    name="ghidra.add_external_function",
+                    description="Add an external function to the external symbol table",
+                    parameters=[
+                        ToolParameter(name="library", type="string", description="Library name", required=True),
+                        ToolParameter(name="name", type="string", description="Function name", required=True),
+                        ToolParameter(name="address", type="integer", description="Optional address to link to", required=False),
+                    ],
+                    returns="Dict with library, name, address, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.create_overlay_space",
+                    description="Create a new overlay address space",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Overlay space name", required=True),
+                    ],
+                    returns="Dict with name and success",
+                ),
             ],
         )
 
-    async def initialize(self, tool_path: Path | None = None, port: int | None = None) -> None:
+    def set_port(self, port: int) -> None:
+        """Set the bridge server port.
+
+        Args:
+            port: TCP port for the ghidra_bridge RPC connection.
+        """
+        self._port = port
+
+    async def initialize(self, tool_path: Path | None = None) -> None:
         """Initialize the Ghidra bridge.
 
         Args:
             tool_path: Path to Ghidra installation.
-            port: Bridge server port. Uses DEFAULT_PORT (4768) if not specified.
 
         Raises:
             ToolError: If ghidra_bridge is not installed or connection fails.
         """
-        self._ghidra_path = tool_path
-        if port is not None:
-            self._port = port
+        if tool_path is not None:
+            self._ghidra_path = tool_path
         self.state = BridgeState(
             connected=False,
             tool_running=False,
@@ -870,7 +1280,10 @@ ghidra_bridge_server.GhidraBridgeServer(
 
         if self._bridge is not None:
             try:
-                await self._execute_remote(f'importFile(java.io.File("{path.as_posix()}"))')
+                safe_path = json.dumps(path.as_posix())
+                await self._execute_remote(
+                    f"prog = importFile(java.io.File({safe_path}))\nif prog is not None:\n    state.setCurrentProgram(prog)\n",
+                )
             except Exception:
                 _logger.exception("ghidra_remote_import_failed", binary_path=str(path))
 
@@ -1234,7 +1647,6 @@ metadata
                         'size': func.getBody().getNumAddresses(),
                         'calling_convention': func.getCallingConventionName(),
                         'return_type': str(func.getReturnType()),
-                        'signature': func.getSignature().getPrototypeString(),
                         'parameters': params,
                         'variables': vars,
                     }}
@@ -1310,7 +1722,7 @@ metadata
                 func = getFunctionContaining(addr)
 
                 if func is not None:
-                    results = ifc.decompileFunction(func, 30, monitor)
+                    results = ifc.decompileFunction(func, {self.DECOMPILE_TIMEOUT_SECONDS}, monitor)
                     if results.decompileCompleted():
                         results.getDecompiledFunction().getC()
                     else:
@@ -1361,7 +1773,10 @@ metadata
                         'address': addr.getOffset(),
                         'bytes': ' '.join('%02X' % b for b in instr.getBytes()),
                         'mnemonic': instr.getMnemonicString(),
-                        'operands': instr.getDefaultOperandRepresentation(0),
+                        'operands': ', '.join(
+                            instr.getDefaultOperandRepresentation(j)
+                            for j in range(instr.getNumOperands())
+                        ),
                     }})
                     addr = instr.getNext().getAddress() if instr.getNext() else None
                     if addr is None:
@@ -1480,11 +1895,12 @@ metadata
             _logger.exception("get_xrefs_from_failed", address=hex(address))
             return []
 
-    async def search_strings(self, pattern: str) -> list[StringInfo]:
+    async def search_strings(self, pattern: str, encoding: str = "ascii") -> list[StringInfo]:
         """Search for strings matching pattern.
 
         Args:
             pattern: Regex pattern.
+            encoding: String encoding to filter (ascii, utf-16, utf-16-le, utf-16-be, utf-32).
 
         Returns:
             list[StringInfo]: List of matching strings.
@@ -1496,19 +1912,32 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
+        encoding_filter = json.dumps(encoding)
         try:
             result = await self._execute_remote(f"""
                 import re
                 strings = []
                 pattern = re.compile({json.dumps(pattern)}, re.IGNORECASE)
+                enc_filter = {encoding_filter}
 
                 for string in currentProgram.getListing().getDefinedData(True):
                     if string.hasStringValue():
+                        type_name = string.getDataType().getName().lower()
+                        if enc_filter in ('utf-16', 'utf-16-le', 'utf-16-be'):
+                            if 'unicode' not in type_name and 'utf16' not in type_name and 'utf-16' not in type_name:
+                                continue
+                        elif enc_filter == 'utf-32':
+                            if 'utf32' not in type_name and 'utf-32' not in type_name:
+                                continue
+                        elif enc_filter == 'ascii':
+                            if 'unicode' in type_name or 'utf' in type_name:
+                                continue
                         value = string.getValue()
                         if value and pattern.search(str(value)):
                             strings.append({{
                                 'address': string.getAddress().getOffset(),
                                 'value': str(value),
+                                'type_name': type_name,
                             }})
 
                 strings
@@ -1519,7 +1948,7 @@ metadata
                 StringInfo(
                     address=int(s.get("address", 0)),
                     value=str(s.get("value", "")),
-                    encoding="ascii",
+                    encoding=encoding,
                     section="",
                 )
                 for s in result_list
@@ -1529,14 +1958,20 @@ metadata
             _logger.exception("string_search_failed", pattern=pattern)
             return []
 
-    async def search_bytes(self, pattern: bytes) -> list[int]:
-        """Search for byte pattern.
+    async def search_bytes(
+        self,
+        pattern: bytes | str | None = None,
+        *,
+        hex_pattern: str | None = None,
+    ) -> list[int]:
+        """Search for a byte pattern in the binary, with optional wildcard mask support.
 
         Args:
-            pattern: Bytes to find.
+            pattern: Bytes to find (exact match) or hex string pattern.
+            hex_pattern: Hex string with optional '??' wildcards (e.g. '48 8B ?? ?? ?? ??').
 
         Returns:
-            list[int]: List of addresses.
+            list[int]: List of addresses where the pattern was found.
 
         Raises:
             ToolError: If Ghidra is not connected.
@@ -1545,29 +1980,75 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
-        try:
-            result = await self._execute_remote(f"""
-                from ghidra.app.plugin.core.searchmem import MemSearcherAlgorithm
+        _logger.debug("byte_search_starting", has_hex_pattern=hex_pattern is not None)
 
+        if hex_pattern is not None:
+            raw_hex = hex_pattern
+        elif isinstance(pattern, str):
+            raw_hex = pattern
+        else:
+            raw_hex = None
+
+        if raw_hex is not None:
+            clean = raw_hex.strip()
+            tokens = clean.split() if " " in clean else [clean[i : i + 2] for i in range(0, len(clean), 2)]
+
+            byte_vals: list[int] = []
+            mask_vals: list[int] = []
+            for tok in tokens:
+                if tok in {"??", "?"}:
+                    b = 0x00
+                    m = 0x00
+                else:
+                    b = int(tok, 16)
+                    m = 0xFF
+                bj = (b - 256) if b > _JAVA_SIGNED_THRESHOLD else b
+                mj = (m - 256) if m > _JAVA_SIGNED_THRESHOLD else m
+                byte_vals.append(bj)
+                mask_vals.append(mj)
+
+            byte_arr_str = ", ".join(str(v) for v in byte_vals)
+            mask_arr_str = ", ".join(str(v) for v in mask_vals)
+
+            try:
+                result = await self._execute_remote(f"""
+                    from jarray import array
+                    addresses = []
+                    memory = currentProgram.getMemory()
+                    start = memory.getMinAddress()
+                    end = memory.getMaxAddress()
+                    byte_arr = array([{byte_arr_str}], 'b')
+                    mask_arr = array([{mask_arr_str}], 'b')
+                    found = memory.findBytes(start, end, byte_arr, mask_arr, True, monitor)
+                    while found is not None:
+                        addresses.append(found.getOffset())
+                        found = memory.findBytes(found.add(1), end, byte_arr, mask_arr, True, monitor)
+                    addresses
+                """)
+                if isinstance(result, list):
+                    return [int(addr) for addr in cast("list[int | float | str]", result)]
+            except Exception:
+                _logger.exception("byte_search_failed_hex", pattern_length=len(tokens))
+            return []
+
+        raw_bytes = pattern if isinstance(pattern, bytes) else b""
+        try:
+            byte_list_str = ", ".join(str(b) for b in raw_bytes)
+            result = await self._execute_remote(f"""
                 addresses = []
                 memory = currentProgram.getMemory()
-
                 start = memory.getMinAddress()
                 end = memory.getMaxAddress()
-
-                searcher = memory.findBytes(start, end, [{", ".join(str(b) for b in pattern)}], None, True, monitor)
-
+                searcher = memory.findBytes(start, end, [{byte_list_str}], None, True, monitor)
                 while searcher is not None:
                     addresses.append(searcher.getOffset())
-                    searcher = memory.findBytes(searcher.add(1), end, [{", ".join(str(b) for b in pattern)}], None, True, monitor)
-
+                    searcher = memory.findBytes(searcher.add(1), end, [{byte_list_str}], None, True, monitor)
                 addresses
             """)
-
             if isinstance(result, list):
                 return [int(addr) for addr in cast("list[int | float | str]", result)]
         except Exception:
-            _logger.exception("byte_search_failed", pattern_length=len(pattern))
+            _logger.exception("byte_search_failed", pattern_length=len(raw_bytes))
         return []
 
     async def rename_function(self, address: int, new_name: str) -> bool:
@@ -1928,16 +2409,23 @@ metadata
             _logger.exception("get_labels_failed", address=hex(address))
             return []
 
-    async def create_bookmark(self, address: int, category: str, comment: str) -> dict[str, Any]:
+    async def create_bookmark(
+        self,
+        address: int,
+        category: str,
+        comment: str,
+        bookmark_type: str = "Note",
+    ) -> dict[str, Any]:
         """Create an analysis bookmark at an address.
 
         Args:
             address: Address to bookmark.
             category: Bookmark category.
             comment: Bookmark comment text.
+            bookmark_type: Bookmark type (Note, Analysis, Error, Warning, Info).
 
         Returns:
-            dict[str, Any]: Dict with address, category, comment, and success status.
+            dict[str, Any]: Dict with address, category, comment, bookmark_type, and success status.
 
         Raises:
             ToolError: If Ghidra is not connected or operation fails.
@@ -1946,12 +2434,12 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
-        _logger.debug("bookmark_creating", address=hex(address), category=category)
+        _logger.debug("bookmark_creating", address=hex(address), category=category, bookmark_type=bookmark_type)
         await self._execute_remote(f"""
             bm = currentProgram.getBookmarkManager()
-            bm.setBookmark(toAddr({address}), "Note", {json.dumps(category)}, {json.dumps(comment)})
+            bm.setBookmark(toAddr({address}), {json.dumps(bookmark_type)}, {json.dumps(category)}, {json.dumps(comment)})
         """)
-        return {"address": hex(address), "category": category, "comment": comment, "success": True}
+        return {"address": hex(address), "category": category, "comment": comment, "bookmark_type": bookmark_type, "success": True}
 
     async def get_bookmarks(self, category: str | None = None) -> list[dict[str, Any]]:
         """List bookmarks, optionally filtered by category.
@@ -2545,6 +3033,48 @@ metadata
             error_message = f"Write bytes failed: {e}"
             raise ToolError(error_message) from e
 
+    async def read_bytes(self, address: int, length: int) -> dict[str, Any]:
+        """Read bytes from an address in the program.
+
+        Args:
+            address: Address to read from.
+            length: Number of bytes to read.
+
+        Returns:
+            dict[str, Any]: Dict with address, hex string, bytes list, and length.
+
+        Raises:
+            ToolError: If Ghidra is not connected or read fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("bytes_reading", address=hex(address), length=length)
+        try:
+            result = await self._execute_remote(f"""
+                from jarray import zeros
+                addr = toAddr({address})
+                buf = zeros({length}, 'b')
+                currentProgram.getMemory().getBytes(addr, buf)
+                result = []
+                for b in buf:
+                    result.append((b + 256) % 256)
+                {{'address': addr.getOffset(), 'bytes': result}}
+            """)
+            result_dict = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+            addr_int = int(result_dict.get("address", address))
+            byte_list = [int(b) for b in cast("list[int]", result_dict.get("bytes", []))]
+            return {
+                "address": hex(addr_int),
+                "hex": " ".join(f"{b:02X}" for b in byte_list),
+                "bytes": byte_list,
+                "length": len(byte_list),
+            }
+        except Exception as e:
+            error_message = f"Read bytes failed: {e}"
+            raise ToolError(error_message) from e
+
     async def undo(self) -> dict[str, Any]:
         """Undo the last change in Ghidra.
 
@@ -2595,6 +3125,1639 @@ metadata
             error_message = f"Redo failed: {e}"
             raise ToolError(error_message) from e
 
+    async def get_pcode(self, address: int, max_ops: int = 500) -> dict[str, Any]:
+        """Get P-code IR operations for the function at an address.
+
+        Args:
+            address: Address within the function to decompile.
+            max_ops: Maximum number of P-code ops to return.
+
+        Returns:
+            dict[str, Any]: Dict with function name and list of P-code operation dicts.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("pcode_fetching", address=hex(address), max_ops=max_ops)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.decompiler import DecompInterface
+
+                ifc = DecompInterface()
+                ifc.openProgram(currentProgram)
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                if func is None:
+                    {{'function': None, 'pcode_ops': []}}
+                else:
+                    res = ifc.decompileFunction(func, 60, monitor)
+                    if not res.decompileCompleted():
+                        {{'function': func.getName(), 'pcode_ops': []}}
+                    else:
+                        hfunc = res.getHighFunction()
+                        ops = []
+                        count = 0
+                        op_iter = hfunc.getPcodeOps()
+                        while op_iter.hasNext() and count < {max_ops}:
+                            op = op_iter.next()
+                            out_vn = op.getOutput()
+                            if out_vn is not None:
+                                out_dict = {{
+                                    'space': out_vn.getAddress().getAddressSpace().getName(),
+                                    'offset': out_vn.getAddress().getOffset(),
+                                    'size': out_vn.getSize(),
+                                }}
+                            else:
+                                out_dict = None
+                            inputs = []
+                            for i in range(op.getNumInputs()):
+                                ivn = op.getInput(i)
+                                inputs.append({{
+                                    'space': ivn.getAddress().getAddressSpace().getName(),
+                                    'offset': ivn.getAddress().getOffset(),
+                                    'size': ivn.getSize(),
+                                }})
+                            ops.append({{
+                                'address': op.getSeqnum().getTarget().getOffset(),
+                                'opcode': int(op.getOpcode()),
+                                'mnemonic': op.getMnemonic(),
+                                'output': out_dict,
+                                'inputs': inputs,
+                            }})
+                            count += 1
+                        {{'function': func.getName(), 'pcode_ops': ops}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"function": None, "pcode_ops": []}
+        except Exception:
+            _logger.exception("get_pcode_failed", address=hex(address))
+            return {"function": None, "pcode_ops": []}
+
+    async def get_basic_blocks(self, address: int, max_blocks: int = 100) -> dict[str, Any]:
+        """Get basic block structure of the function at an address.
+
+        Args:
+            address: Address within the function.
+            max_blocks: Maximum number of blocks to return.
+
+        Returns:
+            dict[str, Any]: Dict with function name and list of basic block dicts.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("basic_blocks_fetching", address=hex(address), max_blocks=max_blocks)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.block import BasicBlockModel
+
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                if func is None:
+                    {{'function': None, 'blocks': []}}
+                else:
+                    bbm = BasicBlockModel(currentProgram)
+                    blocks = []
+                    count = 0
+                    it = bbm.getCodeBlocksContaining(addr, monitor)
+                    func_body = func.getBody()
+                    addr_iter = func_body.getAddressRanges()
+                    block_set = []
+                    while addr_iter.hasNext() and count < {max_blocks}:
+                        rng = addr_iter.next()
+                        blk_it = bbm.getCodeBlocksContaining(rng.getMinAddress(), monitor)
+                        while blk_it.hasNext() and count < {max_blocks}:
+                            blk = blk_it.next()
+                            src_addrs = []
+                            src_it = blk.getSources(monitor)
+                            while src_it.hasNext():
+                                src_ref = src_it.next()
+                                src_addrs.append(src_ref.getSourceAddress().getOffset())
+                            dst_addrs = []
+                            dst_it = blk.getDestinations(monitor)
+                            while dst_it.hasNext():
+                                dst_ref = dst_it.next()
+                                dst_addrs.append(dst_ref.getDestinationAddress().getOffset())
+                            blk_start = blk.getMinAddress().getOffset()
+                            if blk_start not in [b.get('start') for b in blocks]:
+                                blocks.append({{
+                                    'start': blk_start,
+                                    'end': blk.getMaxAddress().getOffset(),
+                                    'sources': src_addrs,
+                                    'destinations': dst_addrs,
+                                }})
+                                count += 1
+                    {{'function': func.getName(), 'blocks': blocks}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"function": None, "blocks": []}
+        except Exception:
+            _logger.exception("get_basic_blocks_failed", address=hex(address))
+            return {"function": None, "blocks": []}
+
+    async def get_slice(self, address: int, direction: str = "backward") -> dict[str, Any]:
+        """Compute a backward or forward program slice from an address.
+
+        Args:
+            address: Slice origin address.
+            direction: Slice direction, either 'backward' or 'forward'.
+
+        Returns:
+            dict[str, Any]: Dict with address, direction, slice_addresses, and slice_pcode_ops.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("slice_computing", address=hex(address), direction=direction)
+        direction_literal = json.dumps(direction)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.decompiler import DecompInterface
+
+                ifc = DecompInterface()
+                ifc.openProgram(currentProgram)
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                if func is None:
+                    {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': [], 'slice_pcode_ops': []}}
+                else:
+                    res = ifc.decompileFunction(func, 60, monitor)
+                    if not res.decompileCompleted():
+                        {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': [], 'slice_pcode_ops': []}}
+                    else:
+                        hfunc = res.getHighFunction()
+                        target_op = None
+                        op_iter = hfunc.getPcodeOps(addr)
+                        if op_iter.hasNext():
+                            target_op = op_iter.next()
+
+                        slice_ops = []
+                        visited_keys = set()
+
+                        def collect_backward(op, depth):
+                            if op is None or depth > 50:
+                                return
+                            key = str(op.getSeqnum())
+                            if key in visited_keys:
+                                return
+                            visited_keys.add(key)
+                            slice_ops.append({{
+                                'address': op.getSeqnum().getTarget().getOffset(),
+                                'opcode': int(op.getOpcode()),
+                                'mnemonic': op.getMnemonic(),
+                            }})
+                            for i in range(op.getNumInputs()):
+                                vn = op.getInput(i)
+                                if vn is not None:
+                                    def_op = vn.getDef()
+                                    if def_op is not None:
+                                        collect_backward(def_op, depth + 1)
+
+                        def collect_forward(op, depth):
+                            if op is None or depth > 50:
+                                return
+                            key = str(op.getSeqnum())
+                            if key in visited_keys:
+                                return
+                            visited_keys.add(key)
+                            slice_ops.append({{
+                                'address': op.getSeqnum().getTarget().getOffset(),
+                                'opcode': int(op.getOpcode()),
+                                'mnemonic': op.getMnemonic(),
+                            }})
+                            out_vn = op.getOutput()
+                            if out_vn is not None:
+                                desc_iter = out_vn.getDescendants()
+                                while desc_iter.hasNext():
+                                    collect_forward(desc_iter.next(), depth + 1)
+
+                        if {direction_literal} == 'backward':
+                            collect_backward(target_op, 0)
+                        else:
+                            collect_forward(target_op, 0)
+
+                        slice_addrs = list(set(op['address'] for op in slice_ops))
+                        {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': slice_addrs, 'slice_pcode_ops': slice_ops}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"address": hex(address), "direction": direction, "slice_addresses": [], "slice_pcode_ops": []}
+            )
+        except Exception:
+            _logger.exception("get_slice_failed", address=hex(address))
+            return {"address": hex(address), "direction": direction, "slice_addresses": [], "slice_pcode_ops": []}
+
+    async def get_callers(self, address: int) -> list[dict[str, Any]]:
+        """Get all functions that call the function at the given address.
+
+        Args:
+            address: Callee function address.
+
+        Returns:
+            list[dict[str, Any]]: List of caller dicts with caller_address, caller_function, call_site, and ref_type.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("callers_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                callers = []
+                addr = toAddr({address})
+                for ref in getReferencesTo(addr):
+                    if ref.getReferenceType().isCall():
+                        from_addr = ref.getFromAddress()
+                        caller_func = getFunctionContaining(from_addr)
+                        callers.append({{
+                            'caller_address': caller_func.getEntryPoint().getOffset() if caller_func else None,
+                            'caller_function': caller_func.getName() if caller_func else None,
+                            'call_site': from_addr.getOffset(),
+                            'ref_type': str(ref.getReferenceType()),
+                        }})
+                callers
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("get_callers_failed", address=hex(address))
+            return []
+
+    async def get_register_value(self, address: int, register: str) -> dict[str, Any]:
+        """Get the context-tracked register value at an address.
+
+        Args:
+            address: Address to query.
+            register: Register name (e.g. EAX, RSP).
+
+        Returns:
+            dict[str, Any]: Dict with address, register name, value, and has_value flag.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("register_value_fetching", address=hex(address), register=register)
+        register_literal = json.dumps(register)
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                ctx = currentProgram.getProgramContext()
+                reg = ctx.getRegister({register_literal})
+                if reg is None:
+                    {{'address': {address}, 'register': {register_literal}, 'value': None, 'has_value': False}}
+                else:
+                    val = ctx.getRegisterValue(reg, addr)
+                    if val is None:
+                        {{'address': {address}, 'register': {register_literal}, 'value': None, 'has_value': False}}
+                    else:
+                        uval = val.getUnsignedValue()
+                        {{'address': {address}, 'register': {register_literal}, 'value': int(uval) if uval is not None else None, 'has_value': uval is not None}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"address": hex(address), "register": register, "value": None, "has_value": False}
+            )
+        except Exception:
+            _logger.exception("get_register_value_failed", address=hex(address), register=register)
+            return {"address": hex(address), "register": register, "value": None, "has_value": False}
+
+    async def import_debug_info(self, path: str) -> dict[str, Any]:
+        """Import debug symbols from a PDB or DWARF file.
+
+        Args:
+            path: Path to the .pdb or .debug file.
+
+        Returns:
+            dict[str, Any]: Dict with path, success, and debug info type.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("debug_info_importing", path=path)
+        path_literal = json.dumps(path)
+        try:
+            result = await self._execute_remote(f"""
+                import os as _os
+                debug_path = {path_literal}
+                ext = _os.path.splitext(debug_path)[1].lower()
+                success = False
+                debug_type = 'unknown'
+
+                if ext == '.pdb':
+                    debug_type = 'pdb'
+                    try:
+                        from ghidra.app.plugin.core.analysis import PdbAnalyzer
+                        from ghidra.util.task import TaskMonitor
+                        opts = currentProgram.getOptions('Analyzers')
+                        opts.setString('PDB Universal/Apply PDB File', debug_path)
+                        mgr = currentProgram.getUsrPropertyManager()
+                        from ghidra.app.services import AutoAnalysisManager
+                        aam = AutoAnalysisManager.getAnalysisManager(currentProgram)
+                        aam.reAnalyzeAll(None)
+                        success = True
+                    except Exception as _e:
+                        success = False
+                elif ext in ('.debug', '.dwarf', '.dbg'):
+                    debug_type = 'dwarf'
+                    try:
+                        from ghidra.app.services import AutoAnalysisManager
+                        aam = AutoAnalysisManager.getAnalysisManager(currentProgram)
+                        aam.reAnalyzeAll(None)
+                        success = True
+                    except Exception as _e:
+                        success = False
+
+                {{'path': debug_path, 'success': success, 'type': debug_type}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"path": path, "success": False, "type": "unknown"}
+        except Exception:
+            _logger.exception("import_debug_info_failed", path=path)
+            return {"path": path, "success": False, "type": "unknown"}
+
+    async def add_reference(self, from_addr: int, to_addr: int, ref_type: str = "DATA") -> dict[str, Any]:
+        """Add a memory reference between two addresses.
+
+        Args:
+            from_addr: Source address.
+            to_addr: Destination address.
+            ref_type: Reference type string (DATA, READ, WRITE, CALL, UNCONDITIONAL_JUMP, CONDITIONAL_JUMP).
+
+        Returns:
+            dict[str, Any]: Dict with from, to, type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or operation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("reference_adding", from_addr=hex(from_addr), to_addr=hex(to_addr), ref_type=ref_type)
+        ref_type_literal = json.dumps(ref_type)
+        try:
+            await self._execute_remote(f"""
+                from ghidra.program.model.symbol import RefType, SourceType
+
+                from_address = toAddr({from_addr})
+                to_address = toAddr({to_addr})
+                ref_type_str = {ref_type_literal}
+
+                ref_type_map = {{
+                    'DATA': RefType.DATA,
+                    'READ': RefType.READ,
+                    'WRITE': RefType.WRITE,
+                    'CALL': RefType.UNCONDITIONAL_CALL,
+                    'UNCONDITIONAL_JUMP': RefType.UNCONDITIONAL_JUMP,
+                    'CONDITIONAL_JUMP': RefType.CONDITIONAL_JUMP,
+                }}
+                rt = ref_type_map.get(ref_type_str, RefType.DATA)
+                refMgr = currentProgram.getReferenceManager()
+                refMgr.addMemoryReference(from_address, to_address, rt, SourceType.USER_DEFINED, 0)
+            """)
+            return {"from": hex(from_addr), "to": hex(to_addr), "type": ref_type, "success": True}
+        except Exception as e:
+            error_message = f"Add reference failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def delete_reference(self, from_addr: int, to_addr: int) -> dict[str, Any]:
+        """Delete a memory reference between two addresses.
+
+        Args:
+            from_addr: Source address.
+            to_addr: Destination address.
+
+        Returns:
+            dict[str, Any]: Dict with from, to, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("reference_deleting", from_addr=hex(from_addr), to_addr=hex(to_addr))
+        try:
+            result = await self._execute_remote(f"""
+                from_address = toAddr({from_addr})
+                to_address = toAddr({to_addr})
+                refMgr = currentProgram.getReferenceManager()
+                refs = refMgr.getReferencesFrom(from_address)
+                deleted = False
+                for ref in refs:
+                    if ref.getToAddress().equals(to_address):
+                        refMgr.delete(ref)
+                        deleted = True
+                        break
+                deleted
+            """)
+            return {"from": hex(from_addr), "to": hex(to_addr), "success": bool(result)}
+        except Exception:
+            _logger.exception("delete_reference_failed", from_addr=hex(from_addr), to_addr=hex(to_addr))
+            return {"from": hex(from_addr), "to": hex(to_addr), "success": False}
+
+    async def get_relocations(self) -> list[dict[str, Any]]:
+        """Get all relocations from the program relocation table.
+
+        Returns:
+            list[dict[str, Any]]: List of relocation dicts with address, type, symbol, and values.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote("""
+                relocations = []
+                reloc_table = currentProgram.getRelocationTable()
+                it = reloc_table.getRelocations()
+                while it.hasNext():
+                    reloc = it.next()
+                    sym_name = reloc.getSymbolName() if reloc.getSymbolName() else ''
+                    vals = list(reloc.getValues()) if reloc.getValues() else []
+                    relocations.append({
+                        'address': reloc.getAddress().getOffset(),
+                        'type': int(reloc.getType()),
+                        'symbol': sym_name,
+                        'values': vals,
+                    })
+                relocations
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("get_relocations_failed")
+            return []
+
+    async def create_namespace(self, name: str, parent: str | None = None) -> dict[str, Any]:
+        """Create a namespace in the Ghidra symbol table.
+
+        Args:
+            name: Namespace name.
+            parent: Parent namespace path, or None for global.
+
+        Returns:
+            dict[str, Any]: Dict with name, path, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or operation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("namespace_creating", namespace_name=name, parent=parent)
+        parent_literal = json.dumps(parent) if parent else "None"
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.symbol import SourceType
+
+                st = currentProgram.getSymbolTable()
+                parent_path = {parent_literal}
+                if parent_path is not None:
+                    parent_ns = st.getNamespace(parent_path, currentProgram.getGlobalNamespace())
+                    if parent_ns is None:
+                        parent_ns = currentProgram.getGlobalNamespace()
+                else:
+                    parent_ns = currentProgram.getGlobalNamespace()
+
+                ns = st.createNameSpace(parent_ns, {json.dumps(name)}, SourceType.USER_DEFINED)
+                {{'name': ns.getName(), 'path': ns.getName(True), 'success': True}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"name": name, "path": name, "success": False}
+        except Exception as e:
+            error_message = f"Create namespace failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def get_namespaces(self) -> list[dict[str, Any]]:
+        """List all namespaces defined in the program.
+
+        Returns:
+            list[dict[str, Any]]: List of namespace dicts with name and path.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote("""
+                from ghidra.program.model.symbol import SymbolType
+
+                namespaces = []
+                st = currentProgram.getSymbolTable()
+                for sym in st.getAllSymbols(True):
+                    if sym.getSymbolType() == SymbolType.NAMESPACE:
+                        namespaces.append({
+                            'name': sym.getName(),
+                            'path': sym.getName(True),
+                        })
+                namespaces
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("get_namespaces_failed")
+            return []
+
+    async def create_equate(self, address: int, value: int, name: str) -> dict[str, Any]:
+        """Create an equate (named constant) and attach it to an address.
+
+        Args:
+            address: Address of the scalar operand.
+            value: Numeric value of the equate.
+            name: Equate name.
+
+        Returns:
+            dict[str, Any]: Dict with name, value, address, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or operation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("equate_creating", equate_name=name, value=value, address=hex(address))
+        try:
+            await self._execute_remote(f"""
+                addr = toAddr({address})
+                eqTable = currentProgram.getEquateTable()
+                existing = eqTable.getEquate({json.dumps(name)})
+                if existing is None:
+                    eq = eqTable.createEquate({json.dumps(name)}, {value})
+                else:
+                    eq = existing
+                eq.addReference(addr, 0)
+            """)
+            return {"name": name, "value": value, "address": hex(address), "success": True}
+        except Exception as e:
+            error_message = f"Create equate failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def get_equates(self) -> list[dict[str, Any]]:
+        """List all equates defined in the program.
+
+        Returns:
+            list[dict[str, Any]]: List of equate dicts with name, value, and reference count.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote("""
+                equates = []
+                eqTable = currentProgram.getEquateTable()
+                it = eqTable.getEquates()
+                while it.hasNext():
+                    eq = it.next()
+                    equates.append({
+                        'name': eq.getName(),
+                        'value': int(eq.getValue()),
+                        'references': eq.getReferenceCount(),
+                    })
+                equates
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("get_equates_failed")
+            return []
+
+    async def search_symbols(self, name: str, symbol_type: str | None = None) -> list[dict[str, Any]]:
+        """Search symbols by name pattern with optional type filter.
+
+        Args:
+            name: Symbol name pattern.
+            symbol_type: Optional symbol type filter (e.g. FUNCTION, LABEL).
+
+        Returns:
+            list[dict[str, Any]]: List of symbol dicts with name, address, type, and namespace.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        type_filter_literal = json.dumps(symbol_type) if symbol_type else "None"
+        try:
+            result = await self._execute_remote(f"""
+                st = currentProgram.getSymbolTable()
+                type_filter = {type_filter_literal}
+                symbols = []
+                it = st.getSymbolIterator({json.dumps(name)}, True)
+                while it.hasNext():
+                    sym = it.next()
+                    sym_type_str = str(sym.getSymbolType())
+                    if type_filter is not None and sym_type_str != type_filter:
+                        continue
+                    symbols.append({{
+                        'name': sym.getName(),
+                        'address': sym.getAddress().getOffset(),
+                        'type': sym_type_str,
+                        'namespace': sym.getParentNamespace().getName() if sym.getParentNamespace() else '',
+                    }})
+                symbols
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("search_symbols_failed", symbol_name=name)
+            return []
+
+    async def get_stack_frame(self, address: int) -> dict[str, Any]:
+        """Get stack frame layout for the function at an address.
+
+        Args:
+            address: Address within the function.
+
+        Returns:
+            dict[str, Any]: Dict with function name, frame_size, and list of stack variable dicts.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("stack_frame_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                if func is None:
+                    {{'function': None, 'frame_size': 0, 'variables': []}}
+                else:
+                    frame = func.getStackFrame()
+                    vars = []
+                    for v in frame.getStackVariables():
+                        vars.append({{
+                            'name': v.getName(),
+                            'offset': v.getStackOffset(),
+                            'size': v.getLength(),
+                            'type': str(v.getDataType()),
+                        }})
+                    {{'function': func.getName(), 'frame_size': frame.getFrameSize(), 'variables': vars}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"function": None, "frame_size": 0, "variables": []}
+        except Exception:
+            _logger.exception("get_stack_frame_failed", address=hex(address))
+            return {"function": None, "frame_size": 0, "variables": []}
+
+    async def get_function_body(self, address: int) -> dict[str, Any]:
+        """Get address ranges, thunk status, and size for a function.
+
+        Args:
+            address: Address within the function.
+
+        Returns:
+            dict[str, Any]: Dict with name, address, is_thunk, thunked_function, ranges, and total_size.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("function_body_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                if func is None:
+                    {{'name': None, 'address': {address}, 'is_thunk': False, 'thunked_function': None, 'ranges': [], 'total_size': 0}}
+                else:
+                    is_thunk = func.isThunk()
+                    thunked_name = None
+                    if is_thunk:
+                        thunked = func.getThunkedFunction(False)
+                        if thunked is not None:
+                            thunked_name = thunked.getName()
+                    body = func.getBody()
+                    ranges = []
+                    addr_ranges = body.getAddressRanges()
+                    while addr_ranges.hasNext():
+                        rng = addr_ranges.next()
+                        ranges.append({{'start': rng.getMinAddress().getOffset(), 'end': rng.getMaxAddress().getOffset()}})
+                    total = body.getNumAddresses()
+                    {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'is_thunk': bool(is_thunk), 'thunked_function': thunked_name, 'ranges': ranges, 'total_size': total}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"name": None, "address": hex(address), "is_thunk": False, "thunked_function": None, "ranges": [], "total_size": 0}
+            )
+        except Exception:
+            _logger.exception("get_function_body_failed", address=hex(address))
+            return {"name": None, "address": hex(address), "is_thunk": False, "thunked_function": None, "ranges": [], "total_size": 0}
+
+    async def get_call_tree(self, address: int, direction: str = "callees", depth: int = 3) -> dict[str, Any]:
+        """Get recursive call tree for callees, callers, or both.
+
+        Args:
+            address: Root function address.
+            direction: Tree direction: 'callees', 'callers', or 'both'.
+            depth: Maximum recursion depth.
+
+        Returns:
+            dict[str, Any]: Recursive call tree dict with function, address, direction, and children.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("call_tree_building", address=hex(address), direction=direction, depth=depth)
+        direction_literal = json.dumps(direction)
+        try:
+            result = await self._execute_remote(f"""
+                def get_callee_tree(func, max_depth, cur_depth, visited):
+                    if cur_depth >= max_depth or func.getEntryPoint().getOffset() in visited:
+                        return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': []}}
+                    visited.add(func.getEntryPoint().getOffset())
+                    children = []
+                    body = func.getBody()
+                    addr_iter = body.getAddresses(True)
+                    seen = set()
+                    while addr_iter.hasNext():
+                        a = addr_iter.next()
+                        for ref in getReferencesFrom(a):
+                            if ref.getReferenceType().isCall():
+                                t = ref.getToAddress()
+                                tf = getFunctionAt(t)
+                                if tf is not None and t.getOffset() not in seen:
+                                    seen.add(t.getOffset())
+                                    children.append(get_callee_tree(tf, max_depth, cur_depth + 1, set(visited)))
+                    return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': children}}
+
+                def get_caller_tree(func, max_depth, cur_depth, visited):
+                    if cur_depth >= max_depth or func.getEntryPoint().getOffset() in visited:
+                        return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': []}}
+                    visited.add(func.getEntryPoint().getOffset())
+                    children = []
+                    seen = set()
+                    for ref in getReferencesTo(func.getEntryPoint()):
+                        if ref.getReferenceType().isCall():
+                            cf = getFunctionContaining(ref.getFromAddress())
+                            if cf is not None and cf.getEntryPoint().getOffset() not in seen:
+                                seen.add(cf.getEntryPoint().getOffset())
+                                children.append(get_caller_tree(cf, max_depth, cur_depth + 1, set(visited)))
+                    return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': children}}
+
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                direction = {direction_literal}
+                if func is None:
+                    {{'function': None, 'address': {address}, 'direction': direction, 'children': []}}
+                else:
+                    if direction == 'callees':
+                        get_callee_tree(func, {depth}, 0, set())
+                    elif direction == 'callers':
+                        get_caller_tree(func, {depth}, 0, set())
+                    else:
+                        callees = get_callee_tree(func, {depth}, 0, set())
+                        callers = get_caller_tree(func, {depth}, 0, set())
+                        {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'direction': direction, 'callees': callees.get('children', []), 'callers': callers.get('children', [])}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"function": None, "address": hex(address), "direction": direction, "children": []}
+            )
+        except Exception:
+            _logger.exception("get_call_tree_failed", address=hex(address))
+            return {"function": None, "address": hex(address), "direction": direction, "children": []}
+
+    async def get_calling_conventions(self) -> list[str]:
+        """List all calling conventions defined in the compiler spec.
+
+        Returns:
+            list[str]: List of calling convention name strings.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote("""
+                cs = currentProgram.getCompilerSpec()
+                conventions = [str(cc.getName()) for cc in cs.getCallingConventions()]
+                conventions
+            """)
+        except Exception:
+            _logger.exception("get_calling_conventions_failed")
+            return []
+        else:
+            if isinstance(result, list):
+                return [str(c) for c in cast("list[object]", result)]
+            return []
+
+    async def get_instruction_flow(self, address: int) -> dict[str, Any]:
+        """Get control flow information for a single instruction.
+
+        Args:
+            address: Instruction address.
+
+        Returns:
+            dict[str, Any]: Dict with address, mnemonic, flow_type, fall_through, and flows.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("instruction_flow_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                listing = currentProgram.getListing()
+                instr = listing.getInstructionAt(addr)
+                if instr is None:
+                    {{'address': {address}, 'mnemonic': None, 'flow_type': None, 'fall_through': None, 'flows': []}}
+                else:
+                    ft = instr.getFallThrough()
+                    flows = [f.getOffset() for f in (instr.getFlows() or [])]
+                    {{'address': addr.getOffset(), 'mnemonic': instr.getMnemonicString(), 'flow_type': str(instr.getFlowType()), 'fall_through': ft.getOffset() if ft is not None else None, 'flows': flows}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"address": hex(address), "mnemonic": None, "flow_type": None, "fall_through": None, "flows": []}
+            )
+        except Exception:
+            _logger.exception("get_instruction_flow_failed", address=hex(address))
+            return {"address": hex(address), "mnemonic": None, "flow_type": None, "fall_through": None, "flows": []}
+
+    async def create_data_type(
+        self,
+        category: str,
+        name: str,
+        type_kind: str,
+        fields: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Create a new data type in the type manager.
+
+        Args:
+            category: Category path (e.g. /MyTypes).
+            name: Data type name.
+            type_kind: Kind of data type: enum, union, typedef, or function_def.
+            fields: Field definitions for enum/union (list of dicts with name and value/type/size).
+
+        Returns:
+            dict[str, Any]: Dict with name, kind, size, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or type creation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("data_type_creating", type_name=name, type_kind=type_kind, category=category)
+        fields_json = json.dumps(fields or [])
+        try:
+            result = await self._execute_remote(f"""
+                import json as _json
+                from ghidra.program.model.data import CategoryPath, EnumDataType, UnionDataType, TypedefDataType
+
+                cat_path = CategoryPath({json.dumps(category)})
+                dtm = currentProgram.getDataTypeManager()
+                type_kind = {json.dumps(type_kind)}
+                fields_data = _json.loads({json.dumps(fields_json)})
+                created = None
+
+                if type_kind == 'enum':
+                    enum_dt = EnumDataType(cat_path, {json.dumps(name)}, 4)
+                    for f in fields_data:
+                        enum_dt.add(f.get('name', ''), int(f.get('value', 0)))
+                    created = dtm.addDataType(enum_dt, None)
+                elif type_kind == 'union':
+                    union_dt = UnionDataType(cat_path, {json.dumps(name)})
+                    for f in fields_data:
+                        from ghidra.app.util.parser import DataTypeParser
+                        parser = DataTypeParser(dtm)
+                        ft = parser.parse(f.get('type', 'byte'))
+                        if ft is not None:
+                            union_dt.add(ft, f.get('size', ft.getLength()), f.get('name', ''), '')
+                    created = dtm.addDataType(union_dt, None)
+                elif type_kind == 'typedef':
+                    base_name = fields_data[0].get('type', 'dword') if fields_data else 'dword'
+                    from ghidra.app.util.parser import DataTypeParser
+                    parser = DataTypeParser(dtm)
+                    base_dt = parser.parse(base_name)
+                    if base_dt is not None:
+                        typedef_dt = TypedefDataType(cat_path, {json.dumps(name)}, base_dt)
+                        created = dtm.addDataType(typedef_dt, None)
+                elif type_kind == 'function_def':
+                    from ghidra.program.model.data import FunctionDefinitionDataType
+                    func_def = FunctionDefinitionDataType(cat_path, {json.dumps(name)})
+                    created = dtm.addDataType(func_def, None)
+
+                if created is not None:
+                    {{'name': created.getName(), 'kind': type_kind, 'size': int(created.getLength()), 'success': True}}
+                else:
+                    {{'name': {json.dumps(name)}, 'kind': type_kind, 'size': 0, 'success': False}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"name": name, "kind": type_kind, "size": 0, "success": False}
+            )
+        except Exception as e:
+            error_message = f"Create data type failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def create_data(self, address: int, data_type: str) -> dict[str, Any]:
+        """Create a data item at an address using a named data type.
+
+        Args:
+            address: Address to create data at.
+            data_type: Data type name.
+
+        Returns:
+            dict[str, Any]: Dict with address, type, size, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or creation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("data_creating", address=hex(address), data_type=data_type)
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.util.parser import DataTypeParser
+
+                addr = toAddr({address})
+                listing = currentProgram.getListing()
+                dtm = currentProgram.getDataTypeManager()
+                parser = DataTypeParser(dtm)
+                parsed = parser.parse({json.dumps(data_type)})
+                if parsed is None:
+                    {{'address': {address}, 'type': {json.dumps(data_type)}, 'size': 0, 'success': False}}
+                else:
+                    existing = listing.getDataAt(addr)
+                    if existing is not None:
+                        listing.clearCodeUnits(addr, addr.add(parsed.getLength() - 1), False)
+                    created = listing.createData(addr, parsed)
+                    {{'address': addr.getOffset(), 'type': {json.dumps(data_type)}, 'size': int(created.getLength()), 'success': True}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"address": hex(address), "type": data_type, "size": 0, "success": False}
+            )
+        except Exception as e:
+            error_message = f"Create data failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def configure_analysis(
+        self,
+        analyzer_name: str,
+        *,
+        enabled: bool,
+        options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Enable or disable a Ghidra analyzer and optionally set options.
+
+        Args:
+            analyzer_name: Analyzer name.
+            enabled: Whether to enable or disable the analyzer.
+            options: Optional dict of analyzer option overrides.
+
+        Returns:
+            dict[str, Any]: Dict with analyzer, enabled, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or configuration fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("analysis_configuring", analyzer=analyzer_name, enabled=enabled)
+        options_json = json.dumps(options or {})
+        enabled_str = "True" if enabled else "False"
+        try:
+            result = await self._execute_remote(f"""
+                import json as _json
+                from ghidra.app.services import AutoAnalysisManager
+
+                aam = AutoAnalysisManager.getAnalysisManager(currentProgram)
+                analyzer_name = {json.dumps(analyzer_name)}
+                options_data = _json.loads({json.dumps(options_json)})
+                found = False
+                for analyzer in aam.getAnalyzers():
+                    if analyzer.getName() == analyzer_name:
+                        found = True
+                        analyzer.setEnabled({enabled_str})
+                        opts = currentProgram.getOptions('Analyzers')
+                        for key, val in options_data.items():
+                            if isinstance(val, bool):
+                                opts.setBoolean(analyzer_name + '.' + key, val)
+                            elif isinstance(val, int):
+                                opts.setInt(analyzer_name + '.' + key, val)
+                            else:
+                                opts.setString(analyzer_name + '.' + key, str(val))
+                        break
+                {{'analyzer': analyzer_name, 'enabled': {enabled_str}, 'success': found}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"analyzer": analyzer_name, "enabled": enabled, "success": False}
+            )
+        except Exception as e:
+            error_message = f"Configure analysis failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def set_decompiler_options(
+        self,
+        simplification: str | None = None,
+        max_instructions: int | None = None,
+    ) -> dict[str, Any]:
+        """Configure decompiler simplification style or instruction limit.
+
+        Args:
+            simplification: Simplification style name (e.g. 'normalize', 'jumptable').
+            max_instructions: Maximum instructions per function for decompiler.
+
+        Returns:
+            dict[str, Any]: Dict with simplification, max_instructions, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or configuration fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("decompiler_options_setting", simplification=simplification, max_instructions=max_instructions)
+        simp_literal = json.dumps(simplification) if simplification else "None"
+        max_instr_literal = str(max_instructions) if max_instructions is not None else "None"
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.app.decompiler import DecompInterface, DecompileOptions
+
+                ifc = DecompInterface()
+                ifc.openProgram(currentProgram)
+                opts = ifc.getOptions()
+                simp = {simp_literal}
+                max_instr = {max_instr_literal}
+                if simp is not None:
+                    opts.setSimplificationStyle(simp)
+                if max_instr is not None:
+                    opts.setMaxInstructions(max_instr)
+                ifc.setOptions(opts)
+                {{'simplification': simp, 'max_instructions': max_instr, 'success': True}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"simplification": simplification, "max_instructions": max_instructions, "success": False}
+            )
+        except Exception as e:
+            error_message = f"Set decompiler options failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def create_memory_block(
+        self,
+        name: str,
+        start: int,
+        size: int,
+        permissions: str = "r",
+    ) -> dict[str, Any]:
+        """Create a new initialized memory block.
+
+        Args:
+            name: Block name.
+            start: Start address.
+            size: Block size in bytes.
+            permissions: Permission string using r/w/x characters.
+
+        Returns:
+            dict[str, Any]: Dict with name, start, size, permissions, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or block creation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("memory_block_creating", block_name=name, start=hex(start), size=size, permissions=permissions)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                addr = toAddr({start})
+                block = memory.createInitializedBlock({json.dumps(name)}, addr, {size}, 0, monitor, False)
+                perms = {json.dumps(permissions)}
+                block.setRead('r' in perms)
+                block.setWrite('w' in perms)
+                block.setExecute('x' in perms)
+                {{'name': block.getName(), 'start': block.getStart().getOffset(), 'size': block.getSize(), 'permissions': perms, 'success': True}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"name": name, "start": hex(start), "size": size, "permissions": permissions, "success": False}
+            )
+        except Exception as e:
+            error_message = f"Create memory block failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def get_comments(self, address: int, range_size: int = 0x100) -> list[dict[str, Any]]:
+        """Get all comments in an address range.
+
+        Args:
+            address: Start address.
+            range_size: Number of bytes to scan.
+
+        Returns:
+            list[dict[str, Any]]: List of comment dicts with address, type, and comment text.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.listing import CodeUnit
+
+                start = toAddr({address})
+                end = toAddr({address} + {range_size})
+                listing = currentProgram.getListing()
+                comments = []
+                cu_iter = listing.getCodeUnits(start, end, True)
+                comment_types = [
+                    ('EOL', CodeUnit.EOL_COMMENT),
+                    ('PRE', CodeUnit.PRE_COMMENT),
+                    ('POST', CodeUnit.POST_COMMENT),
+                    ('PLATE', CodeUnit.PLATE_COMMENT),
+                    ('REPEATABLE', CodeUnit.REPEATABLE_COMMENT),
+                ]
+                while cu_iter.hasNext():
+                    cu = cu_iter.next()
+                    for type_name, type_const in comment_types:
+                        text = cu.getComment(type_const)
+                        if text:
+                            comments.append({{
+                                'address': cu.getAddress().getOffset(),
+                                'type': type_name,
+                                'comment': text,
+                            }})
+                comments
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("get_comments_failed", address=hex(address))
+            return []
+
+    async def get_all_comments(self) -> list[dict[str, Any]]:
+        """Get all comments in the entire program.
+
+        Returns:
+            list[dict[str, Any]]: List of comment dicts with address, type, and comment text.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote("""
+                from ghidra.program.model.listing import CodeUnit
+
+                listing = currentProgram.getListing()
+                comments = []
+                comment_types = [
+                    ('EOL', CodeUnit.EOL_COMMENT),
+                    ('PRE', CodeUnit.PRE_COMMENT),
+                    ('POST', CodeUnit.POST_COMMENT),
+                    ('PLATE', CodeUnit.PLATE_COMMENT),
+                    ('REPEATABLE', CodeUnit.REPEATABLE_COMMENT),
+                ]
+                cu_iter = listing.getCodeUnits(True)
+                while cu_iter.hasNext():
+                    cu = cu_iter.next()
+                    for type_name, type_const in comment_types:
+                        text = cu.getComment(type_const)
+                        if text:
+                            comments.append({
+                                'address': cu.getAddress().getOffset(),
+                                'type': type_name,
+                                'comment': text,
+                            })
+                comments
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("get_all_comments_failed")
+            return []
+
+    async def get_program_tree(self) -> dict[str, Any]:
+        """Get the program tree module and fragment hierarchy.
+
+        Returns:
+            dict[str, Any]: Dict with trees list containing module and fragment information.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        try:
+            result = await self._execute_remote("""
+                listing = currentProgram.getListing()
+                tree_names = list(listing.getTreeNames())
+                trees = []
+                for tree_name in tree_names:
+                    root_module = listing.getRootModule(tree_name)
+                    modules = []
+                    if root_module is not None:
+                        for child in root_module.getChildren():
+                            child_name = child.getName()
+                            modules.append({'name': child_name, 'type': str(child.getClass().getSimpleName())})
+                    trees.append({'name': tree_name, 'modules': modules})
+                {'trees': trees}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"trees": []}
+        except Exception:
+            _logger.exception("get_program_tree_failed")
+            return {"trees": []}
+
+    async def get_properties(self, address: int) -> dict[str, Any]:
+        """Get user-defined properties stored at an address.
+
+        Args:
+            address: Address to query.
+
+        Returns:
+            dict[str, Any]: Dict with address and properties map.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("properties_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                upm = currentProgram.getUsrPropertyManager()
+                props = {{}}
+                prop_names = list(upm.propertyNames())
+                for prop_name in prop_names:
+                    map_obj = upm.getPropertyMap(prop_name)
+                    if map_obj is not None and map_obj.hasProperty(addr):
+                        try:
+                            props[prop_name] = str(map_obj.getObject(addr))
+                        except Exception:
+                            try:
+                                props[prop_name] = bool(map_obj.getBoolean(addr))
+                            except Exception:
+                                props[prop_name] = None
+                {{'address': {address}, 'properties': props}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"address": hex(address), "properties": {}}
+        except Exception:
+            _logger.exception("get_properties_failed", address=hex(address))
+            return {"address": hex(address), "properties": {}}
+
+    async def diff_programs(self, other_program_path: str) -> dict[str, Any]:
+        """Compare the current program with another program file.
+
+        Args:
+            other_program_path: Path to the other program file.
+
+        Returns:
+            dict[str, Any]: Dict with difference count and details list.
+
+        Raises:
+            ToolError: If Ghidra is not connected or comparison fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("program_diffing", other_path=other_program_path)
+        try:
+            result = await self._execute_remote(f"""
+                import java.io.File as JFile
+                from ghidra.program.util import ProgramDiff, ProgramDiffFilter
+
+                other_file = JFile({json.dumps(other_program_path)})
+                other_prog = importFile(other_file)
+                details = []
+                differences = 0
+                if other_prog is not None:
+                    diff = ProgramDiff(currentProgram, other_prog)
+                    diff_filter = ProgramDiffFilter(ProgramDiffFilter.ALL_DIFFS)
+                    diff_set = diff.getDifferences(diff_filter, monitor)
+                    if diff_set is not None:
+                        addr_iter = diff_set.getAddresses(True)
+                        while addr_iter.hasNext() and differences < 1000:
+                            a = addr_iter.next()
+                            details.append({{'address': a.getOffset()}})
+                            differences += 1
+                {{'differences': differences, 'details': details}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"differences": 0, "details": []}
+        except Exception:
+            _logger.exception("diff_programs_failed", other_path=other_program_path)
+            return {"differences": 0, "details": []}
+
+    async def set_color(self, address: int, color: int) -> dict[str, Any]:
+        """Set a background color on a code unit at an address.
+
+        Args:
+            address: Address to colorize.
+            color: RGB color as integer (0xRRGGBB).
+
+        Returns:
+            dict[str, Any]: Dict with address, color, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or operation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("color_setting", address=hex(address), color=hex(color))
+        try:
+            await self._execute_remote(f"""
+                import java.awt.Color as JColor
+
+                addr = toAddr({address})
+                listing = currentProgram.getListing()
+                cu = listing.getCodeUnitAt(addr)
+                if cu is not None:
+                    r = ({color} >> 16) & 0xFF
+                    g = ({color} >> 8) & 0xFF
+                    b = {color} & 0xFF
+                    col = JColor(r, g, b)
+                    cu.setBackgroundColor(col)
+            """)
+            return {"address": hex(address), "color": hex(color), "success": True}
+        except Exception as e:
+            error_message = f"Set color failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def set_program_metadata(
+        self,
+        name: str | None = None,
+        image_base: int | None = None,
+    ) -> dict[str, Any]:
+        """Set program name and/or image base address.
+
+        Args:
+            name: New program name, or None to leave unchanged.
+            image_base: New image base address, or None to leave unchanged.
+
+        Returns:
+            dict[str, Any]: Dict with name, image_base, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or operation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("program_metadata_setting", prog_name=name, image_base=image_base)
+        name_literal = json.dumps(name) if name else "None"
+        image_base_literal = str(image_base) if image_base is not None else "None"
+        try:
+            await self._execute_remote(f"""
+                new_name = {name_literal}
+                new_base = {image_base_literal}
+                if new_name is not None:
+                    currentProgram.setName(new_name)
+                if new_base is not None:
+                    currentProgram.setImageBase(toAddr(new_base), True)
+            """)
+            return {"name": name, "image_base": hex(image_base) if image_base is not None else None, "success": True}
+        except Exception as e:
+            error_message = f"Set program metadata failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def execute_script_with_params(self, code: str, params: dict[str, Any] | None = None) -> str:
+        """Execute Jython code with a JSON params dict injected as a local variable.
+
+        Args:
+            code: Jython code to execute in Ghidra.
+            params: Parameters injected as the 'params' variable in the script.
+
+        Returns:
+            str: String result of script execution.
+        """
+        _logger.debug("parameterized_script_executing", code_length=len(code))
+        params_json = json.dumps(params or {})
+        injected = f"import json as _json\nparams = _json.loads({json.dumps(params_json)})\n{code}"
+        result = await self._execute_remote(injected)
+        return str(result) if result is not None else ""
+
+    async def manage_thunks(self, address: int) -> dict[str, Any]:
+        """Query thunk status and resolved target for a function.
+
+        Args:
+            address: Function address.
+
+        Returns:
+            dict[str, Any]: Dict with address, is_thunk, thunked_function, and thunked_address.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("thunk_managing", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                func = getFunctionContaining(addr)
+                if func is None:
+                    {{'address': {address}, 'is_thunk': False, 'thunked_function': None, 'thunked_address': None}}
+                else:
+                    is_thunk = func.isThunk()
+                    thunked_name = None
+                    thunked_addr = None
+                    if is_thunk:
+                        thunked = func.getThunkedFunction(False)
+                        if thunked is not None:
+                            thunked_name = thunked.getName()
+                            thunked_addr = thunked.getEntryPoint().getOffset()
+                    {{'address': func.getEntryPoint().getOffset(), 'is_thunk': bool(is_thunk), 'thunked_function': thunked_name, 'thunked_address': thunked_addr}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"address": hex(address), "is_thunk": False, "thunked_function": None, "thunked_address": None}
+            )
+        except Exception:
+            _logger.exception("manage_thunks_failed", address=hex(address))
+            return {"address": hex(address), "is_thunk": False, "thunked_function": None, "thunked_address": None}
+
+    async def manage_external_references(self, address: int) -> list[dict[str, Any]]:
+        """Get external (imported) references from an address.
+
+        Args:
+            address: Address to query.
+
+        Returns:
+            list[dict[str, Any]]: List of external reference dicts with address, external_name, library, and type.
+
+        Raises:
+            ToolError: If Ghidra is not connected.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.debug("external_references_fetching", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                ext_refs = []
+                for ref in getReferencesFrom(addr):
+                    if ref.isExternalReference():
+                        ext_loc = ref.getExternalLocation()
+                        lib_name = ''
+                        if ext_loc is not None:
+                            lib = ext_loc.getLibraryName()
+                            lib_name = str(lib) if lib else ''
+                        ext_refs.append({{
+                            'address': addr.getOffset(),
+                            'external_name': ext_loc.getLabel() if ext_loc is not None else '',
+                            'library': lib_name,
+                            'type': str(ref.getReferenceType()),
+                        }})
+                ext_refs
+            """)
+            return cast("list[dict[str, Any]]", result) if result else []
+        except Exception:
+            _logger.exception("manage_external_references_failed", address=hex(address))
+            return []
+
+    async def add_external_function(self, library: str, name: str, address: int | None = None) -> dict[str, Any]:
+        """Add an external function to the external symbol table.
+
+        Args:
+            library: Library name.
+            name: Function name.
+            address: Optional address to link the external function to.
+
+        Returns:
+            dict[str, Any]: Dict with library, name, address, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or operation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("external_function_adding", library=library, func_name=name)
+        addr_literal = str(address) if address is not None else "None"
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.symbol import SourceType
+
+                extMgr = currentProgram.getExternalManager()
+                addr_val = {addr_literal}
+                mem_addr = toAddr(addr_val) if addr_val is not None else None
+                ext_loc = extMgr.addExtFunction({json.dumps(library)}, {json.dumps(name)}, mem_addr, SourceType.USER_DEFINED)
+                {{'library': {json.dumps(library)}, 'name': {json.dumps(name)}, 'address': addr_val, 'success': ext_loc is not None}}
+            """)
+            return (
+                cast("dict[str, Any]", result)
+                if isinstance(result, dict)
+                else {"library": library, "name": name, "address": address, "success": False}
+            )
+        except Exception as e:
+            error_message = f"Add external function failed: {e}"
+            raise ToolError(error_message) from e
+
+    async def create_overlay_space(self, name: str) -> dict[str, Any]:
+        """Create a new overlay address space.
+
+        Args:
+            name: Overlay space name.
+
+        Returns:
+            dict[str, Any]: Dict with name and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or creation fails.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra not connected"
+            raise ToolError(error_message)
+
+        _logger.info("overlay_space_creating", overlay_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                default_space = currentProgram.getAddressFactory().getDefaultAddressSpace()
+                overlay_space = memory.createOverlayAddressSpace({json.dumps(name)}, default_space)
+                {{'name': overlay_space.getName() if overlay_space is not None else {json.dumps(name)}, 'success': overlay_space is not None}}
+            """)
+            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"name": name, "success": False}
+        except Exception as e:
+            error_message = f"Create overlay space failed: {e}"
+            raise ToolError(error_message) from e
+
     async def _execute_remote(self, code: str) -> object:
         """Execute code on the Ghidra bridge.
 
@@ -2623,6 +4786,6 @@ metadata
                 code,
             )
         except Exception as e:
-            _logger.warning("ghidra_remote_exec_failed", error=str(e))
+            _logger.exception("ghidra_remote_exec_failed", error=str(e))
             error_message = f"Remote execution failed: {e}"
             raise ToolError(error_message) from e

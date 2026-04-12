@@ -1,100 +1,210 @@
 {
   "tool": "pydocstyle",
-  "generated": "2026-04-05T20:14:13.465021+00:00",
-  "total_findings": 173,
-  "total_files": 96,
+  "generated": "2026-04-11T07:07:11.504011+00:00",
+  "total_findings": 202,
+  "total_files": 106,
   "files": [
+    {
+      "path": "src/intellicrack/ui\\panels\\cutter_tabs.py",
+      "count": 13,
+      "findings": [
+        {
+          "line": 82,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:82: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 122,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:122: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 161,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:161: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 198,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:198: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 237,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:237: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 277,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:277: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 318,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:318: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 357,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:357: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 396,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:396: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 465,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:465: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 545,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:545: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 646,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:646: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 757,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\cutter_tabs.py:757: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
     {
       "path": "src/intellicrack/core\\types.py",
       "count": 11,
       "findings": [
         {
-          "line": 1228,
+          "line": 1479,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1228: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1479: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1261,
+          "line": 1512,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1261: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1512: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1301,
+          "line": 1552,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1301: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1552: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1338,
+          "line": 1589,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1338: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1589: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1375,
+          "line": 1626,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1375: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1626: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1409,
+          "line": 1660,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1409: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1660: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1444,
+          "line": 1695,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1444: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1695: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1484,
+          "line": 1735,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1484: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1735: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1520,
+          "line": 1771,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1520: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1771: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1550,
+          "line": 1801,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1550: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1801: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1584,
+          "line": 1835,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\types.py:1584: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\types.py:1835: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -273,44 +383,98 @@
           "raw": "src/intellicrack/ui\\tool_config.py:110: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 369,
+          "line": 381,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tool_config.py:369: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tool_config.py:381: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 560,
+          "line": 572,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tool_config.py:560: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tool_config.py:572: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 695,
+          "line": 707,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tool_config.py:695: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tool_config.py:707: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1005,
+          "line": 1017,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tool_config.py:1005: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tool_config.py:1017: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 1178,
+          "line": 1190,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tool_config.py:1178: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tool_config.py:1190: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_sandbox\\conftest.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 76,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "tests/test_sandbox\\conftest.py:76: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 113,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "tests/test_sandbox\\conftest.py:113: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 140,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "tests/test_sandbox\\conftest.py:140: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 425,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "tests/test_sandbox\\conftest.py:425: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 440,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "tests/test_sandbox\\conftest.py:440: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 475,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "tests/test_sandbox\\conftest.py:475: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -365,44 +529,90 @@
       "count": 5,
       "findings": [
         {
-          "line": 363,
+          "line": 402,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tools.py:363: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tools.py:402: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 445,
+          "line": 484,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tools.py:445: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tools.py:484: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 551,
+          "line": 590,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tools.py:551: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tools.py:590: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 638,
+          "line": 677,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tools.py:638: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tools.py:677: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 735,
+          "line": 774,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\tools.py:735: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\tools.py:774: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 96,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:96: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 201,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:201: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 300,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:300: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 488,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:488: D107: in public method `__init__`: - Missing docstring in __init__"
+        },
+        {
+          "line": 526,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:526: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -601,28 +811,28 @@
       "count": 3,
       "findings": [
         {
-          "line": 181,
+          "line": 206,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/sandbox\\qemu.py:181: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/sandbox\\qemu.py:206: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 374,
+          "line": 419,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/sandbox\\qemu.py:374: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/sandbox\\qemu.py:419: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 577,
+          "line": 622,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/sandbox\\qemu.py:577: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/sandbox\\qemu.py:622: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -647,12 +857,12 @@
           "raw": "src/intellicrack/ui\\chat.py:224: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 369,
+          "line": 378,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\chat.py:369: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\chat.py:378: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -713,36 +923,6 @@
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
           "raw": "src/intellicrack/ui\\panels\\script_manager.py:450: D107: in public method `__init__`: - Missing docstring in __init__"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 96,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:96: D107: in public method `__init__`: - Missing docstring in __init__"
-        },
-        {
-          "line": 201,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:201: D107: in public method `__init__`: - Missing docstring in __init__"
-        },
-        {
-          "line": 300,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_widgets.py:300: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -935,12 +1115,12 @@
           "raw": "src/intellicrack/sandbox\\manager.py:47: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 90,
+          "line": 91,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/sandbox\\manager.py:90: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/sandbox\\manager.py:91: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -949,20 +1129,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 128,
+          "line": 129,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\app.py:128: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\app.py:129: D107: in public method `__init__`: - Missing docstring in __init__"
         },
         {
-          "line": 179,
+          "line": 180,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\app.py:179: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\app.py:180: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1055,30 +1235,16 @@
       ]
     },
     {
-      "path": "src/intellicrack/bridges\\binary.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 90,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\binary.py:90: D107: in public method `__init__`: - Missing docstring in __init__"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack/bridges\\cutter.py",
       "count": 1,
       "findings": [
         {
-          "line": 177,
+          "line": 727,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\cutter.py:177: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\cutter.py:727: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1087,12 +1253,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 464,
+          "line": 1065,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\frida_bridge.py:464: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\frida_bridge.py:1065: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1101,12 +1267,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 88,
+          "line": 91,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\ghidra.py:88: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\ghidra.py:91: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1115,12 +1281,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 126,
+          "line": 167,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:126: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\hex_editor.py:167: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1129,12 +1295,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 87,
+          "line": 92,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\hex_state.py:87: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\hex_state.py:92: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1143,12 +1309,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 206,
+          "line": 197,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\installer.py:206: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\installer.py:197: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1157,12 +1323,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 57,
+          "line": 56,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\named_pipe_client.py:57: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\named_pipe_client.py:56: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1171,12 +1337,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 183,
+          "line": 714,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\process.py:183: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\process.py:714: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1185,12 +1351,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 63,
+          "line": 90,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\sandbox_bridge.py:63: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\sandbox_bridge.py:90: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1213,12 +1379,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 351,
+          "line": 369,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/bridges\\x64dbg.py:351: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/bridges\\x64dbg.py:369: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1255,12 +1421,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 179,
+          "line": 189,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/core\\orchestrator.py:179: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/core\\orchestrator.py:189: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1605,12 +1771,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 101,
+          "line": 114,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/sandbox\\windows.py:101: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/sandbox\\windows.py:114: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1713,30 +1879,16 @@
       ]
     },
     {
-      "path": "src/intellicrack/ui\\panels\\binary_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 169,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\binary_panel.py:169: D107: in public method `__init__`: - Missing docstring in __init__"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack/ui\\panels\\cutter_panel.py",
       "count": 1,
       "findings": [
         {
-          "line": 86,
+          "line": 120,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\cutter_panel.py:86: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\cutter_panel.py:120: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1745,12 +1897,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 92,
+          "line": 107,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\frida_panel.py:92: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\frida_panel.py:107: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1759,26 +1911,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 82,
+          "line": 145,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\ghidra_panel.py:82: D107: in public method `__init__`: - Missing docstring in __init__"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/ui\\panels\\hex_tools_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 409,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\hex_tools_panel.py:409: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\ghidra_panel.py:145: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1797,30 +1935,16 @@
       ]
     },
     {
-      "path": "src/intellicrack/ui\\panels\\process_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 421,
-          "column": null,
-          "code": "D107",
-          "context": "in public method `__init__`:",
-          "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\process_panel.py:421: D107: in public method `__init__`: - Missing docstring in __init__"
-        }
-      ]
-    },
-    {
       "path": "src/intellicrack/ui\\panels\\sandbox_panel.py",
       "count": 1,
       "findings": [
         {
-          "line": 75,
+          "line": 77,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\sandbox_panel.py:75: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\sandbox_panel.py:77: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1829,12 +1953,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 101,
+          "line": 110,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\x64dbg_panel.py:101: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\x64dbg_panel.py:110: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1843,12 +1967,26 @@
       "count": 1,
       "findings": [
         {
-          "line": 113,
+          "line": 132,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\panel.py:113: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\panel.py:132: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_comparison.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 50,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_comparison.py:50: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1867,6 +2005,48 @@
       ]
     },
     {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_process_memory.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 79,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_process_memory.py:79: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_sandbox.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 99,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_sandbox.py:99: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 496,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py:496: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack/ui\\panels\\hex_editor\\_sections.py",
       "count": 1,
       "findings": [
@@ -1881,16 +2061,30 @@
       ]
     },
     {
-      "path": "src/intellicrack/ui\\panels\\hex_editor\\_statistics.py",
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py",
       "count": 1,
       "findings": [
         {
-          "line": 78,
+          "line": 55,
           "column": null,
           "code": "D107",
           "context": "in public method `__init__`:",
           "message": "in public method `__init__`: - Missing docstring in __init__",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_statistics.py:78: D107: in public method `__init__`: - Missing docstring in __init__"
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py:55: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_statistics.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 81,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_statistics.py:81: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },
@@ -1905,6 +2099,104 @@
           "context": "in public method `goto_offset`:",
           "message": "in public method `goto_offset`: - Missing docstring in public method",
           "raw": "src/intellicrack/ui\\panels\\hex_editor\\_yara.py:59: D102: in public method `goto_offset`: - Missing docstring in public method"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 77,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_base.py:77: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_memory_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 59,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_memory_tab.py:59: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_modules_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 53,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_modules_tab.py:53: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_process_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 86,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_process_tab.py:86: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_system_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 58,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_system_tab.py:58: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_threads_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 54,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_threads_tab.py:54: D107: in public method `__init__`: - Missing docstring in __init__"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\process_panel\\_workers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 42,
+          "column": null,
+          "code": "D107",
+          "context": "in public method `__init__`:",
+          "message": "in public method `__init__`: - Missing docstring in __init__",
+          "raw": "src/intellicrack/ui\\panels\\process_panel\\_workers.py:42: D107: in public method `__init__`: - Missing docstring in __init__"
         }
       ]
     },

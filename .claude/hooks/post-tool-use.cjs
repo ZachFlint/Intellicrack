@@ -44,8 +44,10 @@ function detectViolations(filePath) {
             { pattern: 'UNIMPLEMENTED', msg: 'UNIMPLEMENTED constant' },
         ];
 
+        const placeholderExclusions = ['setplaceholdertext', 'placeholdertext', 'placeholder_text'];
+
         const lowerChecks = [
-            { pattern: 'placeholder', msg: 'placeholder code' },
+            { pattern: 'placeholder', msg: 'placeholder code', exclusions: placeholderExclusions },
             { pattern: 'stub', msg: 'stub implementation' },
             { pattern: 'mock', msg: 'mock implementation' },
             { pattern: 'dummy', msg: 'Dummy implementation' },
@@ -62,7 +64,11 @@ function detectViolations(filePath) {
                 }
             });
             lowerChecks.forEach(check => {
-                if (line.toLowerCase().includes(check.pattern)) {
+                const lower = line.toLowerCase();
+                if (lower.includes(check.pattern)) {
+                    if (check.exclusions && check.exclusions.some(exc => lower.includes(exc))) {
+                        return;
+                    }
                     violations.push(check.msg + ' found at: ' + (index + 1));
                 }
             });

@@ -11,7 +11,7 @@
             {
               "id": "C901",
               "shortDescription": {
-                "text": "'BinaryBridge._detect_architecture' is too complex (11)"
+                "text": "'FridaBridge.shutdown' is too complex (30)"
               }
             }
           ]
@@ -22,17 +22,17 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'BinaryBridge._detect_architecture' is too complex (11)"
+            "text": "'FridaBridge.shutdown' is too complex (30)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/binary.py",
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 556,
+                  "startLine": 1147,
                   "startColumn": 5
                 }
               }
@@ -43,7 +43,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'FridaBridge.hook_function' is too complex (11)"
+            "text": "'FridaBridge.call_function' is too complex (12)"
           },
           "locations": [
             {
@@ -53,7 +53,301 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 935,
+                  "startLine": 1982,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'FridaBridge.stalker_follow' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2754,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GhidraBridge.search_bytes' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1961,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.copy_as' is too complex (21)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2114,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3023,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.search_numeric' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3243,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.apply_arithmetic_to_selection' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3819,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge._extract_strings_fallback' is too complex (17)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4393,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.base_convert' is too complex (18)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4977,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.run_python_script' is too complex (23)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5049,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge._match_die_pattern' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5273,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge._scan_clamav_ndb' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5402,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge.scan_custom_signatures' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5466,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge._exec_bps_command' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5833,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorBridge._apply_ups_patch' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5939,
                   "startColumn": 5
                 }
               }
@@ -74,7 +368,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 231,
+                  "startLine": 222,
                   "startColumn": 5
                 }
               }
@@ -95,7 +389,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 509,
+                  "startLine": 562,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ProcessBridge.initialize' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/process.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 754,
                   "startColumn": 5
                 }
               }
@@ -116,7 +431,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1110,
+                  "startLine": 1455,
                   "startColumn": 5
                 }
               }
@@ -127,17 +442,17 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'LicenseAnalyzer._detect_algorithms' is too complex (12)"
+            "text": "'ProcessBridge.set_thread_context' is too complex (14)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1897,
+                  "startLine": 2599,
                   "startColumn": 5
                 }
               }
@@ -148,17 +463,647 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'LicenseAnalyzer._detect_key_format' is too complex (12)"
+            "text": "'ProcessBridge.stack_walk' is too complex (13)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/license_analyzer.py",
+                  "uri": "src/intellicrack/bridges/process.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1957,
+                  "startLine": 2698,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ProcessBridge.get_mitigation_policies' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/process.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2874,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'X64DbgBridge.get_stack_trace' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2775,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'X64DbgBridge.find_pattern' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3113,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'X64DbgBridge.yara_scan' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4215,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'AnalysisAggregator._collect_from_static_bridge' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/analysis_aggregator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 121,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexDisassembler._resolve_arch_mode' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/disassembler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 133,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexDisassembler.auto_detect_arch' is too complex (21)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/disassembler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 279,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._format_value' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 339,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._eval_stmt' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 475,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._eval_for' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 553,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._eval_stmt_collect' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1205,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._read_primitive' is too complex (17)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1257,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._eval_expr' is too complex (17)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1324,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._apply_numeric_op' is too complex (20)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1435,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._eval_assign' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1652,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._eval_cast' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1813,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatEvaluator._build_builtins' is too complex (33)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1891,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatLexer._scan_number' is too complex (18)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/lexer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 254,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatLexer._scan_operator' is too complex (42)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/lexer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 351,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatLexer._scan_token' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/lexer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 468,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatParser._parse_expression' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/parser.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 374,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatParser._parse_prefix' is too complex (22)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/parser.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 482,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatParser._parse_statement' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/parser.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 655,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatternRegistry.match_file' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/pattern_registry.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 132,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatPreprocessor.process' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatPreprocessor._process_source' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 194,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'extract_pragmas_fast' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 409,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatLexer._read_multi_char_operator' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat_compiler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 505,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatCodegen.generate' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat_compiler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1182,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexPatCodegen._gen_regular_field' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat_compiler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1250,
                   "startColumn": 5
                 }
               }
@@ -179,7 +1124,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 371,
+                  "startLine": 427,
                   "startColumn": 5
                 }
               }
@@ -190,7 +1135,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'Orchestrator._call_llm' is too complex (11)"
+            "text": "'Orchestrator.shutdown' is too complex (17)"
           },
           "locations": [
             {
@@ -200,7 +1145,112 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 591,
+                  "startLine": 1700,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ProcessManager._sync_cleanup' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 284,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolRegistry.execute_tool_call' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 440,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'_eval_ast_node' is too complex (23)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/transform_pipeline.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 102,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'_run_application' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 609,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'AnthropicProvider.chat_stream' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/anthropic.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 420,
                   "startColumn": 5
                 }
               }
@@ -221,7 +1271,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 342,
+                  "startLine": 325,
                   "startColumn": 5
                 }
               }
@@ -242,7 +1292,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 575,
+                  "startLine": 561,
                   "startColumn": 5
                 }
               }
@@ -263,7 +1313,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 683,
+                  "startLine": 669,
                   "startColumn": 5
                 }
               }
@@ -274,7 +1324,49 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'GrokProvider.chat_stream' is too complex (12)"
+            "text": "'GoogleProvider.chat_stream' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 336,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GoogleProvider._convert_messages_to_provider_format' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 573,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GrokProvider.chat_stream' is too complex (19)"
           },
           "locations": [
             {
@@ -284,7 +1376,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 369,
+                  "startLine": 413,
                   "startColumn": 5
                 }
               }
@@ -295,7 +1387,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'HuggingFaceProvider.chat_stream' is too complex (15)"
+            "text": "'HuggingFaceProvider.chat_stream' is too complex (20)"
           },
           "locations": [
             {
@@ -305,7 +1397,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 526,
+                  "startLine": 439,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'LocalTransformersProvider.chat_stream' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 451,
                   "startColumn": 5
                 }
               }
@@ -326,7 +1439,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 532,
+                  "startLine": 633,
                   "startColumn": 5
                 }
               }
@@ -347,28 +1460,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 838,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "C901",
-          "level": "warning",
-          "message": {
-            "text": "'LocalTransformersProvider._estimate_context_window' is too complex (11)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/local_transformers.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 938,
+                  "startLine": 912,
                   "startColumn": 5
                 }
               }
@@ -389,7 +1481,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 469,
+                  "startLine": 450,
                   "startColumn": 1
                 }
               }
@@ -400,7 +1492,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'OllamaProvider.chat_stream' is too complex (12)"
+            "text": "'OllamaProvider.chat_stream' is too complex (18)"
           },
           "locations": [
             {
@@ -410,7 +1502,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 522,
+                  "startLine": 569,
                   "startColumn": 5
                 }
               }
@@ -421,7 +1513,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'OpenAIProvider.chat_stream' is too complex (11)"
+            "text": "'OpenAIProvider.chat_stream' is too complex (18)"
           },
           "locations": [
             {
@@ -431,7 +1523,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 401,
+                  "startLine": 455,
                   "startColumn": 5
                 }
               }
@@ -442,7 +1534,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'OpenRouterProvider.chat_stream' is too complex (14)"
+            "text": "'OpenRouterProvider.list_models' is too complex (12)"
           },
           "locations": [
             {
@@ -452,7 +1544,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 411,
+                  "startLine": 141,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'OpenRouterProvider.chat' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 218,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'OpenRouterProvider.chat_stream' is too complex (19)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 384,
                   "startColumn": 5
                 }
               }
@@ -473,7 +1607,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 217,
+                  "startLine": 212,
                   "startColumn": 1
                 }
               }
@@ -484,7 +1618,49 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'QEMUSandbox._build_qemu_command' is too complex (11)"
+            "text": "'extract_iocs' is too complex (24)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 427,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'generate_timeline' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 521,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'QEMUSandbox._build_qemu_command' is too complex (12)"
           },
           "locations": [
             {
@@ -494,7 +1670,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 766,
+                  "startLine": 873,
                   "startColumn": 5
                 }
               }
@@ -505,7 +1681,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'QEMUSandbox.start' is too complex (11)"
+            "text": "'QEMUSandbox.run_binary' is too complex (12)"
           },
           "locations": [
             {
@@ -515,7 +1691,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 860,
+                  "startLine": 1707,
                   "startColumn": 5
                 }
               }
@@ -526,7 +1702,112 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'MainWindow._on_tool_result' is too complex (15)"
+            "text": "'QEMUSandbox.apply_anti_evasion' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2463,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'QEMUSandbox.extract_dropped_files' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2586,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'QEMUSandbox.yara_scan' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2660,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'WindowsSandbox.extract_dropped_files' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1159,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'WindowsSandbox.yara_scan' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1222,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'MainWindow._restore_window_state' is too complex (12)"
           },
           "locations": [
             {
@@ -536,7 +1817,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 812,
+                  "startLine": 286,
                   "startColumn": 5
                 }
               }
@@ -557,7 +1838,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1245,
+                  "startLine": 1334,
                   "startColumn": 5
                 }
               }
@@ -578,7 +1859,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1326,
+                  "startLine": 1407,
                   "startColumn": 5
                 }
               }
@@ -589,7 +1870,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'MainWindow.close_event_handler' is too complex (17)"
+            "text": "'MainWindow._on_refresh_models' is too complex (12)"
           },
           "locations": [
             {
@@ -599,7 +1880,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1872,
+                  "startLine": 1482,
                   "startColumn": 5
                 }
               }
@@ -610,17 +1891,17 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'BinaryPanel._parse_sections' is too complex (12)"
+            "text": "'MainWindow._on_process_attached' is too complex (16)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/binary_panel.py",
+                  "uri": "src/intellicrack/ui/app.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 282,
+                  "startLine": 1884,
                   "startColumn": 5
                 }
               }
@@ -631,17 +1912,17 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'StackViewerPanel.refresh' is too complex (11)"
+            "text": "'MainWindow.closeEvent' is too complex (12)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uri": "src/intellicrack/ui/app.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 495,
+                  "startLine": 2103,
                   "startColumn": 5
                 }
               }
@@ -652,7 +1933,679 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'ModelRefreshWorker._fetch_models' is too complex (15)"
+            "text": "'GhidraPanel._dispatch_func_menu_action' is too complex (19)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1867,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'CalculatorMixin._on_convert' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_calculator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 95,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ComparisonMixin._on_compare' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_comparison.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 188,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'DataInspectorMixin._on_bit_toggled' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_data_inspector.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 174,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'DisassemblyMixin._on_disassemble' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_disassembly.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 118,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HashingMixin._on_verify_pe_checksum' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HashingMixin._on_repair_pe_checksum' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 161,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatchesMixin._update_patches' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_patches.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatchesMixin._on_import_patches' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_patches.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 141,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatternEditorMixin._on_pattern_compile' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_pattern_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 171,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatternEditorMixin._on_pattern_apply' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_pattern_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 221,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatternEditorMixin._apply_via_interpreter' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_pattern_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 273,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'PatternEditorMixin._populate_pattern_library' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_pattern_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 461,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'SectionsMixin._auto_detect_file_type' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_sections.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 222,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'SignatureScanWorker._scan_die' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_signatures.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 81,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'SignatureScanWorker._scan_clamav_ndb' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_signatures.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 199,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'SignatureScanWorker._scan_custom' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_signatures.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 257,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TemplatesMixin._bookmark_pe_structure' is too complex (21)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 307,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TemplatesMixin._bookmark_elf_structure' is too complex (21)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 403,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TransformsMixin._on_transform_apply' is too complex (15)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 401,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TransformsMixin._on_pipeline_execute' is too complex (18)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 536,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TransformsMixin._on_block_swap' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 680,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TransformsMixin._on_apply_arithmetic' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 715,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TransformsMixin._apply_arithmetic_op' is too complex (17)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 767,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'YaraMixin._on_yara_scan' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_yara.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 116,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorPanel.set_state_holder' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 807,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorWidget._format_group' is too complex (26)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 741,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorWidget._paint_ascii_byte' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1025,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorWidget.keyPressEvent' is too complex (25)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1193,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorWidget._do_paste' is too complex (18)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1444,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorWidget.copy_as_format' is too complex (17)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1759,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'HexEditorWidget.contextMenuEvent' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1841,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ModelRefreshWorker._fetch_models' is too complex (11)"
           },
           "locations": [
             {
@@ -662,7 +2615,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 448,
+                  "startLine": 551,
                   "startColumn": 5
                 }
               }
@@ -683,7 +2636,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 495,
+                  "startLine": 585,
                   "startColumn": 5
                 }
               }
@@ -694,7 +2647,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'ProviderSettingsWidget._on_pull_model' is too complex (16)"
+            "text": "'ProviderSettingsWidget.get_provider_device_info' is too complex (11)"
           },
           "locations": [
             {
@@ -704,7 +2657,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1756,
+                  "startLine": 2258,
                   "startColumn": 5
                 }
               }
@@ -725,7 +2678,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 229,
+                  "startLine": 242,
                   "startColumn": 5
                 }
               }
@@ -736,7 +2689,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'SessionManagerDialog._load_sessions_from_disk' is too complex (13)"
+            "text": "'SessionManagerDialog._load_sessions_from_disk' is too complex (14)"
           },
           "locations": [
             {
@@ -746,7 +2699,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 284,
+                  "startLine": 297,
                   "startColumn": 5
                 }
               }
@@ -767,7 +2720,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 609,
+                  "startLine": 648,
                   "startColumn": 5
                 }
               }
@@ -799,17 +2752,17 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'ToolOutputPanel._on_tab_close_requested' is too complex (16)"
+            "text": "'ToolStatusCheckWorker._check_cutter' is too complex (11)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/tools.py",
+                  "uri": "src/intellicrack/ui/tool_config.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1401,
+                  "startLine": 511,
                   "startColumn": 5
                 }
               }
@@ -820,7 +2773,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'ToolOutputPanel.close_embedded_tools' is too complex (15)"
+            "text": "'ToolOutputPanel.add_x64dbg_tab' is too complex (11)"
           },
           "locations": [
             {
@@ -830,7 +2783,154 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1473,
+                  "startLine": 1101,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolOutputPanel.add_cutter_tab' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1153,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolOutputPanel.add_ghidra_tab' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1200,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolOutputPanel.add_frida_tab' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1247,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolOutputPanel.add_process_tab' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1297,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolOutputPanel._on_tab_close_requested' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1584,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'ToolOutputPanel.close_embedded_tools' is too complex (13)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tools.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1646,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'TestCrossProviderConsistency.available_providers' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_e2e_chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1132,
                   "startColumn": 5
                 }
               }
@@ -842,7 +2942,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:38:15.027979"
+          "endTimeUtc": "2026-04-11T07:07:46.615920+00:00"
         }
       ]
     }

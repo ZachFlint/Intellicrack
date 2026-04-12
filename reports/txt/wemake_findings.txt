@@ -1,3 +1,201 @@
+51 findings in src/intellicrack\bridges\hex_editor.py
+
+src/intellicrack\bridges\hex_editor.py:65:5: WPS474 Found import object collision: HexPatCompiler
+
+src/intellicrack\bridges\hex_editor.py:65:5: WPS474 Found import object collision: HexPatError
+
+src/intellicrack\bridges\hex_editor.py:79:5: WPS474 Found import object collision: HexPatInterpreter
+
+src/intellicrack\bridges\hex_editor.py:79:5: WPS474 Found import object collision: PatternRegistry
+
+src/intellicrack\bridges\hex_editor.py:92:5: WPS474 Found import object collision: HexDisassembler
+
+src/intellicrack\bridges\hex_editor.py:101:5: WPS474 Found import object collision: YaraScanner
+
+src/intellicrack\bridges\hex_editor.py:111:5: WPS474 Found import object collision: TransformPipeline
+
+src/intellicrack\bridges\hex_editor.py:152:21: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\hex_editor.py:2114:5: C901 'HexEditorBridge.copy_as' is too complex (21)
+
+src/intellicrack\bridges\hex_editor.py:2114:5: WPS212 Found too many return statements: 13 > 5
+
+src/intellicrack\bridges\hex_editor.py:2177:36: WPS441 Found control variable used after block: b
+
+src/intellicrack\bridges\hex_editor.py:2180:36: WPS441 Found control variable used after block: b
+
+src/intellicrack\bridges\hex_editor.py:2183:31: WPS441 Found control variable used after block: b
+
+src/intellicrack\bridges\hex_editor.py:2185:36: WPS441 Found control variable used after block: b
+
+src/intellicrack\bridges\hex_editor.py:3023:5: C901 'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)
+
+src/intellicrack\bridges\hex_editor.py:3023:5: WPS211 Found too many arguments: 8 > 5
+
+src/intellicrack\bridges\hex_editor.py:3243:5: C901 'HexEditorBridge.search_numeric' is too complex (12)
+
+src/intellicrack\bridges\hex_editor.py:3243:5: WPS211 Found too many arguments: 7 > 5
+
+src/intellicrack\bridges\hex_editor.py:3285:38: WPS459 Found comparison with float or complex number
+
+src/intellicrack\bridges\hex_editor.py:3320:5: WPS211 Found too many arguments: 7 > 5
+
+src/intellicrack\bridges\hex_editor.py:3374:21: WPS460 Found single element destructuring
+
+src/intellicrack\bridges\hex_editor.py:3440:5: WPS211 Found too many arguments: 6 > 5
+
+src/intellicrack\bridges\hex_editor.py:3478:32: WPS509 Found incorrectly nested ternary
+
+src/intellicrack\bridges\hex_editor.py:3819:5: C901 'HexEditorBridge.apply_arithmetic_to_selection' is too complex (12)
+
+src/intellicrack\bridges\hex_editor.py:3912:13: WPS223 Found too many `elif` branches: 7 > 3
+
+src/intellicrack\bridges\hex_editor.py:4393:5: C901 'HexEditorBridge._extract_strings_fallback' is too complex (17)
+
+src/intellicrack\bridges\hex_editor.py:4450:19: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4451:34: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4451:45: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4454:41: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4456:35: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4458:54: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4461:39: WPS441 Found control variable used after block: i
+
+src/intellicrack\bridges\hex_editor.py:4973:9: WPS524 Found self assignment  with refactored assignment
+
+src/intellicrack\bridges\hex_editor.py:4977:5: C901 'HexEditorBridge.base_convert' is too complex (18)
+
+src/intellicrack\bridges\hex_editor.py:5049:5: C901 'HexEditorBridge.run_python_script' is too complex (23)
+
+src/intellicrack\bridges\hex_editor.py:5068:9: WPS431 Found nested class: _DocAPI
+
+src/intellicrack\bridges\hex_editor.py:5118:59: WPS421 Found wrong function call: vars
+
+src/intellicrack\bridges\hex_editor.py:5132:9: WPS448 Found incorrect exception order
+
+src/intellicrack\bridges\hex_editor.py:5132:9: WPS448 Found incorrect exception order
+
+src/intellicrack\bridges\hex_editor.py:5133:24: WPS421 Found wrong function call: compile
+
+src/intellicrack\bridges\hex_editor.py:5134:13: WPS421 Found wrong function call: exec
+
+src/intellicrack\bridges\hex_editor.py:5137:9: WPS239 Found too many exceptions in `except` case: 18 > 3
+
+src/intellicrack\bridges\hex_editor.py:5273:5: C901 'HexEditorBridge._match_die_pattern' is too complex (13)
+
+src/intellicrack\bridges\hex_editor.py:5402:5: C901 'HexEditorBridge._scan_clamav_ndb' is too complex (12)
+
+src/intellicrack\bridges\hex_editor.py:5466:5: C901 'HexEditorBridge.scan_custom_signatures' is too complex (12)
+
+src/intellicrack\bridges\hex_editor.py:5833:5: C901 'HexEditorBridge._exec_bps_command' is too complex (13)
+
+src/intellicrack\bridges\hex_editor.py:5833:5: WPS211 Found too many arguments: 7 > 5
+
+src/intellicrack\bridges\hex_editor.py:5939:5: C901 'HexEditorBridge._apply_ups_patch' is too complex (11)
+
+src/intellicrack\bridges\hex_editor.py:6008:1: WPS211 Found too many arguments: 7 > 5
+
+src/intellicrack\bridges\hex_editor.py:6096:1: WPS211 Found too many arguments: 6 > 5
+
+
+45 findings in src/intellicrack\bridges\_win32_types.py
+
+src/intellicrack\bridges\_win32_types.py:15:1: WPS458 Found imports collision: ctypes
+
+src/intellicrack\bridges\_win32_types.py:232:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:249:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:263:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:280:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:302:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:324:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:333:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:342:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:344:46: WPS345 Found meaningless number operation
+
+src/intellicrack\bridges\_win32_types.py:356:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:366:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:379:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:398:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:413:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:416:57: WPS345 Found meaningless number operation
+
+src/intellicrack\bridges\_win32_types.py:428:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:439:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:460:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:469:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:522:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:538:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:574:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:584:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:602:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:644:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:660:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:675:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:688:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:704:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:722:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:731:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:739:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:747:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:755:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:763:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:771:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:779:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:787:5: WPS120 Found regular name with trailing underscore: _fields_
+
+src/intellicrack\bridges\_win32_types.py:813:12: WPS121 Found usage of a variable marked as unused: _kernel32_cache
+
+src/intellicrack\bridges\_win32_types.py:825:12: WPS121 Found usage of a variable marked as unused: _ntdll_cache
+
+src/intellicrack\bridges\_win32_types.py:837:12: WPS121 Found usage of a variable marked as unused: _advapi32_cache
+
+src/intellicrack\bridges\_win32_types.py:849:12: WPS121 Found usage of a variable marked as unused: _user32_cache
+
+src/intellicrack\bridges\_win32_types.py:861:12: WPS121 Found usage of a variable marked as unused: _dbghelp_cache
+
+src/intellicrack\bridges\_win32_types.py:873:12: WPS121 Found usage of a variable marked as unused: _psapi_cache
+
+
 34 findings in src/intellicrack\core\hexpat\evaluator.py
 
 src/intellicrack\core\hexpat\evaluator.py:0:1: WPS203 Found module with too many imported names: 67 > 50
@@ -73,151 +271,324 @@ src/intellicrack\core\hexpat\evaluator.py:1998:9: WPS234 Found overly complex an
 
 src/intellicrack\ui\panels\hex_editor_widget.py:381:9: WPS234 Found overly complex annotation: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:632:5: WPS211 Found too many arguments: 9 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:676:5: WPS211 Found too many arguments: 9 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:697:5: C901 'HexEditorWidget._format_group' is too complex (26)
+src/intellicrack\ui\panels\hex_editor_widget.py:741:5: C901 'HexEditorWidget._format_group' is too complex (26)
 
-src/intellicrack\ui\panels\hex_editor_widget.py:697:5: WPS212 Found too many return statements: 24 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:741:5: WPS212 Found too many return statements: 24 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:770:5: WPS211 Found too many arguments: 10 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:814:5: WPS211 Found too many arguments: 10 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:883:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:927:5: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:945:5: WPS211 Found too many arguments: 8 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:989:5: WPS211 Found too many arguments: 8 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:981:5: C901 'HexEditorWidget._paint_ascii_byte' is too complex (11)
+src/intellicrack\ui\panels\hex_editor_widget.py:1025:5: C901 'HexEditorWidget._paint_ascii_byte' is too complex (11)
 
-src/intellicrack\ui\panels\hex_editor_widget.py:981:5: WPS211 Found too many arguments: 8 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:1025:5: WPS211 Found too many arguments: 8 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1149:5: C901 'HexEditorWidget.keyPressEvent' is too complex (25)
+src/intellicrack\ui\panels\hex_editor_widget.py:1193:5: C901 'HexEditorWidget.keyPressEvent' is too complex (25)
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1149:5: WPS212 Found too many return statements: 7 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:1193:5: WPS212 Found too many return statements: 7 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1187:9: WPS223 Found too many `elif` branches: 10 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1231:9: WPS223 Found too many `elif` branches: 10 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1284:21: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1328:21: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1292:21: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1336:21: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1318:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1362:17: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1326:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1370:17: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1357:13: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1401:13: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1368:13: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1412:13: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1400:5: C901 'HexEditorWidget._do_paste' is too complex (18)
+src/intellicrack\ui\panels\hex_editor_widget.py:1444:5: C901 'HexEditorWidget._do_paste' is too complex (18)
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1427:18: WPS518 Found implicit `enumerate()` call
+src/intellicrack\ui\panels\hex_editor_widget.py:1471:18: WPS518 Found implicit `enumerate()` call
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1435:30: WPS518 Found implicit `enumerate()` call
+src/intellicrack\ui\panels\hex_editor_widget.py:1479:30: WPS518 Found implicit `enumerate()` call
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1437:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1481:17: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1444:30: WPS518 Found implicit `enumerate()` call
+src/intellicrack\ui\panels\hex_editor_widget.py:1488:30: WPS518 Found implicit `enumerate()` call
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1446:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\ui\panels\hex_editor_widget.py:1490:17: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1715:5: C901 'HexEditorWidget.copy_as_format' is too complex (17)
+src/intellicrack\ui\panels\hex_editor_widget.py:1759:5: C901 'HexEditorWidget.copy_as_format' is too complex (17)
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1715:5: WPS212 Found too many return statements: 13 > 5
+src/intellicrack\ui\panels\hex_editor_widget.py:1759:5: WPS212 Found too many return statements: 13 > 5
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1751:36: WPS441 Found control variable used after block: b
+src/intellicrack\ui\panels\hex_editor_widget.py:1795:36: WPS441 Found control variable used after block: b
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1762:36: WPS441 Found control variable used after block: b
+src/intellicrack\ui\panels\hex_editor_widget.py:1806:36: WPS441 Found control variable used after block: b
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1765:36: WPS441 Found control variable used after block: b
+src/intellicrack\ui\panels\hex_editor_widget.py:1809:36: WPS441 Found control variable used after block: b
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1768:31: WPS441 Found control variable used after block: b
+src/intellicrack\ui\panels\hex_editor_widget.py:1812:31: WPS441 Found control variable used after block: b
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1770:36: WPS441 Found control variable used after block: b
+src/intellicrack\ui\panels\hex_editor_widget.py:1814:36: WPS441 Found control variable used after block: b
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1797:5: C901 'HexEditorWidget.contextMenuEvent' is too complex (12)
+src/intellicrack\ui\panels\hex_editor_widget.py:1841:5: C901 'HexEditorWidget.contextMenuEvent' is too complex (12)
 
-src/intellicrack\ui\panels\hex_editor_widget.py:1817:28: WPS342 Found implicit raw string: 'Python (b"\\x4d\\x5a")'
+src/intellicrack\ui\panels\hex_editor_widget.py:1861:28: WPS342 Found implicit raw string: 'Python (b"\\x4d\\x5a")'
 
 
-19 findings in src/intellicrack\bridges\hex_editor.py
+31 findings in src/intellicrack\bridges\x64dbg.py
 
-src/intellicrack\bridges\hex_editor.py:56:5: WPS474 Found import object collision: HexPatCompiler
+src/intellicrack\bridges\x64dbg.py:56:5: WPS458 Found imports collision: ctypes
 
-src/intellicrack\bridges\hex_editor.py:56:5: WPS474 Found import object collision: HexPatError
+src/intellicrack\bridges\x64dbg.py:269:5: WPS431 Found nested class: ProcessBasicInformation
 
-src/intellicrack\bridges\hex_editor.py:70:5: WPS474 Found import object collision: HexPatInterpreter
+src/intellicrack\bridges\x64dbg.py:270:9: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\hex_editor.py:70:5: WPS474 Found import object collision: PatternRegistry
+src/intellicrack\bridges\x64dbg.py:383:9: WPS234 Found overly complex annotation: 4 > 3
 
-src/intellicrack\bridges\hex_editor.py:83:5: WPS474 Found import object collision: HexDisassembler
+src/intellicrack\bridges\x64dbg.py:1933:5: WPS212 Found too many return statements: 6 > 5
 
-src/intellicrack\bridges\hex_editor.py:92:5: WPS474 Found import object collision: YaraScanner
+src/intellicrack\bridges\x64dbg.py:2617:9: WPS431 Found nested class: MemoryBasicInformation
 
-src/intellicrack\bridges\hex_editor.py:102:5: WPS474 Found import object collision: TransformPipeline
+src/intellicrack\bridges\x64dbg.py:2618:13: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\hex_editor.py:1698:5: C901 'HexEditorBridge.copy_as' is too complex (21)
+src/intellicrack\bridges\x64dbg.py:2775:5: C901 'X64DbgBridge.get_stack_trace' is too complex (11)
 
-src/intellicrack\bridges\hex_editor.py:1698:5: WPS212 Found too many return statements: 13 > 5
+src/intellicrack\bridges\x64dbg.py:2833:46: WPS509 Found incorrectly nested ternary
 
-src/intellicrack\bridges\hex_editor.py:1761:36: WPS441 Found control variable used after block: b
+src/intellicrack\bridges\x64dbg.py:2865:9: WPS327 Found useless `continue` at the end of the loop
 
-src/intellicrack\bridges\hex_editor.py:1764:36: WPS441 Found control variable used after block: b
+src/intellicrack\bridges\x64dbg.py:2946:9: WPS431 Found nested class: ThreadEntry32
 
-src/intellicrack\bridges\hex_editor.py:1767:31: WPS441 Found control variable used after block: b
+src/intellicrack\bridges\x64dbg.py:2947:13: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\hex_editor.py:1769:36: WPS441 Found control variable used after block: b
+src/intellicrack\bridges\x64dbg.py:3015:9: WPS431 Found nested class: ModuleEntry32W
 
-src/intellicrack\bridges\hex_editor.py:2574:5: C901 'HexEditorBridge.calculate_hash_custom_crc' is too complex (12)
+src/intellicrack\bridges\x64dbg.py:3016:13: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\hex_editor.py:2574:5: WPS211 Found too many arguments: 8 > 5
+src/intellicrack\bridges\x64dbg.py:3113:5: C901 'X64DbgBridge.find_pattern' is too complex (13)
 
-src/intellicrack\bridges\hex_editor.py:2794:5: C901 'HexEditorBridge.search_numeric' is too complex (11)
+src/intellicrack\bridges\x64dbg.py:3544:35: WPS509 Found incorrectly nested ternary
 
-src/intellicrack\bridges\hex_editor.py:2794:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\bridges\x64dbg.py:3569:9: WPS227 Found too long function output tuple: 6 > 5
 
-src/intellicrack\bridges\hex_editor.py:2859:5: WPS211 Found too many arguments: 7 > 5
+src/intellicrack\bridges\x64dbg.py:3585:13: WPS236 Found too many variables used to unpack a tuple: 6 > 4
 
-src/intellicrack\bridges\hex_editor.py:2913:21: WPS460 Found single element destructuring
+src/intellicrack\bridges\x64dbg.py:4199:31: WPS435 Found list multiply
 
+src/intellicrack\bridges\x64dbg.py:4215:5: C901 'X64DbgBridge.yara_scan' is too complex (11)
 
-19 findings in src/intellicrack\bridges\x64dbg.py
+src/intellicrack\bridges\x64dbg.py:4610:21: WPS431 Found nested class: LUID
 
-src/intellicrack\bridges\x64dbg.py:55:5: WPS458 Found imports collision: ctypes
+src/intellicrack\bridges\x64dbg.py:4611:25: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\x64dbg.py:251:5: WPS431 Found nested class: ProcessBasicInformation
+src/intellicrack\bridges\x64dbg.py:4648:13: WPS431 Found nested class: LUID
 
-src/intellicrack\bridges\x64dbg.py:252:9: WPS120 Found regular name with trailing underscore: _fields_
+src/intellicrack\bridges\x64dbg.py:4649:17: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\x64dbg.py:365:9: WPS234 Found overly complex annotation: 4 > 3
+src/intellicrack\bridges\x64dbg.py:4651:13: WPS431 Found nested class: TokenPrivileges
 
-src/intellicrack\bridges\x64dbg.py:1423:5: WPS212 Found too many return statements: 6 > 5
+src/intellicrack\bridges\x64dbg.py:4652:17: WPS121 Found usage of a variable marked as unused: _fields_
 
-src/intellicrack\bridges\x64dbg.py:2097:9: WPS431 Found nested class: MemoryBasicInformation
+src/intellicrack\bridges\x64dbg.py:4652:17: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\x64dbg.py:2098:13: WPS120 Found regular name with trailing underscore: _fields_
+src/intellicrack\bridges\x64dbg.py:4694:62: WPS509 Found incorrectly nested ternary
 
-src/intellicrack\bridges\x64dbg.py:2297:46: WPS509 Found incorrectly nested ternary
+src/intellicrack\bridges\x64dbg.py:4731:68: WPS509 Found incorrectly nested ternary
 
-src/intellicrack\bridges\x64dbg.py:2329:9: WPS327 Found useless `continue` at the end of the loop
+src/intellicrack\bridges\x64dbg.py:4767:9: WPS431 Found nested class: ProcessEntry32W
 
-src/intellicrack\bridges\x64dbg.py:2410:9: WPS431 Found nested class: ThreadEntry32
+src/intellicrack\bridges\x64dbg.py:4768:13: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\x64dbg.py:2411:13: WPS120 Found regular name with trailing underscore: _fields_
 
-src/intellicrack\bridges\x64dbg.py:2479:9: WPS431 Found nested class: ModuleEntry32W
+27 findings in src/intellicrack\sandbox\windows.py
 
-src/intellicrack\bridges\x64dbg.py:2480:13: WPS120 Found regular name with trailing underscore: _fields_
+src/intellicrack\sandbox\windows.py:112:27: WPS342 Found implicit raw string: "C:\\Users\\WDAGUtilityAccount\\Desktop\\Shared"
 
-src/intellicrack\bridges\x64dbg.py:2577:5: C901 'X64DbgBridge.find_pattern' is too complex (11)
+src/intellicrack\sandbox\windows.py:174:5: WPS217 Found too many await expressions: 11 > 5
 
-src/intellicrack\bridges\x64dbg.py:2987:35: WPS509 Found incorrectly nested ternary
+src/intellicrack\sandbox\windows.py:392:31: WPS342 Found implicit raw string: """
 
-src/intellicrack\bridges\x64dbg.py:3012:9: WPS227 Found too long function output tuple: 6 > 5
+src/intellicrack\sandbox\windows.py:416:35: WPS342 Found implicit raw string: """
 
-src/intellicrack\bridges\x64dbg.py:3028:13: WPS236 Found too many variables used to unpack a tuple: 6 > 4
+src/intellicrack\sandbox\windows.py:455:34: WPS342 Found implicit raw string: """
 
-src/intellicrack\bridges\x64dbg.py:3124:9: WPS431 Found nested class: ProcessEntry32W
+src/intellicrack\sandbox\windows.py:473:34: WPS342 Found implicit raw string: """
 
-src/intellicrack\bridges\x64dbg.py:3125:13: WPS120 Found regular name with trailing underscore: _fields_
+src/intellicrack\sandbox\windows.py:581:5: WPS217 Found too many await expressions: 12 > 5
+
+src/intellicrack\sandbox\windows.py:1029:14: WPS342 Found implicit raw string: "HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS"
+
+src/intellicrack\sandbox\windows.py:1030:14: WPS342 Found implicit raw string: "HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS"
+
+src/intellicrack\sandbox\windows.py:1031:14: WPS342 Found implicit raw string: "HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS"
+
+src/intellicrack\sandbox\windows.py:1033:17: WPS342 Found implicit raw string: "HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS"
+
+src/intellicrack\sandbox\windows.py:1038:14: WPS342 Found implicit raw string: "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum"
+
+src/intellicrack\sandbox\windows.py:1040:17: WPS342 Found implicit raw string: "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation"
+
+src/intellicrack\sandbox\windows.py:1059:13: WPS342 Found implicit raw string: "powershell -Command \"New-Item -Path 'C:\\Users\\John' -ItemType Directory -Force -ErrorAction SilentlyContinue\""
+
+src/intellicrack\sandbox\windows.py:1069:13: WPS342 Found implicit raw string: '  New-Item -Path \\"C:\\Users\\WDAGUtilityAccount\\Documents\\$name.docx\\" -ItemType File -Force -ErrorAction SilentlyContinue'
+
+src/intellicrack\sandbox\windows.py:1081:5: WPS217 Found too many await expressions: 6 > 5
+
+src/intellicrack\sandbox\windows.py:1106:13: WPS480 Found comment inside formatted string
+
+src/intellicrack\sandbox\windows.py:1106:13: WPS479 Found multi-line formatted string
+
+src/intellicrack\sandbox\windows.py:1107:13: WPS480 Found comment inside formatted string
+
+src/intellicrack\sandbox\windows.py:1107:13: WPS479 Found multi-line formatted string
+
+src/intellicrack\sandbox\windows.py:1124:13: WPS480 Found comment inside formatted string
+
+src/intellicrack\sandbox\windows.py:1124:13: WPS479 Found multi-line formatted string
+
+src/intellicrack\sandbox\windows.py:1159:5: C901 'WindowsSandbox.extract_dropped_files' is too complex (11)
+
+src/intellicrack\sandbox\windows.py:1159:5: WPS217 Found too many await expressions: 6 > 5
+
+src/intellicrack\sandbox\windows.py:1222:5: C901 'WindowsSandbox.yara_scan' is too complex (16)
+
+src/intellicrack\sandbox\windows.py:1222:5: WPS217 Found too many await expressions: 9 > 5
+
+src/intellicrack\sandbox\windows.py:1252:29: WPS342 Found implicit raw string: """
+
+
+26 findings in src/intellicrack\sandbox\qemu.py
+
+src/intellicrack\sandbox\qemu.py:223:9: WPS448 Found incorrect exception order
+
+src/intellicrack\sandbox\qemu.py:224:13: WPS414 Found incorrect unpacking target
+
+src/intellicrack\sandbox\qemu.py:224:13: WPS414 Found incorrect unpacking target
+
+src/intellicrack\sandbox\qemu.py:275:13: WPS448 Found incorrect exception order
+
+src/intellicrack\sandbox\qemu.py:453:17: WPS414 Found incorrect unpacking target
+
+src/intellicrack\sandbox\qemu.py:453:17: WPS414 Found incorrect unpacking target
+
+src/intellicrack\sandbox\qemu.py:500:13: WPS448 Found incorrect exception order
+
+src/intellicrack\sandbox\qemu.py:551:13: WPS448 Found incorrect exception order
+
+src/intellicrack\sandbox\qemu.py:556:17: WPS327 Found useless `continue` at the end of the loop
+
+src/intellicrack\sandbox\qemu.py:873:5: C901 'QEMUSandbox._build_qemu_command' is too complex (12)
+
+src/intellicrack\sandbox\qemu.py:987:5: WPS217 Found too many await expressions: 17 > 5
+
+src/intellicrack\sandbox\qemu.py:1077:9: WPS239 Found too many exceptions in `except` case: 5 > 3
+
+src/intellicrack\sandbox\qemu.py:1275:31: WPS342 Found implicit raw string: """@echo off
+
+src/intellicrack\sandbox\qemu.py:1280:29: WPS342 Found implicit raw string: '''#!/usr/bin/env python3
+
+src/intellicrack\sandbox\qemu.py:1707:5: C901 'QEMUSandbox.run_binary' is too complex (12)
+
+src/intellicrack\sandbox\qemu.py:1707:5: WPS217 Found too many await expressions: 10 > 5
+
+src/intellicrack\sandbox\qemu.py:2403:5: WPS217 Found too many await expressions: 6 > 5
+
+src/intellicrack\sandbox\qemu.py:2463:5: C901 'QEMUSandbox.apply_anti_evasion' is too complex (12)
+
+src/intellicrack\sandbox\qemu.py:2522:17: WPS342 Found implicit raw string: 'reg add "HKLM\\HARDWARE\\DESCRIPTION\\System\\BIOS" /v SystemManufacturer /t REG_SZ /d "HP" /f'
+
+src/intellicrack\sandbox\qemu.py:2523:17: WPS342 Found implicit raw string: 'reg add "HKLM\\HARDWARE\\DESCRIPTION\\System\\BIOS" /v SystemProductName /t REG_SZ /d "HP EliteDesk 800 G6" /f'
+
+src/intellicrack\sandbox\qemu.py:2525:17: WPS342 Found implicit raw string: 'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum" /v 0 /t REG_SZ /d "WDC WD10EZEX-00BBHA0" /f'
+
+src/intellicrack\sandbox\qemu.py:2586:5: C901 'QEMUSandbox.extract_dropped_files' is too complex (14)
+
+src/intellicrack\sandbox\qemu.py:2586:5: WPS217 Found too many await expressions: 6 > 5
+
+src/intellicrack\sandbox\qemu.py:2660:5: C901 'QEMUSandbox.yara_scan' is too complex (16)
+
+src/intellicrack\sandbox\qemu.py:2660:5: WPS217 Found too many await expressions: 9 > 5
+
+src/intellicrack\sandbox\qemu.py:2690:29: WPS342 Found implicit raw string: """
+
+
+20 findings in src/intellicrack\ui\tools.py
+
+src/intellicrack\ui\tools.py:0:1: WPS203 Found module with too many imported names: 54 > 50
+
+src/intellicrack\ui\tools.py:263:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:270:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:280:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:287:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:302:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:309:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:319:5: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:326:9: WPS324 Found inconsistent `return` statement
+
+src/intellicrack\ui\tools.py:752:1: WPS230 Found too many public instance attributes: 17 > 6
+
+src/intellicrack\ui\tools.py:1101:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)
+
+src/intellicrack\ui\tools.py:1153:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)
+
+src/intellicrack\ui\tools.py:1200:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)
+
+src/intellicrack\ui\tools.py:1247:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)
+
+src/intellicrack\ui\tools.py:1281:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+
+src/intellicrack\ui\tools.py:1297:5: C901 'ToolOutputPanel.add_process_tab' is too complex (11)
+
+src/intellicrack\ui\tools.py:1334:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+
+src/intellicrack\ui\tools.py:1584:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)
+
+src/intellicrack\ui\tools.py:1638:31: WPS441 Found control variable used after block: k
+
+src/intellicrack\ui\tools.py:1646:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (13)
+
+
+16 findings in src/intellicrack\bridges\frida_bridge.py
+
+src/intellicrack\bridges\frida_bridge.py:105:39: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\frida_bridge.py:126:46: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\frida_bridge.py:135:43: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\frida_bridge.py:136:43: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\frida_bridge.py:137:41: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\frida_bridge.py:138:45: WPS527 Found not a tuple used as an argument
+
+src/intellicrack\bridges\frida_bridge.py:1147:5: C901 'FridaBridge.shutdown' is too complex (30)
+
+src/intellicrack\bridges\frida_bridge.py:1147:5: WPS217 Found too many await expressions: 10 > 5
+
+src/intellicrack\bridges\frida_bridge.py:1982:5: C901 'FridaBridge.call_function' is too complex (12)
+
+src/intellicrack\bridges\frida_bridge.py:2022:34: WPS435 Found list multiply
+
+src/intellicrack\bridges\frida_bridge.py:2714:36: WPS342 Found implicit raw string: "\\\\"
+
+src/intellicrack\bridges\frida_bridge.py:2714:57: WPS342 Found implicit raw string: "\\'"
+
+src/intellicrack\bridges\frida_bridge.py:2714:78: WPS342 Found implicit raw string: "\\n"
+
+src/intellicrack\bridges\frida_bridge.py:2714:99: WPS342 Found implicit raw string: "\\r"
+
+src/intellicrack\bridges\frida_bridge.py:2754:5: C901 'FridaBridge.stalker_follow' is too complex (11)
+
+src/intellicrack\bridges\frida_bridge.py:3806:34: WPS435 Found list multiply
 
 
 16 findings in src/intellicrack\providers\local_transformers.py
@@ -253,41 +624,6 @@ src/intellicrack\providers\local_transformers.py:699:44: WPS478 Found non strict
 src/intellicrack\providers\local_transformers.py:824:17: WPS239 Found too many exceptions in `except` case: 4 > 3
 
 src/intellicrack\providers\local_transformers.py:912:5: C901 'LocalTransformersProvider._parse_tool_calls' is too complex (14)
-
-
-16 findings in src/intellicrack\sandbox\qemu.py
-
-src/intellicrack\sandbox\qemu.py:198:9: WPS448 Found incorrect exception order
-
-src/intellicrack\sandbox\qemu.py:199:13: WPS414 Found incorrect unpacking target
-
-src/intellicrack\sandbox\qemu.py:199:13: WPS414 Found incorrect unpacking target
-
-src/intellicrack\sandbox\qemu.py:250:13: WPS448 Found incorrect exception order
-
-src/intellicrack\sandbox\qemu.py:408:17: WPS414 Found incorrect unpacking target
-
-src/intellicrack\sandbox\qemu.py:408:17: WPS414 Found incorrect unpacking target
-
-src/intellicrack\sandbox\qemu.py:455:13: WPS448 Found incorrect exception order
-
-src/intellicrack\sandbox\qemu.py:506:13: WPS448 Found incorrect exception order
-
-src/intellicrack\sandbox\qemu.py:511:17: WPS327 Found useless `continue` at the end of the loop
-
-src/intellicrack\sandbox\qemu.py:827:5: C901 'QEMUSandbox._build_qemu_command' is too complex (12)
-
-src/intellicrack\sandbox\qemu.py:941:5: WPS217 Found too many await expressions: 17 > 5
-
-src/intellicrack\sandbox\qemu.py:1031:9: WPS239 Found too many exceptions in `except` case: 5 > 3
-
-src/intellicrack\sandbox\qemu.py:1229:31: WPS342 Found implicit raw string: """@echo off
-
-src/intellicrack\sandbox\qemu.py:1234:29: WPS342 Found implicit raw string: '''#!/usr/bin/env python3
-
-src/intellicrack\sandbox\qemu.py:1661:5: C901 'QEMUSandbox.run_binary' is too complex (12)
-
-src/intellicrack\sandbox\qemu.py:1661:5: WPS217 Found too many await expressions: 10 > 5
 
 
 15 findings in src/intellicrack\ui\provider_config.py
@@ -356,31 +692,60 @@ src/intellicrack\providers\ollama.py:749:9: WPS239 Found too many exceptions in 
 
 13 findings in src/intellicrack\bridges\installer.py
 
-src/intellicrack\bridges\installer.py:231:5: C901 'ToolInstaller.find_tool' is too complex (16)
+src/intellicrack\bridges\installer.py:222:5: C901 'ToolInstaller.find_tool' is too complex (16)
 
-src/intellicrack\bridges\installer.py:231:5: WPS212 Found too many return statements: 8 > 5
+src/intellicrack\bridges\installer.py:222:5: WPS212 Found too many return statements: 8 > 5
 
-src/intellicrack\bridges\installer.py:231:5: WPS217 Found too many await expressions: 9 > 5
+src/intellicrack\bridges\installer.py:222:5: WPS217 Found too many await expressions: 9 > 5
 
-src/intellicrack\bridges\installer.py:271:13: WPS426 Found `lambda` in loop's body
+src/intellicrack\bridges\installer.py:262:13: WPS426 Found `lambda` in loop's body
 
-src/intellicrack\bridges\installer.py:278:17: WPS426 Found `lambda` in loop's body
+src/intellicrack\bridges\installer.py:269:17: WPS426 Found `lambda` in loop's body
 
-src/intellicrack\bridges\installer.py:434:5: WPS212 Found too many return statements: 7 > 5
+src/intellicrack\bridges\installer.py:425:5: WPS212 Found too many return statements: 7 > 5
 
-src/intellicrack\bridges\installer.py:473:5: WPS212 Found too many return statements: 8 > 5
+src/intellicrack\bridges\installer.py:464:5: WPS212 Found too many return statements: 8 > 5
 
-src/intellicrack\bridges\installer.py:473:5: WPS217 Found too many await expressions: 6 > 5
+src/intellicrack\bridges\installer.py:464:5: WPS217 Found too many await expressions: 6 > 5
 
-src/intellicrack\bridges\installer.py:528:9: WPS239 Found too many exceptions in `except` case: 5 > 3
+src/intellicrack\bridges\installer.py:519:9: WPS239 Found too many exceptions in `except` case: 5 > 3
 
-src/intellicrack\bridges\installer.py:567:9: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\bridges\installer.py:558:9: WPS239 Found too many exceptions in `except` case: 4 > 3
 
-src/intellicrack\bridges\installer.py:571:5: C901 'ToolInstaller._get_latest_release_url' is too complex (12)
+src/intellicrack\bridges\installer.py:562:5: C901 'ToolInstaller._get_latest_release_url' is too complex (12)
 
-src/intellicrack\bridges\installer.py:571:5: WPS212 Found too many return statements: 7 > 5
+src/intellicrack\bridges\installer.py:562:5: WPS212 Found too many return statements: 7 > 5
 
-src/intellicrack\bridges\installer.py:614:9: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\bridges\installer.py:605:9: WPS239 Found too many exceptions in `except` case: 4 > 3
+
+
+13 findings in src/intellicrack\bridges\process.py
+
+src/intellicrack\bridges\process.py:0:1: WPS203 Found module with too many imported names: 111 > 50
+
+src/intellicrack\bridges\process.py:17:1: WPS458 Found imports collision: ctypes
+
+src/intellicrack\bridges\process.py:495:72: WPS342 Found implicit raw string: "Pipe name (e.g. \\\\.\\pipe\\MyPipe)"
+
+src/intellicrack\bridges\process.py:546:74: WPS342 Found implicit raw string: "Device path (e.g. \\\\.\\MyDriver)"
+
+src/intellicrack\bridges\process.py:589:71: WPS342 Found implicit raw string: "Registry key path (e.g. HKLM\\SOFTWARE\\...)"
+
+src/intellicrack\bridges\process.py:754:5: C901 'ProcessBridge.initialize' is too complex (11)
+
+src/intellicrack\bridges\process.py:1455:5: C901 'ProcessBridge.search_pattern' is too complex (11)
+
+src/intellicrack\bridges\process.py:1483:9: WPS327 Found useless `continue` at the end of the loop
+
+src/intellicrack\bridges\process.py:1654:5: WPS212 Found too many return statements: 6 > 5
+
+src/intellicrack\bridges\process.py:2599:5: C901 'ProcessBridge.set_thread_context' is too complex (14)
+
+src/intellicrack\bridges\process.py:2698:5: C901 'ProcessBridge.stack_walk' is too complex (13)
+
+src/intellicrack\bridges\process.py:2874:5: C901 'ProcessBridge.get_mitigation_policies' is too complex (11)
+
+src/intellicrack\bridges\process.py:2907:13: WPS234 Found overly complex annotation: 4 > 3
 
 
 13 findings in src/intellicrack\providers\google.py
@@ -412,58 +777,33 @@ src/intellicrack\providers\google.py:617:41: WPS441 Found control variable used 
 src/intellicrack\providers\google.py:618:41: WPS441 Found control variable used after block: tc
 
 
-12 findings in src/intellicrack\bridges\binary.py
+13 findings in src/intellicrack\sandbox\analysis.py
 
-src/intellicrack\bridges\binary.py:22:1: WPS458 Found imports collision: lief
+src/intellicrack\sandbox\analysis.py:43:29: WPS527 Found not a tuple used as an argument
 
-src/intellicrack\bridges\binary.py:23:1: WPS458 Found imports collision: lief
+src/intellicrack\sandbox\analysis.py:61:34: WPS527 Found not a tuple used as an argument
 
-src/intellicrack\bridges\binary.py:24:1: WPS458 Found imports collision: lief
+src/intellicrack\sandbox\analysis.py:65:43: WPS527 Found not a tuple used as an argument
 
-src/intellicrack\bridges\binary.py:25:1: WPS458 Found imports collision: lief
+src/intellicrack\sandbox\analysis.py:69:36: WPS527 Found not a tuple used as an argument
 
-src/intellicrack\bridges\binary.py:26:1: WPS458 Found imports collision: lief
+src/intellicrack\sandbox\analysis.py:74:5: WPS342 Found implicit raw string: "\\Run\\"
 
-src/intellicrack\bridges\binary.py:48:5: WPS324 Found inconsistent `return` statement
+src/intellicrack\sandbox\analysis.py:75:5: WPS342 Found implicit raw string: "\\RunOnce\\"
 
-src/intellicrack\bridges\binary.py:58:9: WPS324 Found inconsistent `return` statement
+src/intellicrack\sandbox\analysis.py:76:5: WPS342 Found implicit raw string: "\\CurrentVersion\\Run"
 
-src/intellicrack\bridges\binary.py:429:5: WPS217 Found too many await expressions: 10 > 5
+src/intellicrack\sandbox\analysis.py:77:5: WPS342 Found implicit raw string: "\\RunServices\\"
 
-src/intellicrack\bridges\binary.py:503:9: WPS239 Found too many exceptions in `except` case: 5 > 3
+src/intellicrack\sandbox\analysis.py:78:5: WPS342 Found implicit raw string: "\\RunServicesOnce\\"
 
-src/intellicrack\bridges\binary.py:550:5: C901 'BinaryBridge._detect_architecture' is too complex (11)
+src/intellicrack\sandbox\analysis.py:271:9: WPS327 Found useless `continue` at the end of the loop
 
-src/intellicrack\bridges\binary.py:550:5: WPS212 Found too many return statements: 9 > 5
+src/intellicrack\sandbox\analysis.py:271:18: WPS518 Found implicit `enumerate()` call
 
-src/intellicrack\bridges\binary.py:776:9: WPS362 Found assignment to a subscript slice
+src/intellicrack\sandbox\analysis.py:427:1: C901 'extract_iocs' is too complex (24)
 
-
-12 findings in src/intellicrack\ui\app.py
-
-src/intellicrack\ui\app.py:0:1: WPS203 Found module with too many imported names: 83 > 50
-
-src/intellicrack\ui\app.py:144:9: WPS239 Found too many exceptions in `except` case: 6 > 3
-
-src/intellicrack\ui\app.py:152:1: WPS230 Found too many public instance attributes: 14 > 6
-
-src/intellicrack\ui\app.py:285:5: C901 'MainWindow._restore_window_state' is too complex (12)
-
-src/intellicrack\ui\app.py:1302:33: WPS421 Found wrong function call: vars
-
-src/intellicrack\ui\app.py:1345:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
-
-src/intellicrack\ui\app.py:1418:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
-
-src/intellicrack\ui\app.py:1493:5: C901 'MainWindow._on_refresh_models' is too complex (12)
-
-src/intellicrack\ui\app.py:1839:5: C901 'MainWindow._on_open_frida' is too complex (11)
-
-src/intellicrack\ui\app.py:1885:5: C901 'MainWindow._on_process_attached' is too complex (16)
-
-src/intellicrack\ui\app.py:1885:5: WPS212 Found too many return statements: 8 > 5
-
-src/intellicrack\ui\app.py:2108:5: C901 'MainWindow.closeEvent' is too complex (12)
+src/intellicrack\sandbox\analysis.py:521:1: C901 'generate_timeline' is too complex (12)
 
 
 12 findings in src/intellicrack\ui\tool_config.py
@@ -474,50 +814,23 @@ src/intellicrack\ui\tool_config.py:95:5: WPS234 Found overly complex annotation:
 
 src/intellicrack\ui\tool_config.py:129:5: C901 'ToolInstallWorker._install_tool' is too complex (12)
 
-src/intellicrack\ui\tool_config.py:292:17: WPS342 Found implicit raw string: '"%GHIDRA_DIR%\\support\\analyzeHeadless.bat" "%PROJECT_DIR%" '
+src/intellicrack\ui\tool_config.py:304:17: WPS342 Found implicit raw string: '"%GHIDRA_DIR%\\support\\analyzeHeadless.bat" "%PROJECT_DIR%" '
 
-src/intellicrack\ui\tool_config.py:293:17: WPS342 Found implicit raw string: '"%PROJECT_NAME%" -scriptPath "%GHIDRA_DIR%\\ghidra_scripts" '
+src/intellicrack\ui\tool_config.py:305:17: WPS342 Found implicit raw string: '"%PROJECT_NAME%" -scriptPath "%GHIDRA_DIR%\\ghidra_scripts" '
 
-src/intellicrack\ui\tool_config.py:391:5: WPS212 Found too many return statements: 7 > 5
+src/intellicrack\ui\tool_config.py:403:5: WPS212 Found too many return statements: 7 > 5
 
-src/intellicrack\ui\tool_config.py:458:30: WPS335 Found incorrect `for` loop iter type
+src/intellicrack\ui\tool_config.py:470:30: WPS335 Found incorrect `for` loop iter type
 
-src/intellicrack\ui\tool_config.py:487:34: WPS335 Found incorrect `for` loop iter type
+src/intellicrack\ui\tool_config.py:499:34: WPS335 Found incorrect `for` loop iter type
 
-src/intellicrack\ui\tool_config.py:499:5: C901 'ToolStatusCheckWorker._check_cutter' is too complex (11)
+src/intellicrack\ui\tool_config.py:511:5: C901 'ToolStatusCheckWorker._check_cutter' is too complex (11)
 
-src/intellicrack\ui\tool_config.py:508:26: WPS335 Found incorrect `for` loop iter type
+src/intellicrack\ui\tool_config.py:520:26: WPS335 Found incorrect `for` loop iter type
 
-src/intellicrack\ui\tool_config.py:695:5: WPS211 Found too many arguments: 7 > 5
+src/intellicrack\ui\tool_config.py:707:5: WPS211 Found too many arguments: 7 > 5
 
-src/intellicrack\ui\tool_config.py:1109:5: WPS234 Found overly complex annotation: 4 > 3
-
-
-12 findings in src/intellicrack\ui\tools.py
-
-src/intellicrack\ui\tools.py:244:5: WPS324 Found inconsistent `return` statement
-
-src/intellicrack\ui\tools.py:251:9: WPS324 Found inconsistent `return` statement
-
-src/intellicrack\ui\tools.py:283:5: WPS324 Found inconsistent `return` statement
-
-src/intellicrack\ui\tools.py:290:9: WPS324 Found inconsistent `return` statement
-
-src/intellicrack\ui\tools.py:713:1: WPS230 Found too many public instance attributes: 16 > 6
-
-src/intellicrack\ui\tools.py:1084:5: C901 'ToolOutputPanel.add_x64dbg_tab' is too complex (11)
-
-src/intellicrack\ui\tools.py:1136:5: C901 'ToolOutputPanel.add_cutter_tab' is too complex (11)
-
-src/intellicrack\ui\tools.py:1183:5: C901 'ToolOutputPanel.add_ghidra_tab' is too complex (11)
-
-src/intellicrack\ui\tools.py:1230:5: C901 'ToolOutputPanel.add_frida_tab' is too complex (11)
-
-src/intellicrack\ui\tools.py:1584:5: C901 'ToolOutputPanel._on_tab_close_requested' is too complex (12)
-
-src/intellicrack\ui\tools.py:1639:31: WPS441 Found control variable used after block: k
-
-src/intellicrack\ui\tools.py:1647:5: C901 'ToolOutputPanel.close_embedded_tools' is too complex (14)
+src/intellicrack\ui\tool_config.py:1121:5: WPS234 Found overly complex annotation: 4 > 3
 
 
 11 findings in src/intellicrack\core\hexpat_compiler.py
@@ -570,6 +883,31 @@ src/intellicrack\providers\openrouter.py:497:9: WPS239 Found too many exceptions
 src/intellicrack\providers\openrouter.py:581:9: WPS239 Found too many exceptions in `except` case: 5 > 3
 
 
+11 findings in src/intellicrack\ui\app.py
+
+src/intellicrack\ui\app.py:0:1: WPS203 Found module with too many imported names: 86 > 50
+
+src/intellicrack\ui\app.py:145:9: WPS239 Found too many exceptions in `except` case: 6 > 3
+
+src/intellicrack\ui\app.py:153:1: WPS230 Found too many public instance attributes: 14 > 6
+
+src/intellicrack\ui\app.py:286:5: C901 'MainWindow._restore_window_state' is too complex (12)
+
+src/intellicrack\ui\app.py:1291:33: WPS421 Found wrong function call: vars
+
+src/intellicrack\ui\app.py:1334:5: C901 'MainWindow._apply_tool_settings' is too complex (11)
+
+src/intellicrack\ui\app.py:1407:5: C901 'MainWindow._apply_provider_settings' is too complex (11)
+
+src/intellicrack\ui\app.py:1482:5: C901 'MainWindow._on_refresh_models' is too complex (12)
+
+src/intellicrack\ui\app.py:1884:5: C901 'MainWindow._on_process_attached' is too complex (16)
+
+src/intellicrack\ui\app.py:1884:5: WPS212 Found too many return statements: 8 > 5
+
+src/intellicrack\ui\app.py:2103:5: C901 'MainWindow.closeEvent' is too complex (12)
+
+
 10 findings in src/intellicrack\core\hexpat\data_reader.py
 
 src/intellicrack\core\hexpat\data_reader.py:113:9: WPS460 Found single element destructuring
@@ -591,6 +929,29 @@ src/intellicrack\core\hexpat\data_reader.py:223:9: WPS460 Found single element d
 src/intellicrack\core\hexpat\data_reader.py:251:9: WPS460 Found single element destructuring
 
 src/intellicrack\core\hexpat\data_reader.py:265:9: WPS460 Found single element destructuring
+
+
+10 findings in src/intellicrack\core\orchestrator.py
+
+src/intellicrack\core\orchestrator.py:0:1: WPS203 Found module with too many imported names: 57 > 50
+
+src/intellicrack\core\orchestrator.py:48:5: WPS458 Found imports collision: pathlib
+
+src/intellicrack\core\orchestrator.py:412:9: WPS243 Found too long `finally` block: 5 > 2
+
+src/intellicrack\core\orchestrator.py:427:5: C901 'Orchestrator._run_agent_loop' is too complex (11)
+
+src/intellicrack\core\orchestrator.py:936:5: WPS211 Found too many arguments: 6 > 5
+
+src/intellicrack\core\orchestrator.py:1008:5: WPS211 Found too many arguments: 6 > 5
+
+src/intellicrack\core\orchestrator.py:1152:9: WPS239 Found too many exceptions in `except` case: 5 > 3
+
+src/intellicrack\core\orchestrator.py:1372:9: WPS239 Found too many exceptions in `except` case: 4 > 3
+
+src/intellicrack\core\orchestrator.py:1572:9: WPS239 Found too many exceptions in `except` case: 4 > 3
+
+src/intellicrack\core\orchestrator.py:1700:5: C901 'Orchestrator.shutdown' is too complex (17)
 
 
 10 findings in src/intellicrack\providers\huggingface.py
@@ -662,23 +1023,23 @@ src/intellicrack\core\hexpat\parser.py:1315:13: WPS223 Found too many `elif` bra
 
 9 findings in src/intellicrack\core\types.py
 
-src/intellicrack\core\types.py:1261:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\core\types.py:1512:5: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\core\types.py:1301:5: WPS211 Found too many arguments: 8 > 5
+src/intellicrack\core\types.py:1552:5: WPS211 Found too many arguments: 8 > 5
 
-src/intellicrack\core\types.py:1338:5: WPS211 Found too many arguments: 8 > 5
+src/intellicrack\core\types.py:1589:5: WPS211 Found too many arguments: 8 > 5
 
-src/intellicrack\core\types.py:1375:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\core\types.py:1626:5: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\core\types.py:1409:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\core\types.py:1660:5: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\core\types.py:1444:5: WPS211 Found too many arguments: 8 > 5
+src/intellicrack\core\types.py:1695:5: WPS211 Found too many arguments: 8 > 5
 
-src/intellicrack\core\types.py:1484:5: WPS211 Found too many arguments: 9 > 5
+src/intellicrack\core\types.py:1735:5: WPS211 Found too many arguments: 9 > 5
 
-src/intellicrack\core\types.py:1550:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\core\types.py:1801:5: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\core\types.py:1584:5: WPS211 Found too many arguments: 6 > 5
+src/intellicrack\core\types.py:1835:5: WPS211 Found too many arguments: 6 > 5
 
 
 9 findings in src/intellicrack\providers\anthropic.py
@@ -723,6 +1084,27 @@ src/intellicrack\ui\panels\hex_editor\_patches.py:188:43: WPS435 Found list mult
 src/intellicrack\ui\panels\hex_editor\_patches.py:196:9: WPS239 Found too many exceptions in `except` case: 4 > 3
 
 
+9 findings in src/intellicrack\ui\panels\hex_editor\_transforms.py
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:214:28: WPS335 Found incorrect `for` loop iter type
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:401:5: C901 'TransformsMixin._on_transform_apply' is too complex (15)
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:536:5: C901 'TransformsMixin._on_pipeline_execute' is too complex (18)
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:536:5: WPS212 Found too many return statements: 7 > 5
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:680:5: C901 'TransformsMixin._on_block_swap' is too complex (11)
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:715:5: C901 'TransformsMixin._on_apply_arithmetic' is too complex (13)
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:715:5: WPS212 Found too many return statements: 7 > 5
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:767:5: C901 'TransformsMixin._apply_arithmetic_op' is too complex (17)
+
+src/intellicrack\ui\panels\hex_editor\_transforms.py:785:9: WPS223 Found too many `elif` branches: 7 > 3
+
+
 9 findings in src/intellicrack\ui\panels\vnc_widget.py
 
 src/intellicrack\ui\panels\vnc_widget.py:92:13: WPS414 Found incorrect unpacking target
@@ -744,25 +1126,6 @@ src/intellicrack\ui\panels\vnc_widget.py:237:5: WPS217 Found too many await expr
 src/intellicrack\ui\panels\vnc_widget.py:296:13: WPS236 Found too many variables used to unpack a tuple: 5 > 4
 
 
-8 findings in src/intellicrack\core\orchestrator.py
-
-src/intellicrack\core\orchestrator.py:400:9: WPS243 Found too long `finally` block: 5 > 2
-
-src/intellicrack\core\orchestrator.py:415:5: C901 'Orchestrator._run_agent_loop' is too complex (11)
-
-src/intellicrack\core\orchestrator.py:890:5: WPS211 Found too many arguments: 6 > 5
-
-src/intellicrack\core\orchestrator.py:962:5: WPS211 Found too many arguments: 6 > 5
-
-src/intellicrack\core\orchestrator.py:1106:9: WPS239 Found too many exceptions in `except` case: 5 > 3
-
-src/intellicrack\core\orchestrator.py:1326:9: WPS239 Found too many exceptions in `except` case: 4 > 3
-
-src/intellicrack\core\orchestrator.py:1526:9: WPS239 Found too many exceptions in `except` case: 4 > 3
-
-src/intellicrack\core\orchestrator.py:1654:5: C901 'Orchestrator.shutdown' is too complex (17)
-
-
 8 findings in src/intellicrack\providers\grok.py
 
 src/intellicrack\providers\grok.py:144:9: WPS239 Found too many exceptions in `except` case: 4 > 3
@@ -780,42 +1143,6 @@ src/intellicrack\providers\grok.py:413:5: C901 'GrokProvider.chat_stream' is too
 src/intellicrack\providers\grok.py:413:5: WPS211 Found too many arguments: 8 > 5
 
 src/intellicrack\providers\grok.py:524:9: WPS239 Found too many exceptions in `except` case: 4 > 3
-
-
-8 findings in src/intellicrack\ui\panels\binary_panel.py
-
-src/intellicrack\ui\panels\binary_panel.py:576:5: C901 'BinaryPanel._parse_pe_sections' is too complex (11)
-
-src/intellicrack\ui\panels\binary_panel.py:737:9: WPS426 Found `lambda` in loop's body
-
-src/intellicrack\ui\panels\binary_panel.py:751:31: WPS509 Found incorrectly nested ternary
-
-src/intellicrack\ui\panels\binary_panel.py:804:46: WPS509 Found incorrectly nested ternary
-
-src/intellicrack\ui\panels\binary_panel.py:812:5: C901 'BinaryPanel._parse_elf_sections' is too complex (12)
-
-src/intellicrack\ui\panels\binary_panel.py:1055:5: WPS212 Found too many return statements: 6 > 5
-
-src/intellicrack\ui\panels\binary_panel.py:1085:9: WPS362 Found assignment to a subscript slice
-
-src/intellicrack\ui\panels\binary_panel.py:1100:9: WPS362 Found assignment to a subscript slice
-
-
-7 findings in src/intellicrack\bridges\process.py
-
-src/intellicrack\bridges\process.py:15:1: WPS458 Found imports collision: ctypes
-
-src/intellicrack\bridges\process.py:68:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\bridges\process.py:85:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\bridges\process.py:99:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\bridges\process.py:116:5: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\bridges\process.py:1136:5: C901 'ProcessBridge.search_pattern' is too complex (11)
-
-src/intellicrack\bridges\process.py:1164:9: WPS327 Found useless `continue` at the end of the loop
 
 
 7 findings in src/intellicrack\credentials\oauth.py
@@ -852,21 +1179,21 @@ src/intellicrack\providers\discovery.py:669:5: C901 'ModelDiscovery.get_recommen
 src/intellicrack\providers\discovery.py:669:5: WPS212 Found too many return statements: 6 > 5
 
 
-7 findings in src/intellicrack\sandbox\windows.py
+7 findings in src/intellicrack\ui\panels\hex_editor\_templates.py
 
-src/intellicrack\sandbox\windows.py:99:27: WPS342 Found implicit raw string: "C:\\Users\\WDAGUtilityAccount\\Desktop\\Shared"
+src/intellicrack\ui\panels\hex_editor\_templates.py:307:5: C901 'TemplatesMixin._bookmark_pe_structure' is too complex (21)
 
-src/intellicrack\sandbox\windows.py:160:5: WPS217 Found too many await expressions: 11 > 5
+src/intellicrack\ui\panels\hex_editor\_templates.py:307:5: WPS212 Found too many return statements: 11 > 5
 
-src/intellicrack\sandbox\windows.py:378:31: WPS342 Found implicit raw string: """
+src/intellicrack\ui\panels\hex_editor\_templates.py:403:5: C901 'TemplatesMixin._bookmark_elf_structure' is too complex (21)
 
-src/intellicrack\sandbox\windows.py:402:35: WPS342 Found implicit raw string: """
+src/intellicrack\ui\panels\hex_editor\_templates.py:403:5: WPS212 Found too many return statements: 9 > 5
 
-src/intellicrack\sandbox\windows.py:441:34: WPS342 Found implicit raw string: """
+src/intellicrack\ui\panels\hex_editor\_templates.py:435:44: WPS349 Found redundant subscript slice
 
-src/intellicrack\sandbox\windows.py:459:34: WPS342 Found implicit raw string: """
+src/intellicrack\ui\panels\hex_editor\_templates.py:449:50: WPS349 Found redundant subscript slice
 
-src/intellicrack\sandbox\windows.py:567:5: WPS217 Found too many await expressions: 12 > 5
+src/intellicrack\ui\panels\hex_editor\_templates.py:463:44: WPS349 Found redundant subscript slice
 
 
 6 findings in src/intellicrack\credentials\store.py
@@ -914,32 +1241,17 @@ src/intellicrack\ui\dialogs\splash_screen.py:198:49: WPS435 Found list multiply
 src/intellicrack\ui\dialogs\splash_screen.py:753:5: WPS211 Found too many arguments: 8 > 5
 
 
-6 findings in src/intellicrack\ui\panels\hex_tools_panel.py
+5 findings in src/intellicrack\bridges\cutter.py
 
-src/intellicrack\ui\panels\hex_tools_panel.py:170:5: WPS612 Found useless overwritten method: __init__
+src/intellicrack\bridges\cutter.py:208:1: WPS211 Found too many arguments: 6 > 5
 
-src/intellicrack\ui\panels\hex_tools_panel.py:177:5: WPS612 Found useless overwritten method: __init__
+src/intellicrack\bridges\cutter.py:989:5: WPS217 Found too many await expressions: 12 > 5
 
-src/intellicrack\ui\panels\hex_tools_panel.py:181:1: C901 '_ast_eval_node' is too complex (11)
+src/intellicrack\bridges\cutter.py:1602:40: WPS342 Found implicit raw string: '\\"'
 
-src/intellicrack\ui\panels\hex_tools_panel.py:691:33: WPS335 Found incorrect `for` loop iter type
+src/intellicrack\bridges\cutter.py:2286:44: WPS342 Found implicit raw string: '\\"'
 
-src/intellicrack\ui\panels\hex_tools_panel.py:1070:5: C901 'HexToolsPanel._on_base_input_changed' is too complex (11)
-
-src/intellicrack\ui\panels\hex_tools_panel.py:1274:13: WPS239 Found too many exceptions in `except` case: 4 > 3
-
-
-5 findings in src/intellicrack\bridges\frida_bridge.py
-
-src/intellicrack\bridges\frida_bridge.py:541:5: C901 'FridaBridge.shutdown' is too complex (20)
-
-src/intellicrack\bridges\frida_bridge.py:541:5: WPS217 Found too many await expressions: 7 > 5
-
-src/intellicrack\bridges\frida_bridge.py:1131:5: C901 'FridaBridge.hook_function' is too complex (11)
-
-src/intellicrack\bridges\frida_bridge.py:1363:78: WPS435 Found list multiply
-
-src/intellicrack\bridges\frida_bridge.py:2032:5: C901 'FridaBridge.stalker_follow' is too complex (12)
+src/intellicrack\bridges\cutter.py:2695:37: WPS342 Found implicit raw string: '\\"'
 
 
 5 findings in src/intellicrack\core\hexpat\lexer.py
@@ -1022,15 +1334,15 @@ src/intellicrack\ui\panels\graph_view.py:380:63: WPS441 Found control variable u
 
 5 findings in src/intellicrack\ui\panels\hex_editor\_pattern_editor.py
 
-src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:172:5: C901 'PatternEditorMixin._on_pattern_compile' is too complex (15)
+src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:171:5: C901 'PatternEditorMixin._on_pattern_compile' is too complex (15)
 
-src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:222:5: C901 'PatternEditorMixin._on_pattern_apply' is too complex (15)
+src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:221:5: C901 'PatternEditorMixin._on_pattern_apply' is too complex (15)
 
-src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:274:5: C901 'PatternEditorMixin._apply_via_interpreter' is too complex (12)
+src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:273:5: C901 'PatternEditorMixin._apply_via_interpreter' is too complex (12)
 
-src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:462:5: C901 'PatternEditorMixin._populate_pattern_library' is too complex (11)
+src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:461:5: C901 'PatternEditorMixin._populate_pattern_library' is too complex (11)
 
-src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:487:13: WPS223 Found too many `elif` branches: 4 > 3
+src/intellicrack\ui\panels\hex_editor\_pattern_editor.py:486:13: WPS223 Found too many `elif` branches: 4 > 3
 
 
 5 findings in src/intellicrack\ui\session_manager.py
@@ -1046,6 +1358,17 @@ src/intellicrack\ui\session_manager.py:449:9: WPS519 Found implicit `sum()` call
 src/intellicrack\ui\session_manager.py:648:5: C901 'SessionManagerDialog._prepare_export_data' is too complex (11)
 
 
+4 findings in src/intellicrack\bridges\ghidra.py
+
+src/intellicrack\bridges\ghidra.py:16:1: WPS458 Found imports collision: importlib
+
+src/intellicrack\bridges\ghidra.py:1036:5: WPS217 Found too many await expressions: 8 > 5
+
+src/intellicrack\bridges\ghidra.py:1088:5: WPS217 Found too many await expressions: 6 > 5
+
+src/intellicrack\bridges\ghidra.py:1961:5: C901 'GhidraBridge.search_bytes' is too complex (13)
+
+
 4 findings in src/intellicrack\core\disassembler.py
 
 src/intellicrack\core\disassembler.py:133:5: C901 'HexDisassembler._resolve_arch_mode' is too complex (16)
@@ -1055,6 +1378,28 @@ src/intellicrack\core\disassembler.py:133:5: WPS212 Found too many return statem
 src/intellicrack\core\disassembler.py:279:5: C901 'HexDisassembler.auto_detect_arch' is too complex (21)
 
 src/intellicrack\core\disassembler.py:279:5: WPS212 Found too many return statements: 16 > 5
+
+
+4 findings in src/intellicrack\core\tools.py
+
+src/intellicrack\core\tools.py:124:17: WPS117 Found name reserved for first argument: cls
+
+src/intellicrack\core\tools.py:149:5: WPS217 Found too many await expressions: 6 > 5
+
+src/intellicrack\core\tools.py:440:5: C901 'ToolRegistry.execute_tool_call' is too complex (12)
+
+src/intellicrack\core\tools.py:515:9: WPS239 Found too many exceptions in `except` case: 7 > 3
+
+
+4 findings in src/intellicrack\ui\panels\ghidra_panel.py
+
+src/intellicrack\ui\panels\ghidra_panel.py:151:9: WPS473 Found too many empty lines in `def`: 9 > 8
+
+src/intellicrack\ui\panels\ghidra_panel.py:1867:5: C901 'GhidraPanel._dispatch_func_menu_action' is too complex (19)
+
+src/intellicrack\ui\panels\ghidra_panel.py:1884:9: WPS223 Found too many `elif` branches: 9 > 3
+
+src/intellicrack\ui\panels\ghidra_panel.py:2558:65: WPS421 Found wrong function call: dir
 
 
 4 findings in src/intellicrack\ui\panels\hex_editor\_base.py
@@ -1068,6 +1413,28 @@ src/intellicrack\ui\panels\hex_editor\_base.py:372:1: WPS212 Found too many retu
 src/intellicrack\ui\panels\hex_editor\_base.py:396:5: WPS239 Found too many exceptions in `except` case: 5 > 3
 
 
+4 findings in src/intellicrack\ui\panels\hex_editor\_calculator.py
+
+src/intellicrack\ui\panels\hex_editor\_calculator.py:95:5: C901 'CalculatorMixin._on_convert' is too complex (11)
+
+src/intellicrack\ui\panels\hex_editor\_calculator.py:143:27: WPS335 Found incorrect `for` loop iter type
+
+src/intellicrack\ui\panels\hex_editor\_calculator.py:145:27: WPS441 Found control variable used after block: size
+
+src/intellicrack\ui\panels\hex_editor\_calculator.py:147:60: WPS441 Found control variable used after block: size
+
+
+4 findings in src/intellicrack\ui\panels\hex_editor\_scripting.py
+
+src/intellicrack\ui\panels\hex_editor\_scripting.py:512:9: WPS239 Found too many exceptions in `except` case: 9 > 3
+
+src/intellicrack\ui\panels\hex_editor\_scripting.py:522:30: WPS421 Found wrong function call: vars
+
+src/intellicrack\ui\panels\hex_editor\_scripting.py:546:20: WPS421 Found wrong function call: compile
+
+src/intellicrack\ui\panels\hex_editor\_scripting.py:547:9: WPS421 Found wrong function call: exec
+
+
 4 findings in src/intellicrack\ui\panels\hex_editor\_search.py
 
 src/intellicrack\ui\panels\hex_editor\_search.py:73:5: WPS211 Found too many arguments: 6 > 5
@@ -1079,35 +1446,26 @@ src/intellicrack\ui\panels\hex_editor\_search.py:247:13: WPS327 Found useless `c
 src/intellicrack\ui\panels\hex_editor\_search.py:252:21: WPS460 Found single element destructuring
 
 
+4 findings in src/intellicrack\ui\panels\hex_editor\_signatures.py
+
+src/intellicrack\ui\panels\hex_editor\_signatures.py:78:9: WPS239 Found too many exceptions in `except` case: 4 > 3
+
+src/intellicrack\ui\panels\hex_editor\_signatures.py:81:5: C901 'SignatureScanWorker._scan_die' is too complex (15)
+
+src/intellicrack\ui\panels\hex_editor\_signatures.py:199:5: C901 'SignatureScanWorker._scan_clamav_ndb' is too complex (12)
+
+src/intellicrack\ui\panels\hex_editor\_signatures.py:257:5: C901 'SignatureScanWorker._scan_custom' is too complex (11)
+
+
 4 findings in src/intellicrack\ui\panels\hex_editor\panel.py
 
-src/intellicrack\ui\panels\hex_editor\panel.py:0:1: WPS203 Found module with too many imported names: 61 > 50
+src/intellicrack\ui\panels\hex_editor\panel.py:0:1: WPS203 Found module with too many imported names: 72 > 50
 
-src/intellicrack\ui\panels\hex_editor\panel.py:83:1: WPS215 Too many base classes: 13 > 3
+src/intellicrack\ui\panels\hex_editor\panel.py:95:1: WPS215 Too many base classes: 20 > 3
 
-src/intellicrack\ui\panels\hex_editor\panel.py:703:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)
+src/intellicrack\ui\panels\hex_editor\panel.py:807:5: C901 'HexEditorPanel.set_state_holder' is too complex (16)
 
-src/intellicrack\ui\panels\hex_editor\panel.py:715:13: WPS223 Found too many `elif` branches: 4 > 3
-
-
-4 findings in src/intellicrack\ui\panels\process_panel.py
-
-src/intellicrack\ui\panels\process_panel.py:82:9: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:96:9: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:110:9: WPS120 Found regular name with trailing underscore: _fields_
-
-src/intellicrack\ui\panels\process_panel.py:121:9: WPS120 Found regular name with trailing underscore: _fields_
-
-
-3 findings in src/intellicrack\bridges\ghidra.py
-
-src/intellicrack\bridges\ghidra.py:16:1: WPS458 Found imports collision: importlib
-
-src/intellicrack\bridges\ghidra.py:626:5: WPS217 Found too many await expressions: 8 > 5
-
-src/intellicrack\bridges\ghidra.py:678:5: WPS217 Found too many await expressions: 6 > 5
+src/intellicrack\ui\panels\hex_editor\panel.py:819:13: WPS223 Found too many `elif` branches: 4 > 3
 
 
 3 findings in src/intellicrack\bridges\schemas.py
@@ -1137,15 +1495,6 @@ src/intellicrack\core\process_manager.py:724:5: WPS211 Found too many arguments:
 src/intellicrack\core\process_manager.py:820:5: WPS211 Found too many arguments: 9 > 5
 
 
-3 findings in src/intellicrack\core\tools.py
-
-src/intellicrack\core\tools.py:145:5: WPS217 Found too many await expressions: 6 > 5
-
-src/intellicrack\core\tools.py:452:5: C901 'ToolRegistry.execute_tool_call' is too complex (12)
-
-src/intellicrack\core\tools.py:527:9: WPS239 Found too many exceptions in `except` case: 7 > 3
-
-
 3 findings in src/intellicrack\core\transform_pipeline.py
 
 src/intellicrack\core\transform_pipeline.py:102:1: C901 '_eval_ast_node' is too complex (23)
@@ -1155,13 +1504,13 @@ src/intellicrack\core\transform_pipeline.py:102:1: WPS212 Found too many return 
 src/intellicrack\core\transform_pipeline.py:696:29: WPS435 Found list multiply
 
 
-3 findings in src/intellicrack\ui\panels\hex_editor\_transforms.py
+3 findings in src/intellicrack\ui\panels\hex_editor\_hashing.py
 
-src/intellicrack\ui\panels\hex_editor\_transforms.py:288:5: C901 'TransformsMixin._on_transform_apply' is too complex (15)
+src/intellicrack\ui\panels\hex_editor\_hashing.py:122:5: C901 'HashingMixin._on_verify_pe_checksum' is too complex (11)
 
-src/intellicrack\ui\panels\hex_editor\_transforms.py:423:5: C901 'TransformsMixin._on_pipeline_execute' is too complex (18)
+src/intellicrack\ui\panels\hex_editor\_hashing.py:161:5: C901 'HashingMixin._on_repair_pe_checksum' is too complex (12)
 
-src/intellicrack\ui\panels\hex_editor\_transforms.py:423:5: WPS212 Found too many return statements: 7 > 5
+src/intellicrack\ui\panels\hex_editor\_hashing.py:161:5: WPS212 Found too many return statements: 6 > 5
 
 
 2 findings in src/intellicrack\__init__.py
@@ -1171,18 +1520,11 @@ src/intellicrack\__init__.py:55:1: WPS413 Found bad magic module function: __get
 src/intellicrack\__init__.py:71:5: WPS223 Found too many `elif` branches: 5 > 3
 
 
-2 findings in src/intellicrack\bridges\cutter.py
-
-src/intellicrack\bridges\cutter.py:721:5: WPS217 Found too many await expressions: 12 > 5
-
-src/intellicrack\bridges\cutter.py:1328:40: WPS342 Found implicit raw string: '\\"'
-
-
 2 findings in src/intellicrack\core\analysis_aggregator.py
 
-src/intellicrack\core\analysis_aggregator.py:162:5: C901 'AnalysisAggregator._collect_from_static_bridge' is too complex (12)
+src/intellicrack\core\analysis_aggregator.py:121:5: C901 'AnalysisAggregator._collect_from_static_bridge' is too complex (12)
 
-src/intellicrack\core\analysis_aggregator.py:162:5: WPS211 Found too many arguments: 7 > 5
+src/intellicrack\core\analysis_aggregator.py:121:5: WPS211 Found too many arguments: 7 > 5
 
 
 2 findings in src/intellicrack\core\session.py
@@ -1208,9 +1550,16 @@ src/intellicrack\providers\base.py:247:5: WPS211 Found too many arguments: 8 > 5
 
 2 findings in src/intellicrack\sandbox\base.py
 
-src/intellicrack\sandbox\base.py:260:5: WPS324 Found inconsistent `return` statement
+src/intellicrack\sandbox\base.py:391:5: WPS324 Found inconsistent `return` statement
 
-src/intellicrack\sandbox\base.py:266:9: WPS324 Found inconsistent `return` statement
+src/intellicrack\sandbox\base.py:397:9: WPS324 Found inconsistent `return` statement
+
+
+2 findings in src/intellicrack\sandbox\manager.py
+
+src/intellicrack\sandbox\manager.py:38:1: WPS230 Found too many public instance attributes: 7 > 6
+
+src/intellicrack\sandbox\manager.py:250:5: WPS211 Found too many arguments: 8 > 5
 
 
 2 findings in src/intellicrack\ui\highlighter.py
@@ -1220,11 +1569,32 @@ src/intellicrack\ui\highlighter.py:850:33: WPS441 Found control variable used af
 src/intellicrack\ui\highlighter.py:1246:1: WPS212 Found too many return statements: 6 > 5
 
 
+2 findings in src/intellicrack\ui\panels\hex_editor\_comparison.py
+
+src/intellicrack\ui\panels\hex_editor\_comparison.py:188:5: C901 'ComparisonMixin._on_compare' is too complex (12)
+
+src/intellicrack\ui\panels\hex_editor\_comparison.py:188:5: WPS212 Found too many return statements: 6 > 5
+
+
 2 findings in src/intellicrack\ui\panels\hex_editor\_disassembly.py
 
 src/intellicrack\ui\panels\hex_editor\_disassembly.py:118:5: C901 'DisassemblyMixin._on_disassemble' is too complex (14)
 
 src/intellicrack\ui\panels\hex_editor\_disassembly.py:118:5: WPS212 Found too many return statements: 7 > 5
+
+
+2 findings in src/intellicrack\ui\panels\hex_editor\_process_memory.py
+
+src/intellicrack\ui\panels\hex_editor\_process_memory.py:10:1: WPS458 Found imports collision: ctypes
+
+src/intellicrack\ui\panels\hex_editor\_process_memory.py:54:9: WPS120 Found regular name with trailing underscore: _fields_
+
+
+2 findings in src/intellicrack\ui\panels\hex_editor\_sandbox.py
+
+src/intellicrack\ui\panels\hex_editor\_sandbox.py:99:5: WPS211 Found too many arguments: 7 > 5
+
+src/intellicrack\ui\panels\hex_editor\_sandbox.py:126:9: WPS239 Found too many exceptions in `except` case: 4 > 3
 
 
 2 findings in src/intellicrack\ui\panels\hex_editor\_widgets.py
@@ -1248,11 +1618,25 @@ src/intellicrack\ui\panels\hxd_panel.py:65:5: WPS327 Found useless `continue` at
 src/intellicrack\ui\panels\hxd_panel.py:155:13: WPS421 Found wrong function call: __import__
 
 
+2 findings in src/intellicrack\ui\panels\process_panel\_system_tab.py
+
+src/intellicrack\ui\panels\process_panel\_system_tab.py:272:18: WPS342 Found implicit raw string: "\\\\.\\pipe\\MyPipe"
+
+src/intellicrack\ui\panels\process_panel\_system_tab.py:363:21: WPS342 Found implicit raw string: "HKLM\\SOFTWARE\\..."
+
+
 2 findings in src/intellicrack\ui\panels\stack_viewer.py
 
 src/intellicrack\ui\panels\stack_viewer.py:192:58: WPS522 Found implicit primitive in a form of `lambda`
 
 src/intellicrack\ui\panels\stack_viewer.py:272:57: WPS522 Found implicit primitive in a form of `lambda`
+
+
+2 findings in src/intellicrack\ui\panels\x64dbg_panel.py
+
+src/intellicrack\ui\panels\x64dbg_panel.py:1477:52: WPS509 Found incorrectly nested ternary
+
+src/intellicrack\ui\panels\x64dbg_panel.py:1518:52: WPS509 Found incorrectly nested ternary
 
 
 2 findings in src/intellicrack\ui\sandbox_config.py
@@ -1264,12 +1648,12 @@ src/intellicrack\ui\sandbox_config.py:227:21: WPS342 Found implicit raw string: 
 
 1 findings in src/intellicrack\bridges\hex_state.py
 
-src/intellicrack\bridges\hex_state.py:483:17: WPS239 Found too many exceptions in `except` case: 4 > 3
+src/intellicrack\bridges\hex_state.py:547:17: WPS239 Found too many exceptions in `except` case: 4 > 3
 
 
 1 findings in src/intellicrack\bridges\named_pipe_client.py
 
-src/intellicrack\bridges\named_pipe_client.py:15:1: WPS458 Found imports collision: ctypes
+src/intellicrack\bridges\named_pipe_client.py:14:1: WPS458 Found imports collision: ctypes
 
 
 1 findings in src/intellicrack\core\__init__.py
@@ -1279,7 +1663,7 @@ src/intellicrack\core\__init__.py:0:1: WPS203 Found module with too many importe
 
 1 findings in src/intellicrack\core\config.py
 
-src/intellicrack\core\config.py:464:9: WPS236 Found too many variables used to unpack a tuple: 5 > 4
+src/intellicrack\core\config.py:459:9: WPS236 Found too many variables used to unpack a tuple: 5 > 4
 
 
 1 findings in src/intellicrack\core\hexpat\pattern_registry.py
@@ -1307,19 +1691,24 @@ src/intellicrack\credentials\env_loader.py:73:1: WPS212 Found too many return st
 src/intellicrack\providers\registry.py:160:9: WPS239 Found too many exceptions in `except` case: 5 > 3
 
 
-1 findings in src/intellicrack\sandbox\manager.py
-
-src/intellicrack\sandbox\manager.py:249:5: WPS211 Found too many arguments: 8 > 5
-
-
 1 findings in src/intellicrack\ui\panels\async_bridge.py
 
 src/intellicrack\ui\panels\async_bridge.py:129:9: WPS239 Found too many exceptions in `except` case: 6 > 3
 
 
+1 findings in src/intellicrack\ui\panels\cutter_panel.py
+
+src/intellicrack\ui\panels\cutter_panel.py:0:1: WPS203 Found module with too many imported names: 56 > 50
+
+
 1 findings in src/intellicrack\ui\panels\frida_panel.py
 
-src/intellicrack\ui\panels\frida_panel.py:100:9: WPS473 Found too many empty lines in `def`: 10 > 9
+src/intellicrack\ui\panels\frida_panel.py:116:9: WPS473 Found too many empty lines in `def`: 12 > 11
+
+
+1 findings in src/intellicrack\ui\panels\hex_editor\_data_inspector.py
+
+src/intellicrack\ui\panels\hex_editor\_data_inspector.py:174:5: C901 'DataInspectorMixin._on_bit_toggled' is too complex (13)
 
 
 1 findings in src/intellicrack\ui\panels\hex_editor\_sections.py
@@ -1329,12 +1718,17 @@ src/intellicrack\ui\panels\hex_editor\_sections.py:222:5: C901 'SectionsMixin._a
 
 1 findings in src/intellicrack\ui\panels\hex_editor\_statistics.py
 
-src/intellicrack\ui\panels\hex_editor\_statistics.py:154:64: WPS435 Found list multiply
+src/intellicrack\ui\panels\hex_editor\_statistics.py:157:64: WPS435 Found list multiply
+
+
+1 findings in src/intellicrack\ui\panels\process_panel\_threads_tab.py
+
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:424:9: WPS327 Found useless `continue` at the end of the loop
 
 
 1 findings in src/intellicrack\ui\panels\sandbox_panel.py
 
-src/intellicrack\ui\panels\sandbox_panel.py:57:1: WPS230 Found too many public instance attributes: 7 > 6
+src/intellicrack\ui\panels\sandbox_panel.py:59:1: WPS230 Found too many public instance attributes: 19 > 6
 
 
 1 findings in src/intellicrack\ui\panels\script_manager.py

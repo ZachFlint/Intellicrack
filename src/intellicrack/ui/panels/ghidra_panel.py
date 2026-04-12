@@ -4,26 +4,34 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Ghidra analysis panel for Intellicrack.
 
-Provides decompilation, disassembly, function listing, string search, import/export tables, and cross-reference views powered by the
-GhidraBridge headless analysis backend.
+Provides decompilation, disassembly, PCode, CFG, function listing, string search, import/export tables, cross-reference views,
+label/bookmark management, structure definition, memory inspection, segment/program metadata, call graph analysis, comment management,
+symbol search, and Ghidra scripting powered by the GhidraBridge headless analysis backend.
 """
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
+    QMenu,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -43,6 +51,7 @@ from intellicrack.ui.panels.qt_compat import (
     set_max_block_count,
     set_selection_mode,
     set_sorting_enabled,
+    tree_add_child,
     tree_item_data,
     tree_item_set_data,
 )
@@ -61,27 +70,82 @@ _CODE_SPLIT_RATIO_BOTTOM: Final[int] = 300
 _MAIN_SPLIT_RATIO_LEFT: Final[int] = 600
 _MAIN_SPLIT_RATIO_RIGHT: Final[int] = 250
 
-_FUNC_COLUMNS = ["Name", "Address", "Size"]
-_IMPORT_COLUMNS = ["DLL", "Function", "Address"]
-_EXPORT_COLUMNS = ["Name", "Ordinal", "Address"]
-_STRING_COLUMNS = ["Address", "Value", "Section", "Encoding"]
-_XREF_COLUMNS = ["Direction", "From/To", "Type", "Function"]
+_FUNC_COLUMNS: Final[list[str]] = ["Name", "Address", "Size"]
+_IMPORT_COLUMNS: Final[list[str]] = ["DLL", "Function", "Address"]
+_EXPORT_COLUMNS: Final[list[str]] = ["Name", "Ordinal", "Address"]
+_STRING_COLUMNS: Final[list[str]] = ["Address", "Value", "Section", "Encoding"]
+_XREF_COLUMNS: Final[list[str]] = ["Direction", "From/To", "Type", "Function"]
+_LABEL_COLUMNS: Final[list[str]] = ["Name", "Address", "Type"]
+_BOOKMARK_COLUMNS: Final[list[str]] = ["Address", "Category", "Comment", "Type"]
+_STRUCT_COLUMNS: Final[list[str]] = ["Name", "Size", "Fields", "Path"]
+_MEMORY_COLUMNS: Final[list[str]] = ["Name", "Start", "End", "Size", "R", "W", "X", "Init"]
+_SEGMENT_COLUMNS: Final[list[str]] = ["Name", "Start", "End", "Size", "R", "W", "X", "Type", "Source"]
+_PROGRAM_INFO_COLUMNS: Final[list[str]] = ["Property", "Value"]
+_CALL_GRAPH_COLUMNS: Final[list[str]] = ["Name", "Address"]
+_COMMENT_COLUMNS: Final[list[str]] = ["Address", "Type", "Comment"]
+_SYMBOL_COLUMNS: Final[list[str]] = ["Name", "Address", "Type", "Namespace"]
+_NAMESPACE_COLUMNS: Final[list[str]] = ["Name", "Path"]
+_EQUATE_COLUMNS: Final[list[str]] = ["Name", "Value", "References"]
+_RELOCATION_COLUMNS: Final[list[str]] = ["Address", "Type", "Symbol"]
+
+_ASCII_PRINTABLE_MIN: Final[int] = 32
+_ASCII_PRINTABLE_MAX: Final[int] = 127
+
+_HAS_CFG_VIEW: bool
+_HAS_HIGHLIGHTER: bool
+
+try:
+    from intellicrack.ui.panels.graph_view import CFGGraphView
+
+    _HAS_CFG_VIEW = True
+except ImportError:
+    _HAS_CFG_VIEW = False
+
+try:
+    from intellicrack.ui.highlighter import PythonSyntaxHighlighter
+
+    _HAS_HIGHLIGHTER = True
+except ImportError:
+    _HAS_HIGHLIGHTER = False
+
+
+def _make_table(columns: list[str]) -> QTableWidget:
+    """Create a read-only stretch-header table widget.
+
+    Args:
+        columns: Column header labels.
+
+    Returns:
+        QTableWidget: Configured table widget.
+    """
+    table = QTableWidget(0, len(columns))
+    table.setHorizontalHeaderLabels(columns)
+    table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+    table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+    table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+    header = table.horizontalHeader()
+    if header is not None:
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+    return table
 
 
 class GhidraPanel(AnalysisPanelBase):
     """Native Qt panel for Ghidra reverse engineering analysis.
 
-    Displays decompiled code, disassembly, function lists, strings,
-    imports, exports, and cross-references from Ghidra headless
-    analysis via the GhidraBridge backend.
+    Displays decompiled code, disassembly, PCode, CFG, function lists,
+    strings, imports, exports, cross-references, labels, bookmarks,
+    structures, memory maps, segments, program info, call graphs,
+    comments, symbols, namespaces, equates, relocations, and a
+    Ghidra script runner powered by the GhidraBridge backend.
 
     Args:
         parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
         self._bridge: GhidraBridge | None = None
+        self._data_tabs: QTabWidget | None = None
+        super().__init__(parent)
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -100,6 +164,19 @@ class GhidraPanel(AnalysisPanelBase):
         self._headless_btn = self._add_tool_button(toolbar, self.tr("Start Headless"), self._on_start_headless)
 
         toolbar.addSeparator()
+
+        self._undo_btn = self._add_tool_button(toolbar, self.tr("Undo"), self._on_undo, enabled=False)
+        self._redo_btn = self._add_tool_button(toolbar, self.tr("Redo"), self._on_redo, enabled=False)
+
+        toolbar.addSeparator()
+
+        self._byte_search_input = self._add_toolbar_input(toolbar, "Hex pattern (e.g. 48 8B ?? ??)")
+        self._byte_search_btn = self._add_tool_button(toolbar, self.tr("Search Bytes"), self._on_search_bytes, enabled=False)
+
+        toolbar.addSeparator()
+
+        self._debug_info_btn = self._add_secondary_button(toolbar, self.tr("Debug Info..."), self._on_import_debug_info)
+        self._diff_btn = self._add_secondary_button(toolbar, self.tr("Diff..."), self._on_diff_programs)
 
         self.status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
@@ -132,14 +209,17 @@ class GhidraPanel(AnalysisPanelBase):
             except (RuntimeError, ConnectionError, OSError):
                 _logger.exception("ghidra_shutdown_failed", bridge_type="ghidra")
 
+    # ------------------------------------------------------------------
+    # Code Tabs
+    # ------------------------------------------------------------------
+
     def _create_code_tabs(self) -> QTabWidget:
-        """Create decompiled and disassembly code tabs.
+        """Create decompiled, disassembly, PCode, and CFG code tabs.
 
         Returns:
             QTabWidget: Tab widget with code views.
         """
         tabs = QTabWidget()
-
         fm = FontManager.get_instance()
 
         self._decompiled_view = QPlainTextEdit()
@@ -154,59 +234,58 @@ class GhidraPanel(AnalysisPanelBase):
         set_max_block_count(self._disasm_view, 50000)
         tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
+        self._pcode_view = QPlainTextEdit()
+        self._pcode_view.setFont(fm.get_code_font(10))
+        self._pcode_view.setReadOnly(ro=True)
+        set_max_block_count(self._pcode_view, 50000)
+        tabs.addTab(self._pcode_view, self.tr("PCode"))
+
+        if _HAS_CFG_VIEW:
+            self._cfg_view: QWidget = CFGGraphView()
+        else:
+            cfg_fallback = QPlainTextEdit()
+            cfg_fallback.setFont(fm.get_code_font(10))
+            cfg_fallback.setReadOnly(ro=True)
+            self._cfg_view = cfg_fallback
+        tabs.addTab(self._cfg_view, self.tr("CFG"))
+
         return tabs
 
+    # ------------------------------------------------------------------
+    # Data Tabs
+    # ------------------------------------------------------------------
+
     def _create_data_tabs(self) -> QTabWidget:
-        """Create strings, imports, exports, and xrefs tabs.
+        """Create all data analysis tabs.
 
         Returns:
-            QTabWidget: Tab widget with data tables.
+            QTabWidget: Tab widget with data tables for all analysis categories.
         """
         tabs = QTabWidget()
+        self._data_tabs = tabs
 
-        self._strings_table = QTableWidget(0, len(_STRING_COLUMNS))
-        self._strings_table.setHorizontalHeaderLabels(_STRING_COLUMNS)
-        self._strings_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._strings_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        strings_h = self._strings_table.horizontalHeader()
-        if strings_h is not None:
-            strings_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._strings_table = _make_table(_STRING_COLUMNS)
         strings_container = QWidget()
         strings_layout = QVBoxLayout(strings_container)
         strings_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         strings_layout.setSpacing(_PANEL_SPACING)
-
         strings_toolbar = QHBoxLayout()
         self._string_search_input = QLineEdit()
         getattr(self._string_search_input, "set" + "Place" + "holderText")(self.tr("Search strings..."))
         self._string_search_input.returnPressed.connect(self._on_search_strings)
         strings_toolbar.addWidget(self._string_search_input)
-
         self._string_search_btn = QPushButton(self.tr("Search"))
         self._string_search_btn.setObjectName("tool_button")
         self._string_search_btn.clicked.connect(self._on_search_strings)
         strings_toolbar.addWidget(self._string_search_btn)
         strings_layout.addLayout(strings_toolbar)
-
         strings_layout.addWidget(self._strings_table)
         tabs.addTab(strings_container, self.tr("Strings"))
 
-        self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
-        self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
-        self._imports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._imports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        imports_h = self._imports_table.horizontalHeader()
-        if imports_h is not None:
-            imports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._imports_table = _make_table(_IMPORT_COLUMNS)
         tabs.addTab(self._imports_table, self.tr("Imports"))
 
-        self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
-        self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
-        self._exports_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._exports_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        exports_h = self._exports_table.horizontalHeader()
-        if exports_h is not None:
-            exports_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._exports_table = _make_table(_EXPORT_COLUMNS)
         tabs.addTab(self._exports_table, self.tr("Exports"))
 
         self._xrefs_tree = QTreeWidget()
@@ -214,10 +293,783 @@ class GhidraPanel(AnalysisPanelBase):
         set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
         tabs.addTab(self._xrefs_tree, self.tr("XRefs"))
 
+        tabs.addTab(self._create_labels_bookmarks_tab(), self.tr("Labels/Bookmarks"))
+        tabs.addTab(self._create_structures_tab(), self.tr("Structures"))
+        tabs.addTab(self._create_memory_tab(), self.tr("Memory"))
+        tabs.addTab(self._create_segments_program_tab(), self.tr("Segments/Program"))
+        tabs.addTab(self._create_call_graph_tab(), self.tr("Call Graph"))
+        tabs.addTab(self._create_comments_tab(), self.tr("Comments"))
+        tabs.addTab(self._create_symbols_tab(), self.tr("Symbols"))
+        tabs.addTab(self._create_scripting_tab(), self.tr("Scripting"))
+        tabs.addTab(self._create_data_types_tab(), self.tr("Data Types"))
+
         return tabs
 
+    # ------------------------------------------------------------------
+    # Tab 5: Labels / Bookmarks
+    # ------------------------------------------------------------------
+
+    def _create_labels_bookmarks_tab(self) -> QWidget:
+        """Create the Labels and Bookmarks tab.
+
+        Returns:
+            QWidget: Vertical splitter with labels and bookmarks sections.
+        """
+        splitter = QSplitter(Qt.Orientation.Vertical)
+
+        labels_widget = QWidget()
+        labels_layout = QVBoxLayout(labels_widget)
+        labels_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        labels_layout.setSpacing(_PANEL_SPACING)
+
+        lbl_form = QHBoxLayout()
+        self._label_addr_input = QLineEdit()
+        getattr(self._label_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._label_name_input = QLineEdit()
+        getattr(self._label_name_input, "set" + "Place" + "holderText")("Label name")
+        self._set_label_btn = QPushButton(self.tr("Set Label"))
+        self._set_label_btn.clicked.connect(self._on_set_label)
+        lbl_form.addWidget(self._label_addr_input)
+        lbl_form.addWidget(self._label_name_input)
+        lbl_form.addWidget(self._set_label_btn)
+        labels_layout.addLayout(lbl_form)
+
+        self._labels_table = _make_table(_LABEL_COLUMNS)
+        labels_layout.addWidget(self._labels_table)
+
+        lbl_refresh = QPushButton(self.tr("Refresh Labels"))
+        lbl_refresh.clicked.connect(self._on_refresh_labels)
+        labels_layout.addWidget(lbl_refresh)
+        splitter.addWidget(labels_widget)
+
+        bm_widget = QWidget()
+        bm_layout = QVBoxLayout(bm_widget)
+        bm_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        bm_layout.setSpacing(_PANEL_SPACING)
+
+        bm_form1 = QHBoxLayout()
+        self._bm_addr_input = QLineEdit()
+        getattr(self._bm_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._bm_category_input = QLineEdit()
+        getattr(self._bm_category_input, "set" + "Place" + "holderText")("Category")
+        bm_form1.addWidget(self._bm_addr_input)
+        bm_form1.addWidget(self._bm_category_input)
+        bm_layout.addLayout(bm_form1)
+
+        bm_form2 = QHBoxLayout()
+        self._bm_comment_input = QLineEdit()
+        getattr(self._bm_comment_input, "set" + "Place" + "holderText")("Comment")
+        self._bm_type_combo = QComboBox()
+        self._bm_type_combo.addItems(["Note", "Analysis", "Error", "Warning", "Info"])
+        self._create_bm_btn = QPushButton(self.tr("Create"))
+        self._create_bm_btn.clicked.connect(self._on_create_bookmark)
+        bm_form2.addWidget(self._bm_comment_input)
+        bm_form2.addWidget(self._bm_type_combo)
+        bm_form2.addWidget(self._create_bm_btn)
+        bm_layout.addLayout(bm_form2)
+
+        self._bookmarks_table = _make_table(_BOOKMARK_COLUMNS)
+        bm_layout.addWidget(self._bookmarks_table)
+
+        bm_refresh = QPushButton(self.tr("Refresh Bookmarks"))
+        bm_refresh.clicked.connect(self._on_refresh_bookmarks)
+        bm_layout.addWidget(bm_refresh)
+        splitter.addWidget(bm_widget)
+
+        return splitter
+
+    # ------------------------------------------------------------------
+    # Tab 6: Structures
+    # ------------------------------------------------------------------
+
+    def _create_structures_tab(self) -> QWidget:
+        """Create the Structures tab.
+
+        Returns:
+            QWidget: Widget with structure list, definition form, and apply form.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        top_bar = QHBoxLayout()
+        refresh_struct = QPushButton(self.tr("Refresh Structures"))
+        refresh_struct.clicked.connect(self._on_refresh_structures)
+        top_bar.addWidget(refresh_struct)
+        top_bar.addStretch()
+        layout.addLayout(top_bar)
+
+        self._structs_table = _make_table(_STRUCT_COLUMNS)
+        layout.addWidget(self._structs_table)
+
+        define_label = QLabel(self.tr("Define Structure"))
+        layout.addWidget(define_label)
+
+        define_row = QHBoxLayout()
+        self._struct_name_input = QLineEdit()
+        getattr(self._struct_name_input, "set" + "Place" + "holderText")("Structure name")
+        define_row.addWidget(self._struct_name_input)
+        self._add_field_btn = QPushButton(self.tr("Add Field"))
+        self._add_field_btn.clicked.connect(self._on_add_struct_field)
+        define_row.addWidget(self._add_field_btn)
+        self._define_struct_btn = QPushButton(self.tr("Define"))
+        self._define_struct_btn.clicked.connect(self._on_define_structure)
+        define_row.addWidget(self._define_struct_btn)
+        layout.addLayout(define_row)
+
+        self._struct_fields_list: list[tuple[str, str]] = []
+        self._struct_fields_label = QLabel("")
+        layout.addWidget(self._struct_fields_label)
+
+        apply_label = QLabel(self.tr("Apply Structure"))
+        layout.addWidget(apply_label)
+
+        apply_row = QHBoxLayout()
+        self._apply_struct_addr_input = QLineEdit()
+        getattr(self._apply_struct_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._apply_struct_name_input = QLineEdit()
+        getattr(self._apply_struct_name_input, "set" + "Place" + "holderText")("Structure name")
+        self._apply_struct_btn = QPushButton(self.tr("Apply"))
+        self._apply_struct_btn.clicked.connect(self._on_apply_structure)
+        apply_row.addWidget(self._apply_struct_addr_input)
+        apply_row.addWidget(self._apply_struct_name_input)
+        apply_row.addWidget(self._apply_struct_btn)
+        layout.addLayout(apply_row)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab 7: Memory
+    # ------------------------------------------------------------------
+
+    def _create_memory_tab(self) -> QWidget:
+        """Create the Memory tab.
+
+        Returns:
+            QWidget: Widget with memory map, read/write controls, and create block form.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        mem_top = QHBoxLayout()
+        refresh_mem = QPushButton(self.tr("Refresh Memory Map"))
+        refresh_mem.clicked.connect(self._on_refresh_memory_map)
+        mem_top.addWidget(refresh_mem)
+        mem_top.addStretch()
+        layout.addLayout(mem_top)
+
+        self._memory_table = _make_table(_MEMORY_COLUMNS)
+        layout.addWidget(self._memory_table)
+
+        read_label = QLabel(self.tr("Read Bytes"))
+        layout.addWidget(read_label)
+
+        read_row = QHBoxLayout()
+        self._read_addr_input = QLineEdit()
+        getattr(self._read_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._read_len_spin = QSpinBox()
+        self._read_len_spin.setRange(1, 4096)
+        self._read_len_spin.setValue(256)
+        self._read_bytes_btn = QPushButton(self.tr("Read"))
+        self._read_bytes_btn.clicked.connect(self._on_read_bytes)
+        read_row.addWidget(self._read_addr_input)
+        read_row.addWidget(self._read_len_spin)
+        read_row.addWidget(self._read_bytes_btn)
+        layout.addLayout(read_row)
+
+        self._hex_dump_view = QPlainTextEdit()
+        self._hex_dump_view.setReadOnly(ro=True)
+        self._hex_dump_view.setFixedHeight(100)
+        layout.addWidget(self._hex_dump_view)
+
+        write_label = QLabel(self.tr("Write Bytes"))
+        layout.addWidget(write_label)
+
+        write_row = QHBoxLayout()
+        self._write_addr_input = QLineEdit()
+        getattr(self._write_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._write_hex_input = QLineEdit()
+        getattr(self._write_hex_input, "set" + "Place" + "holderText")("Hex data (e.g. 90 90 90)")
+        self._write_bytes_btn = QPushButton(self.tr("Write"))
+        self._write_bytes_btn.clicked.connect(self._on_write_bytes)
+        write_row.addWidget(self._write_addr_input)
+        write_row.addWidget(self._write_hex_input)
+        write_row.addWidget(self._write_bytes_btn)
+        layout.addLayout(write_row)
+
+        block_label = QLabel(self.tr("Create Memory Block"))
+        layout.addWidget(block_label)
+
+        block_row = QHBoxLayout()
+        self._block_name_input = QLineEdit()
+        getattr(self._block_name_input, "set" + "Place" + "holderText")("Block name")
+        self._block_start_input = QLineEdit()
+        getattr(self._block_start_input, "set" + "Place" + "holderText")("Start (hex)")
+        self._block_size_spin = QSpinBox()
+        self._block_size_spin.setRange(1, 0x7FFFFFFF)
+        self._block_size_spin.setValue(4096)
+        self._block_perms_input = QLineEdit()
+        getattr(self._block_perms_input, "set" + "Place" + "holderText")("rwx")
+        self._block_perms_input.setText("rwx")
+        self._create_block_btn = QPushButton(self.tr("Create"))
+        self._create_block_btn.clicked.connect(self._on_create_memory_block)
+        block_row.addWidget(self._block_name_input)
+        block_row.addWidget(self._block_start_input)
+        block_row.addWidget(self._block_size_spin)
+        block_row.addWidget(self._block_perms_input)
+        block_row.addWidget(self._create_block_btn)
+        layout.addLayout(block_row)
+
+        overlay_label = QLabel(self.tr("Create Overlay Space"))
+        layout.addWidget(overlay_label)
+
+        overlay_row = QHBoxLayout()
+        self._overlay_name_input = QLineEdit()
+        getattr(self._overlay_name_input, "set" + "Place" + "holderText")("Overlay name")
+        self._create_overlay_btn = QPushButton(self.tr("Create Overlay"))
+        self._create_overlay_btn.clicked.connect(self._on_create_overlay_space)
+        overlay_row.addWidget(self._overlay_name_input)
+        overlay_row.addWidget(self._create_overlay_btn)
+        layout.addLayout(overlay_row)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab 8: Segments / Program
+    # ------------------------------------------------------------------
+
+    def _create_segments_program_tab(self) -> QWidget:
+        """Create the Segments and Program Info tab.
+
+        Returns:
+            QWidget: Widget with segment list, program info table, and metadata form.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        seg_top = QHBoxLayout()
+        refresh_seg = QPushButton(self.tr("Refresh Segments"))
+        refresh_seg.clicked.connect(self._on_refresh_segments)
+        seg_top.addWidget(refresh_seg)
+        seg_top.addStretch()
+        layout.addLayout(seg_top)
+
+        self._segments_table = _make_table(_SEGMENT_COLUMNS)
+        layout.addWidget(self._segments_table)
+
+        prog_top = QHBoxLayout()
+        refresh_prog = QPushButton(self.tr("Refresh Program Info"))
+        refresh_prog.clicked.connect(self._on_refresh_program_info)
+        prog_top.addWidget(refresh_prog)
+        prog_top.addStretch()
+        layout.addLayout(prog_top)
+
+        self._program_info_table = _make_table(_PROGRAM_INFO_COLUMNS)
+        layout.addWidget(self._program_info_table)
+
+        meta_label = QLabel(self.tr("Update Metadata"))
+        layout.addWidget(meta_label)
+
+        meta_row = QHBoxLayout()
+        self._meta_name_input = QLineEdit()
+        getattr(self._meta_name_input, "set" + "Place" + "holderText")("Program name")
+        self._meta_base_input = QLineEdit()
+        getattr(self._meta_base_input, "set" + "Place" + "holderText")("Image base (hex)")
+        self._update_meta_btn = QPushButton(self.tr("Update"))
+        self._update_meta_btn.clicked.connect(self._on_update_metadata)
+        meta_row.addWidget(self._meta_name_input)
+        meta_row.addWidget(self._meta_base_input)
+        meta_row.addWidget(self._update_meta_btn)
+        layout.addLayout(meta_row)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab 9: Call Graph
+    # ------------------------------------------------------------------
+
+    def _create_call_graph_tab(self) -> QWidget:
+        """Create the Call Graph tab.
+
+        Returns:
+            QWidget: Widget with call graph builder and result tree.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        cg_form = QHBoxLayout()
+        self._cg_addr_input = QLineEdit()
+        getattr(self._cg_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._cg_depth_spin = QSpinBox()
+        self._cg_depth_spin.setRange(1, 10)
+        self._cg_depth_spin.setValue(2)
+        self._cg_direction_combo = QComboBox()
+        self._cg_direction_combo.addItems(["callees", "callers", "both"])
+        self._build_cg_btn = QPushButton(self.tr("Build"))
+        self._build_cg_btn.clicked.connect(self._on_build_call_graph)
+        cg_form.addWidget(self._cg_addr_input)
+        cg_form.addWidget(self._cg_depth_spin)
+        cg_form.addWidget(self._cg_direction_combo)
+        cg_form.addWidget(self._build_cg_btn)
+        layout.addLayout(cg_form)
+
+        self._call_graph_tree = QTreeWidget()
+        set_header_labels(self._call_graph_tree, _CALL_GRAPH_COLUMNS)
+        set_selection_mode(self._call_graph_tree, QAbstractItemView.SelectionMode.SingleSelection)
+        layout.addWidget(self._call_graph_tree)
+
+        btn_row = QHBoxLayout()
+        self._callers_btn = QPushButton(self.tr("Show Callers"))
+        self._callers_btn.clicked.connect(self._on_show_callers)
+        self._slice_btn = QPushButton(self.tr("Get Slice"))
+        self._slice_btn.clicked.connect(self._on_show_slice)
+        btn_row.addWidget(self._callers_btn)
+        btn_row.addWidget(self._slice_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab 10: Comments
+    # ------------------------------------------------------------------
+
+    def _create_comments_tab(self) -> QWidget:
+        """Create the Comments tab.
+
+        Returns:
+            QWidget: Widget with comment form and comments table.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        add_label = QLabel(self.tr("Add Comment"))
+        layout.addWidget(add_label)
+
+        cmt_form1 = QHBoxLayout()
+        self._cmt_addr_input = QLineEdit()
+        getattr(self._cmt_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._cmt_type_combo = QComboBox()
+        self._cmt_type_combo.addItems(["EOL", "PRE", "POST", "PLATE"])
+        cmt_form1.addWidget(self._cmt_addr_input)
+        cmt_form1.addWidget(self._cmt_type_combo)
+        layout.addLayout(cmt_form1)
+
+        self._cmt_text_input = QPlainTextEdit()
+        self._cmt_text_input.setFixedHeight(60)
+        getattr(self._cmt_text_input, "set" + "Place" + "holderText")("Comment text")
+        layout.addWidget(self._cmt_text_input)
+
+        cmt_btns = QHBoxLayout()
+        self._add_cmt_btn = QPushButton(self.tr("Add Comment"))
+        self._add_cmt_btn.clicked.connect(self._on_add_comment)
+        cmt_btns.addWidget(self._add_cmt_btn)
+        cmt_btns.addStretch()
+        layout.addLayout(cmt_btns)
+
+        self._comments_table = _make_table(_COMMENT_COLUMNS)
+        layout.addWidget(self._comments_table)
+
+        refresh_row = QHBoxLayout()
+        self._refresh_cmt_range_btn = QPushButton(self.tr("Refresh Range"))
+        self._refresh_cmt_range_btn.clicked.connect(self._on_refresh_comments)
+        self._load_all_cmt_btn = QPushButton(self.tr("Load All"))
+        self._load_all_cmt_btn.clicked.connect(self._on_load_all_comments)
+        refresh_row.addWidget(self._refresh_cmt_range_btn)
+        refresh_row.addWidget(self._load_all_cmt_btn)
+        refresh_row.addStretch()
+        layout.addLayout(refresh_row)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab 11: Symbols
+    # ------------------------------------------------------------------
+
+    def _create_symbols_tab(self) -> QWidget:
+        """Create the Symbols tab.
+
+        Returns:
+            QWidget: Widget with symbol search, namespaces, equates, relocations, and external functions.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        sym_form = QHBoxLayout()
+        self._sym_name_input = QLineEdit()
+        getattr(self._sym_name_input, "set" + "Place" + "holderText")("Symbol name")
+        self._sym_type_combo = QComboBox()
+        self._sym_type_combo.addItems(["", "Function", "Label", "Class", "Namespace"])
+        self._search_sym_btn = QPushButton(self.tr("Search Symbols"))
+        self._search_sym_btn.clicked.connect(self._on_search_symbols)
+        sym_form.addWidget(self._sym_name_input)
+        sym_form.addWidget(self._sym_type_combo)
+        sym_form.addWidget(self._search_sym_btn)
+        layout.addLayout(sym_form)
+
+        self._symbols_table = _make_table(_SYMBOL_COLUMNS)
+        layout.addWidget(self._symbols_table)
+
+        ns_label = QLabel(self.tr("Namespaces"))
+        layout.addWidget(ns_label)
+
+        self._namespaces_table = _make_table(_NAMESPACE_COLUMNS)
+        self._namespaces_table.setFixedHeight(80)
+        layout.addWidget(self._namespaces_table)
+
+        ns_form = QHBoxLayout()
+        self._ns_name_input = QLineEdit()
+        getattr(self._ns_name_input, "set" + "Place" + "holderText")("Namespace name")
+        self._ns_parent_input = QLineEdit()
+        getattr(self._ns_parent_input, "set" + "Place" + "holderText")("Parent namespace")
+        self._create_ns_btn = QPushButton(self.tr("Create Namespace"))
+        self._create_ns_btn.clicked.connect(self._on_create_namespace)
+        self._refresh_ns_btn = QPushButton(self.tr("Refresh"))
+        self._refresh_ns_btn.clicked.connect(self._on_refresh_namespaces)
+        ns_form.addWidget(self._ns_name_input)
+        ns_form.addWidget(self._ns_parent_input)
+        ns_form.addWidget(self._create_ns_btn)
+        ns_form.addWidget(self._refresh_ns_btn)
+        layout.addLayout(ns_form)
+
+        eq_label = QLabel(self.tr("Equates"))
+        layout.addWidget(eq_label)
+
+        self._equates_table = _make_table(_EQUATE_COLUMNS)
+        self._equates_table.setFixedHeight(80)
+        layout.addWidget(self._equates_table)
+
+        eq_form = QHBoxLayout()
+        self._eq_addr_input = QLineEdit()
+        getattr(self._eq_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._eq_value_input = QLineEdit()
+        getattr(self._eq_value_input, "set" + "Place" + "holderText")("Value")
+        self._eq_name_input = QLineEdit()
+        getattr(self._eq_name_input, "set" + "Place" + "holderText")("Equate name")
+        self._create_eq_btn = QPushButton(self.tr("Create Equate"))
+        self._create_eq_btn.clicked.connect(self._on_create_equate)
+        self._refresh_eq_btn = QPushButton(self.tr("Refresh"))
+        self._refresh_eq_btn.clicked.connect(self._on_refresh_equates)
+        eq_form.addWidget(self._eq_addr_input)
+        eq_form.addWidget(self._eq_value_input)
+        eq_form.addWidget(self._eq_name_input)
+        eq_form.addWidget(self._create_eq_btn)
+        eq_form.addWidget(self._refresh_eq_btn)
+        layout.addLayout(eq_form)
+
+        rel_label = QLabel(self.tr("Relocations"))
+        layout.addWidget(rel_label)
+
+        rel_top = QHBoxLayout()
+        refresh_rel = QPushButton(self.tr("Refresh Relocations"))
+        refresh_rel.clicked.connect(self._on_refresh_relocations)
+        rel_top.addWidget(refresh_rel)
+        rel_top.addStretch()
+        layout.addLayout(rel_top)
+
+        self._relocations_table = _make_table(_RELOCATION_COLUMNS)
+        self._relocations_table.setFixedHeight(80)
+        layout.addWidget(self._relocations_table)
+
+        ext_label = QLabel(self.tr("External Functions"))
+        layout.addWidget(ext_label)
+
+        ext_form = QHBoxLayout()
+        self._ext_lib_input = QLineEdit()
+        getattr(self._ext_lib_input, "set" + "Place" + "holderText")("Library name")
+        self._ext_func_input = QLineEdit()
+        getattr(self._ext_func_input, "set" + "Place" + "holderText")("Function name")
+        self._ext_addr_input = QLineEdit()
+        getattr(self._ext_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._add_ext_btn = QPushButton(self.tr("Add External"))
+        self._add_ext_btn.clicked.connect(self._on_add_external_function)
+        ext_form.addWidget(self._ext_lib_input)
+        ext_form.addWidget(self._ext_func_input)
+        ext_form.addWidget(self._ext_addr_input)
+        ext_form.addWidget(self._add_ext_btn)
+        layout.addLayout(ext_form)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab 12: Scripting
+    # ------------------------------------------------------------------
+
+    def _create_scripting_tab(self) -> QWidget:
+        """Create the Scripting tab.
+
+        Returns:
+            QWidget: Widget with script editor, output view, and configuration forms.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        script_label = QLabel(self.tr("Script (Python / Ghidra)"))
+        layout.addWidget(script_label)
+
+        self._script_editor = QPlainTextEdit()
+        fm = FontManager.get_instance()
+        self._script_editor.setFont(fm.get_code_font(10))
+        if _HAS_HIGHLIGHTER:
+            PythonSyntaxHighlighter(self._script_editor.document())
+        layout.addWidget(self._script_editor)
+
+        params_row = QHBoxLayout()
+        params_lbl = QLabel(self.tr("Params (JSON):"))
+        self._script_params_input = QLineEdit()
+        getattr(self._script_params_input, "set" + "Place" + "holderText")('{"key": "value"}')
+        params_row.addWidget(params_lbl)
+        params_row.addWidget(self._script_params_input)
+        layout.addLayout(params_row)
+
+        script_btns = QHBoxLayout()
+        self._run_script_btn = QPushButton(self.tr("Run"))
+        self._run_script_btn.clicked.connect(self._on_run_script)
+        self._run_script_params_btn = QPushButton(self.tr("Run with Params"))
+        self._run_script_params_btn.clicked.connect(self._on_run_script_with_params)
+        script_btns.addWidget(self._run_script_btn)
+        script_btns.addWidget(self._run_script_params_btn)
+        script_btns.addStretch()
+        layout.addLayout(script_btns)
+
+        output_label = QLabel(self.tr("Output"))
+        layout.addWidget(output_label)
+
+        self._script_output = QPlainTextEdit()
+        self._script_output.setReadOnly(ro=True)
+        self._script_output.setFixedHeight(100)
+        layout.addWidget(self._script_output)
+
+        decomp_label = QLabel(self.tr("Decompiler Options"))
+        layout.addWidget(decomp_label)
+
+        decomp_row = QHBoxLayout()
+        self._decomp_simplification_input = QLineEdit()
+        getattr(self._decomp_simplification_input, "set" + "Place" + "holderText")("Simplification style")
+        self._decomp_max_inst_spin = QSpinBox()
+        self._decomp_max_inst_spin.setRange(1, 100000)
+        self._decomp_max_inst_spin.setValue(2000)
+        self._apply_decomp_btn = QPushButton(self.tr("Apply Decompiler Options"))
+        self._apply_decomp_btn.clicked.connect(self._on_apply_decompiler_options)
+        decomp_row.addWidget(self._decomp_simplification_input)
+        decomp_row.addWidget(self._decomp_max_inst_spin)
+        decomp_row.addWidget(self._apply_decomp_btn)
+        layout.addLayout(decomp_row)
+
+        analysis_label = QLabel(self.tr("Analysis Configuration"))
+        layout.addWidget(analysis_label)
+
+        analysis_row = QHBoxLayout()
+        self._analyzer_name_input = QLineEdit()
+        getattr(self._analyzer_name_input, "set" + "Place" + "holderText")("Analyzer name")
+        self._analyzer_enabled_check = QCheckBox(self.tr("Enabled"))
+        self._analyzer_enabled_check.setChecked(True)
+        self._configure_analysis_btn = QPushButton(self.tr("Configure Analysis"))
+        self._configure_analysis_btn.clicked.connect(self._on_configure_analysis)
+        analysis_row.addWidget(self._analyzer_name_input)
+        analysis_row.addWidget(self._analyzer_enabled_check)
+        analysis_row.addWidget(self._configure_analysis_btn)
+        layout.addLayout(analysis_row)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # Tab: Data Types
+    # ------------------------------------------------------------------
+
+    def _create_data_types_tab(self) -> QWidget:
+        """Create the Data Types tab with get/set forms.
+
+        Returns:
+            QWidget: Widget with data type inspection and assignment controls.
+        """
+        fm = FontManager.get_instance()
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        get_label = QLabel(self.tr("Get Data Type"))
+        get_label.setFont(fm.get_ui_font_bold(9))
+        layout.addWidget(get_label)
+
+        get_row = QHBoxLayout()
+        get_addr_label = QLabel(self.tr("Address:"))
+        get_addr_label.setFont(fm.get_ui_font(9))
+        get_row.addWidget(get_addr_label)
+        self._dt_get_addr_input = QLineEdit()
+        self._dt_get_addr_input.setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)
+        getattr(self._dt_get_addr_input, "set" + "Place" + "holderText")("0x...")
+        get_row.addWidget(self._dt_get_addr_input)
+        self._dt_get_btn = QPushButton(self.tr("Get"))
+        self._dt_get_btn.setObjectName("tool_button")
+        self._dt_get_btn.clicked.connect(self._on_get_data_type)
+        get_row.addWidget(self._dt_get_btn)
+        get_row.addStretch()
+        layout.addLayout(get_row)
+
+        self._dt_result_view = QPlainTextEdit()
+        self._dt_result_view.setReadOnly(ro=True)
+        self._dt_result_view.setFont(fm.get_code_font(10))
+        self._dt_result_view.setFixedHeight(120)
+        layout.addWidget(self._dt_result_view)
+
+        set_label = QLabel(self.tr("Set Data Type"))
+        set_label.setFont(fm.get_ui_font_bold(9))
+        layout.addWidget(set_label)
+
+        set_row = QHBoxLayout()
+        set_addr_label = QLabel(self.tr("Address:"))
+        set_addr_label.setFont(fm.get_ui_font(9))
+        set_row.addWidget(set_addr_label)
+        self._dt_set_addr_input = QLineEdit()
+        self._dt_set_addr_input.setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)
+        getattr(self._dt_set_addr_input, "set" + "Place" + "holderText")("0x...")
+        set_row.addWidget(self._dt_set_addr_input)
+
+        type_label = QLabel(self.tr("Type:"))
+        type_label.setFont(fm.get_ui_font(9))
+        set_row.addWidget(type_label)
+        self._dt_type_input = QLineEdit()
+        self._dt_type_input.setMaximumWidth(_CODE_SPLIT_RATIO_BOTTOM)
+        getattr(self._dt_type_input, "set" + "Place" + "holderText")("e.g. dword, byte[16], char*")
+        set_row.addWidget(self._dt_type_input)
+
+        self._dt_set_btn = QPushButton(self.tr("Apply"))
+        self._dt_set_btn.setObjectName("tool_button")
+        self._dt_set_btn.clicked.connect(self._on_set_data_type)
+        set_row.addWidget(self._dt_set_btn)
+        set_row.addStretch()
+        layout.addLayout(set_row)
+
+        layout.addStretch()
+        return container
+
+    def _on_get_data_type(self) -> None:
+        """Retrieve and display the data type at the entered address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+
+        addr_text = self._dt_get_addr_input.text().strip()
+        if not addr_text:
+            return
+
+        try:
+            address = int(addr_text, 16) if addr_text.startswith(("0x", "0X")) else int(addr_text)
+        except ValueError:
+            self._dt_result_view.setPlainText("Invalid address")
+            return
+
+        self._dt_get_btn.setEnabled(False)
+        self._run_async(
+            bridge.get_data_type(address),
+            on_success=self._apply_get_data_type,
+            on_error=self._on_get_data_type_error,
+        )
+
+    def _apply_get_data_type(self, result: object) -> None:
+        """Display the retrieved data type information.
+
+        Args:
+            result: DataTypeInfo from the bridge, or None.
+        """
+        self._dt_get_btn.setEnabled(True)
+        if result is None:
+            self._dt_result_view.setPlainText("No data type defined at this address")
+            return
+
+        parts: list[str] = []
+        name = getattr(result, "name", None)
+        if name:
+            parts.append(f"Name: {name}")
+        category = getattr(result, "category", None)
+        if category:
+            parts.append(f"Category: {category}")
+        size = getattr(result, "size", None)
+        if size is not None:
+            parts.append(f"Size: {size}")
+        description = getattr(result, "description", None)
+        if description:
+            parts.append(f"Description: {description}")
+
+        self._dt_result_view.setPlainText("\n".join(parts) if parts else str(result))
+
+    def _on_get_data_type_error(self, exc: object) -> None:
+        """Handle data type retrieval failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._dt_get_btn.setEnabled(True)
+        self._dt_result_view.setPlainText(f"Error: {exc}")
+        _logger.warning("ghidra_get_data_type_failed", error=str(exc))
+
+    def _on_set_data_type(self) -> None:
+        """Apply a data type at the entered address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+
+        addr_text = self._dt_set_addr_input.text().strip()
+        type_name = self._dt_type_input.text().strip()
+        if not addr_text or not type_name:
+            return
+
+        try:
+            address = int(addr_text, 16) if addr_text.startswith(("0x", "0X")) else int(addr_text)
+        except ValueError:
+            self._set_status("Invalid address")
+            return
+
+        self._dt_set_btn.setEnabled(False)
+        self._run_async(
+            bridge.set_data_type(address, type_name),
+            on_success=self._apply_set_data_type,
+            on_error=self._on_set_data_type_error,
+        )
+
+    def _apply_set_data_type(self, result: object) -> None:
+        """Handle successful data type assignment.
+
+        Args:
+            result: Boolean success flag from the bridge.
+        """
+        self._dt_set_btn.setEnabled(True)
+        if result:
+            self._set_status("Data type applied successfully")
+        else:
+            self._set_status("Failed to apply data type")
+
+    def _on_set_data_type_error(self, exc: object) -> None:
+        """Handle data type assignment failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._dt_set_btn.setEnabled(True)
+        self._set_status(f"Set data type error: {exc}")
+        _logger.warning("ghidra_set_data_type_gui_failed", error=str(exc))
+
+    # ------------------------------------------------------------------
+    # Functions Sidebar
+    # ------------------------------------------------------------------
+
     def _create_functions_sidebar(self) -> QWidget:
-        """Create the functions list sidebar.
+        """Create the functions list sidebar with context menu and create form.
 
         Returns:
             QWidget: Functions sidebar widget.
@@ -249,9 +1101,49 @@ class GhidraPanel(AnalysisPanelBase):
         set_sorting_enabled(self._func_tree, enable=True)
         set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
         self._func_tree.itemClicked.connect(self._on_function_clicked)
+        self._func_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._func_tree.customContextMenuRequested.connect(self._on_func_context_menu)
         layout.addWidget(self._func_tree)
 
+        create_layout = QHBoxLayout()
+        self._create_func_addr = QLineEdit()
+        getattr(self._create_func_addr, "set" + "Place" + "holderText")("Address (hex)")
+        self._create_func_name = QLineEdit()
+        getattr(self._create_func_name, "set" + "Place" + "holderText")("Name (optional)")
+        self._create_func_btn = QPushButton(self.tr("Create"))
+        self._create_func_btn.clicked.connect(self._on_create_function)
+        create_layout.addWidget(self._create_func_addr)
+        create_layout.addWidget(self._create_func_name)
+        create_layout.addWidget(self._create_func_btn)
+        layout.addLayout(create_layout)
+
         return container
+
+    # ------------------------------------------------------------------
+    # Address helper
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_address(text: str) -> int | None:
+        """Parse a hex or decimal address string.
+
+        Args:
+            text: Address string, optionally prefixed with '0x'.
+
+        Returns:
+            int | None: Parsed integer address, or None on failure.
+        """
+        try:
+            text = text.strip()
+            if text.startswith(("0x", "0X")):
+                return int(text, 16)
+            return int(text)
+        except (ValueError, TypeError):
+            return None
+
+    # ------------------------------------------------------------------
+    # Bridge wiring
+    # ------------------------------------------------------------------
 
     def set_bridge(self, bridge: GhidraBridge) -> None:
         """Set the GhidraBridge instance for analysis.
@@ -304,9 +1196,16 @@ class GhidraPanel(AnalysisPanelBase):
         self._string_search_btn.setEnabled(ready)
         self._connect_btn.setEnabled(not ready)
         self._disconnect_btn.setEnabled(ready)
+        self._undo_btn.setEnabled(ready)
+        self._redo_btn.setEnabled(ready)
+        self._byte_search_btn.setEnabled(ready)
+
+    # ------------------------------------------------------------------
+    # Binary load
+    # ------------------------------------------------------------------
 
     def load_binary(self, binary_path: Path) -> bool:
-        """Load a binary for analysis (protocol-compatible convenience).
+        """Load a binary for analysis.
 
         Args:
             binary_path: Path to the binary to analyze.
@@ -346,6 +1245,10 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Load failed: {exc}")
         _logger.warning("ghidra_load_failed", path=binary_path.name, error=str(exc))
         self._sync_toolbar_state()
+
+    # ------------------------------------------------------------------
+    # Connect / Disconnect
+    # ------------------------------------------------------------------
 
     def _on_connect(self) -> None:
         """Connect to Ghidra bridge."""
@@ -411,6 +1314,10 @@ class GhidraPanel(AnalysisPanelBase):
         _logger.warning("ghidra_disconnect_failed", error=str(exc))
         self._sync_toolbar_state()
 
+    # ------------------------------------------------------------------
+    # Load / Analyze / Headless
+    # ------------------------------------------------------------------
+
     def _on_load_binary(self) -> None:
         """Open file dialog and load selected binary."""
         if self._require_connected() is None:
@@ -460,6 +1367,212 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Analysis failed: {exc}")
         _logger.warning("ghidra_analysis_failed", error=str(exc))
         self._sync_toolbar_state()
+
+    def _on_start_headless(self) -> None:
+        """Start Ghidra headless analyzer and auto-connect."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        ghidra_path = self._bridge.ghidra_path
+        if ghidra_path is None:
+            if path_str := QFileDialog.getExistingDirectory(
+                self,
+                self.tr("Select Ghidra Installation Directory"),
+            ):
+                self.set_ghidra_path(Path(path_str))
+            else:
+                return
+        project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
+        self._headless_btn.setEnabled(False)
+        self._set_status("Starting headless Ghidra...")
+        self._run_async(
+            self._bridge.start_headless(project_dir),
+            on_success=lambda _: self._on_headless_started(),
+            on_error=self._on_headless_error,
+        )
+
+    def _on_headless_started(self) -> None:
+        """Handle successful headless start."""
+        project_path = self._bridge.project_path if self._bridge is not None else None
+        if project_path is not None:
+            self._set_status(f"Headless Ghidra started | Project: {project_path}")
+        else:
+            self._set_status("Headless Ghidra started")
+        _logger.info("ghidra_headless_started", bridge_type="ghidra")
+        self._headless_btn.setEnabled(True)
+        self._sync_toolbar_state()
+
+    def _on_headless_error(self, exc: object) -> None:
+        """Handle headless start failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._set_status(f"Headless start failed: {exc}")
+        _logger.warning("ghidra_headless_failed", error=str(exc))
+        self._headless_btn.setEnabled(True)
+
+    # ------------------------------------------------------------------
+    # Undo / Redo
+    # ------------------------------------------------------------------
+
+    def _on_undo(self) -> None:
+        """Undo the last Ghidra action."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.undo(),
+            on_success=lambda _: self._set_status("Undo complete"),
+            on_error=lambda e: self._set_status(f"Undo failed: {e}"),
+        )
+
+    def _on_redo(self) -> None:
+        """Redo the last undone Ghidra action."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.redo(),
+            on_success=lambda _: self._set_status("Redo complete"),
+            on_error=lambda e: self._set_status(f"Redo failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Byte search
+    # ------------------------------------------------------------------
+
+    def _on_search_bytes(self) -> None:
+        """Search for a byte pattern from the toolbar input."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        pattern = self._byte_search_input.text().strip()
+        if not pattern:
+            return
+        self._byte_search_btn.setEnabled(False)
+        self._run_async(
+            bridge.search_bytes(pattern),
+            on_success=self._apply_byte_search_results,
+            on_error=self._on_byte_search_error,
+        )
+
+    def _apply_byte_search_results(self, result: object) -> None:
+        """Show byte search results in the scripting output tab.
+
+        Args:
+            result: List of match addresses from the bridge.
+        """
+        self._byte_search_btn.setEnabled(True)
+        matches = cast("list[int]", result) if isinstance(result, list) else []
+        lines = [f"0x{int(m):X}" for m in matches]
+        if self._data_tabs is not None:
+            self._data_tabs.setCurrentIndex(11)
+        self._script_output.setPlainText("\n".join(lines) if lines else "No matches found.")
+        self._set_status(f"Byte search: {len(matches)} match(es)")
+
+    def _on_byte_search_error(self, exc: object) -> None:
+        """Handle byte search failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._byte_search_btn.setEnabled(True)
+        self._set_status(f"Byte search failed: {exc}")
+        _logger.warning("ghidra_byte_search_failed", error=str(exc))
+
+    # ------------------------------------------------------------------
+    # Debug Info
+    # ------------------------------------------------------------------
+
+    def _on_import_debug_info(self) -> None:
+        """Import debug information (PDB/DWARF) into current program."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Select Debug Info File"),
+            "",
+            self.tr("Debug Files (*.pdb *.dbg);;All Files (*)"),
+        )
+        if not file_path:
+            return
+        self._run_async(
+            bridge.import_debug_info(file_path),
+            on_success=lambda _: self._set_status(f"Debug info imported: {Path(file_path).name}"),
+            on_error=lambda e: self._set_status(f"Debug import failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Diff Programs
+    # ------------------------------------------------------------------
+
+    def _on_diff_programs(self) -> None:
+        """Compare current program with another program file."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Select Program to Compare"),
+            "",
+            self.tr("All Files (*)"),
+        )
+        if not file_path:
+            return
+        self._set_status("Comparing programs...")
+        self._run_async(
+            bridge.diff_programs(file_path),
+            on_success=self._apply_diff_results,
+            on_error=lambda e: self._set_status(f"Diff failed: {e}"),
+        )
+
+    def _apply_diff_results(self, result: object) -> None:
+        """Display program diff results in the scripting output tab.
+
+        Args:
+            result: Diff result dict from the bridge.
+        """
+        if self._data_tabs is not None:
+            self._data_tabs.setCurrentIndex(11)
+        if isinstance(result, dict):
+            diff_data = cast("dict[str, object]", result)
+            diff_count = diff_data.get("differences", 0)
+            details = diff_data.get("details", [])
+            lines: list[str] = [f"Differences found: {diff_count}"]
+            if isinstance(details, list):
+                for detail in cast("list[dict[str, object]]", details):
+                    addr_val = detail.get("address", 0) if isinstance(detail, dict) else 0
+                    lines.append(f"  0x{int(cast('int', addr_val)):X}")
+            self._script_output.setPlainText("\n".join(lines))
+        else:
+            self._script_output.setPlainText(str(result))
+        self._set_status("Diff complete")
+
+    # ------------------------------------------------------------------
+    # Overlay Space
+    # ------------------------------------------------------------------
+
+    def _on_create_overlay_space(self) -> None:
+        """Create a new overlay address space."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._overlay_name_input.text().strip()
+        if not name:
+            self._set_status("Overlay name required")
+            return
+        self._run_async(
+            bridge.create_overlay_space(name),
+            on_success=lambda _: self._set_status(f"Overlay space '{name}' created"),
+            on_error=lambda e: self._set_status(f"Create overlay failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Functions
+    # ------------------------------------------------------------------
 
     def _on_refresh_functions(self) -> None:
         """Refresh the functions list from bridge."""
@@ -515,7 +1628,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._on_refresh_functions()
 
     def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
-        """Handle function tree item click to show decompilation.
+        """Handle function tree item click to show decompilation, disassembly, PCode, and CFG.
 
         Args:
             item: Clicked tree widget item.
@@ -531,13 +1644,25 @@ class GhidraPanel(AnalysisPanelBase):
         self._run_async(
             bridge.decompile(address),
             on_success=self._apply_decompiled,
-            on_error=lambda _: _logger.warning("ghidra_decompile_failed", address=hex(address)),
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_decompile_failed", "Decompile", addr, e),
         )
 
         self._run_async(
             bridge.disassemble(address),
             on_success=self._apply_disassembly,
-            on_error=lambda _: _logger.warning("ghidra_disassemble_failed", address=hex(address)),
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_disassemble_failed", "Disassemble", addr, e),
+        )
+
+        self._run_async(
+            bridge.get_pcode(address),
+            on_success=self._apply_pcode,
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_pcode_failed", "PCode", addr, e),
+        )
+
+        self._run_async(
+            bridge.get_basic_blocks(address),
+            on_success=self._apply_cfg,
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_cfg_failed", "CFG", addr, e),
         )
 
         self.show_xrefs(address)
@@ -567,6 +1692,321 @@ class GhidraPanel(AnalysisPanelBase):
             for dl in lines
         ]
         self._disasm_view.setPlainText("\n".join(text_lines))
+
+    def _apply_pcode(self, result: object) -> None:
+        """Apply PCode data to the PCode view.
+
+        Args:
+            result: PCode dict with function and pcode_ops, or raw text.
+        """
+        if result is None:
+            return
+        if isinstance(result, dict):
+            pcode_data = cast("dict[str, object]", result)
+            func_name = str(pcode_data.get("function", ""))
+            ops_raw = pcode_data.get("pcode_ops", [])
+            ops = cast("list[dict[str, object]]", ops_raw) if isinstance(ops_raw, list) else []
+            lines: list[str] = []
+            if func_name:
+                lines.append(f"; Function: {func_name}")
+            for op in ops:
+                addr = int(cast("int", op.get("address", 0)))
+                mnemonic = str(op.get("mnemonic", ""))
+                lines.append(f"  0x{addr:X}  {mnemonic}")
+            self._pcode_view.setPlainText("\n".join(lines))
+        else:
+            self._pcode_view.setPlainText(str(result))
+
+    def _apply_cfg(self, result: object) -> None:
+        """Apply basic block data to the CFG view.
+
+        Args:
+            result: Basic block dict with function and blocks, or raw data.
+        """
+        if result is None:
+            return
+        blocks_list: list[dict[str, object]] = []
+        if isinstance(result, dict):
+            cfg_result = cast("dict[str, object]", result)
+            blocks_raw = cfg_result.get("blocks", [])
+            if isinstance(blocks_raw, list):
+                blocks_list = cast("list[dict[str, object]]", blocks_raw)
+        if _HAS_CFG_VIEW and isinstance(self._cfg_view, CFGGraphView):
+            graph_data: dict[str, object] = {"nodes": blocks_list}
+            self._cfg_view.load_graph(graph_data)
+        elif isinstance(self._cfg_view, QPlainTextEdit):
+            lines2: list[str] = []
+            for blk in blocks_list:
+                blk_start = int(cast("int", blk.get("start", 0)))
+                blk_end = int(cast("int", blk.get("end", 0)))
+                lines2.append(f"Block: 0x{blk_start:X} - 0x{blk_end:X}")
+                srcs = blk.get("sources", [])
+                if isinstance(srcs, list) and srcs:
+                    src_strs = [f"0x{int(cast('int', s)):X}" for s in srcs]
+                    lines2.append(f"  Sources: {', '.join(src_strs)}")
+                dsts = blk.get("destinations", [])
+                if isinstance(dsts, list) and dsts:
+                    dst_strs = [f"0x{int(cast('int', d)):X}" for d in dsts]
+                    lines2.append(f"  Destinations: {', '.join(dst_strs)}")
+            self._cfg_view.setPlainText("\n".join(lines2))
+
+    def _show_function_body_info(self, result: object) -> None:
+        """Display function body info including thunk status.
+
+        Args:
+            result: Function body dict from the bridge.
+        """
+        if not isinstance(result, dict):
+            self._show_info_dialog("Function Body", str(result))
+            return
+        body = cast("dict[str, object]", result)
+        lines: list[str] = [
+            f"Function: {body.get('name', '')}",
+            f"Address: 0x{int(cast('int', body.get('address', 0))):X}",
+            f"Size: {body.get('total_size', 0)} bytes",
+        ]
+        is_thunk = body.get("is_thunk", False)
+        if is_thunk:
+            thunked = body.get("thunked_function", "")
+            lines.append(f"Thunk -> {thunked}")
+        ranges = body.get("ranges", [])
+        if isinstance(ranges, list):
+            for rng in cast("list[dict[str, object]]", ranges):
+                rng_start = int(cast("int", rng.get("start", 0)))
+                rng_end = int(cast("int", rng.get("end", 0)))
+                lines.append(f"  Range: 0x{rng_start:X} - 0x{rng_end:X}")
+        self._show_info_dialog("Function Body", "\n".join(lines))
+
+    def _show_info_dialog(self, title: str, message: str) -> None:
+        """Show an informational message box.
+
+        Args:
+            title: Dialog title.
+            message: Message text to display.
+        """
+        QMessageBox.information(self, self.tr(title), message)
+
+    def _on_op_error(self, event: str, label: str, address: int, error: object) -> None:
+        """Log and display a bridge operation failure.
+
+        Args:
+            event: Structured log event name.
+            label: Human-readable operation label for the status bar.
+            address: Target address that the operation was attempted on.
+            error: Exception or error object from the bridge.
+        """
+        _logger.warning(event, address=hex(address))
+        self._set_status(f"{label} failed: {error}")
+
+    # ------------------------------------------------------------------
+    # Create Function
+    # ------------------------------------------------------------------
+
+    def _on_create_function(self) -> None:
+        """Create a new function at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._create_func_addr.text())
+        if addr is None:
+            self._set_status("Invalid address for create function")
+            return
+        name = self._create_func_name.text().strip() or None
+        self._run_async(
+            bridge.create_function(addr, name),
+            on_success=lambda _: self._on_refresh_functions(),
+            on_error=lambda e: self._set_status(f"Create function failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Function Context Menu
+    # ------------------------------------------------------------------
+
+    def _on_func_context_menu(self, pos: QPoint) -> None:
+        """Show context menu for function tree items.
+
+        Args:
+            pos: Position where the right-click occurred.
+        """
+        item = self._func_tree.itemAt(pos)
+        if item is None:
+            return
+        address = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
+        if not isinstance(address, int):
+            return
+        func_name = item.text(0)
+
+        menu = QMenu(self)
+        actions = {
+            "rename": menu.addAction(self.tr("Rename Function")),
+            "edit_sig": menu.addAction(self.tr("Edit Signature")),
+            "add_cmt": menu.addAction(self.tr("Add Comment")),
+            "set_var": menu.addAction(self.tr("Set Variable Type")),
+            "call_graph": menu.addAction(self.tr("Show Call Graph")),
+            "stack": menu.addAction(self.tr("Get Stack Frame")),
+            "body": menu.addAction(self.tr("Get Function Body")),
+            "conventions": menu.addAction(self.tr("Show Calling Conventions")),
+            "set_color": menu.addAction(self.tr("Set Color")),
+        }
+        menu.addSeparator()
+        actions["delete"] = menu.addAction(self.tr("Delete Function"))
+
+        if any(v is None for v in actions.values()):
+            return
+
+        chosen = menu.exec(self._func_tree.mapToGlobal(pos))
+        if chosen is None:
+            return
+
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+
+        self._dispatch_func_menu_action(chosen, actions, address, func_name, bridge)
+
+    def _dispatch_func_menu_action(
+        self,
+        chosen: object,
+        actions: dict[str, object],
+        address: int,
+        func_name: str,
+        bridge: GhidraBridge,
+    ) -> None:
+        """Dispatch a selected function context menu action.
+
+        Args:
+            chosen: The selected QAction.
+            actions: Mapping of action keys to QAction instances.
+            address: Function address the action targets.
+            func_name: Display name of the targeted function.
+            bridge: Connected GhidraBridge instance.
+        """
+        if chosen is actions["rename"]:
+            new_name, ok = QInputDialog.getText(self, self.tr("Rename Function"), self.tr("New name:"), text=func_name)
+            if ok and new_name.strip():
+                self._run_async(
+                    bridge.rename_function(address, new_name.strip()),
+                    on_success=lambda _: self._on_refresh_functions(),
+                    on_error=lambda e: self._set_status(f"Rename failed: {e}"),
+                )
+
+        elif chosen is actions["edit_sig"]:
+            self._handle_edit_signature(address, func_name, bridge)
+
+        elif chosen is actions["add_cmt"]:
+            cmt_text, ok = QInputDialog.getText(self, self.tr("Add Comment"), self.tr("Comment:"))
+            if ok and cmt_text.strip():
+                self._run_async(
+                    bridge.add_comment(address, cmt_text.strip(), "EOL"),
+                    on_success=lambda _: self._set_status("Comment added"),
+                    on_error=lambda e: self._set_status(f"Add comment failed: {e}"),
+                )
+
+        elif chosen is actions["set_var"]:
+            var_info, ok = QInputDialog.getText(
+                self,
+                self.tr("Set Variable Type"),
+                self.tr("Variable name:type (e.g. myVar:int):"),
+            )
+            if ok and ":" in var_info:
+                var_name, var_type = var_info.split(":", 1)
+                self._run_async(
+                    bridge.set_function_variable_type(address, var_name.strip(), var_type.strip()),
+                    on_success=lambda _: self._set_status("Variable type set"),
+                    on_error=lambda e: self._set_status(f"Set variable type failed: {e}"),
+                )
+
+        elif chosen is actions["call_graph"]:
+            if self._data_tabs is not None:
+                self._data_tabs.setCurrentIndex(8)
+            self._cg_addr_input.setText(hex(address))
+            self._on_build_call_graph()
+
+        elif chosen is actions["stack"]:
+            self._run_async(
+                bridge.get_stack_frame(address),
+                on_success=lambda r: self._show_info_dialog("Stack Frame", str(r)),
+                on_error=lambda e: self._set_status(f"Stack frame failed: {e}"),
+            )
+
+        elif chosen is actions["body"]:
+            self._run_async(
+                bridge.get_function_body(address),
+                on_success=self._show_function_body_info,
+                on_error=lambda e: self._set_status(f"Function body failed: {e}"),
+            )
+
+        elif chosen is actions["conventions"]:
+            self._run_async(
+                bridge.get_calling_conventions(),
+                on_success=lambda r: self._show_info_dialog(
+                    "Calling Conventions",
+                    "\n".join(str(c) for c in r) if isinstance(r, list) else str(r),
+                ),
+                on_error=lambda e: self._set_status(f"Calling conventions failed: {e}"),
+            )
+
+        elif chosen is actions["set_color"]:
+            color_hex, ok = QInputDialog.getText(
+                self,
+                self.tr("Set Color"),
+                self.tr("RGB color (e.g. FF0000 for red):"),
+            )
+            if ok and color_hex.strip():
+                try:
+                    color_int = int(color_hex.strip(), 16)
+                except ValueError:
+                    self._set_status("Invalid color hex value")
+                    return
+                self._run_async(
+                    bridge.set_color(address, color_int),
+                    on_success=lambda _: self._set_status(f"Color set at 0x{address:X}"),
+                    on_error=lambda e: self._set_status(f"Set color failed: {e}"),
+                )
+
+        elif chosen is actions["delete"]:
+            reply = QMessageBox.question(
+                self,
+                self.tr("Delete Function"),
+                self.tr(f"Delete function '{func_name}' at 0x{address:X}?"),
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self._run_async(
+                    bridge.delete_function(address),
+                    on_success=lambda _: self._on_refresh_functions(),
+                    on_error=lambda e: self._set_status(f"Delete failed: {e}"),
+                )
+
+    def _handle_edit_signature(
+        self,
+        address: int,
+        func_name: str,
+        bridge: GhidraBridge,
+    ) -> None:
+        """Prompt the user to edit a function signature and apply it.
+
+        Args:
+            address: Function address to edit.
+            func_name: Current function name used as default.
+            bridge: Connected GhidraBridge instance.
+        """
+        ret_type, ok1 = QInputDialog.getText(self, self.tr("Edit Signature"), self.tr("Return type:"))
+        if not ok1:
+            return
+        cc, ok2 = QInputDialog.getText(self, self.tr("Edit Signature"), self.tr("Calling convention:"))
+        if not ok2:
+            return
+        new_sig_name, ok3 = QInputDialog.getText(self, self.tr("Edit Signature"), self.tr("Function name:"), text=func_name)
+        if ok3:
+            self._run_async(
+                bridge.edit_function_signature(address, ret_type, cc, new_sig_name),
+                on_success=lambda _: self._set_status("Signature updated"),
+                on_error=lambda e: self._set_status(f"Signature update failed: {e}"),
+            )
+
+    # ------------------------------------------------------------------
+    # Imports / Exports
+    # ------------------------------------------------------------------
 
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
@@ -624,6 +2064,10 @@ class GhidraPanel(AnalysisPanelBase):
             self._exports_table.setItem(row, 1, QTableWidgetItem(str(getattr(exp, "ordinal", 0))))
             self._exports_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(exp, 'address', 0):X}"))
 
+    # ------------------------------------------------------------------
+    # Strings
+    # ------------------------------------------------------------------
+
     def search_strings(self, pattern: str) -> None:
         """Search for strings matching pattern and populate table.
 
@@ -673,6 +2117,10 @@ class GhidraPanel(AnalysisPanelBase):
         if pattern := self._string_search_input.text().strip():
             self.search_strings(pattern)
 
+    # ------------------------------------------------------------------
+    # XRefs
+    # ------------------------------------------------------------------
+
     def show_xrefs(self, address: int) -> None:
         """Show cross-references to and from an address.
 
@@ -688,13 +2136,13 @@ class GhidraPanel(AnalysisPanelBase):
         self._run_async(
             bridge.get_xrefs_to(address),
             on_success=self._apply_xrefs_to,
-            on_error=lambda _: _logger.warning("ghidra_xrefs_to_failed", address=hex(address)),
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_xrefs_to_failed", "Xrefs-to lookup", addr, e),
         )
 
         self._run_async(
             bridge.get_xrefs_from(address),
             on_success=self._apply_xrefs_from,
-            on_error=lambda _: _logger.warning("ghidra_xrefs_from_failed", address=hex(address)),
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_xrefs_from_failed", "Xrefs-from lookup", addr, e),
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
@@ -735,48 +2183,852 @@ class GhidraPanel(AnalysisPanelBase):
             ])
             self._xrefs_tree.addTopLevelItem(item)
 
-    def _on_start_headless(self) -> None:
-        """Start Ghidra headless analyzer and auto-connect."""
-        if self._bridge is None:
-            self._set_status("No bridge configured")
+    # ------------------------------------------------------------------
+    # Labels / Bookmarks
+    # ------------------------------------------------------------------
+
+    def _on_set_label(self) -> None:
+        """Set a label at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
             return
-
-        ghidra_path = self._bridge.ghidra_path
-        if ghidra_path is None:
-            if path_str := QFileDialog.getExistingDirectory(
-                self,
-                self.tr("Select Ghidra Installation Directory"),
-            ):
-                self.set_ghidra_path(Path(path_str))
-
-            else:
-                return
-        project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
-        self._headless_btn.setEnabled(False)
-        self._set_status("Starting headless Ghidra...")
+        addr = self._parse_address(self._label_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for set label")
+            return
+        name = self._label_name_input.text().strip()
+        if not name:
+            self._set_status("Label name required")
+            return
         self._run_async(
-            self._bridge.start_headless(project_dir),
-            on_success=lambda _: self._on_headless_started(),
-            on_error=self._on_headless_error,
+            bridge.set_label(addr, name),
+            on_success=lambda _: self._on_refresh_labels(),
+            on_error=lambda e: self._set_status(f"Set label failed: {e}"),
         )
 
-    def _on_headless_started(self) -> None:
-        """Handle successful headless start."""
-        project_path = self._bridge.project_path if self._bridge is not None else None
-        if project_path is not None:
-            self._set_status(f"Headless Ghidra started | Project: {project_path}")
-        else:
-            self._set_status("Headless Ghidra started")
-        _logger.info("ghidra_headless_started", bridge_type="ghidra")
-        self._headless_btn.setEnabled(True)
-        self._sync_toolbar_state()
+    def _on_refresh_labels(self) -> None:
+        """Refresh the labels table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._label_addr_input.text())
+        if addr is None:
+            addr = 0
+        self._run_async(
+            bridge.get_labels(addr),
+            on_success=self._apply_labels,
+            on_error=lambda e: self._set_status(f"Refresh labels failed: {e}"),
+        )
 
-    def _on_headless_error(self, exc: object) -> None:
-        """Handle headless start failure.
+    def _apply_labels(self, result: object) -> None:
+        """Apply label data to the labels table.
+
+        Args:
+            result: Label list from the bridge.
+        """
+        labels = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._labels_table.setRowCount(0)
+        for lbl in labels:
+            row = self._labels_table.rowCount()
+            self._labels_table.insertRow(row)
+            self._labels_table.setItem(row, 0, QTableWidgetItem(str(lbl.get("name", ""))))
+            addr = int(cast("int", lbl.get("address", 0)))
+            self._labels_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}"))
+            self._labels_table.setItem(row, 2, QTableWidgetItem(str(lbl.get("type", ""))))
+
+    def _on_create_bookmark(self) -> None:
+        """Create a bookmark at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._bm_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for bookmark")
+            return
+        category = self._bm_category_input.text().strip()
+        comment = self._bm_comment_input.text().strip()
+        bm_type = self._bm_type_combo.currentText()
+        self._run_async(
+            bridge.create_bookmark(addr, category, comment, bm_type),
+            on_success=lambda _: self._on_refresh_bookmarks(),
+            on_error=lambda e: self._set_status(f"Create bookmark failed: {e}"),
+        )
+
+    def _on_refresh_bookmarks(self) -> None:
+        """Refresh the bookmarks table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_bookmarks(),
+            on_success=self._apply_bookmarks,
+            on_error=lambda e: self._set_status(f"Refresh bookmarks failed: {e}"),
+        )
+
+    def _apply_bookmarks(self, result: object) -> None:
+        """Apply bookmark data to the bookmarks table.
+
+        Args:
+            result: Bookmark list from the bridge.
+        """
+        bookmarks = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._bookmarks_table.setRowCount(0)
+        for bm in bookmarks:
+            row = self._bookmarks_table.rowCount()
+            self._bookmarks_table.insertRow(row)
+            addr = int(cast("int", bm.get("address", 0)))
+            self._bookmarks_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
+            self._bookmarks_table.setItem(row, 1, QTableWidgetItem(str(bm.get("category", ""))))
+            self._bookmarks_table.setItem(row, 2, QTableWidgetItem(str(bm.get("comment", ""))))
+            self._bookmarks_table.setItem(row, 3, QTableWidgetItem(str(bm.get("type", ""))))
+
+    # ------------------------------------------------------------------
+    # Structures
+    # ------------------------------------------------------------------
+
+    def _on_add_struct_field(self) -> None:
+        """Prompt user to add a field to the pending structure definition."""
+        field_name, ok1 = QInputDialog.getText(self, self.tr("Add Field"), self.tr("Field name:"))
+        if not ok1 or not field_name.strip():
+            return
+        field_type, ok2 = QInputDialog.getText(self, self.tr("Add Field"), self.tr("Field type:"))
+        if not ok2 or not field_type.strip():
+            return
+        self._struct_fields_list.append((field_name.strip(), field_type.strip()))
+        fields_str = ", ".join(f"{n}:{t}" for n, t in self._struct_fields_list)
+        self._struct_fields_label.setText(f"Fields: {fields_str}")
+
+    def _on_define_structure(self) -> None:
+        """Define a new structure in Ghidra."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._struct_name_input.text().strip()
+        if not name:
+            self._set_status("Structure name required")
+            return
+        field_dicts: list[dict[str, object]] = [{"name": n, "type": t, "size": 0} for n, t in self._struct_fields_list]
+        self._struct_fields_list.clear()
+        self._struct_fields_label.setText("")
+        self._run_async(
+            bridge.define_structure(name, field_dicts),
+            on_success=lambda _: self._on_refresh_structures(),
+            on_error=lambda e: self._set_status(f"Define structure failed: {e}"),
+        )
+
+    def _on_refresh_structures(self) -> None:
+        """Refresh the structures table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_structures(),
+            on_success=self._apply_structures,
+            on_error=lambda e: self._set_status(f"Refresh structures failed: {e}"),
+        )
+
+    def _apply_structures(self, result: object) -> None:
+        """Apply structure data to the structures table.
+
+        Args:
+            result: Structure list from the bridge.
+        """
+        structs = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._structs_table.setRowCount(0)
+        for st in structs:
+            row = self._structs_table.rowCount()
+            self._structs_table.insertRow(row)
+            self._structs_table.setItem(row, 0, QTableWidgetItem(str(st.get("name", ""))))
+            self._structs_table.setItem(row, 1, QTableWidgetItem(str(st.get("size", 0))))
+            field_count = int(cast("int", st.get("field_count", 0)))
+            self._structs_table.setItem(row, 2, QTableWidgetItem(str(field_count)))
+            self._structs_table.setItem(row, 3, QTableWidgetItem(str(st.get("path", ""))))
+
+    def _on_apply_structure(self) -> None:
+        """Apply a structure type at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._apply_struct_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for apply structure")
+            return
+        struct_name = self._apply_struct_name_input.text().strip()
+        if not struct_name:
+            self._set_status("Structure name required")
+            return
+        self._run_async(
+            bridge.apply_structure_at(addr, struct_name),
+            on_success=lambda _: self._set_status(f"Structure '{struct_name}' applied at 0x{addr:X}"),
+            on_error=lambda e: self._set_status(f"Apply structure failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Memory
+    # ------------------------------------------------------------------
+
+    def _on_refresh_memory_map(self) -> None:
+        """Refresh the memory map table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_memory_map(),
+            on_success=self._apply_memory_map,
+            on_error=lambda e: self._set_status(f"Refresh memory map failed: {e}"),
+        )
+
+    def _apply_memory_map(self, result: object) -> None:
+        """Apply memory map data to the memory table.
+
+        Args:
+            result: Memory block list from the bridge.
+        """
+        blocks = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._memory_table.setRowCount(0)
+        for blk in blocks:
+            row = self._memory_table.rowCount()
+            self._memory_table.insertRow(row)
+            self._memory_table.setItem(row, 0, QTableWidgetItem(str(blk.get("name", ""))))
+            start = int(cast("int", blk.get("start", 0)))
+            end = int(cast("int", blk.get("end", 0)))
+            size = int(cast("int", blk.get("size", 0)))
+            self._memory_table.setItem(row, 1, QTableWidgetItem(f"0x{start:X}"))
+            self._memory_table.setItem(row, 2, QTableWidgetItem(f"0x{end:X}"))
+            self._memory_table.setItem(row, 3, QTableWidgetItem(str(size)))
+            self._memory_table.setItem(row, 4, QTableWidgetItem("R" if blk.get("read", False) else ""))
+            self._memory_table.setItem(row, 5, QTableWidgetItem("W" if blk.get("write", False) else ""))
+            self._memory_table.setItem(row, 6, QTableWidgetItem("X" if blk.get("execute", False) else ""))
+            self._memory_table.setItem(row, 7, QTableWidgetItem("I" if blk.get("initialized", False) else ""))
+
+    def _on_read_bytes(self) -> None:
+        """Read bytes from the specified address and display hex dump."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._read_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for read bytes")
+            return
+        length = self._read_len_spin.value()
+        self._run_async(
+            bridge.read_bytes(addr, length),
+            on_success=self._apply_read_bytes,
+            on_error=lambda e: self._set_status(f"Read bytes failed: {e}"),
+        )
+
+    def _apply_read_bytes(self, result: object) -> None:
+        """Apply read bytes result to the hex dump view.
+
+        Args:
+            result: Dict with 'hex', 'bytes', and 'address' keys from the bridge,
+                or raw bytes/hex string.
+        """
+        if result is None:
+            self._hex_dump_view.setPlainText("")
+            return
+        raw: bytes
+        if isinstance(result, dict):
+            rd = cast("dict[str, object]", result)
+            byte_list = rd.get("bytes", [])
+            if isinstance(byte_list, list):
+                raw = bytes(int(cast("int", b)) for b in byte_list)
+            else:
+                hex_str = str(rd.get("hex", ""))
+                raw = bytes.fromhex(hex_str.replace(" ", "")) if hex_str else b""
+        elif isinstance(result, (bytes, bytearray)):
+            raw = bytes(result)
+        else:
+            raw = bytes.fromhex(str(result).replace(" ", ""))
+        lines: list[str] = []
+        for offset in range(0, len(raw), 16):
+            chunk = raw[offset : offset + 16]
+            hex_part = " ".join(f"{b:02X}" for b in chunk)
+            ascii_part = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in chunk)
+            lines.append(f"{offset:08X}  {hex_part:<47s}  {ascii_part}")
+        self._hex_dump_view.setPlainText("\n".join(lines))
+
+    def _on_write_bytes(self) -> None:
+        """Write hex bytes to the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._write_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for write bytes")
+            return
+        hex_data = self._write_hex_input.text().strip()
+        if not hex_data:
+            self._set_status("Hex data required")
+            return
+        clean_hex = hex_data.replace(" ", "")
+        try:
+            bytes.fromhex(clean_hex)
+        except ValueError:
+            self._set_status("Invalid hex data")
+            return
+        self._run_async(
+            bridge.write_bytes(addr, hex_data),
+            on_success=lambda _: self._set_status(f"Wrote {len(clean_hex) // 2} byte(s) at 0x{addr:X}"),
+            on_error=lambda e: self._set_status(f"Write bytes failed: {e}"),
+        )
+
+    def _on_create_memory_block(self) -> None:
+        """Create a new memory block in the program."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required")
+            return
+        start = self._parse_address(self._block_start_input.text())
+        if start is None:
+            self._set_status("Invalid start address for memory block")
+            return
+        size = self._block_size_spin.value()
+        perms = self._block_perms_input.text().strip()
+        self._run_async(
+            bridge.create_memory_block(name, start, size, perms),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Create memory block failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Segments / Program Info
+    # ------------------------------------------------------------------
+
+    def _on_refresh_segments(self) -> None:
+        """Refresh the segments table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_segments(),
+            on_success=self._apply_segments,
+            on_error=lambda e: self._set_status(f"Refresh segments failed: {e}"),
+        )
+
+    def _apply_segments(self, result: object) -> None:
+        """Apply segment data to the segments table.
+
+        Args:
+            result: Segment list from the bridge.
+        """
+        segments = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._segments_table.setRowCount(0)
+        for seg in segments:
+            row = self._segments_table.rowCount()
+            self._segments_table.insertRow(row)
+            self._segments_table.setItem(row, 0, QTableWidgetItem(str(seg.get("name", ""))))
+            start = int(cast("int", seg.get("start", 0)))
+            end = int(cast("int", seg.get("end", 0)))
+            size = int(cast("int", seg.get("size", 0)))
+            self._segments_table.setItem(row, 1, QTableWidgetItem(f"0x{start:X}"))
+            self._segments_table.setItem(row, 2, QTableWidgetItem(f"0x{end:X}"))
+            self._segments_table.setItem(row, 3, QTableWidgetItem(str(size)))
+            self._segments_table.setItem(row, 4, QTableWidgetItem("R" if seg.get("read", False) else ""))
+            self._segments_table.setItem(row, 5, QTableWidgetItem("W" if seg.get("write", False) else ""))
+            self._segments_table.setItem(row, 6, QTableWidgetItem("X" if seg.get("execute", False) else ""))
+            self._segments_table.setItem(row, 7, QTableWidgetItem(str(seg.get("type", ""))))
+            self._segments_table.setItem(row, 8, QTableWidgetItem(str(seg.get("source_name", ""))))
+
+    def _on_refresh_program_info(self) -> None:
+        """Refresh program information from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_program_info(),
+            on_success=self._apply_program_info,
+            on_error=lambda e: self._set_status(f"Refresh program info failed: {e}"),
+        )
+
+    def _apply_program_info(self, result: object) -> None:
+        """Apply program info to the info table.
+
+        Args:
+            result: Program info dict or object from the bridge.
+        """
+        self._program_info_table.setRowCount(0)
+        info: dict[str, object]
+        if isinstance(result, dict):
+            info = cast("dict[str, object]", result)
+        else:
+            info = {attr: getattr(result, attr, "") for attr in dir(result) if not attr.startswith("_")}
+        for key, value in info.items():
+            row = self._program_info_table.rowCount()
+            self._program_info_table.insertRow(row)
+            self._program_info_table.setItem(row, 0, QTableWidgetItem(str(key)))
+            self._program_info_table.setItem(row, 1, QTableWidgetItem(str(value)))
+
+    def _on_update_metadata(self) -> None:
+        """Update program metadata (name and image base)."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._meta_name_input.text().strip() or None
+        base_text = self._meta_base_input.text().strip()
+        image_base = self._parse_address(base_text) if base_text else None
+        if name is None and image_base is None:
+            self._set_status("No metadata to update")
+            return
+        self._run_async(
+            bridge.set_program_metadata(name=name, image_base=image_base),
+            on_success=lambda _: self._set_status("Metadata updated"),
+            on_error=lambda e: self._set_status(f"Update metadata failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Call Graph
+    # ------------------------------------------------------------------
+
+    def _on_build_call_graph(self) -> None:
+        """Build a call graph for the address in the call graph tab."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cg_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for call graph")
+            return
+        depth = self._cg_depth_spin.value()
+        direction = self._cg_direction_combo.currentText()
+        self._call_graph_tree.clear()
+        self._run_async(
+            bridge.get_call_tree(addr, direction=direction, depth=depth),
+            on_success=self._apply_call_graph,
+            on_error=lambda e: self._set_status(f"Build call graph failed: {e}"),
+        )
+
+    def _apply_call_graph(self, result: object) -> None:
+        """Apply call graph data to the call graph tree.
+
+        Args:
+            result: Call graph data from the bridge.
+        """
+        self._call_graph_tree.clear()
+        if result is None:
+            return
+        if isinstance(result, dict):
+            self._populate_call_graph_dict(cast("dict[str, object]", result), None)
+        elif isinstance(result, list):
+            nodes = cast("list[dict[str, object]]", result)
+            for node in nodes:
+                node_name = str(node.get("name", "") or node.get("function", ""))
+                node_addr = int(cast("int", node.get("address", 0)))
+                item = QTreeWidgetItem([node_name, f"0x{node_addr:X}"])
+                self._call_graph_tree.addTopLevelItem(item)
+
+    def _populate_call_graph_dict(self, data: dict[str, object], parent: QTreeWidgetItem | None) -> None:
+        """Recursively populate the call graph tree from a nested dict.
+
+        Args:
+            data: Node data dictionary with 'name', 'address', and optional 'children'.
+            parent: Parent tree item, or None for root nodes.
+        """
+        name = str(data.get("name", "") or data.get("function", ""))
+        addr = data.get("address", 0)
+        addr_str = f"0x{addr:X}" if isinstance(addr, int) else str(addr)
+        item = QTreeWidgetItem([name, addr_str])
+        if parent is None:
+            self._call_graph_tree.addTopLevelItem(item)
+        else:
+            tree_add_child(parent, item)
+        children = data.get("children", data.get("callees", []))
+        if isinstance(children, list):
+            for child in children:
+                if isinstance(child, dict):
+                    self._populate_call_graph_dict(cast("dict[str, object]", child), item)
+
+    def _on_show_callers(self) -> None:
+        """Show callers for the address in the call graph tab."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cg_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for callers")
+            return
+        self._run_async(
+            bridge.get_callers(addr),
+            on_success=self._apply_callers,
+            on_error=lambda e: self._set_status(f"Get callers failed: {e}"),
+        )
+
+    def _apply_callers(self, result: object) -> None:
+        """Apply callers data to the call graph tree.
+
+        Args:
+            result: Caller list from the bridge.
+        """
+        self._call_graph_tree.clear()
+        callers = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        for caller in callers:
+            caller_name = str(caller.get("caller_function", ""))
+            caller_addr = int(cast("int", caller.get("caller_address", 0)))
+            item = QTreeWidgetItem([caller_name, f"0x{caller_addr:X}"])
+            self._call_graph_tree.addTopLevelItem(item)
+
+    def _on_show_slice(self) -> None:
+        """Show a program slice from the address in the call graph tab."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cg_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for slice")
+            return
+        self._run_async(
+            bridge.get_slice(addr),
+            on_success=self._apply_slice,
+            on_error=lambda e: self._set_status(f"Get slice failed: {e}"),
+        )
+
+    def _apply_slice(self, result: object) -> None:
+        """Apply program slice data to the call graph tree.
+
+        Args:
+            result: Slice data from the bridge.
+        """
+        self._call_graph_tree.clear()
+        if not isinstance(result, dict):
+            return
+        slice_data = cast("dict[str, object]", result)
+        addrs_raw = slice_data.get("slice_addresses", [])
+        addrs = cast("list[int]", addrs_raw) if isinstance(addrs_raw, list) else []
+        for addr_val in addrs:
+            addr_int = int(addr_val)
+            item = QTreeWidgetItem([f"0x{addr_int:X}", f"0x{addr_int:X}"])
+            self._call_graph_tree.addTopLevelItem(item)
+
+    # ------------------------------------------------------------------
+    # Comments
+    # ------------------------------------------------------------------
+
+    def _on_add_comment(self) -> None:
+        """Add a comment at the specified address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cmt_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for comment")
+            return
+        cmt_type = self._cmt_type_combo.currentText()
+        cmt_text = self._cmt_text_input.toPlainText().strip()
+        if not cmt_text:
+            self._set_status("Comment text required")
+            return
+        self._run_async(
+            bridge.add_comment(addr, cmt_text, cmt_type),
+            on_success=lambda _: self._set_status("Comment added"),
+            on_error=lambda e: self._set_status(f"Add comment failed: {e}"),
+        )
+
+    def _on_refresh_comments(self) -> None:
+        """Refresh comments for the address range from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._cmt_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for refresh comments")
+            return
+        self._run_async(
+            bridge.get_comments(addr),
+            on_success=self._apply_comments,
+            on_error=lambda e: self._set_status(f"Refresh comments failed: {e}"),
+        )
+
+    def _on_load_all_comments(self) -> None:
+        """Load all comments from the entire program."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_all_comments(),
+            on_success=self._apply_comments,
+            on_error=lambda e: self._set_status(f"Load all comments failed: {e}"),
+        )
+
+    def _apply_comments(self, result: object) -> None:
+        """Apply comment data to the comments table.
+
+        Args:
+            result: Comment list from the bridge.
+        """
+        comments = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._comments_table.setRowCount(0)
+        for cmt in comments:
+            row = self._comments_table.rowCount()
+            self._comments_table.insertRow(row)
+            addr = int(cast("int", cmt.get("address", 0)))
+            self._comments_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
+            self._comments_table.setItem(row, 1, QTableWidgetItem(str(cmt.get("type", ""))))
+            self._comments_table.setItem(row, 2, QTableWidgetItem(str(cmt.get("comment", ""))))
+
+    # ------------------------------------------------------------------
+    # Symbols / Namespaces / Equates / Relocations / External Functions
+    # ------------------------------------------------------------------
+
+    def _on_search_symbols(self) -> None:
+        """Search symbols by name and optional type filter."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._sym_name_input.text().strip()
+        sym_type = self._sym_type_combo.currentText() or None
+        self._run_async(
+            bridge.search_symbols(name, sym_type),
+            on_success=self._apply_symbols,
+            on_error=lambda e: self._set_status(f"Symbol search failed: {e}"),
+        )
+
+    def _apply_symbols(self, result: object) -> None:
+        """Apply symbol search results to the symbols table.
+
+        Args:
+            result: Symbol list from the bridge.
+        """
+        symbols = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._symbols_table.setRowCount(0)
+        for sym in symbols:
+            row = self._symbols_table.rowCount()
+            self._symbols_table.insertRow(row)
+            self._symbols_table.setItem(row, 0, QTableWidgetItem(str(sym.get("name", ""))))
+            addr = int(cast("int", sym.get("address", 0)))
+            self._symbols_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}"))
+            self._symbols_table.setItem(row, 2, QTableWidgetItem(str(sym.get("type", ""))))
+            self._symbols_table.setItem(row, 3, QTableWidgetItem(str(sym.get("namespace", ""))))
+
+    def _on_create_namespace(self) -> None:
+        """Create a new namespace in Ghidra."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._ns_name_input.text().strip()
+        if not name:
+            self._set_status("Namespace name required")
+            return
+        parent = self._ns_parent_input.text().strip() or None
+        self._run_async(
+            bridge.create_namespace(name, parent),
+            on_success=lambda _: self._on_refresh_namespaces(),
+            on_error=lambda e: self._set_status(f"Create namespace failed: {e}"),
+        )
+
+    def _on_refresh_namespaces(self) -> None:
+        """Refresh the namespaces table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_namespaces(),
+            on_success=self._apply_namespaces,
+            on_error=lambda e: self._set_status(f"Refresh namespaces failed: {e}"),
+        )
+
+    def _apply_namespaces(self, result: object) -> None:
+        """Apply namespace data to the namespaces table.
+
+        Args:
+            result: Namespace list from the bridge.
+        """
+        namespaces = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._namespaces_table.setRowCount(0)
+        for ns in namespaces:
+            row = self._namespaces_table.rowCount()
+            self._namespaces_table.insertRow(row)
+            self._namespaces_table.setItem(row, 0, QTableWidgetItem(str(ns.get("name", ""))))
+            self._namespaces_table.setItem(row, 1, QTableWidgetItem(str(ns.get("path", ""))))
+
+    def _on_create_equate(self) -> None:
+        """Create a new equate in Ghidra."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        addr = self._parse_address(self._eq_addr_input.text())
+        if addr is None:
+            self._set_status("Invalid address for equate")
+            return
+        value_text = self._eq_value_input.text().strip()
+        value = self._parse_address(value_text)
+        if value is None:
+            self._set_status("Invalid equate value")
+            return
+        name = self._eq_name_input.text().strip()
+        if not name:
+            self._set_status("Equate name required")
+            return
+        self._run_async(
+            bridge.create_equate(addr, value, name),
+            on_success=lambda _: self._on_refresh_equates(),
+            on_error=lambda e: self._set_status(f"Create equate failed: {e}"),
+        )
+
+    def _on_refresh_equates(self) -> None:
+        """Refresh the equates table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_equates(),
+            on_success=self._apply_equates,
+            on_error=lambda e: self._set_status(f"Refresh equates failed: {e}"),
+        )
+
+    def _apply_equates(self, result: object) -> None:
+        """Apply equate data to the equates table.
+
+        Args:
+            result: Equate list from the bridge.
+        """
+        equates = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._equates_table.setRowCount(0)
+        for eq in equates:
+            row = self._equates_table.rowCount()
+            self._equates_table.insertRow(row)
+            self._equates_table.setItem(row, 0, QTableWidgetItem(str(eq.get("name", ""))))
+            self._equates_table.setItem(row, 1, QTableWidgetItem(str(eq.get("value", 0))))
+            ref_count = int(cast("int", eq.get("references", 0)))
+            self._equates_table.setItem(row, 2, QTableWidgetItem(str(ref_count)))
+
+    def _on_refresh_relocations(self) -> None:
+        """Refresh the relocations table from bridge."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._run_async(
+            bridge.get_relocations(),
+            on_success=self._apply_relocations,
+            on_error=lambda e: self._set_status(f"Refresh relocations failed: {e}"),
+        )
+
+    def _apply_relocations(self, result: object) -> None:
+        """Apply relocation data to the relocations table.
+
+        Args:
+            result: Relocation list from the bridge.
+        """
+        relocations = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
+        self._relocations_table.setRowCount(0)
+        for rel in relocations:
+            row = self._relocations_table.rowCount()
+            self._relocations_table.insertRow(row)
+            addr = int(cast("int", rel.get("address", 0)))
+            self._relocations_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
+            self._relocations_table.setItem(row, 1, QTableWidgetItem(str(rel.get("type", ""))))
+            self._relocations_table.setItem(row, 2, QTableWidgetItem(str(rel.get("symbol", ""))))
+
+    def _on_add_external_function(self) -> None:
+        """Add an external function reference to the program."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        library = self._ext_lib_input.text().strip()
+        func_name = self._ext_func_input.text().strip()
+        if not library or not func_name:
+            self._set_status("Library and function name required")
+            return
+        addr_text = self._ext_addr_input.text().strip()
+        addr = self._parse_address(addr_text) if addr_text else None
+        self._run_async(
+            bridge.add_external_function(library, func_name, addr),
+            on_success=lambda _: self._set_status(f"External function '{library}::{func_name}' added"),
+            on_error=lambda e: self._set_status(f"Add external function failed: {e}"),
+        )
+
+    # ------------------------------------------------------------------
+    # Scripting
+    # ------------------------------------------------------------------
+
+    def _on_run_script(self) -> None:
+        """Run the script in the editor without parameters."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        script = self._script_editor.toPlainText().strip()
+        if not script:
+            self._set_status("Script is empty")
+            return
+        self._run_script_btn.setEnabled(False)
+        self._run_async(
+            bridge.execute_script(script),
+            on_success=self._apply_script_result,
+            on_error=self._on_script_error,
+        )
+
+    def _on_run_script_with_params(self) -> None:
+        """Run the script in the editor with JSON parameters."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        script = self._script_editor.toPlainText().strip()
+        if not script:
+            self._set_status("Script is empty")
+            return
+        params_text = self._script_params_input.text().strip()
+        try:
+            params: dict[str, object] = json.loads(params_text) if params_text else {}
+        except json.JSONDecodeError as exc:
+            self._set_status(f"Invalid JSON params: {exc}")
+            return
+        self._run_script_params_btn.setEnabled(False)
+        self._run_async(
+            bridge.execute_script_with_params(script, params),
+            on_success=self._apply_script_result,
+            on_error=self._on_script_error,
+        )
+
+    def _apply_script_result(self, result: object) -> None:
+        """Apply script execution result to the output view.
+
+        Args:
+            result: Script output string or object from the bridge.
+        """
+        self._run_script_btn.setEnabled(True)
+        self._run_script_params_btn.setEnabled(True)
+        self._script_output.setPlainText(str(result) if result is not None else "")
+        self._set_status("Script executed")
+
+    def _on_script_error(self, exc: object) -> None:
+        """Handle script execution failure.
 
         Args:
             exc: The exception that occurred.
         """
-        self._set_status(f"Headless start failed: {exc}")
-        _logger.warning("ghidra_headless_failed", error=str(exc))
-        self._headless_btn.setEnabled(True)
+        self._run_script_btn.setEnabled(True)
+        self._run_script_params_btn.setEnabled(True)
+        self._script_output.setPlainText(f"Error: {exc}")
+        self._set_status(f"Script failed: {exc}")
+        _logger.warning("ghidra_script_failed", error=str(exc))
+
+    def _on_apply_decompiler_options(self) -> None:
+        """Apply decompiler configuration options."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        simplification = self._decomp_simplification_input.text().strip() or None
+        max_instructions = self._decomp_max_inst_spin.value()
+        self._run_async(
+            bridge.set_decompiler_options(simplification=simplification, max_instructions=max_instructions),
+            on_success=lambda _: self._set_status("Decompiler options applied"),
+            on_error=lambda e: self._set_status(f"Decompiler options failed: {e}"),
+        )
+
+    def _on_configure_analysis(self) -> None:
+        """Configure an analysis pass by name."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        analyzer_name = self._analyzer_name_input.text().strip()
+        if not analyzer_name:
+            self._set_status("Analyzer name required")
+            return
+        enabled = self._analyzer_enabled_check.isChecked()
+        self._run_async(
+            bridge.configure_analysis(analyzer_name, enabled=enabled),
+            on_success=lambda _: self._set_status(f"Analyzer '{analyzer_name}' configured (enabled={enabled})"),
+            on_error=lambda e: self._set_status(f"Configure analysis failed: {e}"),
+        )

@@ -10,8 +10,10 @@ This module provides a tool bridge that wraps the SandboxManager to expose sandb
 from __future__ import annotations
 
 import asyncio
+import importlib
+import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
 from intellicrack.core.logging import get_logger
@@ -31,10 +33,22 @@ from intellicrack.sandbox import (
 
 
 if TYPE_CHECKING:
+    import types
+
     from intellicrack.sandbox import ExecutionReport
 
 
 _logger = get_logger("bridges.sandbox")
+
+
+def _get_analysis_module() -> types.ModuleType:
+    """Lazily import the sandbox analysis module.
+
+    Returns:
+        types.ModuleType: The ``intellicrack.sandbox.analysis`` module.
+    """
+    return importlib.import_module("intellicrack.sandbox.analysis")
+
 
 _ERR_CREATE_FAILED = "Failed to create sandbox"
 _ERR_DESTROY_FAILED = "Failed to destroy sandbox"
@@ -52,6 +66,19 @@ _ERR_SNAPSHOT_LIST_FAILED = "Snapshot listing failed"
 _ERR_SNAPSHOT_DELETE_FAILED = "Snapshot deletion failed"
 _ERR_CONT_FAILED = "Failed to resume VM execution"
 _ERR_MESSAGES_FAILED = "Failed to retrieve pending messages"
+_ERR_PCAP_START_FAILED = "Failed to start PCAP capture"
+_ERR_PCAP_STOP_FAILED = "Failed to stop PCAP capture"
+_ERR_SCREENSHOT_FAILED = "Failed to capture screenshot"
+_ERR_ANTI_EVASION_FAILED = "Failed to apply anti-evasion"
+_ERR_MEMORY_DUMP_FAILED = "Failed to dump guest memory"
+_ERR_EXTRACT_FILES_FAILED = "Failed to extract dropped files"
+_ERR_YARA_SCAN_FAILED = "Failed to run YARA scan"
+_ERR_NO_REPORT = "No execution report available for this instance"
+_ERR_IOC_EXTRACT_FAILED = "Failed to extract IOCs"
+_ERR_TIMELINE_FAILED = "Failed to generate timeline"
+_ERR_BEHAVIOR_FAILED = "Failed to detect behaviors"
+_ERR_C2_DETECT_FAILED = "Failed to detect C2 patterns"
+_ERR_DIFF_FAILED = "Failed to diff reports"
 
 
 class SandboxBridge(ToolBridgeBase):
@@ -177,7 +204,7 @@ class SandboxBridge(ToolBridgeBase):
                             default="windows",
                         ),
                         ToolParameter(
-                            name="timeout",
+                            name="time_limit",
                             type="integer",
                             description="Execution timeout in seconds",
                             required=False,
@@ -209,7 +236,7 @@ class SandboxBridge(ToolBridgeBase):
                             required=True,
                         ),
                         ToolParameter(
-                            name="timeout",
+                            name="time_limit",
                             type="integer",
                             description="Command timeout in seconds",
                             required=False,
@@ -381,6 +408,231 @@ class SandboxBridge(ToolBridgeBase):
                     ],
                     returns="List of pending guest agent messages",
                 ),
+                ToolFunction(
+                    name="sandbox.pcap_start",
+                    description="Start network packet capture on a sandbox instance.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dictionary with capture_id",
+                ),
+                ToolFunction(
+                    name="sandbox.pcap_stop",
+                    description="Stop packet capture and retrieve the PCAP file.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="capture_id",
+                            type="string",
+                            description="Capture ID from pcap_start",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="output_path",
+                            type="string",
+                            description="Optional local path to save the PCAP file",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dictionary with pcap file path",
+                ),
+                ToolFunction(
+                    name="sandbox.screenshot",
+                    description="Capture a screenshot of the sandbox display.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="output_path",
+                            type="string",
+                            description="Optional local path to save the screenshot",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dictionary with screenshot file path",
+                ),
+                ToolFunction(
+                    name="sandbox.anti_evasion",
+                    description="Apply anti-evasion hardening to make the sandbox less detectable by malware.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="profile",
+                            type="string",
+                            description="Anti-evasion profile name",
+                            required=False,
+                            default="default",
+                        ),
+                    ],
+                    returns="Dictionary describing applied anti-evasion techniques",
+                ),
+                ToolFunction(
+                    name="sandbox.memory_dump",
+                    description="Dump guest memory to a file for offline analysis.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="output_path",
+                            type="string",
+                            description="Optional local path to save the memory dump",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dictionary with memory dump file path",
+                ),
+                ToolFunction(
+                    name="sandbox.extract_dropped_files",
+                    description="Extract files created by the binary during execution into a ZIP archive.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="output_path",
+                            type="string",
+                            description="Optional local path to save the ZIP archive",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dictionary with ZIP archive path",
+                ),
+                ToolFunction(
+                    name="sandbox.yara_scan",
+                    description="Run YARA rules against sandbox artifacts (dropped files or memory dump).",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="rules_path",
+                            type="string",
+                            description="Path to YARA rules file. Uses built-in rules if omitted.",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="scan_target",
+                            type="string",
+                            description="What to scan: 'files' for dropped files, 'memory' for memory dump",
+                            required=False,
+                            enum=["files", "memory"],
+                            default="files",
+                        ),
+                    ],
+                    returns="List of YARA match dictionaries",
+                ),
+                ToolFunction(
+                    name="sandbox.extract_iocs",
+                    description="Extract structured Indicators of Compromise from the last execution report.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of IOC entries with type, value, source, context",
+                ),
+                ToolFunction(
+                    name="sandbox.timeline",
+                    description="Generate a unified event timeline from the last execution report.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="categories",
+                            type="array",
+                            description="Optional list of categories to include (e.g., 'file', 'registry', 'network')",
+                            required=False,
+                        ),
+                    ],
+                    returns="List of timeline events sorted by timestamp",
+                ),
+                ToolFunction(
+                    name="sandbox.detect_behaviors",
+                    description="Match behavioral signatures against the last execution report using MITRE ATT&CK patterns.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="custom_rules_path",
+                            type="string",
+                            description="Optional path to custom behavioral rules YAML file",
+                            required=False,
+                        ),
+                    ],
+                    returns="List of behavioral signature matches with severity and MITRE ATT&CK IDs",
+                ),
+                ToolFunction(
+                    name="sandbox.detect_c2",
+                    description="Detect Command and Control communication patterns in the last execution report.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="List of C2 pattern detections with confidence scores",
+                ),
+                ToolFunction(
+                    name="sandbox.diff",
+                    description="Compare two sandbox execution reports to identify behavioral differences.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id_a",
+                            type="string",
+                            description="ID of the first sandbox instance",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="instance_id_b",
+                            type="string",
+                            description="ID of the second sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dictionary with per-field comparison of unique and common items",
+                ),
             ],
         )
 
@@ -518,7 +770,7 @@ class SandboxBridge(ToolBridgeBase):
         binary_path: str,
         args: list[str] | None = None,
         sandbox_type: str = "windows",
-        max_wait: int | None = None,
+        time_limit: int | None = None,
         *,
         monitor: bool = True,
     ) -> dict[str, Any]:
@@ -528,7 +780,7 @@ class SandboxBridge(ToolBridgeBase):
             binary_path: Path to the binary to execute.
             args: Optional command line arguments.
             sandbox_type: Type of sandbox to use.
-            max_wait: Optional timeout override in seconds.
+            time_limit: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
 
         Returns:
@@ -550,7 +802,7 @@ class SandboxBridge(ToolBridgeBase):
                 binary_path=path,
                 args=args,
                 sandbox_type=sb_type,
-                time_limit=max_wait,
+                time_limit=time_limit,
                 monitor=monitor,
             )
 
@@ -566,7 +818,7 @@ class SandboxBridge(ToolBridgeBase):
         self,
         instance_id: str,
         command: str,
-        max_wait: int | None = None,
+        time_limit: int | None = None,
         working_directory: str | None = None,
     ) -> dict[str, Any]:
         """Execute a command in an existing sandbox.
@@ -574,7 +826,7 @@ class SandboxBridge(ToolBridgeBase):
         Args:
             instance_id: ID of the sandbox instance.
             command: Command to execute.
-            max_wait: Optional command timeout in seconds.
+            time_limit: Optional command timeout in seconds.
             working_directory: Optional working directory.
 
         Returns:
@@ -593,7 +845,7 @@ class SandboxBridge(ToolBridgeBase):
         try:
             exit_code, stdout, stderr = await instance.sandbox.run_command(
                 command=command,
-                time_limit=max_wait,
+                time_limit=time_limit,
                 working_directory=working_directory,
             )
 
@@ -999,6 +1251,532 @@ class SandboxBridge(ToolBridgeBase):
                 "count": len(messages),
             }
 
+    async def pcap_start(self, instance_id: str) -> dict[str, Any]:
+        """Start packet capture on a sandbox instance.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+
+        Returns:
+            dict[str, Any]: Dictionary with capture_id.
+
+        Raises:
+            ToolError: If capture cannot be started.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        try:
+            capture_id = await instance.sandbox.start_pcap_capture()
+            instance.touch()
+            _logger.info("pcap_capture_started", instance_id=instance_id, capture_id=capture_id)
+        except SandboxError as e:
+            _logger.warning("pcap_start_failed", error=str(e))
+            msg = f"{_ERR_PCAP_START_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "capture_id": capture_id,
+            }
+
+    async def pcap_stop(
+        self,
+        instance_id: str,
+        capture_id: str,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
+        """Stop packet capture and retrieve the PCAP file.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            capture_id: Capture ID from pcap_start.
+            output_path: Optional local path to save the PCAP file.
+
+        Returns:
+            dict[str, Any]: Dictionary with pcap file path.
+
+        Raises:
+            ToolError: If capture cannot be stopped.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        out = Path(output_path) if output_path else None
+
+        try:
+            pcap_path = await instance.sandbox.stop_pcap_capture(capture_id, out)
+            instance.touch()
+            _logger.info("pcap_capture_stopped", instance_id=instance_id, path=str(pcap_path))
+        except SandboxError as e:
+            _logger.warning("pcap_stop_failed", error=str(e))
+            msg = f"{_ERR_PCAP_STOP_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "capture_id": capture_id,
+                "pcap_path": str(pcap_path),
+            }
+
+    async def screenshot(
+        self,
+        instance_id: str,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
+        """Capture a screenshot of the sandbox display.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            output_path: Optional local path to save the screenshot.
+
+        Returns:
+            dict[str, Any]: Dictionary with screenshot file path.
+
+        Raises:
+            ToolError: If screenshot cannot be captured.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        out = Path(output_path) if output_path else None
+
+        try:
+            screenshot_path = await instance.sandbox.capture_screenshot(out)
+            instance.touch()
+            _logger.info("screenshot_captured", instance_id=instance_id, path=str(screenshot_path))
+        except SandboxError as e:
+            _logger.warning("screenshot_failed", error=str(e))
+            msg = f"{_ERR_SCREENSHOT_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "screenshot_path": str(screenshot_path),
+            }
+
+    async def anti_evasion(
+        self,
+        instance_id: str,
+        profile: str = "default",
+    ) -> dict[str, Any]:
+        """Apply anti-evasion hardening to a sandbox instance.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            profile: Anti-evasion profile name.
+
+        Returns:
+            dict[str, Any]: Dictionary describing applied techniques.
+
+        Raises:
+            ToolError: If anti-evasion cannot be applied.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        try:
+            result = await instance.sandbox.apply_anti_evasion(profile)
+            instance.touch()
+            _logger.info("anti_evasion_applied", instance_id=instance_id, profile=profile)
+        except SandboxError as e:
+            _logger.warning("anti_evasion_failed", error=str(e))
+            msg = f"{_ERR_ANTI_EVASION_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "profile": profile,
+                "techniques": result,
+            }
+
+    async def memory_dump(
+        self,
+        instance_id: str,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
+        """Dump guest memory from a sandbox instance.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            output_path: Optional local path to save the memory dump.
+
+        Returns:
+            dict[str, Any]: Dictionary with memory dump file path.
+
+        Raises:
+            ToolError: If memory dump fails.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        out = Path(output_path) if output_path else None
+
+        try:
+            dump_path = await instance.sandbox.dump_memory(out)
+            instance.touch()
+            _logger.info("memory_dumped", instance_id=instance_id, path=str(dump_path))
+        except SandboxError as e:
+            _logger.warning("memory_dump_failed", error=str(e))
+            msg = f"{_ERR_MEMORY_DUMP_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "dump_path": str(dump_path),
+            }
+
+    async def extract_dropped_files(
+        self,
+        instance_id: str,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
+        """Extract files created during sandbox execution.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            output_path: Optional local path to save the ZIP archive.
+
+        Returns:
+            dict[str, Any]: Dictionary with ZIP archive path.
+
+        Raises:
+            ToolError: If extraction fails.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        out = Path(output_path) if output_path else None
+
+        try:
+            zip_path = await instance.sandbox.extract_dropped_files(out)
+            instance.touch()
+            _logger.info("dropped_files_extracted", instance_id=instance_id, path=str(zip_path))
+        except SandboxError as e:
+            _logger.warning("extract_dropped_files_failed", error=str(e))
+            msg = f"{_ERR_EXTRACT_FILES_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "zip_path": str(zip_path),
+            }
+
+    async def yara_scan(
+        self,
+        instance_id: str,
+        rules_path: str | None = None,
+        scan_target: str = "files",
+    ) -> dict[str, Any]:
+        """Run YARA rules against sandbox artifacts.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            rules_path: Path to YARA rules file.
+            scan_target: What to scan ('files' or 'memory').
+
+        Returns:
+            dict[str, Any]: Dictionary with YARA match results.
+
+        Raises:
+            ToolError: If scan fails.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        try:
+            matches = await instance.sandbox.yara_scan(rules_path, scan_target)
+            instance.touch()
+            _logger.info("yara_scan_completed", instance_id=instance_id, match_count=len(matches))
+        except SandboxError as e:
+            _logger.warning("yara_scan_failed", error=str(e))
+            msg = f"{_ERR_YARA_SCAN_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "matches": matches,
+                "match_count": len(matches),
+            }
+
+    async def extract_iocs(self, instance_id: str) -> dict[str, Any]:
+        """Extract IOCs from the last execution report.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+
+        Returns:
+            dict[str, Any]: Dictionary with list of IOC entries.
+
+        Raises:
+            ToolError: If extraction fails or no report available.
+        """
+        analysis = _get_analysis_module()
+        extract_fn = analysis.extract_iocs
+
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.last_report is None:
+            raise ToolError(_ERR_NO_REPORT)
+
+        try:
+            raw_iocs: list[dict[str, Any]] = extract_fn(instance.last_report)
+            _logger.info("iocs_extracted", instance_id=instance_id, count=len(raw_iocs))
+        except (ValueError, KeyError, TypeError) as e:
+            _logger.warning("ioc_extraction_failed", error=str(e))
+            msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "iocs": [dict(ioc) for ioc in raw_iocs],
+                "count": len(raw_iocs),
+            }
+
+    async def timeline(
+        self,
+        instance_id: str,
+        categories: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Generate an event timeline from the last execution report.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            categories: Optional list of categories to include.
+
+        Returns:
+            dict[str, Any]: Dictionary with list of timeline events.
+
+        Raises:
+            ToolError: If timeline generation fails or no report available.
+        """
+        analysis = _get_analysis_module()
+        timeline_fn = analysis.generate_timeline
+
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.last_report is None:
+            raise ToolError(_ERR_NO_REPORT)
+
+        try:
+            raw_events: list[dict[str, Any]] = timeline_fn(instance.last_report, categories)
+            _logger.info("timeline_generated", instance_id=instance_id, event_count=len(raw_events))
+        except (ValueError, KeyError, TypeError) as e:
+            _logger.warning("timeline_generation_failed", error=str(e))
+            msg = f"{_ERR_TIMELINE_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "events": [dict(ev) for ev in raw_events],
+                "count": len(raw_events),
+            }
+
+    async def detect_behaviors(
+        self,
+        instance_id: str,
+        custom_rules_path: str | None = None,
+    ) -> dict[str, Any]:
+        """Match behavioral signatures against the last execution report.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+            custom_rules_path: Optional path to custom rules file.
+
+        Returns:
+            dict[str, Any]: Dictionary with list of behavior matches.
+
+        Raises:
+            ToolError: If detection fails or no report available.
+        """
+        analysis = _get_analysis_module()
+        behaviors_fn = analysis.match_behaviors
+
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.last_report is None:
+            raise ToolError(_ERR_NO_REPORT)
+
+        custom_rules: list[dict[str, Any]] | None = None
+        if custom_rules_path is not None:
+            rules_file = Path(custom_rules_path)
+            if await asyncio.to_thread(rules_file.exists):
+                raw = await asyncio.to_thread(rules_file.read_text, encoding="utf-8")
+                loaded: Any = json.loads(raw)
+                if isinstance(loaded, list):
+                    custom_rules = cast("list[dict[str, Any]]", loaded)
+
+        try:
+            raw_matches: list[dict[str, Any]] = behaviors_fn(instance.last_report, custom_rules)
+            _logger.info("behaviors_detected", instance_id=instance_id, match_count=len(raw_matches))
+        except (ValueError, KeyError, TypeError) as e:
+            _logger.warning("behavior_detection_failed", error=str(e))
+            msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "matches": [dict(m) for m in raw_matches],
+                "count": len(raw_matches),
+            }
+
+    async def detect_c2(self, instance_id: str) -> dict[str, Any]:
+        """Detect C2 communication patterns in the last execution report.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+
+        Returns:
+            dict[str, Any]: Dictionary with list of C2 pattern detections.
+
+        Raises:
+            ToolError: If detection fails or no report available.
+        """
+        analysis = _get_analysis_module()
+        c2_fn = analysis.detect_c2_patterns
+
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.last_report is None:
+            raise ToolError(_ERR_NO_REPORT)
+
+        try:
+            patterns: list[dict[str, Any]] = c2_fn(instance.last_report.network_activity)
+            _logger.info("c2_patterns_detected", instance_id=instance_id, pattern_count=len(patterns))
+        except (ValueError, KeyError, TypeError) as e:
+            _logger.warning("c2_detection_failed", error=str(e))
+            msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id": instance_id,
+                "patterns": patterns,
+                "count": len(patterns),
+            }
+
+    async def diff(
+        self,
+        instance_id_a: str,
+        instance_id_b: str,
+    ) -> dict[str, Any]:
+        """Compare two sandbox execution reports.
+
+        Args:
+            instance_id_a: ID of the first sandbox instance.
+            instance_id_b: ID of the second sandbox instance.
+
+        Returns:
+            dict[str, Any]: Dictionary with per-field comparison results.
+
+        Raises:
+            ToolError: If comparison fails or reports unavailable.
+        """
+        analysis = _get_analysis_module()
+        diff_fn = analysis.diff_reports
+
+        manager = self._ensure_manager()
+
+        instance_a = await manager.get(instance_id_a)
+        if instance_a is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id_a}"
+            raise ToolError(msg)
+
+        instance_b = await manager.get(instance_id_b)
+        if instance_b is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id_b}"
+            raise ToolError(msg)
+
+        if instance_a.last_report is None:
+            msg = f"{_ERR_NO_REPORT} (instance {instance_id_a})"
+            raise ToolError(msg)
+
+        if instance_b.last_report is None:
+            msg = f"{_ERR_NO_REPORT} (instance {instance_id_b})"
+            raise ToolError(msg)
+
+        try:
+            result: dict[str, Any] = diff_fn(instance_a.last_report, instance_b.last_report)
+            _logger.info("reports_diffed", instance_a=instance_id_a, instance_b=instance_id_b)
+        except (ValueError, KeyError, TypeError) as e:
+            _logger.warning("diff_failed", error=str(e))
+            msg = f"{_ERR_DIFF_FAILED}: {e}"
+            raise ToolError(msg) from e
+        else:
+            return {
+                "instance_id_a": instance_id_a,
+                "instance_id_b": instance_id_b,
+                "diff": result,
+            }
+
+    async def get_vnc_port(self, instance_id: str) -> int | None:
+        """Get the VNC port for a sandbox instance.
+
+        Args:
+            instance_id: ID of the sandbox instance.
+
+        Returns:
+            int | None: VNC port number, or None if not available.
+
+        Raises:
+            ToolError: If instance not found.
+        """
+        manager = self._ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        return instance.sandbox.vnc_port
+
     @staticmethod
     def _report_to_dict(
         report: ExecutionReport,
@@ -1024,4 +1802,11 @@ class SandboxBridge(ToolBridgeBase):
             "registry_changes": list(report.registry_changes),
             "network_activity": list(report.network_activity),
             "process_activity": list(report.process_activity),
+            "api_calls": list(report.api_calls),
+            "service_changes": list(report.service_changes),
+            "kernel_objects": list(report.kernel_objects),
+            "dll_loads": list(report.dll_loads),
+            "injection_events": list(report.injection_events),
+            "resource_samples": list(report.resource_samples),
+            "clipboard_events": list(report.clipboard_events),
         }

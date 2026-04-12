@@ -234,6 +234,18 @@ class ToolInstallWorker(QThread):
             error_message = f"Failed to install ghidra_bridge: {result.stderr.strip()}"
             raise RuntimeError(error_message)
 
+        server_install_result = process_manager.run_tracked(
+            [sys.executable, "-m", "ghidra_bridge.install_server", str(ghidra_root)],
+            name="ghidra-bridge-server-install",
+            check=False,
+            timeout=300,
+        )
+        if server_install_result.returncode != _RETURNCODE_SUCCESS:
+            _logger.warning(
+                "ghidra_bridge_server_install_failed",
+                stderr=server_install_result.stderr.strip(),
+            )
+
         scripts_dir = ghidra_root / "ghidra_scripts"
         scripts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1142,12 +1154,12 @@ class ToolStatusDialog(QDialog):
         },
         "cutter": {
             "supports_static_analysis": True,
-            "supports_dynamic_analysis": True,
+            "supports_dynamic_analysis": False,
             "supports_decompilation": True,
-            "supports_debugging": True,
+            "supports_debugging": False,
             "supports_patching": True,
             "supports_scripting": True,
-            "supports_memory_access": True,
+            "supports_memory_access": False,
             "architectures": ["x86", "x86_64", "ARM", "ARM64", "MIPS", "PPC", "SPARC"],
             "formats": ["PE", "ELF", "Mach-O", "Raw", "DEX"],
         },

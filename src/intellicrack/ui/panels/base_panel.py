@@ -83,7 +83,7 @@ class AnalysisPanelBase(QWidget):
             QToolBar: Toolbar populated by ``_populate_toolbar``.
         """
         toolbar = QToolBar()
-        toolbar.setMovable(movable=False)
+        toolbar.setMovable(False)
         toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
         self._populate_toolbar(toolbar)
         return toolbar

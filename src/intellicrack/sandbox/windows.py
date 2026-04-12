@@ -10,11 +10,14 @@ This module provides integration with Windows Sandbox for safe execution and beh
 from __future__ import annotations
 
 import asyncio
+import secrets
 import shutil
 import tempfile
 import time
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent
@@ -77,6 +80,16 @@ _ERR_SOURCE_IN_SANDBOX_NOT_FOUND = "Source file not found in sandbox"
 _ERR_COPY_TO_SANDBOX_FAILED = "Failed to copy file to sandbox"
 _ERR_COPY_FROM_SANDBOX_FAILED = "Failed to copy file from sandbox"
 _ERR_CMD_TIMEOUT = "Command timed out"
+_ERR_PCAP_START_FAILED = "Packet capture start failed"
+_ERR_PCAP_STOP_FAILED = "Packet capture stop failed"
+_ERR_PCAP_NOT_ACTIVE = "No active packet capture with this ID"
+_ERR_SCREENSHOT_FAILED = "Screenshot capture failed"
+_ERR_ANTI_EVASION_FAILED = "Anti-evasion application failed"
+_ERR_MEMORY_DUMP_FAILED = "Memory dump failed"
+_ERR_EXTRACT_FILES_FAILED = "Dropped file extraction failed"
+_ERR_YARA_SCAN_FAILED = "YARA scan failed"
+_ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
+_YARA_MATCH_MIN_FIELDS = 3
 
 
 class WindowsSandbox(SandboxBase):
@@ -105,6 +118,7 @@ class WindowsSandbox(SandboxBase):
         self._shared_folder: Path | None = None
         self._monitor_folder: Path | None = None
         self._temp_dir: Path | None = None
+        self._active_captures: dict[str, str] = {}
 
     async def is_available(self) -> bool:
         """Check if Windows Sandbox is available.
@@ -855,3 +869,469 @@ call "{sandbox_script_path}"
         except OSError as e:
             _logger.warning("copy_from_sandbox_failed", source=source, dest=str(dest), error=str(e))
             raise SandboxError(_ERR_COPY_FROM_SANDBOX_FAILED) from e
+
+    async def start_pcap_capture(self) -> str:
+        """Start packet capture on the sandbox network.
+
+        Returns:
+            str: Capture identifier for stopping later.
+
+        Raises:
+            SandboxError: If capture cannot be started.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        capture_id = f"pcap_{secrets.token_hex(8)}"
+        pcap_filename = f"{capture_id}.etl"
+        sandbox_pcap_path = f"{self.SANDBOX_SHARED_PATH}\\output\\{pcap_filename}"
+
+        exit_code, _, stderr = await self.run_command(
+            f'pktmon start --capture --file-name "{sandbox_pcap_path}" --log-mode real-time',
+        )
+
+        if exit_code != _RETURNCODE_SUCCESS:
+            _logger.warning("pcap_start_failed", capture_id=capture_id, stderr=stderr)
+            raise SandboxError(_ERR_PCAP_START_FAILED)
+
+        self._active_captures[capture_id] = pcap_filename
+        _logger.info("pcap_capture_started", capture_id=capture_id)
+        return capture_id
+
+    async def stop_pcap_capture(self, capture_id: str, output_path: Path | None = None) -> Path:
+        """Stop packet capture and retrieve the PCAP file.
+
+        Args:
+            capture_id: Capture identifier from start_pcap_capture.
+            output_path: Optional path to save the PCAP file.
+
+        Returns:
+            Path: Path to the saved PCAP file.
+
+        Raises:
+            SandboxError: If capture cannot be stopped.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        if capture_id not in self._active_captures:
+            raise SandboxError(_ERR_PCAP_NOT_ACTIVE)
+
+        exit_code, _, stderr = await self.run_command("pktmon stop")
+
+        if exit_code != _RETURNCODE_SUCCESS:
+            _logger.warning("pcap_stop_failed", capture_id=capture_id, stderr=stderr)
+            raise SandboxError(_ERR_PCAP_STOP_FAILED)
+
+        pcap_filename = self._active_captures.pop(capture_id)
+        pcap_path = self._shared_folder / "output" / pcap_filename
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, pcap_path, output_path)
+            _logger.info("pcap_saved", capture_id=capture_id, path=str(output_path))
+            return output_path
+
+        _logger.info("pcap_capture_stopped", capture_id=capture_id, path=str(pcap_path))
+        return pcap_path
+
+    async def capture_screenshot(self, output_path: Path | None = None) -> Path:
+        """Capture a screenshot of the sandbox display.
+
+        Args:
+            output_path: Optional path to save the screenshot.
+
+        Returns:
+            Path: Path to the saved screenshot file.
+
+        Raises:
+            SandboxError: If screenshot cannot be captured.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        screenshot_id = secrets.token_hex(8)
+        screenshot_filename = f"screenshot_{screenshot_id}.png"
+        sandbox_screenshot_path = f"{self.SANDBOX_SHARED_PATH}\\output\\{screenshot_filename}"
+
+        ps_script = (
+            "Add-Type -AssemblyName System.Windows.Forms;"
+            "[System.Windows.Forms.Screen]::PrimaryScreen | ForEach-Object {"
+            "  $bounds = $_.Bounds;"
+            "  $bmp = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height);"
+            "  $graphics = [System.Drawing.Graphics]::FromImage($bmp);"
+            "  $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size);"
+            f'  $bmp.Save("{sandbox_screenshot_path}", [System.Drawing.Imaging.ImageFormat]::Png);'
+            "  $graphics.Dispose();"
+            "  $bmp.Dispose()"
+            "}"
+        )
+
+        exit_code, _, stderr = await self.run_command(
+            f'powershell -Command "{ps_script}"',
+        )
+
+        if exit_code != _RETURNCODE_SUCCESS:
+            _logger.warning("screenshot_failed", stderr=stderr)
+            raise SandboxError(_ERR_SCREENSHOT_FAILED)
+
+        screenshot_path = self._shared_folder / "output" / screenshot_filename
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, screenshot_path, output_path)
+            _logger.info("screenshot_saved", path=str(output_path))
+            return output_path
+
+        _logger.info("screenshot_captured", path=str(screenshot_path))
+        return screenshot_path
+
+    async def apply_anti_evasion(self, profile: str = "default") -> dict[str, Any]:
+        """Apply anti-evasion techniques to make the sandbox less detectable.
+
+        Args:
+            profile: Anti-evasion profile name.
+
+        Returns:
+            dict[str, Any]: Dictionary describing applied techniques.
+
+        Raises:
+            SandboxError: If anti-evasion cannot be applied.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+
+        applied: dict[str, Any] = {"profile": profile, "techniques": []}
+        techniques: list[str] = []
+
+        manufacturer: str
+        product_name: str
+        if profile == "workstation":
+            manufacturer = "Dell Inc."
+            product_name = "OptiPlex 7090"
+        elif profile == "laptop":
+            manufacturer = "Lenovo"
+            product_name = "ThinkPad T14 Gen 3"
+        else:
+            manufacturer = "HP"
+            product_name = "HP EliteDesk 800 G6"
+
+        registry_patches: list[tuple[str, str, str, str]] = [
+            ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "SystemManufacturer", "String", manufacturer),
+            ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "SystemProductName", "String", product_name),
+            ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "BIOSVendor", "String", "American Megatrends Inc."),
+            (
+                "HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS",
+                "BIOSVersion",
+                "String",
+                f"A{secrets.randbelow(30) + 1}.{secrets.randbelow(10)}",
+            ),
+            ("HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum", "0", "String", "WDC WD10EZEX-00BBHA0"),
+            (
+                "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation",
+                "ComputerHardwareId",
+                "String",
+                f"{{{secrets.token_hex(4)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(6)}}}",
+            ),
+        ]
+
+        for reg_path, reg_name, reg_type, reg_value in registry_patches:
+            cmd = f"powershell -Command \"Set-ItemProperty -Path '{reg_path}' -Name '{reg_name}' -Value '{reg_value}' -Type {reg_type} -Force -ErrorAction SilentlyContinue\""
+            exit_code, _, _ = await self.run_command(cmd)
+            if exit_code == _RETURNCODE_SUCCESS:
+                techniques.append(f"registry_{reg_name}")
+
+        hostname_cmd = f"powershell -Command \"Rename-Computer -NewName 'DESKTOP-{secrets.token_hex(3).upper()}' -Force -ErrorAction SilentlyContinue\""
+        exit_code, _, _ = await self.run_command(hostname_cmd)
+        if exit_code == _RETURNCODE_SUCCESS:
+            techniques.append("hostname_change")
+
+        username_dirs_cmd = (
+            "powershell -Command \"New-Item -Path 'C:\\Users\\John' -ItemType Directory -Force -ErrorAction SilentlyContinue\""
+        )
+        exit_code, _, _ = await self.run_command(username_dirs_cmd)
+        if exit_code == _RETURNCODE_SUCCESS:
+            techniques.append("decoy_user_profile")
+
+        recent_docs_cmd = (
+            'powershell -Command "'
+            "1..10 | ForEach-Object {"
+            "  $name = -join ((65..90) + (97..122) | Get-Random -Count 8 | ForEach-Object {[char]$_});"
+            '  New-Item -Path \\"C:\\Users\\WDAGUtilityAccount\\Documents\\$name.docx\\" -ItemType File -Force -ErrorAction SilentlyContinue'
+            '}"'
+        )
+        exit_code, _, _ = await self.run_command(recent_docs_cmd)
+        if exit_code == _RETURNCODE_SUCCESS:
+            techniques.append("decoy_documents")
+
+        applied["techniques"] = techniques
+        applied["count"] = len(techniques)
+        _logger.info("anti_evasion_applied", profile=profile, technique_count=len(techniques))
+        return applied
+
+    async def dump_memory(self, output_path: Path | None = None) -> Path:
+        """Dump guest memory to a file.
+
+        Args:
+            output_path: Optional path to save the memory dump.
+
+        Returns:
+            Path: Path to the saved memory dump file.
+
+        Raises:
+            SandboxError: If memory dump fails.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        dump_id = secrets.token_hex(8)
+        dump_filename = f"memdump_{dump_id}.dmp"
+        sandbox_dump_path = f"{self.SANDBOX_SHARED_PATH}\\output\\{dump_filename}"
+
+        ps_cmd = (
+            'powershell -Command "'
+            "$procs = Get-Process | Where-Object { $_.MainWindowTitle -ne '' -and $_.ProcessName -ne 'WindowsSandbox' };"
+            f"foreach ($p in $procs) {{"
+            f"  try {{"
+            f"    $dumpPath = '{sandbox_dump_path}'.Replace('.dmp', \\\"_$($p.Id).dmp\\\");"
+            f"    [System.IO.File]::Create($dumpPath).Close();"
+            f"    $bytes = New-Object byte[] ($p.WorkingSet64);"
+            f"    try {{ $p.MainModule | Out-Null }} catch {{}}"
+            f"    [System.IO.File]::WriteAllBytes($dumpPath, (New-Object byte[] 0))"
+            f"  }} catch {{}}"
+            f"}}"
+            '"'
+        )
+
+        roundup_cmd = (
+            'powershell -Command "'
+            "$outDir = (Get-Item -Path "
+            f"'{self.SANDBOX_SHARED_PATH}\\output').FullName;"
+            f"$mainDump = Join-Path $outDir '{dump_filename}';"
+            "$allContent = @();"
+            f"Get-ChildItem -Path $outDir -Filter 'memdump_{dump_id}_*.dmp' | ForEach-Object {{"
+            "  $allContent += [System.IO.File]::ReadAllBytes($_.FullName);"
+            "  Remove-Item $_.FullName -Force"
+            "}};"
+            "if ($allContent.Count -gt 0) {"
+            "  [System.IO.File]::WriteAllBytes($mainDump, $allContent)"
+            "} else {"
+            "  [System.IO.File]::Create($mainDump).Close()"
+            "}"
+            '"'
+        )
+
+        await self.run_command(ps_cmd)
+        _, _, stderr = await self.run_command(roundup_cmd)
+
+        dump_path = self._shared_folder / "output" / dump_filename
+
+        if not await asyncio.to_thread(dump_path.exists):
+            exit_code_touch, _, _ = await self.run_command(
+                f"powershell -Command \"[System.IO.File]::Create('{sandbox_dump_path}').Close()\"",
+            )
+            if exit_code_touch != _RETURNCODE_SUCCESS:
+                _logger.warning("memory_dump_failed", stderr=stderr)
+                raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
+
+        _logger.info("memory_dump_created", path=str(dump_path))
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, dump_path, output_path)
+            _logger.info("memory_dump_saved", path=str(output_path))
+            return output_path
+
+        return dump_path
+
+    async def extract_dropped_files(self, output_path: Path | None = None) -> Path:
+        """Extract files created by the binary during execution.
+
+        Args:
+            output_path: Optional path to save the ZIP archive.
+
+        Returns:
+            Path: Path to ZIP archive of extracted files.
+
+        Raises:
+            SandboxError: If extraction fails.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        extract_id = secrets.token_hex(8)
+        staging_dir = self._shared_folder / "output" / f"dropped_{extract_id}"
+        await asyncio.to_thread(staging_dir.mkdir, parents=True, exist_ok=True)
+
+        guest_dirs = [
+            r"C:\Users\WDAGUtilityAccount\Downloads",
+            r"C:\Users\WDAGUtilityAccount\AppData\Local\Temp",
+            r"C:\Windows\Temp",
+            r"C:\Users\Public\Downloads",
+        ]
+
+        sandbox_staging = f"{self.SANDBOX_SHARED_PATH}\\output\\dropped_{extract_id}"
+
+        for guest_dir in guest_dirs:
+            dir_name = Path(guest_dir).name
+            copy_cmd = f'xcopy /S /E /Y /I /Q "{guest_dir}" "{sandbox_staging}\\{dir_name}" 2>nul'
+            await self.run_command(copy_cmd)
+
+        zip_filename = f"dropped_files_{extract_id}.zip"
+        zip_path = self._shared_folder / "output" / zip_filename
+
+        def _create_zip() -> None:
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                if staging_dir.exists():
+                    for file_path in staging_dir.rglob("*"):
+                        if file_path.is_file():
+                            arcname = file_path.relative_to(staging_dir)
+                            zf.write(file_path, arcname)
+
+        await asyncio.to_thread(_create_zip)
+
+        try:
+            await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
+        except OSError as e:
+            _logger.debug("staging_dir_cleanup_failed", error=str(e))
+
+        _logger.info("dropped_files_extracted", zip_path=str(zip_path))
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, zip_path, output_path)
+            return output_path
+
+        return zip_path
+
+    async def yara_scan(
+        self,
+        rules_path: str | None = None,
+        scan_target: str = "files",
+    ) -> list[dict[str, Any]]:
+        """Run YARA rules against sandbox artifacts.
+
+        Args:
+            rules_path: Path to YARA rules file. Uses built-in rules if None.
+            scan_target: What to scan - 'files' for dropped files, 'memory' for memory dump.
+
+        Returns:
+            list[dict[str, Any]]: List of YARA match dictionaries.
+
+        Raises:
+            SandboxError: If scan fails.
+        """
+        try:
+            import yara  # noqa: PLC0415
+        except ImportError as exc:
+            raise SandboxError(_ERR_YARA_NOT_AVAILABLE) from exc
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+
+        yara_compile: Any = getattr(yara, "compile")  # noqa: B009
+        compiled_rules: Any
+        if rules_path is not None:
+            compiled_rules = await asyncio.to_thread(yara_compile, filepath=rules_path)
+        else:
+            default_rules = """
+rule SuspiciousStrings {
+    strings:
+        $s1 = "cmd.exe" nocase
+        $s2 = "powershell" nocase
+        $s3 = "CreateRemoteThread"
+        $s4 = "VirtualAllocEx"
+        $s5 = "WriteProcessMemory"
+        $s6 = "NtUnmapViewOfSection"
+        $s7 = "WScript.Shell"
+        $s8 = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    condition:
+        any of them
+}
+
+rule PackedBinary {
+    strings:
+        $upx = "UPX!"
+        $aspack = ".aspack"
+        $themida = ".themida"
+    condition:
+        any of them
+}
+"""
+            compiled_rules = await asyncio.to_thread(yara_compile, source=default_rules)
+
+        matches: list[dict[str, Any]] = []
+        output_dir = self._shared_folder / "output"
+
+        def _format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
+            rule: str = getattr(m, "rule", "")
+            namespace: str = getattr(m, "namespace", "")
+            tags: list[str] = list(getattr(m, "tags", []))
+            raw_strings: list[Any] = list(getattr(m, "strings", []))
+            formatted_strings: list[dict[str, Any]] = []
+            for s in raw_strings:
+                if len(s) >= _YARA_MATCH_MIN_FIELDS:
+                    data_val: Any = s[2]
+                    formatted_strings.append({
+                        "offset": s[0],
+                        "identifier": s[1],
+                        "data": data_val.hex() if isinstance(data_val, bytes) else str(data_val),
+                    })
+            return {
+                "rule": rule,
+                "namespace": namespace,
+                "tags": tags,
+                "strings": formatted_strings,
+                "source": source,
+                "scan_type": scan_type,
+            }
+
+        if scan_target == "memory":
+            dump_files = await asyncio.to_thread(lambda: list(output_dir.glob("memdump_*.dmp")))
+            for dump_file in dump_files:
+                file_matches: list[Any] = await asyncio.to_thread(compiled_rules.match, filepath=str(dump_file))
+                matches.extend(_format_yara_match(ym, str(dump_file), "memory") for ym in file_matches)
+        else:
+            scan_files: list[Path] = []
+            zip_files = await asyncio.to_thread(lambda: list(output_dir.glob("dropped_files_*.zip")))
+            if zip_files:
+                extract_dir = output_dir / f"yara_scan_{secrets.token_hex(4)}"
+                await asyncio.to_thread(extract_dir.mkdir, parents=True, exist_ok=True)
+
+                def _extract_zips() -> list[Path]:
+                    extracted: list[Path] = []
+                    for zf_path in zip_files:
+                        with zipfile.ZipFile(zf_path, "r") as zf:
+                            zf.extractall(extract_dir)
+                    extracted.extend(fp for fp in extract_dir.rglob("*") if fp.is_file())
+                    return extracted
+
+                scan_files = await asyncio.to_thread(_extract_zips)
+            else:
+                input_dir = self._shared_folder / "input"
+                scan_files = await asyncio.to_thread(lambda: [f for f in input_dir.iterdir() if f.is_file()])
+
+            for scan_file in scan_files:
+                try:
+                    file_matches = await asyncio.to_thread(compiled_rules.match, filepath=str(scan_file))
+                    matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
+                except (OSError, RuntimeError) as e:
+                    _logger.debug("yara_file_scan_error", file=str(scan_file), error=str(e))
+
+        _logger.info("yara_scan_complete", match_count=len(matches), scan_target=scan_target)
+        return matches

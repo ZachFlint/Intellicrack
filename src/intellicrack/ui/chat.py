@@ -350,6 +350,15 @@ class ChatInput(QFrame):
         self._clear_hint()
         self._text_edit.setFocus()
 
+    def set_text(self, text: str) -> None:
+        """Set the input text content.
+
+        Args:
+            text: Text to set in the input field.
+        """
+        self._clear_hint()
+        self._text_edit.setPlainText(text)
+
 
 class ChatPanel(QFrame):
     """Main chat panel widget.
@@ -520,4 +529,17 @@ class ChatPanel(QFrame):
 
     def set_focus_input(self) -> None:
         """Set focus to the input widget."""
+        self._input.set_focus()
+
+    def insert_context_text(self, text: str) -> None:
+        """Insert context text into the chat input field.
+
+        Replaces the current input content with the provided text
+        and sets focus to the input widget for immediate editing
+        or submission.
+
+        Args:
+            text: Context text to insert.
+        """
+        self._input.set_text(text)
         self._input.set_focus()

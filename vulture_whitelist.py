@@ -3,14 +3,6 @@
 
 intellicrack.__init__.__getattr__  # unused-function
 intellicrack.bridges.base.matched_bytes  # unused-variable
-intellicrack.bridges.binary.apply_patch  # unused-method
-intellicrack.bridges.binary.revert_patch  # unused-method
-intellicrack.bridges.binary.search_pattern  # unused-method
-intellicrack.bridges.binary.search_pattern_with_wildcards  # unused-method
-intellicrack.bridges.binary.disassemble_at_offset  # unused-method
-intellicrack.bridges.binary.detail  # unused-attribute
-intellicrack.bridges.binary.calculate_checksum  # unused-method
-intellicrack.bridges.binary.offset_to_rva  # unused-method
 intellicrack.bridges.cutter.get_function  # unused-method
 intellicrack.bridges.cutter.search_bytes  # unused-method
 intellicrack.bridges.cutter.search_bytes_wildcard  # unused-method

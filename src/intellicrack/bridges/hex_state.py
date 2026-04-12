@@ -15,14 +15,13 @@ import enum
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from intellicrack.core.types import HexDocumentFull
 
 
@@ -45,6 +44,9 @@ class HexDocumentEvent(enum.Enum):
         HIGHLIGHT_RULE_REMOVED: A byte highlight rule was removed.
         DISPLAY_MODE_CHANGED: The hex display mode changed.
         PATTERN_EXECUTED: A .hexpat pattern was executed against the document.
+        VA_MAPPING_CHANGED: Virtual address mappings were added or removed.
+        ALIGNMENT_GRID_CHANGED: The alignment grid size changed.
+        COLOR_MODE_CHANGED: The byte color-mapping mode changed.
     """
 
     DOCUMENT_OPENED = "document_opened"
@@ -59,6 +61,9 @@ class HexDocumentEvent(enum.Enum):
     HIGHLIGHT_RULE_REMOVED = "highlight_rule_removed"
     DISPLAY_MODE_CHANGED = "display_mode_changed"
     PATTERN_EXECUTED = "pattern_executed"
+    VA_MAPPING_CHANGED = "va_mapping_changed"
+    ALIGNMENT_GRID_CHANGED = "alignment_grid_changed"
+    COLOR_MODE_CHANGED = "color_mode_changed"
 
 
 StateCallbackFn = Callable[[HexDocumentEvent, dict[str, Any]], None]
@@ -214,7 +219,8 @@ class HexDocumentState:
             offset: New cursor byte offset.
             source: Identifier of the caller for loop-guard filtering.
         """
-        self._cursor_offset = offset
+        with self._lock:
+            self._cursor_offset = offset
         self._notify(
             HexDocumentEvent.CURSOR_MOVED,
             {"offset": offset},
@@ -235,7 +241,8 @@ class HexDocumentState:
             end: Selection end offset (inclusive).
             source: Identifier of the caller for loop-guard filtering.
         """
-        self._selection = (start, end)
+        with self._lock:
+            self._selection = (start, end)
         self._notify(
             HexDocumentEvent.SELECTION_CHANGED,
             {"start": start, "end": end},
@@ -248,7 +255,8 @@ class HexDocumentState:
         Args:
             source: Identifier of the caller for loop-guard filtering.
         """
-        self._selection = None
+        with self._lock:
+            self._selection = None
         self._notify(
             HexDocumentEvent.SELECTION_CHANGED,
             {"start": -1, "end": -1},
@@ -306,7 +314,8 @@ class HexDocumentState:
         Args:
             mode: Display mode string (e.g. ``"hex8"``, ``"hex16_le"``).
         """
-        self._display_mode = mode
+        with self._lock:
+            self._display_mode = mode
 
     def notify_data_modified(
         self,
@@ -335,6 +344,7 @@ class HexDocumentState:
             path: Path where the document was saved.
             source: Identifier of the caller for loop-guard filtering.
         """
+        self._file_path = Path(path)
         self._notify(
             HexDocumentEvent.DOCUMENT_SAVED,
             {"path": path},
@@ -451,6 +461,60 @@ class HexDocumentState:
             source=source,
         )
 
+    def notify_va_mapping_changed(
+        self,
+        mapping_count: int,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that virtual address mappings changed.
+
+        Args:
+            mapping_count: Number of active VA mappings after the change.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.VA_MAPPING_CHANGED,
+            {"mapping_count": mapping_count},
+            source=source,
+        )
+
+    def notify_alignment_grid_changed(
+        self,
+        size: int,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that the alignment grid size changed.
+
+        Args:
+            size: New alignment grid size in bytes, or 0 for disabled.
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.ALIGNMENT_GRID_CHANGED,
+            {"size": size},
+            source=source,
+        )
+
+    def notify_color_mode_changed(
+        self,
+        mode: str,
+        *,
+        source: str = "",
+    ) -> None:
+        """Notify observers that the byte color-mapping mode changed.
+
+        Args:
+            mode: New color mode string (e.g. ``"none"``, ``"entropy"``).
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        self._notify(
+            HexDocumentEvent.COLOR_MODE_CHANGED,
+            {"mode": mode},
+            source=source,
+        )
+
     def _notify(
         self,
         event_type: HexDocumentEvent,
@@ -489,4 +553,5 @@ class HexDocumentState:
                         exc_info=True,
                     )
         finally:
-            self._notify_guard = False
+            with self._lock:
+                self._notify_guard = False

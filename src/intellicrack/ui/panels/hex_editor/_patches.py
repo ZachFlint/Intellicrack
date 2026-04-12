@@ -106,7 +106,7 @@ class PatchesMixin:
             parent,
             "Export Patches",
             "",
-            "IPS Patches (*.ips);;IPS32 Patches (*.ips32);;All Files (*)",
+            "IPS Patches (*.ips);;IPS32 Patches (*.ips32);;BPS Patches (*.bps);;UPS Patches (*.ups);;All Files (*)",
         )
         save_path = result[0] if result else ""
         if not save_path:
@@ -147,7 +147,7 @@ class PatchesMixin:
             parent,
             "Import Patches",
             "",
-            "Patch Files (*.ips *.ips32);;All Files (*)",
+            "Patch Files (*.ips *.ips32 *.bps *.ups);;All Files (*)",
         )
         file_path_str = result[0] if result else ""
         if not file_path_str:

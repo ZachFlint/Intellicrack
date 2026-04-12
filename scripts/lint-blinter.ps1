@@ -32,7 +32,7 @@ try {
     $batFiles | ForEach-Object {
         Invoke-Expression "$Pixi python -m blinter $Flags $_ 2>&1"
     } | Out-File -FilePath $tmpFile -Encoding utf8
-    Invoke-Expression "$Pixi python scripts/process_lint_json.py blinter --text $tmpFile"
+    Invoke-Expression "$Pixi python scripts/lint_report.py blinter --text $tmpFile"
 } finally {
     Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
 }

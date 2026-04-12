@@ -1,1 +1,4 @@
 tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+blinter,Intellicrack.cmd,1,0,error,E018,E018,Unix line endings detected,,,,,,,,,,,,
+blinter,REMOVE_NUL.cmd,1,0,error,E018,E018,Unix line endings detected,,,,,,,,,,,,
+blinter,scripts\build-cli-launcher.cmd,1,0,error,E018,E018,Unix line endings detected,,,,,,,,,,,,

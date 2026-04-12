@@ -148,10 +148,13 @@ __all__: list[str] = [
     "AttachError",
     "AuthenticationError",
     "BinaryInfo",
+    "BlockInfo",
     "BreakpointInfo",
     "BridgeAnalysisSummary",
     "CacheConfig",
     "ChildProcessInfo",
+    "ClassInfo",
+    "CommentInfo",
     "CompiledYaraRules",
     "ConfigurationError",
     "ConfirmationLevel",
@@ -159,14 +162,18 @@ __all__: list[str] = [
     "CrossReference",
     "DataTypeInfo",
     "ExportInfo",
+    "FlagInfo",
     "FridaDeviceInfo",
     "FunctionInfo",
+    "GadgetInfo",
+    "HeaderInfo",
     "HexDocumentFull",
     "HexDocumentLike",
     "HookInfo",
     "ImportInfo",
     "InitializationError",
     "IntellicrackError",
+    "LibraryInfo",
     "MemoryRegion",
     "Message",
     "ModelInfo",
@@ -180,8 +187,11 @@ __all__: list[str] = [
     "ProviderName",
     "RateLimitError",
     "RegisterState",
+    "RelocationInfo",
+    "ResourceInfo",
     "SandboxError",
     "SectionInfo",
+    "SegmentInfo",
     "Session",
     "StalkerEvent",
     "StalkerTrace",
@@ -201,6 +211,7 @@ __all__: list[str] = [
     "ToolResult",
     "ToolState",
     "VariableInfo",
+    "VtableInfo",
 ]
 
 
@@ -212,7 +223,6 @@ class ToolName(enum.Enum):
     FRIDA = "frida"
     CUTTER = "cutter"
     PROCESS = "process"
-    BINARY = "binary"
     SANDBOX = "sandbox"
     HEX_EDITOR = "hex_editor"
 
@@ -947,6 +957,183 @@ class SymbolInfo:
 
 
 @dataclass
+class LibraryInfo:
+    """Linked library information from binary analysis.
+
+    Attributes:
+        name: Library file name or path.
+    """
+
+    name: str
+
+
+@dataclass
+class HeaderInfo:
+    """Binary header field information.
+
+    Attributes:
+        name: Header field name.
+        value: Header field value as string.
+        address: Address of the header field if available.
+    """
+
+    name: str
+    value: str
+    address: int
+
+
+@dataclass
+class RelocationInfo:
+    """Relocation table entry.
+
+    Attributes:
+        name: Symbol name for the relocation.
+        address: Physical address of the relocation.
+        type: Relocation type string.
+        vaddr: Virtual address of the relocation.
+    """
+
+    name: str
+    address: int
+    type: str
+    vaddr: int
+
+
+@dataclass
+class ResourceInfo:
+    """Embedded resource information from a binary.
+
+    Attributes:
+        name: Resource name or identifier.
+        address: Physical address of the resource.
+        size: Size of the resource in bytes.
+        type: Resource type string.
+        language: Resource language identifier.
+    """
+
+    name: str
+    address: int
+    size: int
+    type: str
+    language: str
+
+
+@dataclass
+class GadgetInfo:
+    """ROP gadget information from binary analysis.
+
+    Attributes:
+        address: Address of the gadget.
+        instructions: Disassembled instruction sequence.
+        size: Size of the gadget in bytes.
+    """
+
+    address: int
+    instructions: str
+    size: int
+
+
+@dataclass
+class ClassInfo:
+    """Class information from binary analysis.
+
+    Attributes:
+        name: Class name.
+        address: Address of the class metadata.
+        methods: List of method dictionaries with name and address.
+        fields: List of field dictionaries with name and offset.
+    """
+
+    name: str
+    address: int
+    methods: list[dict[str, Any]]
+    fields: list[dict[str, Any]]
+
+
+@dataclass
+class VtableInfo:
+    """Virtual function table information.
+
+    Attributes:
+        address: Address of the vtable.
+        methods: List of method dictionaries with name and address.
+        name: Class or vtable name.
+    """
+
+    address: int
+    methods: list[dict[str, Any]]
+    name: str
+
+
+@dataclass
+class CommentInfo:
+    """Comment annotation at a binary address.
+
+    Attributes:
+        address: Address of the comment.
+        text: Comment text content.
+        comment_type: Type of comment (inline, function, etc.).
+    """
+
+    address: int
+    text: str
+    comment_type: str
+
+
+@dataclass
+class FlagInfo:
+    """Named flag/label at a binary address.
+
+    Attributes:
+        name: Flag name.
+        address: Address of the flag.
+        size: Size covered by the flag.
+    """
+
+    name: str
+    address: int
+    size: int
+
+
+@dataclass
+class BlockInfo:
+    """Basic block information from control flow analysis.
+
+    Attributes:
+        address: Start address of the basic block.
+        size: Size of the block in bytes.
+        jump: Address of the true/unconditional jump target.
+        fail: Address of the false/fallthrough target.
+        instructions: List of instruction dictionaries in the block.
+    """
+
+    address: int
+    size: int
+    jump: int | None
+    fail: int | None
+    instructions: list[dict[str, Any]]
+
+
+@dataclass
+class SegmentInfo:
+    """Binary segment information (ELF segments, PE sections extended).
+
+    Attributes:
+        name: Segment name.
+        address: Start address of the segment.
+        size: Size of the segment in bytes.
+        permissions: Permission string (e.g. 'r-x').
+        type: Segment type identifier.
+    """
+
+    name: str
+    address: int
+    size: int
+    permissions: str
+    type: str
+
+
+@dataclass
 class CrashInfo:
     """Process crash report from Frida.
 
@@ -1038,6 +1225,19 @@ class FridaDeviceInfo:
 
 
 @dataclass
+class FridaProcessEntry:
+    """Frida process information.
+
+    Attributes:
+        pid: Process identifier.
+        name: Process name.
+    """
+
+    pid: int
+    name: str
+
+
+@dataclass
 class ApiResolverMatch:
     """Result from Frida ApiResolver query.
 
@@ -1048,6 +1248,57 @@ class ApiResolverMatch:
 
     name: str
     address: int
+
+
+@dataclass
+class InstructionInfo:
+    """Disassembled instruction information from Frida.
+
+    Attributes:
+        address: Instruction address.
+        next_address: Address of the next instruction.
+        size: Size of the instruction in bytes.
+        mnemonic: Instruction mnemonic.
+        op_str: Operand string.
+        string: Full instruction string representation.
+    """
+
+    address: int
+    next_address: int
+    size: int
+    mnemonic: str
+    op_str: str
+    string: str
+
+
+@dataclass
+class SystemCallResult:
+    """Result from a SystemFunction call capturing errno/lastError.
+
+    Attributes:
+        value: Return value of the function.
+        errno: POSIX errno value after the call.
+        last_error: Windows GetLastError value after the call.
+    """
+
+    value: int
+    errno: int
+    last_error: int
+
+
+@dataclass
+class FridaApplicationInfo:
+    """Frida application information from device enumeration.
+
+    Attributes:
+        identifier: Application bundle identifier.
+        name: Human-readable application name.
+        pid: Process ID (0 if not running).
+    """
+
+    identifier: str
+    name: str
+    pid: int
 
 
 @dataclass

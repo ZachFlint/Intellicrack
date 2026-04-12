@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory)][string]$DisplayName,
     [Parameter(Mandatory)][string]$Command,
     [switch]$TextMode,
-    [string]$Processor = 'process_lint_json',
+    [string]$Processor = 'lint_report',
     [string]$Pixi = 'pixi run',
     [string]$WorkDir,
     [string[]]$ReportFormats = @('txt', 'json', 'xml'),
@@ -37,7 +37,8 @@ try {
     } elseif ($SuppressStderr) {
         Invoke-Expression $Command 2>$null | Out-File -FilePath $tmpFile -Encoding utf8
     } else {
-        Invoke-Expression $Command 2>&1 | Out-File -FilePath $tmpFile -Encoding utf8
+        $captured = Invoke-Expression "$Command 2>&1"
+        $captured | Out-File -FilePath $tmpFile -Encoding utf8
     }
 
     if ($WorkDir) { Pop-Location }

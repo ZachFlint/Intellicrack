@@ -427,6 +427,7 @@ docker-compose.override.yml
 
 # Linting and testing reports
 reports/ci-jobs/
+reports/.tool_durations.json
 bandit-report.json
 rollout-*.json
 .aider*

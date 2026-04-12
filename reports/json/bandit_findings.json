@@ -1,7 +1,101 @@
 {
   "tool": "bandit",
-  "generated": "2026-04-10T20:02:48.454225+00:00",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-04-11T07:08:13.898986+00:00",
+  "total_findings": 7,
+  "total_files": 5,
+  "files": [
+    {
+      "path": "src/intellicrack/bridges\\hex_editor.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 5134,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "High",
+          "code": "B102:exec_used",
+          "message": "Use of exec detected.",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5134: [Medium] B102:exec_used: Use of exec detected."
+        },
+        {
+          "line": 5375,
+          "column": null,
+          "severity": "High",
+          "confidence": "High",
+          "code": "B324:hashlib",
+          "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5375: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox\\qemu.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 2618,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "Medium",
+          "code": "B108:hardcoded_tmp_directory",
+          "message": "Probable insecure usage of temp file/directory.",
+          "raw": "src/intellicrack/sandbox\\qemu.py:2618: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory."
+        },
+        {
+          "line": 2619,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "Medium",
+          "code": "B108:hardcoded_tmp_directory",
+          "message": "Probable insecure usage of temp file/directory.",
+          "raw": "src/intellicrack/sandbox\\qemu.py:2619: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox\\analysis.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 47,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "Medium",
+          "code": "B104:hardcoded_bind_all_interfaces",
+          "message": "Possible binding to all interfaces.",
+          "raw": "src/intellicrack/sandbox\\analysis.py:47: [Medium] B104:hardcoded_bind_all_interfaces: Possible binding to all interfaces."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 547,
+          "column": null,
+          "severity": "Medium",
+          "confidence": "High",
+          "code": "B102:exec_used",
+          "message": "Use of exec detected.",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py:547: [Medium] B102:exec_used: Use of exec detected."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 176,
+          "column": null,
+          "severity": "High",
+          "confidence": "High",
+          "code": "B324:hashlib",
+          "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py:176: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+        }
+      ]
+    }
+  ]
 }

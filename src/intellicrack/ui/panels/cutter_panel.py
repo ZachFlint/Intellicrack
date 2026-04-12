@@ -14,13 +14,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, override
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
     QSplitter,
@@ -38,6 +42,21 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import AssemblySyntaxHighlighter, CSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.cutter_tabs import (
+    AllStringsTab,
+    CommentsTab,
+    ESILConsoleTab,
+    FlagsTab,
+    HeadersTab,
+    HexdumpTab,
+    LibrariesTab,
+    RelocationsTab,
+    ResourcesTab,
+    ROPGadgetsTab,
+    SegmentsTab,
+    SymbolsTab,
+    TypeBrowserTab,
+)
 from intellicrack.ui.panels.graph_view import CFGGraphView
 from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
@@ -71,6 +90,21 @@ _SECTION_COLUMNS = ["Name", "VAddr", "VSize", "RawSize", "Entropy", "Flags"]
 _XREF_COLUMNS = ["Direction", "From/To", "Type", "Function"]
 
 
+def _perm_to_rwx(perm: int) -> str:
+    """Convert a Rizin section permission integer to an rwx string.
+
+    Args:
+        perm: Permission flags (4=read, 2=write, 1=execute).
+
+    Returns:
+        str: Human-readable permission string like 'r-x'.
+    """
+    r = "r" if perm & 4 else "-"
+    w = "w" if perm & 2 else "-"
+    x = "x" if perm & 1 else "-"
+    return f"{r}{w}{x}"
+
+
 class CutterPanel(AnalysisPanelBase):
     """Native Qt panel for Cutter/Rizin reverse engineering analysis.
 
@@ -102,7 +136,19 @@ class CutterPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._status_label = self._add_toolbar_label(toolbar, "Ready")
+        self._save_btn = self._add_tool_button(toolbar, "Save Binary", self._on_save_binary)
+        self._patch_btn = self._add_tool_button(toolbar, "Patch...", self._on_patch_dialog)
+
+        toolbar.addSeparator()
+
+        self._goto_input = self._add_toolbar_line_edit(toolbar, "Address...", 120)
+        self._goto_btn = self._add_tool_button(toolbar, "Go", self._on_goto_address)
+        self._find_func_input = self._add_toolbar_line_edit(toolbar, "Function name...", 140)
+        self._find_func_btn = self._add_tool_button(toolbar, "Find", self._on_find_function)
+
+        toolbar.addSeparator()
+
+        self.status_label = self._add_toolbar_label(toolbar, "Ready")
 
     @override
     def _create_content(self) -> QWidget:
@@ -178,6 +224,8 @@ class CutterPanel(AnalysisPanelBase):
         set_sorting_enabled(self._func_tree, enable=True)
         set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
         self._func_tree.itemClicked.connect(self._on_function_clicked)
+        self._func_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._func_tree.customContextMenuRequested.connect(self._on_func_context_menu)
         layout.addWidget(self._func_tree)
 
         return container
@@ -278,6 +326,45 @@ class CutterPanel(AnalysisPanelBase):
         set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
         set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
         tabs.addTab(self._xrefs_tree, "XRefs")
+
+        self._all_strings_tab = AllStringsTab()
+        tabs.addTab(self._all_strings_tab, "All Strings")
+
+        self._symbols_tab = SymbolsTab()
+        tabs.addTab(self._symbols_tab, "Symbols")
+
+        self._libraries_tab = LibrariesTab()
+        tabs.addTab(self._libraries_tab, "Libraries")
+
+        self._headers_tab = HeadersTab()
+        tabs.addTab(self._headers_tab, "Headers")
+
+        self._relocations_tab = RelocationsTab()
+        tabs.addTab(self._relocations_tab, "Relocations")
+
+        self._resources_tab = ResourcesTab()
+        tabs.addTab(self._resources_tab, "Resources")
+
+        self._segments_tab = SegmentsTab()
+        tabs.addTab(self._segments_tab, "Segments")
+
+        self._comments_tab = CommentsTab()
+        tabs.addTab(self._comments_tab, "Comments")
+
+        self._flags_tab = FlagsTab()
+        tabs.addTab(self._flags_tab, "Flags")
+
+        self._rop_gadgets_tab = ROPGadgetsTab()
+        tabs.addTab(self._rop_gadgets_tab, "ROP Gadgets")
+
+        self._type_browser_tab = TypeBrowserTab()
+        tabs.addTab(self._type_browser_tab, "Type Browser")
+
+        self._hexdump_tab = HexdumpTab()
+        tabs.addTab(self._hexdump_tab, "Hexdump")
+
+        self._esil_tab = ESILConsoleTab()
+        tabs.addTab(self._esil_tab, "ESIL Console")
 
         return tabs
 
@@ -401,7 +488,7 @@ class CutterPanel(AnalysisPanelBase):
         """
         self._set_status(f"Init failed: {exc}")
         _logger.warning("cutter_init_failed", error=str(exc))
-        self.tool_started.emit()
+        self.tool_closed.emit()
 
     def _on_binary_loaded(self, binary_path: Path) -> None:
         """Handle successful binary load and auto-trigger analysis.
@@ -466,6 +553,7 @@ class CutterPanel(AnalysisPanelBase):
         self._refresh_imports()
         self._refresh_exports()
         self._refresh_sections()
+        self._refresh_new_tabs()
 
     def _on_analysis_error(self, exc: object) -> None:
         """Handle analysis failure.
@@ -745,7 +833,7 @@ class CutterPanel(AnalysisPanelBase):
             self._sections_table.setItem(
                 row,
                 5,
-                QTableWidgetItem(f"0x{getattr(sec, 'characteristics', 0):X}"),
+                QTableWidgetItem(_perm_to_rwx(getattr(sec, "characteristics", 0))),
             )
 
     def search_strings(self, pattern: str) -> None:
@@ -896,3 +984,264 @@ class CutterPanel(AnalysisPanelBase):
         self.console_output.appendPlainText(f"[error] {exc}")
         _logger.warning("cutter_command_failed", error=str(exc))
         self._console_run_btn.setEnabled(True)
+
+    def _refresh_new_tabs(self) -> None:
+        """Refresh all new data tabs after analysis completes."""
+        if self._bridge is None:
+            return
+        run_fn = self._run_async
+        self._all_strings_tab.refresh(self._bridge, run_fn)
+        self._symbols_tab.refresh(self._bridge, run_fn)
+        self._libraries_tab.refresh(self._bridge, run_fn)
+        self._headers_tab.refresh(self._bridge, run_fn)
+        self._relocations_tab.refresh(self._bridge, run_fn)
+        self._resources_tab.refresh(self._bridge, run_fn)
+        self._segments_tab.refresh(self._bridge, run_fn)
+        self._comments_tab.refresh(self._bridge, run_fn)
+        self._flags_tab.refresh(self._bridge, run_fn)
+        self._rop_gadgets_tab.refresh(self._bridge, run_fn)
+        self._type_browser_tab.refresh(self._bridge, run_fn)
+        self._hexdump_tab.refresh(self._bridge, run_fn)
+        self._esil_tab.refresh(self._bridge, run_fn)
+
+    def _on_save_binary(self) -> None:
+        """Save the binary with cached patches via file dialog."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Patched Binary",
+            "",
+            "All Files (*)",
+        )
+        if not file_path:
+            return
+
+        self._set_status("Saving...")
+        self._run_async(
+            self._bridge.save_binary(file_path),
+            on_success=lambda _: self._set_status(f"Saved: {file_path}"),
+            on_error=lambda e: self._set_status(f"Save failed: {e}"),
+        )
+
+    def _on_patch_dialog(self) -> None:
+        """Open a dialog to apply a patch at an address."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        addr_str, ok = QInputDialog.getText(self, "Patch Address", "Address (hex):")
+        if not ok or not addr_str:
+            return
+
+        try:
+            address = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+        except ValueError:
+            self._set_status("Invalid address")
+            return
+
+        hex_data, ok2 = QInputDialog.getText(self, "Patch Data", "Hex bytes (e.g. 90 90 90):")
+        if not ok2 or not hex_data:
+            return
+
+        self._run_async(
+            self._bridge.write_bytes(address, hex_data),
+            on_success=lambda _: self._set_status(f"Patched @ 0x{address:X}"),
+            on_error=lambda e: self._set_status(f"Patch failed: {e}"),
+        )
+
+    def _on_goto_address(self) -> None:
+        """Seek to the address in the goto input and refresh disassembly."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        addr_text = self._goto_input.text().strip()
+        if not addr_text:
+            return
+
+        try:
+            address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text)
+        except ValueError:
+            self._set_status("Invalid address")
+            return
+
+        self._run_async(
+            self._bridge.seek(address),
+            on_success=lambda _: self._on_goto_complete(address),
+            on_error=lambda e: self._set_status(f"Seek failed: {e}"),
+        )
+
+    def _on_goto_complete(self, address: int) -> None:
+        """Handle seek completion by refreshing disassembly.
+
+        Args:
+            address: Address that was sought.
+        """
+        if self._bridge is None:
+            return
+        self._set_status(f"@ 0x{address:X}")
+        self._run_async(
+            self._bridge.disassemble(address),
+            on_success=self._apply_disassembly,
+            on_error=lambda _: _logger.warning("cutter_disassemble_failed", address=hex(address)),
+        )
+
+    def _on_find_function(self) -> None:
+        """Find a function by name and navigate to it."""
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+
+        name = self._find_func_input.text().strip()
+        if not name:
+            return
+
+        self._run_async(
+            self._bridge.get_function_address(name),
+            on_success=lambda addr: self._on_find_func_result(name, addr),
+            on_error=lambda e: self._set_status(f"Find failed: {e}"),
+        )
+
+    def _on_find_func_result(self, name: str, addr: object) -> None:
+        """Handle function address lookup result.
+
+        Args:
+            name: Function name searched for.
+            addr: Resolved address or None.
+        """
+        if addr is None or not isinstance(addr, int):
+            self._set_status(f"Function not found: {name}")
+            return
+        self._set_status(f"{name} @ 0x{addr:X}")
+        self._goto_input.setText(f"0x{addr:X}")
+        self._on_goto_complete(addr)
+
+    def _on_func_context_menu(self, position: object) -> None:
+        """Show context menu for the function tree.
+
+        Args:
+            position: Click position from the signal.
+        """
+        item = self._func_tree.itemAt(position)
+        if item is None:
+            return
+
+        address = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
+        if not isinstance(address, int):
+            return
+
+        menu = QMenu(self)
+
+        rename_action = QAction("Rename...", self)
+        rename_action.triggered.connect(lambda: self._ctx_rename_function(address))
+        menu.addAction(rename_action)
+
+        comment_action = QAction("Add Comment...", self)
+        comment_action.triggered.connect(lambda: self._ctx_add_comment(address))
+        menu.addAction(comment_action)
+
+        decompile_action = QAction("Decompile", self)
+        decompile_action.triggered.connect(self._on_decompile_selected)
+        menu.addAction(decompile_action)
+
+        graph_action = QAction("Show Graph", self)
+        graph_action.triggered.connect(self._on_graph_selected)
+        menu.addAction(graph_action)
+
+        copy_action = QAction("Copy Address", self)
+        copy_action.triggered.connect(lambda: self._ctx_copy_address(address))
+        menu.addAction(copy_action)
+
+        read_action = QAction("Read Bytes...", self)
+        read_action.triggered.connect(lambda: self._ctx_read_bytes(address))
+        menu.addAction(read_action)
+
+        menu.exec(self._func_tree.viewport().mapToGlobal(position))
+
+    def _ctx_rename_function(self, address: int) -> None:
+        """Rename a function via input dialog.
+
+        Args:
+            address: Function address to rename.
+        """
+        if self._bridge is None:
+            return
+        new_name, ok = QInputDialog.getText(self, "Rename Function", "New name:")
+        if not ok or not new_name:
+            return
+        self._run_async(
+            self._bridge.rename_function(address, new_name),
+            on_success=lambda _: self._on_rename_complete(address, new_name),
+            on_error=lambda e: self._set_status(f"Rename failed: {e}"),
+        )
+
+    def _on_rename_complete(self, address: int, new_name: str) -> None:
+        """Handle successful function rename.
+
+        Args:
+            address: Function address that was renamed.
+            new_name: The new function name.
+        """
+        self._set_status(f"Renamed 0x{address:X} -> {new_name}")
+        self._on_refresh_functions()
+
+    def _ctx_add_comment(self, address: int) -> None:
+        """Add a comment at an address via input dialog.
+
+        Args:
+            address: Address for the comment.
+        """
+        if self._bridge is None:
+            return
+        comment, ok = QInputDialog.getText(self, "Add Comment", "Comment:")
+        if not ok or not comment:
+            return
+        self._run_async(
+            self._bridge.add_comment(address, comment),
+            on_success=lambda _: self._set_status(f"Comment added @ 0x{address:X}"),
+            on_error=lambda e: self._set_status(f"Comment failed: {e}"),
+        )
+
+    def _ctx_copy_address(self, address: int) -> None:
+        """Copy an address to the clipboard.
+
+        Args:
+            address: Address to copy.
+        """
+        clipboard: QClipboard | None = QApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(f"0x{address:X}")
+            self._set_status(f"Copied 0x{address:X}")
+
+    def _ctx_read_bytes(self, address: int) -> None:
+        """Read bytes at an address and display in console.
+
+        Args:
+            address: Address to read from.
+        """
+        if self._bridge is None:
+            return
+        count, ok = QInputDialog.getInt(self, "Read Bytes", "Count:", 16, 1, 4096)
+        if not ok:
+            return
+        self._run_async(
+            self._bridge.read_bytes(address, count),
+            on_success=lambda data: self._show_read_bytes(address, data),
+            on_error=lambda e: self.console_output.appendPlainText(f"[error] Read failed: {e}"),
+        )
+
+    def _show_read_bytes(self, address: int, data: object) -> None:
+        """Display read bytes in the console.
+
+        Args:
+            address: Source address.
+            data: Bytes read from the bridge.
+        """
+        if isinstance(data, bytes):
+            hex_str = data.hex(" ")
+            self.console_output.appendPlainText(f"[0x{address:X}] {hex_str}")
+        elif data is not None:
+            self.console_output.appendPlainText(f"[0x{address:X}] {data}")

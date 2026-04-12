@@ -73,6 +73,18 @@ try {
     Write-Step 'GIT' "Using fallback: $commitMsg" '32'
 }
 
+Write-Step 'GIT' "Regenerating CHANGELOG.md (including pending commit)..." '32'
+try {
+    & "$PSScriptRoot/update-changelog.ps1" -Pixi "$Pixi" -Message "$commitMsg"
+    if ($LASTEXITCODE -ne 0) { throw "update-changelog.ps1 failed (exit=$LASTEXITCODE)" }
+    git add CHANGELOG.md 2>&1 | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -ne 0) { throw "git add CHANGELOG.md failed" }
+    Write-Success "CHANGELOG.md staged"
+} catch {
+    Write-Fail "Changelog step failed: $_"
+    Write-Step 'GIT' "Proceeding with commit without changelog update" '33'
+}
+
 Write-Step 'GIT' "Committing and pushing..." '32'
 try {
     git commit --no-verify -m $commitMsg 2>&1 | ForEach-Object { Write-Host "  $_" }

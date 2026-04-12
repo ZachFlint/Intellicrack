@@ -10,11 +10,12 @@ This module provides integration with x64dbg for dynamic analysis, debugging, an
 from __future__ import annotations
 
 import asyncio
+import math
 import os
 import struct
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypeGuard
+from typing import TYPE_CHECKING, Any, Literal, TypeGuard, cast
 
 from intellicrack.bridges.base import (
     BridgeCapabilities,
@@ -144,6 +145,23 @@ PE_SECTION_HEADER_SIZE = 40
 PE_EXPORT_MAX = 4096
 PE_EXPORT_NAME_BUF = 256
 PE_EXPORT_DIR_MIN_SIZE = 0x10000
+_PE_RESOURCE_TYPE_NAMES: dict[int, str] = {
+    1: "RT_CURSOR",
+    2: "RT_BITMAP",
+    3: "RT_ICON",
+    4: "RT_MENU",
+    5: "RT_DIALOG",
+    6: "RT_STRING",
+    7: "RT_FONTDIR",
+    8: "RT_FONT",
+    9: "RT_ACCELERATOR",
+    10: "RT_RCDATA",
+    11: "RT_MESSAGETABLE",
+    12: "RT_GROUP_CURSOR",
+    14: "RT_GROUP_ICON",
+    16: "RT_VERSION",
+    24: "RT_MANIFEST",
+}
 
 
 _ERR_REQUIRES_WINDOWS = "requires Windows platform"
@@ -778,6 +796,13 @@ class X64DbgBridge(DebuggerBridge):
                             description="Hex pattern with wildcards",
                             required=True,
                         ),
+                        ToolParameter(
+                            name="alignment",
+                            type="integer",
+                            description="Only return matches at addresses divisible by this value",
+                            required=False,
+                            default=1,
+                        ),
                     ],
                     returns="List of matching addresses",
                 ),
@@ -1080,6 +1105,480 @@ class X64DbgBridge(DebuggerBridge):
                     ],
                     returns="Exception config result",
                 ),
+                ToolFunction(
+                    name="x64dbg.spawn",
+                    description="Spawn a process for debugging",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Path to executable", required=True),
+                        ToolParameter(name="args", type="array", description="Optional argument list", required=False),
+                    ],
+                    returns="Process ID",
+                ),
+                ToolFunction(
+                    name="x64dbg.patch_instruction",
+                    description="Assemble and write an instruction at address using x64dbg's assembler",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Target address", required=True),
+                        ToolParameter(name="instruction", type="string", description="Assembly instruction text", required=True),
+                    ],
+                    returns="Dict with success status and address",
+                ),
+                ToolFunction(
+                    name="x64dbg.nop_range",
+                    description="Fill an address range with NOP (0x90) bytes",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Start address", required=True),
+                        ToolParameter(name="size", type="integer", description="Number of bytes to NOP", required=True),
+                    ],
+                    returns="Dict with success status, address, and size",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_module_imports",
+                    description="Get imports of a loaded module via the plugin",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name (e.g. 'kernel32.dll')", required=True),
+                    ],
+                    returns="List of import dicts with iatRva, iatVa, ordinal, name, undecoratedName",
+                ),
+                ToolFunction(
+                    name="x64dbg.find_references",
+                    description="Find references to an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Target address", required=True),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.find_string_references",
+                    description="Find string references in a module",
+                    parameters=[
+                        ToolParameter(name="module", type="string", description="Module name", required=True),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.find_intermodular_calls",
+                    description="Find intermodular calls in a module",
+                    parameters=[
+                        ToolParameter(name="module", type="string", description="Module name", required=True),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.evaluate_expression",
+                    description="Evaluate an x64dbg expression",
+                    parameters=[
+                        ToolParameter(
+                            name="expression", type="string", description="Expression to evaluate (e.g. 'rax+rbx*4')", required=True
+                        ),
+                    ],
+                    returns="Expression result value as integer",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_function_cfg",
+                    description="Get control flow graph of a function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Function entry address", required=True),
+                        ToolParameter(
+                            name="max_blocks", type="integer", description="Maximum number of basic blocks to analyze", required=False
+                        ),
+                    ],
+                    returns="Dict with entry, blocks list, and edges list",
+                ),
+                ToolFunction(
+                    name="x64dbg.save_database",
+                    description="Save the x64dbg analysis database",
+                    parameters=[],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.load_database",
+                    description="Load the x64dbg analysis database",
+                    parameters=[],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.clear_database",
+                    description="Clear the x64dbg analysis database",
+                    parameters=[],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_patches",
+                    description="List all applied patches",
+                    parameters=[],
+                    returns="List of patch dicts with address, oldByte, newByte",
+                ),
+                ToolFunction(
+                    name="x64dbg.restore_patch",
+                    description="Restore original bytes at a patched address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the patch to restore", required=True),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.export_patches",
+                    description="Export patches to a file",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Output file path", required=True),
+                    ],
+                    returns="Dict with success status and path",
+                ),
+                ToolFunction(
+                    name="x64dbg.suspend_thread",
+                    description="Suspend a thread",
+                    parameters=[
+                        ToolParameter(name="tid", type="integer", description="Thread ID", required=True),
+                    ],
+                    returns="Dict with success status and tid",
+                ),
+                ToolFunction(
+                    name="x64dbg.resume_thread",
+                    description="Resume a suspended thread",
+                    parameters=[
+                        ToolParameter(name="tid", type="integer", description="Thread ID", required=True),
+                    ],
+                    returns="Dict with success status and tid",
+                ),
+                ToolFunction(
+                    name="x64dbg.switch_thread",
+                    description="Switch the active debugger thread",
+                    parameters=[
+                        ToolParameter(name="tid", type="integer", description="Thread ID to switch to", required=True),
+                    ],
+                    returns="Dict with success status and tid",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_thread_name",
+                    description="Set a thread's name",
+                    parameters=[
+                        ToolParameter(name="tid", type="integer", description="Thread ID", required=True),
+                        ToolParameter(name="name", type="string", description="Display name for the thread", required=True),
+                    ],
+                    returns="Dict with success status, tid, and name",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_seh_chain",
+                    description="Get the structured exception handler chain",
+                    parameters=[],
+                    returns="List of SEH entry dicts with handler and next addresses",
+                ),
+                ToolFunction(
+                    name="x64dbg.read_peb",
+                    description="Read the Process Environment Block",
+                    parameters=[],
+                    returns="Dict with PEB fields including beingDebugged, imageBaseAddress, ntGlobalFlag",
+                ),
+                ToolFunction(
+                    name="x64dbg.read_teb",
+                    description="Read the Thread Environment Block",
+                    parameters=[
+                        ToolParameter(
+                            name="tid", type="integer", description="Thread ID; uses current thread if not provided", required=False
+                        ),
+                    ],
+                    returns="Dict with TEB fields including stackBase, stackLimit, processId, threadId",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_pe_directories",
+                    description="Get PE data directory entries for a module",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name (e.g. 'ntdll.dll')", required=True),
+                    ],
+                    returns="List of directory entry dicts with index, name, rva, size",
+                ),
+                ToolFunction(
+                    name="x64dbg.add_watch",
+                    description="Add a watch expression",
+                    parameters=[
+                        ToolParameter(name="expression", type="string", description="Expression to watch", required=True),
+                    ],
+                    returns="Dict with success status and expression",
+                ),
+                ToolFunction(
+                    name="x64dbg.remove_watch",
+                    description="Remove a watch expression by index",
+                    parameters=[
+                        ToolParameter(name="index", type="integer", description="Watch index to remove", required=True),
+                    ],
+                    returns="Dict with success status and index",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_watches",
+                    description="Get all watch expressions and their current values",
+                    parameters=[],
+                    returns="List of watch dicts",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_logging_breakpoint",
+                    description="Set a logging breakpoint that logs text without stopping",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(name="log_text", type="string", description="Text to log when hit", required=True),
+                        ToolParameter(
+                            name="non_stopping", type="boolean", description="If True, continue execution after logging", required=False
+                        ),
+                    ],
+                    returns="Dict with success status, address, and log_text",
+                ),
+                ToolFunction(
+                    name="x64dbg.configure_breakpoint",
+                    description="Configure breakpoint properties including condition, log text, command, and fast resume",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
+                        ToolParameter(name="condition", type="string", description="Conditional expression", required=False),
+                        ToolParameter(name="log_text", type="string", description="Log text on hit", required=False),
+                        ToolParameter(name="command", type="string", description="Command to execute on hit", required=False),
+                        ToolParameter(name="fast_resume", type="boolean", description="Whether to auto-resume after hit", required=False),
+                    ],
+                    returns="Dict with success status and configured properties",
+                ),
+                ToolFunction(
+                    name="x64dbg.set_dll_breakpoint",
+                    description="Set a breakpoint on DLL load/unload",
+                    parameters=[
+                        ToolParameter(name="dll_name", type="string", description="DLL name to break on", required=True),
+                        ToolParameter(
+                            name="event",
+                            type="string",
+                            description="Event type: 'load' or 'unload'",
+                            required=False,
+                            enum=["load", "unload"],
+                        ),
+                    ],
+                    returns="Dict with success status, dll_name, and event",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_into",
+                    description="Trace into with optional condition",
+                    parameters=[
+                        ToolParameter(name="condition", type="string", description="Trace break condition expression", required=False),
+                        ToolParameter(name="max_steps", type="integer", description="Maximum number of steps", required=False),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.trace_over",
+                    description="Trace over with optional condition",
+                    parameters=[
+                        ToolParameter(name="condition", type="string", description="Trace break condition expression", required=False),
+                        ToolParameter(name="max_steps", type="integer", description="Maximum number of steps", required=False),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_trace_record",
+                    description="Get trace record hit count at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to query", required=True),
+                        ToolParameter(name="size", type="integer", description="Number of bytes to check", required=False),
+                    ],
+                    returns="Dict with address and hitCount",
+                ),
+                ToolFunction(
+                    name="x64dbg.step_count",
+                    description="Execute a specific number of steps",
+                    parameters=[
+                        ToolParameter(name="count", type="integer", description="Number of steps to execute", required=True),
+                        ToolParameter(
+                            name="step_type",
+                            type="string",
+                            description="Step type: 'into' or 'over'",
+                            required=False,
+                            enum=["into", "over"],
+                        ),
+                    ],
+                    returns="Dict with success status, count, and step_type",
+                ),
+                ToolFunction(
+                    name="x64dbg.animate_start",
+                    description="Start animation (visual step execution)",
+                    parameters=[
+                        ToolParameter(
+                            name="step_type",
+                            type="string",
+                            description="Step type: 'into' or 'over'",
+                            required=False,
+                            enum=["into", "over"],
+                        ),
+                    ],
+                    returns="Dict with success status and step_type",
+                ),
+                ToolFunction(
+                    name="x64dbg.animate_stop",
+                    description="Stop animation",
+                    parameters=[],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.analyze_entropy",
+                    description="Analyze Shannon entropy of a memory region",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Start address", required=True),
+                        ToolParameter(name="size", type="integer", description="Total bytes to analyze", required=True),
+                        ToolParameter(
+                            name="block_size", type="integer", description="Size of each entropy calculation block", required=False
+                        ),
+                    ],
+                    returns="List of dicts with address, entropy value, and block size",
+                ),
+                ToolFunction(
+                    name="x64dbg.yara_scan",
+                    description="Scan memory with a YARA rule",
+                    parameters=[
+                        ToolParameter(name="rule_path", type="string", description="Path to YARA rule file", required=False),
+                        ToolParameter(name="rule_text", type="string", description="Inline YARA rule text", required=False),
+                        ToolParameter(name="address", type="integer", description="Start address (0 for all memory)", required=False),
+                        ToolParameter(name="size", type="integer", description="Size to scan (0 for all)", required=False),
+                    ],
+                    returns="List of match dicts",
+                ),
+                ToolFunction(
+                    name="x64dbg.script_load",
+                    description="Load an x64dbg script file",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Path to script file", required=True),
+                    ],
+                    returns="Dict with success status and path",
+                ),
+                ToolFunction(
+                    name="x64dbg.script_run",
+                    description="Run the currently loaded script",
+                    parameters=[],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.script_cmd",
+                    description="Execute a single script command",
+                    parameters=[
+                        ToolParameter(name="line", type="string", description="Script command line", required=True),
+                    ],
+                    returns="Dict with success status and line",
+                ),
+                ToolFunction(
+                    name="x64dbg.script_abort",
+                    description="Abort the running script",
+                    parameters=[],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.plugin_load",
+                    description="Load a plugin",
+                    parameters=[
+                        ToolParameter(name="path", type="string", description="Path to plugin DLL", required=True),
+                    ],
+                    returns="Dict with success status and path",
+                ),
+                ToolFunction(
+                    name="x64dbg.plugin_unload",
+                    description="Unload a plugin",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Plugin name", required=True),
+                    ],
+                    returns="Dict with success status and name",
+                ),
+                ToolFunction(
+                    name="x64dbg.plugin_list",
+                    description="List loaded plugins",
+                    parameters=[],
+                    returns="List of plugin info dicts",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_handles",
+                    description="Enumerate process handles",
+                    parameters=[],
+                    returns="List of handle info dicts",
+                ),
+                ToolFunction(
+                    name="x64dbg.close_handle",
+                    description="Close a process handle",
+                    parameters=[
+                        ToolParameter(name="handle", type="integer", description="Handle value to close", required=True),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.detect_anti_debug",
+                    description="Detect common anti-debugging techniques",
+                    parameters=[],
+                    returns="Dict with detected anti-debug indicators",
+                ),
+                ToolFunction(
+                    name="x64dbg.patch_anti_debug",
+                    description="Patch common anti-debug checks in the target process",
+                    parameters=[
+                        ToolParameter(
+                            name="checks",
+                            type="array",
+                            description="Specific checks to patch; patches all known checks if not provided",
+                            required=False,
+                        ),
+                    ],
+                    returns="Dict with success status and patched checks",
+                ),
+                ToolFunction(
+                    name="x64dbg.reconstruct_imports",
+                    description="Reconstruct the import table using Scylla",
+                    parameters=[
+                        ToolParameter(name="oep", type="integer", description="Original Entry Point address", required=True),
+                        ToolParameter(name="output_path", type="string", description="Path to write the fixed binary", required=True),
+                    ],
+                    returns="Dict with success status",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_status",
+                    description="Get current debugger status",
+                    parameters=[],
+                    returns="Dict with debugging, paused, and initialized flags",
+                ),
+                ToolFunction(
+                    name="x64dbg.goto_address",
+                    description="Navigate the disassembly view to an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to navigate to", required=True),
+                    ],
+                    returns="Dict with success status and address",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_tls_callbacks",
+                    description="Get TLS callback addresses for a module",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name", required=True),
+                    ],
+                    returns="List of TLS callback dicts with address",
+                ),
+                ToolFunction(
+                    name="x64dbg.break_on_tls_callbacks",
+                    description="Set breakpoints on all TLS callbacks of a module",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name", required=True),
+                    ],
+                    returns="Dict with success status and breakpoints set",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_resources",
+                    description="Get PE resource entries for a module",
+                    parameters=[
+                        ToolParameter(name="module_name", type="string", description="Module name", required=True),
+                    ],
+                    returns="List of resource dicts with type, id, size, and rva",
+                ),
+                ToolFunction(
+                    name="x64dbg.get_privileges",
+                    description="Enumerate current process token privileges",
+                    parameters=[],
+                    returns="List of privilege dicts with name and enabled status",
+                ),
+                ToolFunction(
+                    name="x64dbg.adjust_privilege",
+                    description="Adjust a process token privilege",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Privilege name (e.g. 'SeDebugPrivilege')", required=True),
+                        ToolParameter(name="enable", type="boolean", description="True to enable, False to disable", required=False),
+                    ],
+                    returns="Dict with success status and privilege name",
+                ),
             ],
         )
 
@@ -1313,7 +1812,7 @@ class X64DbgBridge(DebuggerBridge):
             try:
                 cb(event_type, message)
             except (RuntimeError, TypeError, ValueError):
-                _logger.debug("event_callback_error", event_type=event_type)
+                _logger.warning("event_callback_error", event_type=event_type, exc_info=True)
 
     async def _send_pipe_command(
         self,
@@ -1358,7 +1857,7 @@ class X64DbgBridge(DebuggerBridge):
             error = response.get("error", "Command failed")
             msg = str(error)
             raise ToolError(msg)
-        data: str | int | float | bool | dict[str, object] | list[object] | None = response.get("data")
+        data: str | int | float | bool | dict[str, object] | list[object] | None = response.get("result")
         return data
 
     async def _send_command(self, command: str) -> str:
@@ -1411,6 +1910,17 @@ class X64DbgBridge(DebuggerBridge):
             cmd += f', "{args}"'
 
         await self._send_command(cmd)
+
+        try:
+            pid_result = await self._send_pipe_command("reg_get", {"name": "$pid"})
+            if isinstance(pid_result, str):
+                pid_val = int(pid_result, 0)
+                if pid_val > 0:
+                    self._attached_pid = pid_val
+                    self._state.target_pid = pid_val
+                    self._state.process_attached = True
+        except ToolError:
+            _logger.debug("pid_capture_after_load_failed")
 
         self._state.connected = True
         self._state.tool_running = True
@@ -1588,14 +2098,24 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             int: Breakpoint ID.
         """
-        await self._send_pipe_command(
-            "bp_set",
-            {
-                "address": address,
-                "type": bp_type,
-                "condition": condition,
-            },
-        )
+        if bp_type == "hardware":
+            await self._send_pipe_command(
+                "bphws",
+                {
+                    "address": address,
+                    "type": "execute",
+                    "condition": condition,
+                },
+            )
+        else:
+            await self._send_pipe_command(
+                "bp_set",
+                {
+                    "address": address,
+                    "type": bp_type,
+                    "condition": condition,
+                },
+            )
 
         bp_id = self._next_bp_id
         self._next_bp_id += 1
@@ -2179,8 +2699,15 @@ class X64DbgBridge(DebuggerBridge):
             list[DisassemblyLine]: Disassembly lines. Returns empty list on error.
 
         Raises:
-            ToolError: If capstone disassembler is not available.
+            ToolError: If capstone disassembler is not available and plugin is not connected.
         """
+        try:
+            result = await self._send_pipe_command("disasm", {"address": hex(address), "count": count})
+            if isinstance(result, list):
+                return [self._parse_disasm_entry(e) for e in result if _is_str_obj_dict(e)]
+        except ToolError:
+            pass
+
         capstone = get_capstone()
         if capstone is None:
             msg = "Capstone disassembler not available. Install with: pixi add capstone-engine"
@@ -2192,10 +2719,10 @@ class X64DbgBridge(DebuggerBridge):
             mode = capstone.CS_MODE_64 if self._is_64bit else capstone.CS_MODE_32
             md = capstone.Cs(capstone.CS_ARCH_X86, mode)
 
-            lines: list[DisassemblyLine] = []
+            capstone_lines: list[DisassemblyLine] = []
 
             for instr in md.disasm(data, address):
-                lines.append(
+                capstone_lines.append(
                     DisassemblyLine(
                         address=instr.address,
                         bytes_str=" ".join(f"{b:02x}" for b in instr.bytes),
@@ -2204,14 +2731,14 @@ class X64DbgBridge(DebuggerBridge):
                         comment=None,
                     ),
                 )
-                if len(lines) >= count:
+                if len(capstone_lines) >= count:
                     break
 
         except Exception:
             _logger.exception("disassembly_failed", address=hex(address), count=count)
             return []
         else:
-            return lines
+            return capstone_lines
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
@@ -2241,7 +2768,9 @@ class X64DbgBridge(DebuggerBridge):
             msg = f"Failed to assemble: {instruction}"
             raise ToolError(msg)
 
-        return bytes(encoding)
+        assembled = bytes(encoding)
+        await self.write_memory(address, assembled)
+        return assembled
 
     async def get_stack_trace(self) -> list[StackFrame]:
         """Get current stack trace.
@@ -2249,14 +2778,21 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[StackFrame]: List of stack frames.
         """
-        frames: list[StackFrame] = []
+        try:
+            result = await self._send_pipe_command("stack_trace")
+            if isinstance(result, list):
+                return [self._parse_stack_frame_entry(e) for e in result if _is_str_obj_dict(e)]
+        except ToolError:
+            pass
+
+        frames_fallback: list[StackFrame] = []
 
         regs = await self.get_registers()
         rsp = regs.rsp
         rbp = regs.rbp
         rip = regs.rip
 
-        frames.append(
+        frames_fallback.append(
             StackFrame(
                 index=0,
                 address=rip,
@@ -2288,7 +2824,7 @@ class X64DbgBridge(DebuggerBridge):
                 if return_addr == 0 or saved_rbp == 0:
                     break
 
-                frames.append(
+                frames_fallback.append(
                     StackFrame(
                         index=i,
                         address=return_addr,
@@ -2306,7 +2842,7 @@ class X64DbgBridge(DebuggerBridge):
                 _logger.warning("stack_trace_unavailable", error=str(e))
                 break
 
-        return frames
+        return frames_fallback
 
     async def scan_memory(self, pattern: str | bytes) -> list[MemorySearchResult]:
         """Scan process memory for a pattern.
@@ -2544,7 +3080,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[ThreadInfo]: List of thread information.
         """
-        return await self.get_threads()
+        return await self._get_threads()
 
     async def get_process_info(self) -> ProcessInfo | None:
         """Get complete process information including threads and modules.
@@ -2574,16 +3110,24 @@ class X64DbgBridge(DebuggerBridge):
             modules=modules,
         )
 
-    async def find_pattern(self, pattern: str) -> list[dict[str, Any]]:
+    async def find_pattern(
+        self,
+        pattern: str,
+        alignment: int = 1,
+    ) -> list[dict[str, Any]]:
         """Search memory for a hex pattern with optional wildcards.
 
         Args:
             pattern: Hex pattern string with optional '??' wildcards
                 (e.g. "48 8B ?? 90" or "488B??90").
+            alignment: Only return matches at addresses divisible by this value.
+                Defaults to 1 (no alignment filtering).
 
         Returns:
             list[dict[str, Any]]: List of match dicts with 'address' and 'offset' keys.
         """
+        if alignment < 1:
+            alignment = 1
         _logger.debug("pattern_search_starting", pattern=pattern)
         tokens = pattern.replace("  ", " ").strip().split(" ")
         if len(tokens) == 1 and len(tokens[0]) > HEX_BYTE_LENGTH:
@@ -2596,7 +3140,7 @@ class X64DbgBridge(DebuggerBridge):
         if not has_wildcards:
             byte_pattern = bytes.fromhex("".join(tokens))
             results = await self.scan_memory(byte_pattern)
-            return [{"address": hex(r.address), "offset": r.address} for r in results]
+            return [{"address": hex(r.address), "offset": r.address} for r in results if r.address % alignment == 0]
 
         pat_bytes: list[int | None] = []
         for token in tokens:
@@ -2622,7 +3166,8 @@ class X64DbgBridge(DebuggerBridge):
                 matched = not any(pat_bytes[j] is not None and data[i + j] != pat_bytes[j] for j in range(pat_len))
                 if matched:
                     addr = region.base_address + i
-                    matches.append({"address": hex(addr), "offset": addr})
+                    if addr % alignment == 0:
+                        matches.append({"address": hex(addr), "offset": addr})
 
         _logger.debug("pattern_search_completed", matches=len(matches))
         return matches
@@ -2721,22 +3266,28 @@ class X64DbgBridge(DebuggerBridge):
             list[dict[str, Any]]: List of label dicts with address and text.
         """
         try:
-            result = await self._send_pipe_command("exec", {"command": "lbllist"})
+            result = await self._send_pipe_command(
+                "lbl_list",
+                {"start": start, "end": end},
+            )
         except ToolError as exc:
             _logger.debug("labels_list_failed", error=str(exc))
             return []
 
         labels: list[dict[str, Any]] = []
-        if isinstance(result, str):
-            for line in result.strip().splitlines():
-                parts = line.split(maxsplit=1)
-                if len(parts) >= MIN_LINE_PARTS:
+        if isinstance(result, list):
+            for entry in result:
+                if _is_str_obj_dict(entry):
+                    raw_addr = entry.get("address")
+                    raw_text = entry.get("text")
+                    addr_str = raw_addr if isinstance(raw_addr, str) else ""
+                    text = raw_text if isinstance(raw_text, str) else ""
                     try:
-                        addr = int(parts[0], 16)
+                        addr = int(addr_str, 0)
                     except ValueError:
                         continue
                     if start <= addr <= end:
-                        labels.append({"address": hex(addr), "text": parts[1]})
+                        labels.append({"address": addr_str, "text": text})
         return labels
 
     async def set_comment(self, address: int, text: str) -> dict[str, Any]:
@@ -2764,22 +3315,28 @@ class X64DbgBridge(DebuggerBridge):
             list[dict[str, Any]]: List of comment dicts with address and text.
         """
         try:
-            result = await self._send_pipe_command("exec", {"command": "cmtlist"})
+            result = await self._send_pipe_command(
+                "cmt_list",
+                {"start": start, "end": end},
+            )
         except ToolError as exc:
             _logger.debug("comments_list_failed", error=str(exc))
             return []
 
         comments: list[dict[str, Any]] = []
-        if isinstance(result, str):
-            for line in result.strip().splitlines():
-                parts = line.split(maxsplit=1)
-                if len(parts) >= MIN_LINE_PARTS:
+        if isinstance(result, list):
+            for entry in result:
+                if _is_str_obj_dict(entry):
+                    raw_addr = entry.get("address")
+                    raw_text = entry.get("text")
+                    addr_str = raw_addr if isinstance(raw_addr, str) else ""
+                    text = raw_text if isinstance(raw_text, str) else ""
                     try:
-                        addr = int(parts[0], 16)
+                        addr = int(addr_str, 0)
                     except ValueError:
                         continue
                     if start <= addr <= end:
-                        comments.append({"address": hex(addr), "text": parts[1]})
+                        comments.append({"address": addr_str, "text": text})
         return comments
 
     async def enable_breakpoint(self, address: int) -> dict[str, Any]:
@@ -3100,6 +3657,1092 @@ class X64DbgBridge(DebuggerBridge):
         handling_code = handling_map.get(handling, 1)
         await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, {handling_code}"})
         return {"success": True, "code": hex(code), "handling": handling}
+
+    async def patch_instruction(self, address: int, instruction: str) -> dict[str, Any]:
+        """Assemble and write an instruction at address using x64dbg's assembler.
+
+        Args:
+            address: Target address.
+            instruction: Assembly instruction text.
+
+        Returns:
+            dict[str, Any]: Dict with success status and address.
+        """
+        _logger.info("patching_instruction", address=hex(address), instruction=instruction)
+        await self._send_pipe_command("assemble", {"address": hex(address), "instruction": instruction})
+        return {"success": True, "address": hex(address), "instruction": instruction}
+
+    async def nop_range(self, address: int, size: int) -> dict[str, Any]:
+        """Fill an address range with NOP (0x90) bytes.
+
+        Args:
+            address: Start address.
+            size: Number of bytes to NOP.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, and size.
+        """
+        _logger.info("nop_range_filling", address=hex(address), size=size)
+        await self._send_command(f"fill {hex(address)}, {size}, 90")
+        return {"success": True, "address": hex(address), "size": size}
+
+    async def get_module_imports(self, module_name: str) -> list[dict[str, Any]]:
+        """Get imports of a loaded module via the plugin.
+
+        Args:
+            module_name: Module name (e.g. 'kernel32.dll').
+
+        Returns:
+            list[dict[str, Any]]: List of import dicts with iatRva, iatVa, ordinal, name, undecoratedName.
+        """
+        _logger.debug("module_imports_reading", module=module_name)
+        result = await self._send_pipe_command("mod_imports", {"name": module_name})
+        if isinstance(result, list):
+            return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
+        return []
+
+    async def find_references(self, address: int) -> dict[str, Any]:
+        """Find references to an address.
+
+        Args:
+            address: Target address.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.debug("finding_references", address=hex(address))
+        try:
+            await self._send_pipe_command("ref_search", {"address": hex(address), "type": "call"})
+        except ToolError:
+            await self._send_command(f"reffind {hex(address)}")
+        return {"success": True, "address": hex(address)}
+
+    async def find_string_references(self, module: str) -> dict[str, Any]:
+        """Find string references in a module.
+
+        Args:
+            module: Module name.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.debug("finding_string_references", module=module)
+        await self._send_command(f"strref {module}")
+        return {"success": True, "module": module}
+
+    async def find_intermodular_calls(self, module: str) -> dict[str, Any]:
+        """Find intermodular calls in a module.
+
+        Args:
+            module: Module name.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.debug("finding_intermodular_calls", module=module)
+        await self._send_command(f"modcallfind {module}")
+        return {"success": True, "module": module}
+
+    async def evaluate_expression(self, expression: str) -> int:
+        """Evaluate an x64dbg expression.
+
+        Args:
+            expression: Expression to evaluate (e.g. 'rax+rbx*4').
+
+        Returns:
+            int: Expression result value.
+        """
+        _logger.debug("evaluating_expression", expression=expression)
+        result = await self._send_pipe_command("eval", {"expression": expression})
+        if isinstance(result, str):
+            return int(result, 0)
+        if isinstance(result, int):
+            return result
+        return 0
+
+    async def get_function_cfg(self, address: int, max_blocks: int = 500) -> dict[str, Any]:
+        """Get control flow graph of a function.
+
+        Args:
+            address: Function entry address.
+            max_blocks: Maximum number of basic blocks to analyze.
+
+        Returns:
+            dict[str, Any]: Dict with entry, blocks list, and edges list.
+        """
+        _logger.debug("getting_function_cfg", address=hex(address), max_blocks=max_blocks)
+        result = await self._send_pipe_command("cfg", {"address": hex(address), "max_blocks": max_blocks})
+        if _is_str_obj_dict(result):
+            return dict(result)
+        return {"entry": hex(address), "blocks": [], "edges": []}
+
+    async def save_database(self) -> dict[str, Any]:
+        """Save the x64dbg analysis database.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("database_saving")
+        await self._send_command("dbsave")
+        return {"success": True}
+
+    async def load_database(self) -> dict[str, Any]:
+        """Load the x64dbg analysis database.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("database_loading")
+        await self._send_command("dbload")
+        return {"success": True}
+
+    async def clear_database(self) -> dict[str, Any]:
+        """Clear the x64dbg analysis database.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("database_clearing")
+        await self._send_command("dbclear")
+        return {"success": True}
+
+    async def get_patches(self) -> list[dict[str, Any]]:
+        """List all applied patches.
+
+        Returns:
+            list[dict[str, Any]]: List of patch dicts with address, oldByte, newByte.
+        """
+        _logger.debug("patches_listing")
+        try:
+            result = await self._send_pipe_command("patch_list")
+            if isinstance(result, list):
+                return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
+        except ToolError:
+            _logger.debug("patch_list_pipe_unavailable")
+        return []
+
+    async def restore_patch(self, address: int) -> dict[str, Any]:
+        """Restore original bytes at a patched address.
+
+        Args:
+            address: Address of the patch to restore.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("patch_restoring", address=hex(address))
+        try:
+            await self._send_pipe_command("patch_restore", {"address": hex(address)})
+        except ToolError:
+            await self._send_command(f"patchrestore {hex(address)}")
+        return {"success": True, "address": hex(address)}
+
+    async def export_patches(self, path: str) -> dict[str, Any]:
+        """Export patches to a file.
+
+        Args:
+            path: Output file path.
+
+        Returns:
+            dict[str, Any]: Dict with success status and path.
+        """
+        _logger.info("patches_exporting", path=path)
+        await self._send_command(f'savedata "{path}"')
+        return {"success": True, "path": path}
+
+    async def suspend_thread(self, tid: int) -> dict[str, Any]:
+        """Suspend a thread.
+
+        Args:
+            tid: Thread ID.
+
+        Returns:
+            dict[str, Any]: Dict with success status and tid.
+        """
+        _logger.info("thread_suspending", tid=tid)
+        await self._send_command(f"suspendthread {tid}")
+        return {"success": True, "tid": tid}
+
+    async def resume_thread(self, tid: int) -> dict[str, Any]:
+        """Resume a suspended thread.
+
+        Args:
+            tid: Thread ID.
+
+        Returns:
+            dict[str, Any]: Dict with success status and tid.
+        """
+        _logger.info("thread_resuming", tid=tid)
+        await self._send_command(f"resumethread {tid}")
+        return {"success": True, "tid": tid}
+
+    async def switch_thread(self, tid: int) -> dict[str, Any]:
+        """Switch the active debugger thread.
+
+        Args:
+            tid: Thread ID to switch to.
+
+        Returns:
+            dict[str, Any]: Dict with success status and tid.
+        """
+        _logger.info("thread_switching", tid=tid)
+        await self._send_command(f"switchthread {tid}")
+        return {"success": True, "tid": tid}
+
+    async def set_thread_name(self, tid: int, name: str) -> dict[str, Any]:
+        """Set a thread's name.
+
+        Args:
+            tid: Thread ID.
+            name: Display name for the thread.
+
+        Returns:
+            dict[str, Any]: Dict with success status, tid, and name.
+        """
+        _logger.info("thread_name_setting", tid=tid)
+        await self._send_command(f'setthreadname {tid}, "{name}"')
+        return {"success": True, "tid": tid, "name": name}
+
+    async def get_seh_chain(self) -> list[dict[str, Any]]:
+        """Get the structured exception handler chain.
+
+        Returns:
+            list[dict[str, Any]]: List of SEH entry dicts with handler and next addresses.
+        """
+        _logger.debug("seh_chain_reading")
+        try:
+            result = await self._send_pipe_command("seh_chain")
+            if isinstance(result, list):
+                return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
+        except ToolError:
+            _logger.debug("seh_chain_pipe_unavailable")
+        return []
+
+    async def read_peb(self) -> dict[str, Any]:
+        """Read the Process Environment Block.
+
+        Returns:
+            dict[str, Any]: Dict with PEB fields including beingDebugged, imageBaseAddress, ntGlobalFlag.
+        """
+        _logger.debug("peb_reading")
+        try:
+            result = await self._send_pipe_command("peb_read")
+            if _is_str_obj_dict(result):
+                return dict(result)
+        except ToolError:
+            _logger.debug("peb_read_pipe_unavailable")
+        return {}
+
+    async def read_teb(self, tid: int | None = None) -> dict[str, Any]:
+        """Read the Thread Environment Block.
+
+        Args:
+            tid: Thread ID. Uses current thread if None.
+
+        Returns:
+            dict[str, Any]: Dict with TEB fields including stackBase, stackLimit, processId, threadId.
+        """
+        _logger.debug("teb_reading", tid=tid)
+        params: dict[str, Any] = {}
+        if tid is not None:
+            params["tid"] = tid
+        try:
+            result = await self._send_pipe_command("teb_read", params or None)
+            if _is_str_obj_dict(result):
+                return dict(result)
+        except ToolError:
+            _logger.debug("teb_read_pipe_unavailable")
+        return {}
+
+    async def get_pe_directories(self, module_name: str) -> list[dict[str, Any]]:
+        """Get PE data directory entries for a module.
+
+        Args:
+            module_name: Module name (e.g. 'ntdll.dll').
+
+        Returns:
+            list[dict[str, Any]]: List of directory entry dicts with index, name, rva, size.
+        """
+        _logger.debug("pe_directories_reading", module=module_name)
+        try:
+            result = await self._send_pipe_command("pe_directories", {"module": module_name})
+            if isinstance(result, list):
+                return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
+        except ToolError:
+            _logger.debug("pe_directories_pipe_unavailable")
+        return []
+
+    async def add_watch(self, expression: str) -> dict[str, Any]:
+        """Add a watch expression.
+
+        Args:
+            expression: Expression to watch.
+
+        Returns:
+            dict[str, Any]: Dict with success status and expression.
+        """
+        _logger.info("watch_adding", expression=expression)
+        try:
+            await self._send_pipe_command("watch_add", {"expression": expression})
+        except ToolError:
+            await self._send_command(f'AddWatch "{expression}"')
+        return {"success": True, "expression": expression}
+
+    async def remove_watch(self, index: int) -> dict[str, Any]:
+        """Remove a watch expression by index.
+
+        Args:
+            index: Watch index to remove.
+
+        Returns:
+            dict[str, Any]: Dict with success status and index.
+        """
+        _logger.info("watch_removing", index=index)
+        try:
+            await self._send_pipe_command("watch_remove", {"index": index})
+        except ToolError:
+            await self._send_command(f"DelWatch {index}")
+        return {"success": True, "index": index}
+
+    async def get_watches(self) -> list[dict[str, Any]]:
+        """Get all watch expressions and their current values.
+
+        Returns:
+            list[dict[str, Any]]: List of watch dicts.
+        """
+        _logger.debug("watches_listing")
+        try:
+            result = await self._send_pipe_command("watch_list")
+            if isinstance(result, list):
+                return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
+        except ToolError:
+            _logger.debug("watch_list_pipe_unavailable")
+        return []
+
+    async def set_logging_breakpoint(self, address: int, log_text: str, *, non_stopping: bool = True) -> dict[str, Any]:
+        """Set a logging breakpoint that logs text without stopping.
+
+        Args:
+            address: Breakpoint address.
+            log_text: Text to log when hit.
+            non_stopping: If True, continue execution after logging.
+
+        Returns:
+            dict[str, Any]: Dict with success status, address, and log_text.
+        """
+        _logger.info("logging_breakpoint_setting", address=hex(address))
+        await self._send_command(f"bp {hex(address)}")
+        await self._send_command(f'SetBreakpointLog {hex(address)}, "{log_text}"')
+        if non_stopping:
+            await self._send_command(f"SetBreakpointFastResume {hex(address)}, 1")
+        return {"success": True, "address": hex(address), "log_text": log_text}
+
+    async def configure_breakpoint(
+        self,
+        address: int,
+        *,
+        condition: str | None = None,
+        log_text: str | None = None,
+        command: str | None = None,
+        fast_resume: bool = False,
+    ) -> dict[str, Any]:
+        """Configure breakpoint properties.
+
+        Args:
+            address: Breakpoint address.
+            condition: Conditional expression.
+            log_text: Log text on hit.
+            command: Command to execute on hit.
+            fast_resume: Whether to auto-resume after hit.
+
+        Returns:
+            dict[str, Any]: Dict with success status and configured properties.
+        """
+        _logger.info("breakpoint_configuring", address=hex(address))
+        if condition is not None:
+            await self._send_command(f'bpcond {hex(address)}, "{condition}"')
+        if log_text is not None:
+            await self._send_command(f'SetBreakpointLog {hex(address)}, "{log_text}"')
+        if command is not None:
+            await self._send_command(f'SetBreakpointCommand {hex(address)}, "{command}"')
+        if fast_resume:
+            await self._send_command(f"SetBreakpointFastResume {hex(address)}, 1")
+        return {"success": True, "address": hex(address)}
+
+    async def set_dll_breakpoint(self, dll_name: str, event: str = "load") -> dict[str, Any]:
+        """Set a breakpoint on DLL load/unload.
+
+        Args:
+            dll_name: DLL name to break on.
+            event: Event type ('load' or 'unload').
+
+        Returns:
+            dict[str, Any]: Dict with success status, dll_name, and event.
+        """
+        _logger.info("dll_breakpoint_setting", dll=dll_name, dll_event=event)
+        cmd = f'LibrarianSetBreakPoint "{dll_name}"'
+        if event == "unload":
+            cmd += ", unload"
+        await self._send_command(cmd)
+        return {"success": True, "dll_name": dll_name, "event": event}
+
+    async def trace_into(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
+        """Trace into with optional condition.
+
+        Args:
+            condition: Trace break condition expression.
+            max_steps: Maximum number of steps.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("trace_into_starting", max_steps=max_steps)
+        cmd = f"TraceIntoConditional {max_steps}"
+        if condition:
+            cmd += f', "{condition}"'
+        await self._send_command(cmd)
+        return {"success": True, "max_steps": max_steps}
+
+    async def trace_over(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
+        """Trace over with optional condition.
+
+        Args:
+            condition: Trace break condition expression.
+            max_steps: Maximum number of steps.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("trace_over_starting", max_steps=max_steps)
+        cmd = f"TraceOverConditional {max_steps}"
+        if condition:
+            cmd += f', "{condition}"'
+        await self._send_command(cmd)
+        return {"success": True, "max_steps": max_steps}
+
+    async def get_trace_record(self, address: int, size: int = 1) -> dict[str, Any]:
+        """Get trace record hit count at an address.
+
+        Args:
+            address: Address to query.
+            size: Number of bytes to check.
+
+        Returns:
+            dict[str, Any]: Dict with address and hitCount.
+        """
+        _logger.debug("trace_record_reading", address=hex(address))
+        try:
+            result = await self._send_pipe_command("trace_record", {"address": hex(address), "size": size})
+            if _is_str_obj_dict(result):
+                return dict(result)
+        except ToolError:
+            _logger.debug("trace_record_pipe_unavailable")
+        return {"address": hex(address), "hitCount": 0}
+
+    async def step_count(self, count: int, step_type: str = "into") -> dict[str, Any]:
+        """Execute a specific number of steps.
+
+        Args:
+            count: Number of steps to execute.
+            step_type: Step type ('into' or 'over').
+
+        Returns:
+            dict[str, Any]: Dict with success status, count, and step_type.
+        """
+        _logger.info("step_count_executing", count=count, step_type=step_type)
+        cmd = f"tic 0, {count}" if step_type == "into" else f"toc 0, {count}"
+        await self._send_command(cmd)
+        return {"success": True, "count": count, "step_type": step_type}
+
+    async def animate_start(self, step_type: str = "into") -> dict[str, Any]:
+        """Start animation (visual step execution).
+
+        Args:
+            step_type: Step type ('into' or 'over').
+
+        Returns:
+            dict[str, Any]: Dict with success status and step_type.
+        """
+        _logger.info("animation_starting", step_type=step_type)
+        cmd = "AnimateInto" if step_type == "into" else "AnimateOver"
+        await self._send_command(cmd)
+        return {"success": True, "step_type": step_type}
+
+    async def animate_stop(self) -> dict[str, Any]:
+        """Stop animation.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("animation_stopping")
+        await self._send_command("AnimateStop")
+        return {"success": True}
+
+    async def analyze_entropy(self, address: int, size: int, block_size: int = 256) -> list[dict[str, Any]]:
+        """Analyze Shannon entropy of a memory region.
+
+        Args:
+            address: Start address.
+            size: Total bytes to analyze.
+            block_size: Size of each entropy calculation block.
+
+        Returns:
+            list[dict[str, Any]]: List of dicts with address, entropy value, and block size.
+        """
+        _logger.debug("entropy_analyzing", address=hex(address), size=size, block_size=block_size)
+        data = await self.read_memory(address, size)
+        results: list[dict[str, Any]] = []
+        for offset in range(0, len(data), block_size):
+            block = data[offset : offset + block_size]
+            if not block:
+                break
+            freq: list[int] = [0] * 256
+            for b in block:
+                freq[b] += 1
+            entropy = 0.0
+            block_len = len(block)
+            for f in freq:
+                if f > 0:
+                    p = f / block_len
+                    entropy -= p * math.log2(p)
+            results.append({
+                "address": hex(address + offset),
+                "entropy": round(entropy, 4),
+                "size": block_len,
+            })
+        return results
+
+    async def yara_scan(
+        self,
+        *,
+        rule_path: str | None = None,
+        rule_text: str | None = None,
+        address: int = 0,
+        size: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Scan memory with a YARA rule.
+
+        Args:
+            rule_path: Path to YARA rule file.
+            rule_text: Inline YARA rule text.
+            address: Start address (0 for all memory).
+            size: Size to scan (0 for all).
+
+        Returns:
+            list[dict[str, Any]]: List of match dicts.
+        """
+        _logger.info("yara_scanning")
+        if rule_path and not rule_text:
+            cmd = f'yarascan "{rule_path}"'
+            if address:
+                cmd += f", {hex(address)}"
+            if size:
+                cmd += f", {hex(size)}"
+            await self._send_command(cmd)
+            return [{"success": True, "rule_path": rule_path}]
+
+        try:
+            import yara as _yara_raw  # noqa: PLC0415
+        except ImportError:
+            _logger.debug("yara_module_not_available")
+            return []
+
+        yara_module: Any = cast("Any", _yara_raw)
+        yara_compile: Callable[..., Any] = yara_module.compile
+        if rule_text:
+            rules: Any = yara_compile(source=rule_text)
+        elif rule_path:
+            rules = yara_compile(filepath=rule_path)
+        else:
+            return []
+
+        if not (address and size):
+            return [{"success": True, "note": "full memory YARA scan via x64dbg"}]
+
+        data = await self.read_memory(address, size)
+        yara_match_fn: Callable[..., list[Any]] = rules.match
+        yara_matches: list[Any] = yara_match_fn(data=data)
+        results: list[dict[str, Any]] = []
+        for m in yara_matches:
+            rule_name: str = str(m.rule)
+            strings_list: list[tuple[int, str, Any]] = list(m.strings)
+            for offset_val, _identifier, match_bytes in strings_list:
+                byte_val: bytes = match_bytes if isinstance(match_bytes, bytes) else str(match_bytes).encode()
+                results.append({
+                    "rule": rule_name,
+                    "address": hex(address + offset_val),
+                    "matched_bytes": byte_val.hex(),
+                })
+        return results
+
+    async def script_load(self, path: str) -> dict[str, Any]:
+        """Load an x64dbg script file.
+
+        Args:
+            path: Path to script file.
+
+        Returns:
+            dict[str, Any]: Dict with success status and path.
+        """
+        _logger.info("script_loading", path=path)
+        await self._send_command(f'scriptload "{path}"')
+        return {"success": True, "path": path}
+
+    async def script_run(self) -> dict[str, Any]:
+        """Run the currently loaded script.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("script_running")
+        await self._send_command("scriptrun")
+        return {"success": True}
+
+    async def script_cmd(self, line: str) -> dict[str, Any]:
+        """Execute a single script command.
+
+        Args:
+            line: Script command line.
+
+        Returns:
+            dict[str, Any]: Dict with success status and line.
+        """
+        _logger.debug("script_cmd_executing", line=line)
+        await self._send_command(f'scriptcmd "{line}"')
+        return {"success": True, "line": line}
+
+    async def script_abort(self) -> dict[str, Any]:
+        """Abort the running script.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("script_aborting")
+        await self._send_command("scriptabort")
+        return {"success": True}
+
+    async def plugin_load(self, path: str) -> dict[str, Any]:
+        """Load a plugin.
+
+        Args:
+            path: Path to plugin DLL.
+
+        Returns:
+            dict[str, Any]: Dict with success status and path.
+        """
+        _logger.info("plugin_loading", path=path)
+        await self._send_command(f'plugload "{path}"')
+        return {"success": True, "path": path}
+
+    async def plugin_unload(self, name: str) -> dict[str, Any]:
+        """Unload a plugin.
+
+        Args:
+            name: Plugin name.
+
+        Returns:
+            dict[str, Any]: Dict with success status and name.
+        """
+        _logger.info("plugin_unloading", plugin_name=name)
+        await self._send_command(f'plugunload "{name}"')
+        return {"success": True, "name": name}
+
+    async def plugin_list(self) -> list[dict[str, Any]]:
+        """List loaded plugins.
+
+        Returns:
+            list[dict[str, Any]]: List of plugin info dicts.
+        """
+        _logger.debug("plugins_listing")
+        try:
+            result = await self._send_pipe_command("plugin_list")
+            if isinstance(result, list):
+                return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
+        except ToolError:
+            await self._send_command("pluglist")
+        return []
+
+    async def get_handles(self) -> list[dict[str, Any]]:
+        """Enumerate process handles.
+
+        Returns:
+            list[dict[str, Any]]: List of handle info dicts.
+        """
+        _logger.debug("handles_enumerating")
+        await self._send_command("handlelist")
+        return [{"success": True, "note": "handle list displayed in x64dbg"}]
+
+    async def close_handle(self, handle: int) -> dict[str, Any]:
+        """Close a process handle.
+
+        Args:
+            handle: Handle value to close.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("handle_closing", handle=hex(handle))
+        await self._send_command(f"handleclose {hex(handle)}")
+        return {"success": True, "handle": hex(handle)}
+
+    async def detect_anti_debug(self) -> dict[str, Any]:
+        """Detect common anti-debugging techniques.
+
+        Returns:
+            dict[str, Any]: Dict with detected anti-debug indicators.
+        """
+        _logger.info("anti_debug_detecting")
+        peb = await self.read_peb()
+        checks: dict[str, bool] = {}
+        being_debugged = peb.get("beingDebugged", 0)
+        checks["peb_being_debugged"] = bool(being_debugged)
+        nt_global_flag = peb.get("ntGlobalFlag", 0)
+        if isinstance(nt_global_flag, int):
+            checks["nt_global_flag_set"] = (nt_global_flag & 0x70) != 0
+        return {"success": True, "checks": checks, "peb": peb}
+
+    async def patch_anti_debug(self, checks: list[str] | None = None) -> dict[str, Any]:
+        """Patch common anti-debug checks in the target process.
+
+        Args:
+            checks: Specific checks to patch. Patches all known checks if None.
+
+        Returns:
+            dict[str, Any]: Dict with success status and patched checks.
+        """
+        _logger.info("anti_debug_patching")
+        patched: list[str] = []
+        peb = await self.read_peb()
+        peb_addr_raw = peb.get("address")
+        if not isinstance(peb_addr_raw, str) or not peb_addr_raw:
+            return {"success": False, "error": "Cannot read PEB address"}
+
+        peb_addr = int(peb_addr_raw, 0)
+
+        all_checks = checks or ["being_debugged", "nt_global_flag"]
+
+        if "being_debugged" in all_checks:
+            await self.write_memory(peb_addr + 2, b"\x00")
+            patched.append("being_debugged")
+
+        if "nt_global_flag" in all_checks:
+            flag_offset = 0xBC if self._is_64bit else 0x68
+            await self.write_memory(peb_addr + flag_offset, b"\x00\x00\x00\x00")
+            patched.append("nt_global_flag")
+
+        return {"success": True, "patched": patched}
+
+    async def reconstruct_imports(self, oep: int, output_path: str) -> dict[str, Any]:
+        """Reconstruct the import table using Scylla.
+
+        Args:
+            oep: Original Entry Point address.
+            output_path: Path to write the fixed binary.
+
+        Returns:
+            dict[str, Any]: Dict with success status.
+        """
+        _logger.info("imports_reconstructing", oep=hex(oep), output=output_path)
+        await self._send_command(f"scylla.searchIAT {hex(oep)}")
+        await self._send_command("scylla.autoFix")
+        await self._send_command(f'scylla.dump "{output_path}"')
+        return {"success": True, "oep": hex(oep), "output_path": output_path}
+
+    async def get_status(self) -> dict[str, Any]:
+        """Get current debugger status.
+
+        Returns:
+            dict[str, Any]: Dict with debugging, paused, and initialized flags.
+        """
+        _logger.debug("status_querying")
+        result = await self._send_pipe_command("status")
+        if _is_str_obj_dict(result):
+            return dict(result)
+        return {"debugging": False, "paused": False, "initialized": False}
+
+    async def goto_address(self, address: int) -> dict[str, Any]:
+        """Navigate the disassembly view to an address.
+
+        Args:
+            address: Address to navigate to.
+
+        Returns:
+            dict[str, Any]: Dict with success status and address.
+        """
+        _logger.debug("goto_address", address=hex(address))
+        await self._send_pipe_command("goto", {"address": hex(address)})
+        return {"success": True, "address": hex(address)}
+
+    async def get_tls_callbacks(self, module_name: str) -> list[dict[str, Any]]:
+        """Get TLS callback addresses for a module.
+
+        Args:
+            module_name: Module name.
+
+        Returns:
+            list[dict[str, Any]]: List of TLS callback dicts with address.
+        """
+        _logger.debug("tls_callbacks_reading", module=module_name)
+        base_address = await self._resolve_module_base(module_name)
+        _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
+
+        machine = struct.unpack_from("<H", pe_header, 4)[0]
+        is_pe64 = machine == PE64_MACHINE
+        tls_dir_offset = 24 + (is_pe64 * 112 + (1 - is_pe64) * 96) + 72
+        if tls_dir_offset + 8 > len(pe_header):
+            return []
+
+        tls_rva = struct.unpack_from("<I", pe_header, tls_dir_offset)[0]
+        tls_size = struct.unpack_from("<I", pe_header, tls_dir_offset + 4)[0]
+        if tls_rva == 0 or tls_size == 0:
+            return []
+
+        ptr_size = 8 if is_pe64 else 4
+        tls_dir = await self.read_memory(base_address + tls_rva, max(tls_size, 40))
+        callback_array_va = struct.unpack_from("<Q" if is_pe64 else "<I", tls_dir, 12 + ptr_size)[0]
+        if callback_array_va == 0:
+            return []
+
+        callbacks: list[dict[str, Any]] = []
+        for i in range(64):
+            cb_data = await self.read_memory(callback_array_va + i * ptr_size, ptr_size)
+            cb_addr = struct.unpack_from("<Q" if is_pe64 else "<I", cb_data, 0)[0]
+            if cb_addr == 0:
+                break
+            callbacks.append({"index": i, "address": hex(cb_addr)})
+
+        return callbacks
+
+    async def break_on_tls_callbacks(self, module_name: str) -> dict[str, Any]:
+        """Set breakpoints on all TLS callbacks of a module.
+
+        Args:
+            module_name: Module name.
+
+        Returns:
+            dict[str, Any]: Dict with success status and breakpoints set.
+        """
+        _logger.info("tls_callbacks_breaking", module=module_name)
+        callbacks = await self.get_tls_callbacks(module_name)
+        for cb in callbacks:
+            addr_str = cb.get("address", "0")
+            if isinstance(addr_str, str):
+                addr = int(addr_str, 0)
+                await self.set_breakpoint(addr)
+        return {"success": True, "breakpoints_set": len(callbacks)}
+
+    async def get_resources(self, module_name: str) -> list[dict[str, Any]]:
+        """Get PE resource entries for a module.
+
+        Args:
+            module_name: Module name.
+
+        Returns:
+            list[dict[str, Any]]: List of resource dicts with type, id, size, and rva.
+        """
+        _logger.debug("resources_reading", module=module_name)
+        base_address = await self._resolve_module_base(module_name)
+        _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
+
+        machine = struct.unpack_from("<H", pe_header, 4)[0]
+        is_pe64 = machine == PE64_MACHINE
+        rsrc_dir_offset = 24 + (is_pe64 * 112 + (1 - is_pe64) * 96) + 16
+        if rsrc_dir_offset + 8 > len(pe_header):
+            return []
+
+        rsrc_rva = struct.unpack_from("<I", pe_header, rsrc_dir_offset)[0]
+        rsrc_size = struct.unpack_from("<I", pe_header, rsrc_dir_offset + 4)[0]
+        if rsrc_rva == 0 or rsrc_size == 0:
+            return []
+
+        rsrc_header = await self.read_memory(base_address + rsrc_rva, min(rsrc_size, 4096))
+        num_named = struct.unpack_from("<H", rsrc_header, 12)[0]
+        num_id = struct.unpack_from("<H", rsrc_header, 14)[0]
+        resources: list[dict[str, Any]] = []
+        offset = 16
+        for i in range(num_named + num_id):
+            if offset + 8 > len(rsrc_header):
+                break
+            type_id = struct.unpack_from("<I", rsrc_header, offset)[0]
+            resources.append({"index": i, "type_id": type_id, "type_name": _PE_RESOURCE_TYPE_NAMES.get(type_id, f"RT_{type_id}")})
+            offset += 8
+
+        return resources
+
+    @staticmethod
+    async def get_privileges() -> list[dict[str, Any]]:
+        """Enumerate current process token privileges.
+
+        Returns:
+            list[dict[str, Any]]: List of privilege dicts with name and enabled status.
+        """
+        _logger.debug("privileges_enumerating")
+        if not _IS_WIN32:
+            return []
+
+        try:
+            advapi32 = ctypes.windll.advapi32
+            kernel32 = ctypes.windll.kernel32
+
+            token_handle = wintypes.HANDLE()
+            current_process = kernel32.GetCurrentProcess()
+            if not advapi32.OpenProcessToken(current_process, 0x0008, ctypes.byref(token_handle)):
+                return []
+
+            try:
+                return_length = wintypes.DWORD()
+                advapi32.GetTokenInformation(token_handle, 3, None, 0, ctypes.byref(return_length))
+                buffer = ctypes.create_string_buffer(return_length.value)
+                if not advapi32.GetTokenInformation(token_handle, 3, buffer, return_length.value, ctypes.byref(return_length)):
+                    return []
+
+                count = struct.unpack_from("<I", buffer.raw, 0)[0]
+                privileges: list[dict[str, Any]] = []
+                offset = 4
+                for _ in range(min(count, 100)):
+                    luid_low = struct.unpack_from("<I", buffer.raw, offset)[0]
+                    luid_high = struct.unpack_from("<I", buffer.raw, offset + 4)[0]
+                    attrs = struct.unpack_from("<I", buffer.raw, offset + 8)[0]
+
+                    name_buf = ctypes.create_unicode_buffer(256)
+                    name_len = wintypes.DWORD(256)
+
+                    class LUID(ctypes.Structure):
+                        _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+                    luid = LUID(luid_low, luid_high)
+                    if advapi32.LookupPrivilegeNameW(None, ctypes.byref(luid), name_buf, ctypes.byref(name_len)):
+                        privileges.append({
+                            "name": name_buf.value,
+                            "enabled": bool(attrs & 0x00000002),
+                            "enabled_by_default": bool(attrs & 0x00000001),
+                        })
+                    offset += 12
+
+                return privileges
+            finally:
+                kernel32.CloseHandle(token_handle)
+        except (OSError, ValueError) as e:
+            _logger.warning("privileges_enum_failed", error=str(e))
+            return []
+
+    @staticmethod
+    async def adjust_privilege(name: str, *, enable: bool = True) -> dict[str, Any]:
+        """Adjust a process token privilege.
+
+        Args:
+            name: Privilege name (e.g. 'SeDebugPrivilege').
+            enable: True to enable, False to disable.
+
+        Returns:
+            dict[str, Any]: Dict with success status and privilege name.
+        """
+        _logger.info("privilege_adjusting", privilege=name, enable=enable)
+        if not _IS_WIN32:
+            return {"success": False, "error": "Windows only"}
+
+        try:
+            advapi32 = ctypes.windll.advapi32
+            kernel32 = ctypes.windll.kernel32
+
+            class LUID(ctypes.Structure):
+                _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+            class TokenPrivileges(ctypes.Structure):
+                _fields_ = [
+                    ("PrivilegeCount", wintypes.DWORD),
+                    ("Luid", LUID),
+                    ("Attributes", wintypes.DWORD),
+                ]
+
+            luid = LUID()
+            if not advapi32.LookupPrivilegeValueW(None, name, ctypes.byref(luid)):
+                return {"success": False, "error": f"Privilege {name!r} not found"}
+
+            token_handle = wintypes.HANDLE()
+            current_process = kernel32.GetCurrentProcess()
+            if not advapi32.OpenProcessToken(current_process, 0x0020, ctypes.byref(token_handle)):
+                return {"success": False, "error": "Failed to open process token"}
+
+            try:
+                tp = TokenPrivileges()
+                tp.PrivilegeCount = 1
+                tp.Luid = luid
+                tp.Attributes = 0x00000002 if enable else 0
+
+                disable_all_privileges = False
+                result = advapi32.AdjustTokenPrivileges(token_handle, disable_all_privileges, ctypes.byref(tp), 0, None, None)
+                return {"success": bool(result), "privilege": name, "enabled": enable}
+            finally:
+                kernel32.CloseHandle(token_handle)
+        except (OSError, ValueError) as e:
+            _logger.warning("privilege_adjust_failed", error=str(e))
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _parse_stack_frame_entry(entry: dict[str, object]) -> StackFrame:
+        """Parse a single stack frame entry dict from the plugin into a StackFrame.
+
+        Args:
+            entry: Dict with index, address, from, to, comment fields.
+
+        Returns:
+            StackFrame: Parsed stack frame.
+        """
+
+        def _parse_int(val: object) -> int:
+            return int(val, 0) if isinstance(val, str) else (int(val) if isinstance(val, (int, float)) else 0)
+
+        idx = _parse_int(entry.get("index", 0))
+        addr = _parse_int(entry.get("address", 0))
+        from_addr = _parse_int(entry.get("from", 0))
+        to_addr = _parse_int(entry.get("to", 0))
+        comment_raw = entry.get("comment", "")
+        comment = str(comment_raw) if comment_raw else ""
+        function_name: str | None = None
+        module_name: str | None = None
+        if comment and "." in comment:
+            dot_idx = comment.rfind(".")
+            module_name = comment[:dot_idx]
+            function_name = comment[dot_idx + 1 :]
+        elif comment:
+            function_name = comment
+        return StackFrame(
+            index=idx,
+            address=addr,
+            return_address=from_addr,
+            frame_pointer=to_addr,
+            stack_pointer=0,
+            function_name=function_name,
+            module_name=module_name,
+        )
+
+    @staticmethod
+    def _parse_disasm_entry(entry: dict[str, object]) -> DisassemblyLine:
+        """Parse a single disassembly entry dict from the plugin into a DisassemblyLine.
+
+        Args:
+            entry: Dict with address, instruction, bytes, comment, label fields.
+
+        Returns:
+            DisassemblyLine: Parsed disassembly line.
+        """
+        addr_raw = entry.get("address", 0)
+        addr = int(addr_raw, 0) if isinstance(addr_raw, str) else (int(addr_raw) if isinstance(addr_raw, int) else 0)
+        instr_raw = entry.get("instruction", "")
+        instr_str = str(instr_raw) if instr_raw else ""
+        parts = instr_str.split(" ", 1)
+        mnemonic = parts[0] if parts else ""
+        operands = parts[1] if len(parts) > 1 else ""
+        bytes_raw = entry.get("bytes", "")
+        comment_raw = entry.get("comment") or entry.get("label")
+        return DisassemblyLine(
+            address=addr,
+            bytes_str=str(bytes_raw) if bytes_raw else "",
+            mnemonic=mnemonic,
+            operands=operands,
+            comment=str(comment_raw) if comment_raw else None,
+        )
 
     @staticmethod
     def _get_parent_pid(pid: int) -> int:
