@@ -1,1 +1,1 @@
-tests/test_scripts/test_commit_message.py -v --timeout=30 --no-header -p no:cacheprovider
+tests/test_bridges/test_schemas.py -x --tb=short
