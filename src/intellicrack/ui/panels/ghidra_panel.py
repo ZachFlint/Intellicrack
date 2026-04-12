@@ -59,6 +59,8 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QAction
+
     from intellicrack.bridges.ghidra import GhidraBridge
 
 _logger = get_logger("ui.panels.ghidra")
@@ -91,22 +93,15 @@ _RELOCATION_COLUMNS: Final[list[str]] = ["Address", "Type", "Symbol"]
 _ASCII_PRINTABLE_MIN: Final[int] = 32
 _ASCII_PRINTABLE_MAX: Final[int] = 127
 
-_HAS_CFG_VIEW: bool
-_HAS_HIGHLIGHTER: bool
-
 try:
     from intellicrack.ui.panels.graph_view import CFGGraphView
-
-    _HAS_CFG_VIEW = True
 except ImportError:
-    _HAS_CFG_VIEW = False
+    CFGGraphView = None
 
 try:
     from intellicrack.ui.highlighter import PythonSyntaxHighlighter
-
-    _HAS_HIGHLIGHTER = True
 except ImportError:
-    _HAS_HIGHLIGHTER = False
+    PythonSyntaxHighlighter = None
 
 
 def _make_table(columns: list[str]) -> QTableWidget:
@@ -240,7 +235,7 @@ class GhidraPanel(AnalysisPanelBase):
         set_max_block_count(self._pcode_view, 50000)
         tabs.addTab(self._pcode_view, self.tr("PCode"))
 
-        if _HAS_CFG_VIEW:
+        if CFGGraphView is not None:
             self._cfg_view: QWidget = CFGGraphView()
         else:
             cfg_fallback = QPlainTextEdit()
@@ -823,8 +818,10 @@ class GhidraPanel(AnalysisPanelBase):
         self._script_editor = QPlainTextEdit()
         fm = FontManager.get_instance()
         self._script_editor.setFont(fm.get_code_font(10))
-        if _HAS_HIGHLIGHTER:
-            PythonSyntaxHighlighter(self._script_editor.document())
+        if PythonSyntaxHighlighter is not None:
+            doc = self._script_editor.document()
+            if doc is not None:
+                PythonSyntaxHighlighter(doc)
         layout.addWidget(self._script_editor)
 
         params_row = QHBoxLayout()
@@ -1544,7 +1541,7 @@ class GhidraPanel(AnalysisPanelBase):
             lines: list[str] = [f"Differences found: {diff_count}"]
             if isinstance(details, list):
                 for detail in cast("list[dict[str, object]]", details):
-                    addr_val = detail.get("address", 0) if isinstance(detail, dict) else 0
+                    addr_val = detail.get("address", 0)
                     lines.append(f"  0x{int(cast('int', addr_val)):X}")
             self._script_output.setPlainText("\n".join(lines))
         else:
@@ -1731,9 +1728,11 @@ class GhidraPanel(AnalysisPanelBase):
             blocks_raw = cfg_result.get("blocks", [])
             if isinstance(blocks_raw, list):
                 blocks_list = cast("list[dict[str, object]]", blocks_raw)
-        if _HAS_CFG_VIEW and isinstance(self._cfg_view, CFGGraphView):
+        if CFGGraphView is not None and isinstance(self._cfg_view, CFGGraphView):
             graph_data: dict[str, object] = {"nodes": blocks_list}
-            self._cfg_view.load_graph(graph_data)
+            scene = self._cfg_view.graph_scene()
+            scene.load_graph(blocks_list)
+            _ = graph_data
         elif isinstance(self._cfg_view, QPlainTextEdit):
             lines2: list[str] = []
             for blk in blocks_list:
@@ -1741,13 +1740,17 @@ class GhidraPanel(AnalysisPanelBase):
                 blk_end = int(cast("int", blk.get("end", 0)))
                 lines2.append(f"Block: 0x{blk_start:X} - 0x{blk_end:X}")
                 srcs = blk.get("sources", [])
-                if isinstance(srcs, list) and srcs:
-                    src_strs = [f"0x{int(cast('int', s)):X}" for s in srcs]
-                    lines2.append(f"  Sources: {', '.join(src_strs)}")
+                if isinstance(srcs, list):
+                    src_list = cast("list[int]", srcs)
+                    if src_list:
+                        src_strs = [f"0x{s:X}" for s in src_list]
+                        lines2.append(f"  Sources: {', '.join(src_strs)}")
                 dsts = blk.get("destinations", [])
-                if isinstance(dsts, list) and dsts:
-                    dst_strs = [f"0x{int(cast('int', d)):X}" for d in dsts]
-                    lines2.append(f"  Destinations: {', '.join(dst_strs)}")
+                if isinstance(dsts, list):
+                    dst_list = cast("list[int]", dsts)
+                    if dst_list:
+                        dst_strs = [f"0x{d:X}" for d in dst_list]
+                        lines2.append(f"  Destinations: {', '.join(dst_strs)}")
             self._cfg_view.setPlainText("\n".join(lines2))
 
     def _show_function_body_info(self, result: object) -> None:
@@ -1837,7 +1840,7 @@ class GhidraPanel(AnalysisPanelBase):
         func_name = item.text(0)
 
         menu = QMenu(self)
-        actions = {
+        raw_actions: dict[str, QAction | None] = {
             "rename": menu.addAction(self.tr("Rename Function")),
             "edit_sig": menu.addAction(self.tr("Edit Signature")),
             "add_cmt": menu.addAction(self.tr("Add Comment")),
@@ -1849,10 +1852,12 @@ class GhidraPanel(AnalysisPanelBase):
             "set_color": menu.addAction(self.tr("Set Color")),
         }
         menu.addSeparator()
-        actions["delete"] = menu.addAction(self.tr("Delete Function"))
+        raw_actions["delete"] = menu.addAction(self.tr("Delete Function"))
 
-        if any(v is None for v in actions.values()):
+        if any(v is None for v in raw_actions.values()):
             return
+
+        actions: dict[str, object] = {k: v for k, v in raw_actions.items() if v is not None}
 
         chosen = menu.exec(self._func_tree.mapToGlobal(pos))
         if chosen is None:
@@ -1937,12 +1942,17 @@ class GhidraPanel(AnalysisPanelBase):
             )
 
         elif chosen is actions["conventions"]:
+            def _show_conventions(r: object) -> None:
+                if isinstance(r, list):
+                    conv_list = cast("list[object]", r)
+                    body_text = "\n".join(str(c) for c in conv_list)
+                else:
+                    body_text = str(r)
+                self._show_info_dialog("Calling Conventions", body_text)
+
             self._run_async(
                 bridge.get_calling_conventions(),
-                on_success=lambda r: self._show_info_dialog(
-                    "Calling Conventions",
-                    "\n".join(str(c) for c in r) if isinstance(r, list) else str(r),
-                ),
+                on_success=_show_conventions,
                 on_error=lambda e: self._set_status(f"Calling conventions failed: {e}"),
             )
 
@@ -2432,7 +2442,8 @@ class GhidraPanel(AnalysisPanelBase):
             rd = cast("dict[str, object]", result)
             byte_list = rd.get("bytes", [])
             if isinstance(byte_list, list):
-                raw = bytes(int(cast("int", b)) for b in byte_list)
+                typed_bytes = cast("list[int]", byte_list)
+                raw = bytes(typed_bytes)
             else:
                 hex_str = str(rd.get("hex", ""))
                 raw = bytes.fromhex(hex_str.replace(" ", "")) if hex_str else b""
@@ -2637,7 +2648,8 @@ class GhidraPanel(AnalysisPanelBase):
             tree_add_child(parent, item)
         children = data.get("children", data.get("callees", []))
         if isinstance(children, list):
-            for child in children:
+            child_list = cast("list[object]", children)
+            for child in child_list:
                 if isinstance(child, dict):
                     self._populate_call_graph_dict(cast("dict[str, object]", child), item)
 

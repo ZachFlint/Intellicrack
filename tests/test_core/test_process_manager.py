@@ -20,7 +20,8 @@ import os
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import pytest
 
@@ -33,7 +34,43 @@ from intellicrack.core.process_manager import (
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from datetime import datetime
     from pathlib import Path
+
+
+class _ExternalPidEntry(TypedDict):
+    """Shape of internal external PID tracking entries.
+
+    Matches ``intellicrack.core.process_manager._ExternalPidInfo`` so tests can
+    inspect the registry without relying on implementation-private symbols.
+    """
+
+    name: str
+    process_type: ProcessType
+    metadata: dict[str, str]
+    registered_at: datetime
+
+
+def _external_pids(pm: ProcessManager) -> dict[int, _ExternalPidEntry]:
+    """Return the ProcessManager's external PID registry via ``getattr``.
+
+    Args:
+        pm: The ProcessManager instance to inspect.
+
+    Returns:
+        dict[int, _ExternalPidEntry]: Mapping of PID to registration info.
+    """
+    return cast(dict[int, _ExternalPidEntry], getattr(pm, "_external_pids"))
+
+
+def _sync_cleanup(pm: ProcessManager) -> None:
+    """Invoke the ProcessManager's synchronous cleanup routine.
+
+    Args:
+        pm: The ProcessManager instance to clean up.
+    """
+    cleanup = cast(Callable[[], None], getattr(pm, "_sync_cleanup"))
+    cleanup()
 
 
 EXPECTED_EXIT_CODE_FAILURE = 1
@@ -264,7 +301,7 @@ class TestRunTrackedAsync:
             await process_manager.run_tracked_async(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
                 name="test-async-timeout",
-                timeout=PROCESS_TIMEOUT,
+                process_timeout=PROCESS_TIMEOUT,
             )
 
     @staticmethod
@@ -321,10 +358,11 @@ class TestExternalPidRegistration:
             metadata={"test_key": "test_value"},
         )
 
-        assert TEST_PID_EXTERNAL in process_manager.external_pids
-        assert process_manager.external_pids[TEST_PID_EXTERNAL]["name"] == "test-external"
-        assert process_manager.external_pids[TEST_PID_EXTERNAL]["process_type"] == ProcessType.SANDBOX
-        assert process_manager.external_pids[TEST_PID_EXTERNAL]["metadata"]["test_key"] == "test_value"
+        pids = _external_pids(process_manager)
+        assert TEST_PID_EXTERNAL in pids
+        assert pids[TEST_PID_EXTERNAL]["name"] == "test-external"
+        assert pids[TEST_PID_EXTERNAL]["process_type"] == ProcessType.SANDBOX
+        assert pids[TEST_PID_EXTERNAL]["metadata"]["test_key"] == "test_value"
 
     @staticmethod
     def test_unregister_external_pid_removes_entry(
@@ -333,12 +371,12 @@ class TestExternalPidRegistration:
         """Verify unregister_external_pid removes the registered PID."""
         process_manager.register_external_pid(TEST_PID_UNREGISTER, name="test-unregister")
 
-        assert TEST_PID_UNREGISTER in process_manager.external_pids
+        assert TEST_PID_UNREGISTER in _external_pids(process_manager)
 
         result = process_manager.unregister_external_pid(TEST_PID_UNREGISTER)
 
         assert result is True
-        assert TEST_PID_UNREGISTER not in process_manager.external_pids
+        assert TEST_PID_UNREGISTER not in _external_pids(process_manager)
 
     @staticmethod
     def test_unregister_external_pid_returns_false_for_unknown(
@@ -357,7 +395,7 @@ class TestExternalPidRegistration:
         process_manager.register_external_pid(TEST_PID_DUPLICATE, name="original-name")
         process_manager.register_external_pid(TEST_PID_DUPLICATE, name="new-name")
 
-        assert process_manager.external_pids[TEST_PID_DUPLICATE]["name"] == "original-name"
+        assert _external_pids(process_manager)[TEST_PID_DUPLICATE]["name"] == "original-name"
 
 
 class TestTerminateExternalPid:
@@ -373,7 +411,7 @@ class TestTerminateExternalPid:
         result = process_manager.terminate_external_pid(NONEXISTENT_PID)
 
         assert result is False
-        assert NONEXISTENT_PID not in process_manager.external_pids
+        assert NONEXISTENT_PID not in _external_pids(process_manager)
 
     @staticmethod
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -450,7 +488,7 @@ class TestProcessCleanup:
 
         time.sleep(PROCESS_STARTUP_DELAY)
 
-        process_manager.sync_cleanup()
+        _sync_cleanup(process_manager)
 
         exit1 = proc1.wait(timeout=CLEANUP_WAIT_TIMEOUT)
         exit2 = proc2.wait(timeout=CLEANUP_WAIT_TIMEOUT)
@@ -474,12 +512,12 @@ class TestProcessCleanup:
 
         time.sleep(PROCESS_STARTUP_DELAY)
 
-        process_manager.sync_cleanup()
+        _sync_cleanup(process_manager)
 
         exit_code = proc.wait(timeout=CLEANUP_WAIT_TIMEOUT)
 
         assert exit_code is not None
-        assert proc.pid not in process_manager.external_pids
+        assert proc.pid not in _external_pids(process_manager)
 
     @staticmethod
     @pytest.mark.asyncio
@@ -505,7 +543,7 @@ class TestProcessCleanup:
 
         assert exit_code is not None
         assert process_manager.process_count == EXPECTED_TRACKED_COUNT_ZERO
-        assert ASYNC_CLEANUP_EXTERNAL_PID not in process_manager.external_pids
+        assert ASYNC_CLEANUP_EXTERNAL_PID not in _external_pids(process_manager)
 
 
 class TestTrackedProcess:

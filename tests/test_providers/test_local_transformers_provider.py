@@ -11,11 +11,11 @@ including XPU detection, model loading, inference, and fallback mechanisms.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
-from intellicrack.core.types import Message, ProviderCredentials, ProviderError, ProviderName
+from intellicrack.core.types import Message, ProviderCredentials, ProviderError, ProviderName, ToolCall
 
 
 if TYPE_CHECKING:
@@ -50,6 +50,67 @@ _15_GIB = 15 * 1024 * 1024 * 1024
 _TENSOR_SIZE = 100
 _MATRIX_SIZE = 100
 _INVALID_DEVICE_INDEX = 999
+
+_ATTR_FORMAT_PROMPT = "_format_prompt"
+_ATTR_PARSE_TOOL_CALLS = "_parse_tool_calls"
+
+
+def _format_prompt_via(
+    provider: LocalTransformersProvider,
+    messages: list[dict[str, object]],
+) -> str:
+    """Invoke the provider's protected ``_format_prompt`` method in a type-safe way.
+
+    Args:
+        provider: The provider instance exposing the formatting method.
+        messages: The list of pre-converted message dictionaries.
+
+    Returns:
+        str: The formatted prompt string.
+
+    Raises:
+        TypeError: If the underlying method is missing, not callable, or
+            returns a value that is not a string.
+    """
+    method: object = getattr(provider, _ATTR_FORMAT_PROMPT)
+    if not callable(method):
+        msg = f"{_ATTR_FORMAT_PROMPT} is not callable"
+        raise TypeError(msg)
+    result: object = method(messages)
+    if not isinstance(result, str):
+        msg = f"Expected str result, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def _parse_tool_calls_via(response: str) -> list[ToolCall] | None:
+    """Invoke the provider's protected ``_parse_tool_calls`` static method.
+
+    Args:
+        response: The raw model response to parse.
+
+    Returns:
+        list[ToolCall] | None: Parsed tool calls, or None if no tool call was present.
+
+    Raises:
+        TypeError: If the underlying method is missing, not callable, or
+            returns a value that is neither None nor a list of ToolCall objects.
+    """
+    method: object = getattr(LocalTransformersProvider, _ATTR_PARSE_TOOL_CALLS)
+    if not callable(method):
+        msg = f"{_ATTR_PARSE_TOOL_CALLS} is not callable"
+        raise TypeError(msg)
+    result: object = method(response)
+    if result is None:
+        return None
+    if not isinstance(result, list):
+        msg = f"Expected list or None, got {type(result).__name__}"
+        raise TypeError(msg)
+    for item in cast("list[object]", result):
+        if not isinstance(item, ToolCall):
+            msg = f"Expected ToolCall items, got {type(item).__name__}"
+            raise TypeError(msg)
+    return cast("list[ToolCall]", result)
 
 
 class TestXPUDetection:
@@ -497,8 +558,8 @@ class TestPromptFormatting:
     def test_format_prompt_simple() -> None:
         """Should format simple prompt."""
         provider = LocalTransformersProvider()
-        messages = [{"role": "user", "content": "Hello"}]
-        prompt = provider.format_prompt(messages)
+        messages: list[dict[str, object]] = [{"role": "user", "content": "Hello"}]
+        prompt = _format_prompt_via(provider, messages)
         assert "<|im_start|>user" in prompt
         assert "Hello" in prompt
         assert "<|im_start|>assistant" in prompt
@@ -507,11 +568,11 @@ class TestPromptFormatting:
     def test_format_prompt_with_system() -> None:
         """Should include system message."""
         provider = LocalTransformersProvider()
-        messages = [
+        messages: list[dict[str, object]] = [
             {"role": "system", "content": "Be helpful"},
             {"role": "user", "content": "Hi"},
         ]
-        prompt = provider.format_prompt(messages)
+        prompt = _format_prompt_via(provider, messages)
         assert "<|im_start|>system" in prompt
         assert "Be helpful" in prompt
 
@@ -522,16 +583,14 @@ class TestToolCallParsing:
     @staticmethod
     def test_parse_no_tool_calls() -> None:
         """Should return None for text without tool calls."""
-        provider = LocalTransformersProvider()
-        result = provider.parse_tool_calls("Just a regular response")
+        result = _parse_tool_calls_via("Just a regular response")
         assert result is None
 
     @staticmethod
     def test_parse_valid_tool_call() -> None:
         """Should parse valid tool call JSON."""
-        provider = LocalTransformersProvider()
         response = 'Here is the result: {"tool_call": {"name": "test_func", "arguments": {"arg1": "value1"}}}'
-        result = provider.parse_tool_calls(response)
+        result = _parse_tool_calls_via(response)
         assert result is not None
         assert len(result) == 1
         assert result[0].function_name == "test_func"

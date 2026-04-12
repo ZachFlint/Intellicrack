@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -57,7 +57,7 @@ class TestHTMLExport:
         f = tmp_path / "html.bin"
         f.write_bytes(b"\xAA\xBB\xCC\xDD" * 16)
         _run(bridge.open_file(str(f)))
-        html = cast(str, _run(bridge.export_annotated_html()))
+        html = _run(bridge.export_annotated_html())
         assert "<!DOCTYPE html>" in html
         assert "</html>" in html
 
@@ -71,7 +71,7 @@ class TestHTMLExport:
         f = tmp_path / "html_data.bin"
         f.write_bytes(b"\xDE\xAD\xBE\xEF" + b"\x00" * 60)
         _run(bridge.open_file(str(f)))
-        html = cast(str, _run(bridge.export_annotated_html()))
+        html = _run(bridge.export_annotated_html())
         assert "DE" in html
         assert "AD" in html
         assert "BE" in html
@@ -87,7 +87,7 @@ class TestHTMLExport:
         f = tmp_path / "html_range.bin"
         f.write_bytes(bytes(range(256)))
         _run(bridge.open_file(str(f)))
-        html = cast(str, _run(bridge.export_annotated_html(start=16, end=32)))
+        html = _run(bridge.export_annotated_html(start=16, end=32))
         assert "00000010" in html
         assert "00000000" not in html
 
@@ -102,7 +102,7 @@ class TestHTMLExport:
         f.write_bytes(b"\x00" * 128)
         _run(bridge.open_file(str(f)))
         _run(bridge.add_bookmark(0, 16, "TestBookmark", "#FF0000"))
-        html = cast(str, _run(bridge.export_annotated_html()))
+        html = _run(bridge.export_annotated_html())
         assert "TestBookmark" in html
 
     def test_html_export_bytes_per_row(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -115,7 +115,7 @@ class TestHTMLExport:
         f = tmp_path / "html_bpr.bin"
         f.write_bytes(b"\x00" * 32)
         _run(bridge.open_file(str(f)))
-        html = cast(str, _run(bridge.export_annotated_html(bytes_per_row=8)))
+        html = _run(bridge.export_annotated_html(bytes_per_row=8))
         assert "00000000" in html
         assert "00000008" in html
 
@@ -133,7 +133,7 @@ class TestHTMLExport:
         f = tmp_path / "html_esc.bin"
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
-        html = cast(str, _run(bridge.export_annotated_html()))
+        html = _run(bridge.export_annotated_html())
         assert "&#38;" in html
         assert "&#60;" in html
         assert "&#62;" in html
@@ -161,7 +161,7 @@ class TestLargeFileControls:
         f = tmp_path / "chunk.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast(bool, _run(bridge.set_chunk_size(65536)))
+        result = _run(bridge.set_chunk_size(65536))
         assert result is True
 
     def test_get_memory_usage(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -174,7 +174,7 @@ class TestLargeFileControls:
         f = tmp_path / "mem.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, int]", _run(bridge.get_memory_usage()))
+        result = _run(bridge.get_memory_usage())
         assert "usage_bytes" in result
         assert "chunk_size" in result
         assert "memory_budget" in result
@@ -189,5 +189,5 @@ class TestLargeFileControls:
         f = tmp_path / "budget.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast(bool, _run(bridge.set_memory_budget(1024 * 1024)))
+        result = _run(bridge.set_memory_budget(1024 * 1024))
         assert result is True

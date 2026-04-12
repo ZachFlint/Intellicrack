@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 pytest.importorskip("intellicrack_hexcore")
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
@@ -137,7 +137,7 @@ class TestStateAfterClose:
         _run(bridge.goto_offset(256))
         _run(bridge.close_file())
 
-        assert bridge.cursor_offset == 0
+        assert _run(bridge.get_cursor_position()) == 0
 
     def test_close_file_clears_selection(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """After close_file the internal selection must be None.
@@ -150,7 +150,7 @@ class TestStateAfterClose:
         _run(bridge.select_range(0, 127))
         _run(bridge.close_file())
 
-        assert bridge.selection is None
+        assert _run(bridge.get_selection()) is None
 
     def test_read_after_close_raises_runtime_error(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """read_bytes after close_file must raise RuntimeError.
