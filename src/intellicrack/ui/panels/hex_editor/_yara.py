@@ -56,7 +56,12 @@ class YaraMixin:
     _yara_inline_editor: QPlainTextEdit | None
     _yara_results_tree: QTreeWidget | None
 
-    def goto_offset(self, offset: int) -> None: ...
+    def goto_offset(self, offset: int) -> None:
+        """Navigate the hex widget to the given byte offset.
+
+        Args:
+            offset: Absolute byte offset within the active document.
+        """
 
     def _create_yara_tab(self) -> QWidget:
         """Create the YARA scanner side panel tab widget.
