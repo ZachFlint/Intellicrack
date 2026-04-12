@@ -32,7 +32,6 @@ from intellicrack.core.types import (
 ADDR_BASE = 0x401000
 ADDR_IMPORT = 0x402000
 ADDR_EXPORT = 0x403000
-EXPECTED_STRING_COUNT = 2
 
 
 def _make_binary_info() -> BinaryInfo:
@@ -86,27 +85,6 @@ def _make_tool_registry_no_bridges() -> MagicMock:
         MagicMock: MagicMock configured to raise ToolError on bridge access.
     """
     registry = MagicMock()
-    registry.get_binary_bridge.side_effect = ToolError("not available")
-    registry.get_ghidra_bridge.side_effect = ToolError("not available")
-    registry.get_cutter_bridge.side_effect = ToolError("not available")
-    return registry
-
-
-def _make_tool_registry_with_binary_bridge() -> MagicMock:
-    """Create a mock ToolRegistry with a working BinaryBridge.
-
-    Returns:
-        MagicMock: MagicMock with BinaryBridge returning test strings.
-    """
-    registry = MagicMock()
-    binary_bridge = MagicMock()
-    binary_bridge.get_strings = AsyncMock(
-        return_value=[
-            (ADDR_BASE, "test string"),
-            (0x402000, "another string"),
-        ],
-    )
-    registry.get_binary_bridge.return_value = binary_bridge
     registry.get_ghidra_bridge.side_effect = ToolError("not available")
     registry.get_cutter_bridge.side_effect = ToolError("not available")
     return registry
@@ -143,66 +121,16 @@ class TestAnalysisAggregatorNoBridges:
         result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
 
         notes_text = " ".join(result.analysis_notes)
-        assert "No bridges connected" in notes_text or "BinaryBridge not available" in notes_text
-
-
-class TestAnalysisAggregatorWithBinaryBridge:
-    """Tests for aggregation with BinaryBridge available."""
-
-    @staticmethod
-    def test_aggregate_collects_strings() -> None:
-        """Verify strings are collected from BinaryBridge."""
-        registry = _make_tool_registry_with_binary_bridge()
-        aggregator = AnalysisAggregator(registry)
-        binary_info = _make_binary_info()
-
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
-
-        assert len(result.strings) == EXPECTED_STRING_COUNT
-        assert result.strings[0].value == "test string"
-        assert result.strings[0].address == ADDR_BASE
-        assert "binary" in result.source_bridges
-
-    @staticmethod
-    def test_aggregate_preserves_binary_info_imports() -> None:
-        """Verify BinaryInfo imports are preserved."""
-        registry = _make_tool_registry_with_binary_bridge()
-        aggregator = AnalysisAggregator(registry)
-        binary_info = _make_binary_info()
-
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
-
-        assert len(result.imports) == 1
-        assert result.imports[0].function == "CreateFileA"
+        assert "No bridges connected" in notes_text
 
 
 class TestAnalysisAggregatorExceptionHandling:
     """Tests for graceful exception handling from bridge calls."""
 
     @staticmethod
-    def test_aggregate_handles_binary_bridge_exception() -> None:
-        """Verify aggregation continues when BinaryBridge.get_strings raises."""
-        registry = MagicMock()
-        binary_bridge = MagicMock()
-        binary_bridge.get_strings = AsyncMock(side_effect=RuntimeError("disk error"))
-        registry.get_binary_bridge.return_value = binary_bridge
-        registry.get_ghidra_bridge.side_effect = ToolError("not available")
-        registry.get_cutter_bridge.side_effect = ToolError("not available")
-
-        aggregator = AnalysisAggregator(registry)
-        binary_info = _make_binary_info()
-
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
-
-        assert isinstance(result, BridgeAnalysisSummary)
-        assert len(result.strings) == 0
-        assert any("failed" in note for note in result.analysis_notes)
-
-    @staticmethod
     def test_aggregate_handles_static_bridge_exception() -> None:
         """Verify aggregation continues when static bridge methods raise."""
         registry = MagicMock()
-        registry.get_binary_bridge.side_effect = ToolError("not available")
 
         ghidra = MagicMock()
         ghidra.search_strings = AsyncMock(side_effect=RuntimeError("connection lost"))
@@ -228,7 +156,6 @@ class TestDeduplication:
     def test_duplicate_imports_deduplicated() -> None:
         """Verify duplicate imports by address are removed."""
         registry = MagicMock()
-        registry.get_binary_bridge.side_effect = ToolError("not available")
 
         ghidra = MagicMock()
         ghidra.search_strings = AsyncMock(return_value=[])

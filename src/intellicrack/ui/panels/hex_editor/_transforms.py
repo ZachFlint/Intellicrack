@@ -10,7 +10,10 @@ from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -18,6 +21,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -37,6 +41,9 @@ _LAYOUT_MARGIN: Final[int] = 2
 _ZERO_MARGIN: Final[int] = 0
 _PREVIEW_MAX_HEIGHT: Final[int] = 120
 _PIPELINE_MAX_HEIGHT: Final[int] = 100
+_PIPELINE_DEFAULT_LEN: Final[int] = 65536
+_BYTE_MASK: Final[int] = 0xFF
+_BITS_PER_BYTE: Final[int] = 8
 
 _TransformPipeline_cls: Any = None
 _pipeline_available: bool = False
@@ -63,6 +70,8 @@ class TransformsMixin:
     _transform_pipeline_list: QListWidget | None
     _transform_pipeline: Any
     _transform_nodes_cache: list[Any]
+    _selection_start: int
+    _selection_end: int
 
     def _on_data_changed(self) -> None: ...
 
@@ -84,6 +93,32 @@ class TransformsMixin:
         else:
             self._transform_pipeline = None
 
+        layout.addLayout(self._create_node_selector_row())
+        layout.addWidget(self._create_params_section())
+        layout.addLayout(self._create_action_row())
+        layout.addWidget(self._create_preview_pane())
+        layout.addWidget(QLabel("Pipeline:"))
+        layout.addWidget(self._create_pipeline_list())
+        layout.addLayout(self._create_pipeline_btn_row())
+
+        execute_btn = QPushButton("Execute Pipeline")
+        execute_btn.clicked.connect(self._on_pipeline_execute)
+        layout.addWidget(execute_btn)
+
+        layout.addWidget(self._create_block_ops_group())
+        layout.addWidget(self._create_arithmetic_group())
+        layout.addStretch()
+
+        self._on_transform_node_changed(0)
+
+        return container
+
+    def _create_node_selector_row(self) -> QHBoxLayout:
+        """Build the transform node selector row.
+
+        Returns:
+            QHBoxLayout: Row containing the Transform label and combo box.
+        """
         node_row = QHBoxLayout()
         node_row.addWidget(QLabel("Transform:"))
         self._transform_node_combo = QComboBox()
@@ -93,13 +128,25 @@ class TransformsMixin:
         self._transform_node_combo.currentIndexChanged.connect(self._on_transform_node_changed)
         node_row.addWidget(self._transform_node_combo)
         node_row.addStretch()
-        layout.addLayout(node_row)
+        return node_row
 
+    def _create_params_section(self) -> QWidget:
+        """Build the transform parameters form widget.
+
+        Returns:
+            QWidget: Widget containing the parameter form layout.
+        """
         self._transform_params_widget = QWidget()
         self._transform_params_form = QFormLayout(self._transform_params_widget)
         self._transform_params_form.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
-        layout.addWidget(self._transform_params_widget)
+        return self._transform_params_widget
 
+    def _create_action_row(self) -> QHBoxLayout:
+        """Build the Preview/Apply action button row.
+
+        Returns:
+            QHBoxLayout: Row containing Preview and Apply buttons.
+        """
         action_row = QHBoxLayout()
         preview_btn = QPushButton("Preview")
         preview_btn.clicked.connect(self._on_transform_preview)
@@ -108,8 +155,14 @@ class TransformsMixin:
         apply_btn.clicked.connect(self._on_transform_apply)
         action_row.addWidget(apply_btn)
         action_row.addStretch()
-        layout.addLayout(action_row)
+        return action_row
 
+    def _create_preview_pane(self) -> QPlainTextEdit:
+        """Build the transform preview plain-text pane.
+
+        Returns:
+            QPlainTextEdit: Read-only monospace preview pane.
+        """
         self._transform_preview_pane = QPlainTextEdit()
         self._transform_preview_pane.setReadOnly(ro=True)
         preview_font = self._transform_preview_pane.font()
@@ -117,14 +170,24 @@ class TransformsMixin:
         preview_font.setPointSize(9)
         self._transform_preview_pane.setFont(preview_font)
         self._transform_preview_pane.setMaximumHeight(_PREVIEW_MAX_HEIGHT)
-        layout.addWidget(self._transform_preview_pane)
+        return self._transform_preview_pane
 
-        layout.addWidget(QLabel("Pipeline:"))
+    def _create_pipeline_list(self) -> QListWidget:
+        """Build the pipeline step list widget.
 
+        Returns:
+            QListWidget: List widget showing current pipeline steps.
+        """
         self._transform_pipeline_list = QListWidget()
         self._transform_pipeline_list.setMaximumHeight(_PIPELINE_MAX_HEIGHT)
-        layout.addWidget(self._transform_pipeline_list)
+        return self._transform_pipeline_list
 
+    def _create_pipeline_btn_row(self) -> QHBoxLayout:
+        """Build the pipeline management button row.
+
+        Returns:
+            QHBoxLayout: Row containing Add, Remove, Move Up, Move Down buttons.
+        """
         pipeline_btn_row = QHBoxLayout()
         add_step_btn = QPushButton("Add Step")
         add_step_btn.clicked.connect(self._on_pipeline_add_step)
@@ -138,17 +201,67 @@ class TransformsMixin:
         move_down_btn = QPushButton("Move Down")
         move_down_btn.clicked.connect(self._on_pipeline_move_down)
         pipeline_btn_row.addWidget(move_down_btn)
-        layout.addLayout(pipeline_btn_row)
+        return pipeline_btn_row
 
-        execute_btn = QPushButton("Execute Pipeline")
-        execute_btn.clicked.connect(self._on_pipeline_execute)
-        layout.addWidget(execute_btn)
+    def _create_block_ops_group(self) -> QGroupBox:
+        """Create the Block Operations group box.
 
-        layout.addStretch()
+        Returns:
+            QGroupBox: Group containing Fill, Copy, Move, and Swap buttons.
+        """
+        block_box = QGroupBox("Block Operations")
+        block_layout = QHBoxLayout(block_box)
+        for label, slot in [
+            ("Fill", self._on_block_fill),
+            ("Copy", self._on_block_copy),
+            ("Move", self._on_block_move),
+            ("Swap", self._on_block_swap),
+        ]:
+            btn = QPushButton(label)
+            btn.clicked.connect(slot)
+            block_layout.addWidget(btn)
+        return block_box
 
-        self._on_transform_node_changed(0)
+    def _create_arithmetic_group(self) -> QGroupBox:
+        """Create the Quick Arithmetic group box.
 
-        return container
+        Returns:
+            QGroupBox: Group with operator selector, key/mask input, and apply button.
+        """
+        arith_box = QGroupBox("Quick Arithmetic")
+        arith_layout = QVBoxLayout(arith_box)
+        arith_top = QHBoxLayout()
+        self._arith_op_combo = QComboBox()
+        self._arith_op_combo.addItems([
+            "XOR",
+            "AND",
+            "OR",
+            "NOT",
+            "Shift Left",
+            "Shift Right",
+            "Rotate Left",
+            "Rotate Right",
+        ])
+        arith_top.addWidget(self._arith_op_combo)
+        arith_layout.addLayout(arith_top)
+        arith_key_row = QHBoxLayout()
+        arith_key_row.addWidget(QLabel("Key/Mask:"))
+        self._arith_key_edit = QLineEdit()
+        self._arith_key_edit.setToolTip("Hex key or mask (e.g. FF or DEADBEEF)")
+        arith_key_row.addWidget(self._arith_key_edit)
+        arith_layout.addLayout(arith_key_row)
+        arith_count_row = QHBoxLayout()
+        arith_count_row.addWidget(QLabel("Count:"))
+        self._arith_count_spin = QSpinBox()
+        self._arith_count_spin.setRange(1, 64)
+        self._arith_count_spin.setValue(1)
+        arith_count_row.addWidget(self._arith_count_spin)
+        arith_count_row.addStretch()
+        arith_layout.addLayout(arith_count_row)
+        arith_apply_btn = QPushButton("Apply to Selection")
+        arith_apply_btn.clicked.connect(self._on_apply_arithmetic)
+        arith_layout.addWidget(arith_apply_btn)
+        return arith_box
 
     def _on_transform_node_changed(self, index: int) -> None:
         """Rebuild the parameter form when the selected transform changes.
@@ -429,7 +542,7 @@ class TransformsMixin:
             return
 
         cursor_offset = 0
-        apply_len = 65536
+        apply_len = _PIPELINE_DEFAULT_LEN
         if self._hex_widget is not None:
             cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
             sel_start: int = getattr(self._hex_widget, "_selection_start", -1)
@@ -491,3 +604,343 @@ class TransformsMixin:
                     update_fn()
             self._on_data_changed()
             logger.debug("pipeline_executed", offset=cursor_offset, length=write_len)
+
+    def _on_block_fill(self) -> None:
+        """Open a dialog for filling a block with a repeating pattern."""
+        if self.document is None:
+            return
+        parent = self if isinstance(self, QWidget) else None
+        dlg = _BlockFillDialog(self._hex_widget, parent)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        offset, length, pattern = dlg.get_values()
+        if not pattern:
+            return
+        fill_data = (pattern * ((length // len(pattern)) + 1))[:length]
+        try:
+            self.document.write_bytes(offset, bytes(fill_data))
+        except (AttributeError, ValueError) as exc:
+            logger.debug("block_fill_failed", error=str(exc))
+            return
+        self._refresh_widget()
+        logger.debug("block_fill_complete", offset=offset, length=length)
+
+    def _on_block_copy(self) -> None:
+        """Open a dialog for copying a block to another offset."""
+        if self.document is None:
+            return
+        parent = self if isinstance(self, QWidget) else None
+        dlg = _BlockCopyMoveDialog("Copy Block", parent)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        src, length, dst = dlg.get_values()
+        try:
+            raw_read: object = self.document.read(src, length)
+            if isinstance(raw_read, bytes):
+                data = raw_read
+            elif isinstance(raw_read, list):
+                data = bytes(cast("list[int]", raw_read))
+            elif isinstance(raw_read, bytearray):
+                data = bytes(raw_read)
+            else:
+                return
+            self.document.write_bytes(dst, data)
+        except (AttributeError, ValueError) as exc:
+            logger.debug("block_copy_failed", error=str(exc))
+            return
+        self._refresh_widget()
+
+    def _on_block_move(self) -> None:
+        """Open a dialog for moving a block to another offset."""
+        if self.document is None:
+            return
+        parent = self if isinstance(self, QWidget) else None
+        dlg = _BlockCopyMoveDialog("Move Block", parent)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        src, length, dst = dlg.get_values()
+        try:
+            raw_mv: object = self.document.read(src, length)
+            if isinstance(raw_mv, bytes):
+                data = raw_mv
+            elif isinstance(raw_mv, list):
+                data = bytes(cast("list[int]", raw_mv))
+            elif isinstance(raw_mv, bytearray):
+                data = bytes(raw_mv)
+            else:
+                return
+            zero_fill = bytes(length)
+            self.document.write_bytes(src, zero_fill)
+            self.document.write_bytes(dst, data)
+        except (AttributeError, ValueError) as exc:
+            logger.debug("block_move_failed", error=str(exc))
+            return
+        self._refresh_widget()
+
+    def _on_block_swap(self) -> None:
+        """Open a dialog for swapping two blocks."""
+        if self.document is None:
+            return
+        parent = self if isinstance(self, QWidget) else None
+        dlg = _BlockSwapDialog(parent)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        off_a, len_a, off_b, len_b = dlg.get_values()
+        try:
+            raw_sa: object = self.document.read(off_a, len_a)
+            raw_sb: object = self.document.read(off_b, len_b)
+            if isinstance(raw_sa, bytes):
+                data_a = raw_sa
+            elif isinstance(raw_sa, list):
+                data_a = bytes(cast("list[int]", raw_sa))
+            elif isinstance(raw_sa, bytearray):
+                data_a = bytes(raw_sa)
+            else:
+                return
+            if isinstance(raw_sb, bytes):
+                data_b = raw_sb
+            elif isinstance(raw_sb, list):
+                data_b = bytes(cast("list[int]", raw_sb))
+            elif isinstance(raw_sb, bytearray):
+                data_b = bytes(raw_sb)
+            else:
+                return
+            self.document.write_bytes(off_a, data_b[:len_a].ljust(len_a, b"\x00"))
+            self.document.write_bytes(off_b, data_a[:len_b].ljust(len_b, b"\x00"))
+        except (AttributeError, ValueError) as exc:
+            logger.debug("block_swap_failed", error=str(exc))
+            return
+        self._refresh_widget()
+
+    def _on_apply_arithmetic(self) -> None:
+        """Apply the selected arithmetic operation to the current selection."""
+        if self.document is None or self._hex_widget is None:
+            return
+
+        sel_start: int = getattr(self, "_selection_start", -1)
+        sel_end: int = getattr(self, "_selection_end", -1)
+        if sel_start < 0 or sel_end < 0 or sel_end <= sel_start:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.information(parent, "Arithmetic", "Select a region first.")
+            return
+
+        op_combo: QComboBox | None = getattr(self, "_arith_op_combo", None)
+        key_edit: QLineEdit | None = getattr(self, "_arith_key_edit", None)
+        count_spin: QSpinBox | None = getattr(self, "_arith_count_spin", None)
+        if op_combo is None:
+            return
+
+        op = op_combo.currentText()
+        key_hex = key_edit.text().strip() if key_edit else ""
+        count = count_spin.value() if count_spin else 1
+
+        try:
+            raw_arith: object = self.document.read(sel_start, sel_end - sel_start)
+            if isinstance(raw_arith, bytes):
+                data = bytearray(raw_arith)
+            elif isinstance(raw_arith, list):
+                data = bytearray(cast("list[int]", raw_arith))
+            elif isinstance(raw_arith, bytearray):
+                data = raw_arith
+            else:
+                return
+        except (AttributeError, ValueError) as exc:
+            logger.debug("arithmetic_read_failed", error=str(exc))
+            return
+
+        try:
+            key_bytes = bytes.fromhex(key_hex) if key_hex else b"\x00"
+        except ValueError:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(parent, "Arithmetic", "Invalid hex key.")
+            return
+
+        result = self._apply_arithmetic_op(data, op, key_bytes, count)
+        try:
+            self.document.write_bytes(sel_start, bytes(result))
+        except (AttributeError, ValueError) as exc:
+            logger.debug("arithmetic_write_failed", error=str(exc))
+            return
+        self._refresh_widget()
+
+    @staticmethod
+    def _apply_arithmetic_op(
+        data: bytearray,
+        op: str,
+        key: bytes,
+        count: int,
+    ) -> bytearray:
+        """Apply an arithmetic/bitwise operation to a byte array.
+
+        Args:
+            data: Input byte array to transform.
+            op: Operation name string.
+            key: Key/mask bytes for XOR/AND/OR operations.
+            count: Shift/rotate count for shift/rotate operations.
+
+        Returns:
+            bytearray: Transformed byte array.
+        """
+        result = bytearray(len(data))
+        if op == "XOR":
+            for i, b in enumerate(data):
+                result[i] = b ^ key[i % len(key)]
+        elif op == "AND":
+            for i, b in enumerate(data):
+                result[i] = b & key[i % len(key)]
+        elif op == "OR":
+            for i, b in enumerate(data):
+                result[i] = b | key[i % len(key)]
+        elif op == "NOT":
+            for i, b in enumerate(data):
+                result[i] = (~b) & _BYTE_MASK
+        elif op == "Shift Left":
+            for i, b in enumerate(data):
+                result[i] = (b << count) & _BYTE_MASK
+        elif op == "Shift Right":
+            for i, b in enumerate(data):
+                result[i] = (b >> count) & _BYTE_MASK
+        elif op == "Rotate Left":
+            for i, b in enumerate(data):
+                result[i] = ((b << count) | (b >> (_BITS_PER_BYTE - count))) & _BYTE_MASK
+        elif op == "Rotate Right":
+            for i, b in enumerate(data):
+                result[i] = ((b >> count) | (b << (_BITS_PER_BYTE - count))) & _BYTE_MASK
+        else:
+            return data
+        return result
+
+    def _refresh_widget(self) -> None:
+        """Refresh the hex widget viewport and trigger data changed."""
+        if self._hex_widget is not None:
+            update_fn = getattr(self._hex_widget, "_update_viewport", None)
+            if callable(update_fn):
+                update_fn()
+        self._on_data_changed()
+
+
+class _BlockFillDialog(QDialog):
+    """Dialog for configuring block fill parameters.
+
+    Args:
+        hex_widget: The hex editor widget for pre-filling cursor/selection values.
+        parent: Parent widget.
+    """
+
+    def __init__(self, hex_widget: object, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Fill Block")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+
+        cursor = int(getattr(hex_widget, "_cursor_offset", 0)) if hex_widget else 0
+        sel_start = int(getattr(hex_widget, "_selection_start", -1)) if hex_widget else -1
+        sel_end = int(getattr(hex_widget, "_selection_end", -1)) if hex_widget else -1
+        default_len = max(sel_end - sel_start, 1) if sel_start >= 0 and sel_end > sel_start else 16
+
+        self._offset_edit = QLineEdit(f"0x{cursor:X}")
+        form.addRow("Offset (hex):", self._offset_edit)
+        self._length_edit = QLineEdit(str(default_len))
+        form.addRow("Length:", self._length_edit)
+        self._pattern_edit = QLineEdit("00")
+        self._pattern_edit.setToolTip("Hex pattern to fill with (e.g. 00 or DEADBEEF)")
+        form.addRow("Pattern (hex):", self._pattern_edit)
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self) -> tuple[int, int, bytes]:
+        """Extract the dialog values.
+
+        Returns:
+            tuple[int, int, bytes]: Offset, length, and pattern bytes.
+        """
+        offset = int(self._offset_edit.text().strip(), 0)
+        length = int(self._length_edit.text().strip(), 0)
+        pattern = bytes.fromhex(self._pattern_edit.text().strip())
+        return offset, length, pattern
+
+
+class _BlockCopyMoveDialog(QDialog):
+    """Dialog for configuring block copy or move parameters.
+
+    Args:
+        title: Dialog window title.
+        parent: Parent widget.
+    """
+
+    def __init__(self, title: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self._src_edit = QLineEdit("0x0")
+        form.addRow("Source offset (hex):", self._src_edit)
+        self._len_edit = QLineEdit("16")
+        form.addRow("Length:", self._len_edit)
+        self._dst_edit = QLineEdit("0x0")
+        form.addRow("Destination offset (hex):", self._dst_edit)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self) -> tuple[int, int, int]:
+        """Extract the dialog values.
+
+        Returns:
+            tuple[int, int, int]: Source offset, length, destination offset.
+        """
+        src = int(self._src_edit.text().strip(), 0)
+        length = int(self._len_edit.text().strip(), 0)
+        dst = int(self._dst_edit.text().strip(), 0)
+        return src, length, dst
+
+
+class _BlockSwapDialog(QDialog):
+    """Dialog for configuring block swap parameters.
+
+    Args:
+        parent: Parent widget.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Swap Blocks")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self._off_a_edit = QLineEdit("0x0")
+        form.addRow("Block A offset (hex):", self._off_a_edit)
+        self._len_a_edit = QLineEdit("16")
+        form.addRow("Block A length:", self._len_a_edit)
+        self._off_b_edit = QLineEdit("0x0")
+        form.addRow("Block B offset (hex):", self._off_b_edit)
+        self._len_b_edit = QLineEdit("16")
+        form.addRow("Block B length:", self._len_b_edit)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self) -> tuple[int, int, int, int]:
+        """Extract the dialog values.
+
+        Returns:
+            tuple[int, int, int, int]: Offset A, length A, offset B, length B.
+        """
+        off_a = int(self._off_a_edit.text().strip(), 0)
+        len_a = int(self._len_a_edit.text().strip(), 0)
+        off_b = int(self._off_b_edit.text().strip(), 0)
+        len_b = int(self._len_b_edit.text().strip(), 0)
+        return off_a, len_a, off_b, len_b

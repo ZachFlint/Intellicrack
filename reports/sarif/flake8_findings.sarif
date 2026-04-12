@@ -15,27 +15,33 @@
               }
             },
             {
-              "id": "F811",
-              "shortDescription": {
-                "text": "redefinition of unused 'Callable' from line 14"
-              }
-            },
-            {
               "id": "F824",
               "shortDescription": {
                 "text": "`nonlocal content_label` is unused: name is never assigned in scope"
               }
             },
             {
-              "id": "F821",
+              "id": "F401",
               "shortDescription": {
-                "text": "undefined name '_PROC_COL_COUNT'"
+                "text": "'asyncio' imported but unused"
+              }
+            },
+            {
+              "id": "F811",
+              "shortDescription": {
+                "text": "redefinition of unused 'asyncio' from line 28"
               }
             },
             {
               "id": "F841",
               "shortDescription": {
-                "text": "local variable '_store' is assigned to but never used"
+                "text": "local variable '_buf_addr' is assigned to but never used"
+              }
+            },
+            {
+              "id": "E402",
+              "shortDescription": {
+                "text": "module level import not at top of file"
               }
             }
           ]
@@ -52,11 +58,368 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2898,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (144 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3350,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (161 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3431,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (192 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3874,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (203 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3953,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (205 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4018,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (146 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4297,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (162 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4641,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4754,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (215 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/process.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 750,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (143 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3537,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (149 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 310,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (160 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/type_system.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 232,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (146 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 540,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (232 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 587,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (169 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 704,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 705,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (146 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
                   "uri": "src/intellicrack/providers/xpu_utils.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 530,
+                  "startLine": 528,
                   "startColumn": 141
                 }
               }
@@ -77,7 +440,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 559,
+                  "startLine": 557,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2524,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (163 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2533,
                   "startColumn": 141
                 }
               }
@@ -98,7 +503,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 433,
+                  "startLine": 464,
                   "startColumn": 141
                 }
               }
@@ -106,21 +511,63 @@
           ]
         },
         {
-          "ruleId": "F811",
+          "ruleId": "E501",
           "level": "warning",
           "message": {
-            "text": "redefinition of unused 'Callable' from line 14"
+            "text": "line too long (174 > 140 characters)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/app.py",
+                  "uri": "src/intellicrack/sandbox/windows.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 54,
-                  "startColumn": 5
+                  "startLine": 1048,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (152 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1053,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (141 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1069,
+                  "startColumn": 141
                 }
               }
             }
@@ -140,50 +587,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 485,
+                  "startLine": 487,
                   "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "F821",
-          "level": "warning",
-          "message": {
-            "text": "undefined name '_PROC_COL_COUNT'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 527,
-                  "startColumn": 38
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "F821",
-          "level": "warning",
-          "message": {
-            "text": "undefined name 'QColor'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 530,
-                  "startColumn": 48
                 }
               }
             }
@@ -203,8 +608,113 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 91,
+                  "startLine": 97,
                   "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F401",
+          "level": "warning",
+          "message": {
+            "text": "'asyncio' imported but unused"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_cutter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F811",
+          "level": "warning",
+          "message": {
+            "text": "redefinition of unused 'asyncio' from line 28"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_cutter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 158,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_buf_addr' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg_new_methods.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 262,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_buf_addr' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg_new_methods.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 277,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_buf_addr' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_x64dbg_new_methods.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 292,
+                  "startColumn": 9
                 }
               }
             }
@@ -224,8 +734,995 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 47,
+                  "startLine": 52,
                   "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (149 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_hash_advanced.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 263,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (144 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_hash_advanced.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 278,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_hash_advanced.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 303,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (149 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_bridge_hash_advanced.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 345,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (154 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 285,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (151 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 299,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 314,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (154 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 338,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (159 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 353,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (145 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 362,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (147 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hashing.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 363,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_compiler_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_parser_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_parser_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_parser_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_parser_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_type_system_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E402",
+          "level": "warning",
+          "message": {
+            "text": "module level import not at top of file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_hexpat_type_system_e2e.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (144 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_search.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 337,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_search.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 383,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_exc' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 642,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_exc' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_hexcore_e2e/test_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 666,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_chunks' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_agentic_capabilities.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 196,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F841",
+          "level": "warning",
+          "message": {
+            "text": "local variable '_chunks' is assigned to but never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_agentic_capabilities.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 217,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (141 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 502,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (160 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 520,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (161 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 531,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (149 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 542,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (147 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 553,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (181 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 575,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (160 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 586,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (153 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 613,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (142 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 645,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (149 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 670,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (201 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 681,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (178 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 692,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (169 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 703,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (181 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 714,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (167 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 726,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (169 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 737,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (165 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 779,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (171 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 790,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (174 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 801,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (161 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 812,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (160 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 833,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E501",
+          "level": "warning",
+          "message": {
+            "text": "line too long (162 > 140 characters)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_sandbox/test_analysis.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 849,
+                  "startColumn": 141
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F401",
+          "level": "warning",
+          "message": {
+            "text": "'tests.test_ui.conftest.SignalRecorder as SignalRecorderType' imported but unused"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_process_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 5
                 }
               }
             }
@@ -236,7 +1733,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:38:03.436665"
+          "endTimeUtc": "2026-04-11T07:06:56.380291+00:00"
         }
       ]
     }

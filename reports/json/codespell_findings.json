@@ -1,8 +1,8 @@
 {
   "tool": "codespell",
-  "generated": "2026-04-05T20:21:33.402470+00:00",
-  "total_findings": 202,
-  "total_files": 33,
+  "generated": "2026-04-11T07:09:03.338876+00:00",
+  "total_findings": 226,
+  "total_files": 40,
   "files": [
     {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-4fc3a9a4bb9c9a32.d",
@@ -833,6 +833,84 @@
       ]
     },
     {
+      "path": "src/intellicrack\\bridges\\process.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 9,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:9: SEH ==> SHE"
+        },
+        {
+          "line": 469,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:469: SEH ==> SHE"
+        },
+        {
+          "line": 473,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:473: SEH ==> SHE"
+        },
+        {
+          "line": 664,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:664: SEH ==> SHE"
+        },
+        {
+          "line": 750,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:750: SEH ==> SHE"
+        },
+        {
+          "line": 2814,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:2814: SEH ==> SHE"
+        },
+        {
+          "line": 2818,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:2818: SEH ==> SHE"
+        },
+        {
+          "line": 2828,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:2828: SEH ==> SHE"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack-hexcore\\_typos.toml",
       "count": 8,
       "findings": [
@@ -1339,6 +1417,57 @@
           "correction": "set",
           "message": "'ser' ==> 'set'",
           "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-ff3da71971c64cbb.d:16: ser ==> set"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 7,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:7: SEH ==> SHE"
+        },
+        {
+          "line": 48,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:48: SEH ==> SHE"
+        },
+        {
+          "line": 237,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:237: SEH ==> SHE"
+        },
+        {
+          "line": 240,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:240: SEH ==> SHE"
+        },
+        {
+          "line": 469,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:469: SEH ==> SHE"
         }
       ]
     },
@@ -1943,6 +2072,111 @@
       ]
     },
     {
+      "path": "tests/test_hexcore_e2e\\test_bridge_va_mapping.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 161,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "VAs",
+          "correction": "was",
+          "message": "'VAs' ==> 'was'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_va_mapping.py:161: VAs ==> was"
+        },
+        {
+          "line": 170,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "vas",
+          "correction": "was",
+          "message": "'vas' ==> 'was'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_va_mapping.py:170: vas ==> was"
+        },
+        {
+          "line": 171,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "vas",
+          "correction": "was",
+          "message": "'vas' ==> 'was'",
+          "raw": "tests/test_hexcore_e2e\\test_bridge_va_mapping.py:171: vas ==> was"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\bridges\\_win32_types.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 622,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\_win32_types.py:622: SEH ==> SHE"
+        },
+        {
+          "line": 627,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\_win32_types.py:627: SEH ==> SHE"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\bridges\\x64dbg.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 1265,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:1265: SEH ==> SHE"
+        },
+        {
+          "line": 3910,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:3910: SEH ==> SHE"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_bridges\\test_process_bridge.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 685,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "tests/test_bridges\\test_process_bridge.py:685: SEH ==> SHE"
+        },
+        {
+          "line": 690,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "tests/test_bridges\\test_process_bridge.py:690: SEH ==> SHE"
+        }
+      ]
+    },
+    {
       "path": "tests/test_hexcore_e2e\\test_bridge_encoding_decoding.py",
       "count": 2,
       "findings": [
@@ -1987,6 +2221,30 @@
           "correction": "calf",
           "message": "'caf' ==> 'calf'",
           "raw": "tests/test_hexcore_e2e\\test_encodings.py:151: caf ==> calf"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_sandbox\\test_base_types.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 226,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "te",
+          "correction": "the, be, we, to",
+          "message": "'te' ==> 'the, be, we, to'",
+          "raw": "tests/test_sandbox\\test_base_types.py:226: te ==> the, be, we, to"
+        },
+        {
+          "line": 232,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "te",
+          "correction": "the, be, we, to",
+          "message": "'te' ==> 'the, be, we, to'",
+          "raw": "tests/test_sandbox\\test_base_types.py:232: te ==> the, be, we, to"
         }
       ]
     },

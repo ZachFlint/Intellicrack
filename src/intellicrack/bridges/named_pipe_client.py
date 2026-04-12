@@ -10,7 +10,6 @@ import asyncio
 import ctypes
 import json
 import os
-import uuid
 from collections.abc import Callable
 from ctypes import wintypes
 from dataclasses import dataclass
@@ -63,6 +62,7 @@ class NamedPipeClient:
         self._handle: int | None = None
         self._lock = asyncio.Lock()
         self._event_handler = event_handler
+        self._next_id: int = 0
 
     @property
     def is_connected(self) -> bool:
@@ -135,7 +135,8 @@ class NamedPipeClient:
         Returns:
             dict[str, Any]: Response payload.
         """
-        request_id = str(uuid.uuid4())
+        self._next_id += 1
+        request_id = self._next_id
         request = {
             "id": request_id,
             "type": "command",

@@ -10,13 +10,14 @@ Provides sandbox creation, configuration, binary execution, snapshot management,
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Any, Final, cast, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
@@ -43,6 +44,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
+    from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
     from intellicrack.sandbox.manager import SandboxManager, SandboxType
 
@@ -76,11 +78,17 @@ class SandboxPanel(AnalysisPanelBase):
         super().__init__(parent)
         self._sandbox: SandboxBase | None = None
         self._sandbox_manager: SandboxManager | None = None
+        self._bridge: SandboxBridge | None = None
         self.sandbox_id: str | None = None
         self._pending_binary: Path = Path()
         self._pending_args: list[str] = []
         self._pending_snapshot_id: str = "unknown"
         self._vnc_widget: VNCWidget | None = None
+        self._pcap_capture_id: str | None = None
+        self._pending_copy_in_dest: str = ""
+        self._pending_copy_in_source: str = ""
+        self._pending_copy_out_source: str = ""
+        self._pending_copy_out_dest: str = ""
         self._status_poll_timer = QTimer(self)
         self._status_poll_timer.timeout.connect(self._poll_status)
 
@@ -114,6 +122,45 @@ class SandboxPanel(AnalysisPanelBase):
         self.sandbox_type_combo.addItems(["Windows Sandbox", "QEMU"])
         self.sandbox_type_combo.setMinimumWidth(120)
         toolbar.addWidget(self.sandbox_type_combo)
+
+        toolbar.addSeparator()
+
+        self.screenshot_btn = self._add_tool_button(toolbar, "Screenshot", self._on_screenshot, enabled=False)
+        self.pcap_btn = self._add_tool_button(toolbar, "PCAP Start", self._on_pcap_toggle, enabled=False)
+        self.memdump_btn = self._add_tool_button(toolbar, "Mem Dump", self._on_memory_dump, enabled=False)
+        self.extract_files_btn = self._add_tool_button(
+            toolbar,
+            "Extract Files",
+            self._on_extract_files,
+            enabled=False,
+        )
+
+        toolbar.addSeparator()
+
+        self.yara_btn = self._add_tool_button(toolbar, "YARA Scan", self._on_yara_scan, enabled=False)
+        self.iocs_btn = self._add_tool_button(toolbar, "Extract IOCs", self._on_extract_iocs, enabled=False)
+        self.timeline_btn = self._add_tool_button(toolbar, "Timeline", self._on_timeline, enabled=False)
+        self.behaviors_btn = self._add_tool_button(
+            toolbar,
+            "Behaviors",
+            self._on_detect_behaviors,
+            enabled=False,
+        )
+
+        toolbar.addSeparator()
+
+        self.copy_in_btn = self._add_tool_button(toolbar, "Copy In", self._on_copy_in, enabled=False)
+        self.copy_out_btn = self._add_tool_button(toolbar, "Copy Out", self._on_copy_out, enabled=False)
+
+        toolbar.addSeparator()
+
+        self.continue_btn = self._add_tool_button(toolbar, "Continue VM", self._on_continue_vm, enabled=False)
+        self.delete_snap_btn = self._add_tool_button(
+            toolbar,
+            "Delete Snap",
+            self._on_delete_snapshot,
+            enabled=False,
+        )
 
     @override
     def _create_content(self) -> QWidget:
@@ -165,6 +212,23 @@ class SandboxPanel(AnalysisPanelBase):
         args_row.addWidget(self._run_btn)
         exec_layout.addLayout(args_row)
 
+        cmd_row = QHBoxLayout()
+        cmd_label = QLabel("Command:")
+        cmd_label.setObjectName("toolbar_label")
+        cmd_row.addWidget(cmd_label)
+
+        self._cmd_input = QLineEdit()
+        self._cmd_input.setFont(fm.get_code_font(9))
+        self._cmd_input.setPlaceholderText("Execute command in sandbox...")
+        cmd_row.addWidget(self._cmd_input)
+
+        self._exec_cmd_btn = QPushButton("Execute")
+        self._exec_cmd_btn.setObjectName("tool_button")
+        self._exec_cmd_btn.setEnabled(False)
+        self._exec_cmd_btn.clicked.connect(self._on_execute_command)
+        cmd_row.addWidget(self._exec_cmd_btn)
+        exec_layout.addLayout(cmd_row)
+
         main_splitter.addWidget(exec_container)
 
         output_tabs = QTabWidget()
@@ -200,6 +264,56 @@ class SandboxPanel(AnalysisPanelBase):
         vnc_w.connection_status_changed.connect(_vnc_status_slot)
         output_tabs.addTab(vnc_w, "VM Display")
 
+        self._api_calls_tree = QTreeWidget()
+        set_header_labels(self._api_calls_tree, ["Timestamp", "Process", "API", "Module", "Args", "Return"])
+        output_tabs.addTab(self._api_calls_tree, "API Calls")
+
+        self._dll_loads_tree = QTreeWidget()
+        set_header_labels(self._dll_loads_tree, ["Timestamp", "Process", "DLL Path", "Base Addr", "Size"])
+        output_tabs.addTab(self._dll_loads_tree, "DLL Loads")
+
+        self._services_tree = QTreeWidget()
+        set_header_labels(self._services_tree, ["Operation", "Name", "Binary Path", "Start Type", "Time"])
+        output_tabs.addTab(self._services_tree, "Services")
+
+        self._kernel_objects_tree = QTreeWidget()
+        set_header_labels(self._kernel_objects_tree, ["Type", "Name", "Process", "Operation", "Timestamp"])
+        output_tabs.addTab(self._kernel_objects_tree, "Kernel Objects")
+
+        self._injections_tree = QTreeWidget()
+        set_header_labels(self._injections_tree, ["Type", "Source", "Target", "APIs", "Timestamp"])
+        output_tabs.addTab(self._injections_tree, "Injections")
+
+        self._resources_tree = QTreeWidget()
+        set_header_labels(
+            self._resources_tree,
+            ["Timestamp", "CPU%", "Mem MB", "Disk R", "Disk W", "Net S", "Net R"],
+        )
+        output_tabs.addTab(self._resources_tree, "Resources")
+
+        self._clipboard_tree = QTreeWidget()
+        set_header_labels(self._clipboard_tree, ["Timestamp", "Op", "Format", "Preview", "Size"])
+        output_tabs.addTab(self._clipboard_tree, "Clipboard")
+
+        self._timeline_tree = QTreeWidget()
+        set_header_labels(self._timeline_tree, ["Timestamp", "Category", "Summary"])
+        output_tabs.addTab(self._timeline_tree, "Timeline")
+
+        self._iocs_tree = QTreeWidget()
+        set_header_labels(self._iocs_tree, ["Type", "Value", "Source", "Context"])
+        output_tabs.addTab(self._iocs_tree, "IOCs")
+
+        self._behaviors_tree = QTreeWidget()
+        set_header_labels(
+            self._behaviors_tree,
+            ["Signature", "Category", "Severity", "MITRE", "Description"],
+        )
+        output_tabs.addTab(self._behaviors_tree, "Behaviors")
+
+        self._instances_tree = QTreeWidget()
+        set_header_labels(self._instances_tree, ["ID", "Type", "Status", "Created", "Last Used", "Binary"])
+        output_tabs.addTab(self._instances_tree, "Instances")
+
         main_splitter.addWidget(output_tabs)
 
         main_splitter.setSizes([_SPLIT_LEFT, _SPLIT_RIGHT])
@@ -210,44 +324,54 @@ class SandboxPanel(AnalysisPanelBase):
         """Stop the status poll timer, disconnect VNC, and shut down the sandbox."""
         self._disconnect_vnc_display()
         self._status_poll_timer.stop()
-        if self._sandbox is not None and self.sandbox_id is not None:
+        if self._bridge is not None and self.sandbox_id is not None:
             try:
-                run_bridge_coroutine(self._sandbox.stop())
+                run_bridge_coroutine(self._bridge.destroy(self.sandbox_id))
             except (RuntimeError, ConnectionError, OSError):
-                _logger.debug("sandbox_stop_skipped", exc_info=True)
+                _logger.debug("sandbox_cleanup_destroy_skipped", exc_info=True)
+
+    def set_bridge(self, bridge: SandboxBridge) -> None:
+        """Set the sandbox bridge for all operations.
+
+        Args:
+            bridge: The SandboxBridge instance.
+        """
+        self._bridge = bridge
+        _logger.info("sandbox_bridge_set", bridge_type=type(bridge).__name__)
+
+    def get_bridge(self) -> SandboxBridge | None:
+        """Get the current sandbox bridge.
+
+        Returns:
+            SandboxBridge | None: The attached bridge or None.
+        """
+        return self._bridge
 
     def set_sandbox(self, sandbox: SandboxBase) -> None:
-        """Set the sandbox backend instance.
+        """Set the sandbox backend instance (deprecated).
 
         Args:
             sandbox: The SandboxBase implementation to use.
         """
         self._sandbox = sandbox
-        _logger.info("sandbox_backend_set", backend_type=type(sandbox).__name__)
+        _logger.warning("sandbox_set_deprecated", msg="Use set_bridge() instead")
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
-        """Set the sandbox manager for type-aware creation.
-
-        When a manager is set, the Create button uses the combo box
-        selection to create the correct sandbox type.
+        """Set the sandbox manager (deprecated).
 
         Args:
             manager: The SandboxManager instance.
         """
         self._sandbox_manager = manager
-        _logger.info("sandbox_manager_set", manager_type=type(manager).__name__)
-        self._run_async(
-            manager.cleanup_stale(),
-            on_success=self._on_cleanup_stale_success,
-            on_error=self._on_cleanup_stale_error,
-        )
+        _logger.warning("sandbox_manager_set_deprecated", msg="Use set_bridge() instead")
 
     def get_sandbox(self) -> SandboxBase | None:
-        """Get the current sandbox backend.
+        """Get the current sandbox backend (deprecated).
 
         Returns:
             SandboxBase | None: The attached sandbox or None.
         """
+        _logger.warning("get_sandbox_deprecated", msg="Use get_bridge() instead")
         return self._sandbox
 
     def _log(self, message: str) -> None:
@@ -270,6 +394,19 @@ class SandboxPanel(AnalysisPanelBase):
         self._run_btn.setEnabled(active)
         self.snapshot_btn.setEnabled(active)
         self.restore_btn.setEnabled(active)
+        self.screenshot_btn.setEnabled(active)
+        self.pcap_btn.setEnabled(active)
+        self.memdump_btn.setEnabled(active)
+        self.extract_files_btn.setEnabled(active)
+        self.yara_btn.setEnabled(active)
+        self.iocs_btn.setEnabled(active)
+        self.timeline_btn.setEnabled(active)
+        self.behaviors_btn.setEnabled(active)
+        self.copy_in_btn.setEnabled(active)
+        self.copy_out_btn.setEnabled(active)
+        self.continue_btn.setEnabled(active)
+        self.delete_snap_btn.setEnabled(active)
+        self._exec_cmd_btn.setEnabled(active)
 
     def _selected_sandbox_type(self) -> SandboxType:
         """Get the sandbox type from the combo box selection.
@@ -282,48 +419,32 @@ class SandboxPanel(AnalysisPanelBase):
 
     def _on_create(self) -> None:
         """Create a new sandbox environment."""
-        if self._sandbox_manager is not None:
-            sandbox_type = self._selected_sandbox_type()
-            _logger.debug("sandbox_create_via_manager", sandbox_type=sandbox_type)
-            self.create_btn.setEnabled(False)
-            self._run_async(
-                self._sandbox_manager.create(sandbox_type=sandbox_type, auto_start=True),
-                on_success=self._on_mgr_create_success,
-                on_error=self._on_create_error,
-            )
+        if self._bridge is None:
+            self._log("[!] No sandbox bridge configured")
+            _logger.warning("sandbox_create_failed_no_bridge")
             return
 
-        if self._sandbox is None:
-            self._log("[!] No sandbox backend configured")
-            _logger.warning("sandbox_create_failed_no_backend", reason="no backend configured")
-            return
-
-        _logger.debug("sandbox_create_started", backend_type=type(self._sandbox).__name__)
-        enable_vnc_fn = getattr(self._sandbox, "enable_vnc_display", None)
-        if callable(enable_vnc_fn):
-            enable_vnc_fn()
+        sandbox_type = self._selected_sandbox_type()
+        _logger.debug("sandbox_create_via_bridge", sandbox_type=sandbox_type)
         self.create_btn.setEnabled(False)
         self._run_async(
-            self._sandbox.start(),
-            on_success=self._on_create_success,
+            self._bridge.create(sandbox_type=sandbox_type),
+            on_success=self._on_bridge_create_success,
             on_error=self._on_create_error,
         )
 
-    def _on_mgr_create_success(self, result: object) -> None:
-        """Handle successful sandbox creation via SandboxManager.
-
-        Extracts the SandboxBase from the returned SandboxInstance
-        and delegates to the standard creation success handler.
+    def _on_bridge_create_success(self, result: object) -> None:
+        """Handle successful sandbox creation via bridge.
 
         Args:
-            result: The SandboxInstance returned by the manager.
+            result: Dictionary with instance_id and status from bridge.
         """
-        sandbox = getattr(result, "sandbox", None)
-        instance_id = getattr(result, "id", "active")
-        if sandbox is not None:
-            self._sandbox = sandbox
-        self.sandbox_id = str(instance_id)
-        self._on_create_success(result)
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            self.sandbox_id = str(typed.get("instance_id", "active"))
+        else:
+            self.sandbox_id = "active"
+        self._on_create_success(None)
 
     def _on_create_success(self, _result: object) -> None:
         """Handle successful sandbox creation.
@@ -354,35 +475,15 @@ class SandboxPanel(AnalysisPanelBase):
         self.create_btn.setEnabled(True)
         _logger.warning("sandbox_create_failed", error=str(exc))
 
-    def _on_cleanup_stale_success(self, result: object) -> None:
-        """Handle successful stale sandbox cleanup.
-
-        Args:
-            result: Number of instances cleaned up.
-        """
-        _ = self
-        count = result if isinstance(result, int) else 0
-        if count > 0:
-            _logger.info("stale_sandboxes_cleaned_up", count=count)
-
-    def _on_cleanup_stale_error(self, exc: object) -> None:
-        """Handle stale cleanup failure.
-
-        Args:
-            exc: The exception from the failed operation.
-        """
-        _ = self
-        _logger.warning("stale_sandbox_cleanup_failed", error=str(exc))
-
     def _on_destroy(self) -> None:
         """Destroy the current sandbox environment."""
-        if self._sandbox is None:
+        if self._bridge is None or self.sandbox_id is None:
             return
 
         _logger.debug("sandbox_destroy_started", sandbox_id=self.sandbox_id)
         self.destroy_btn.setEnabled(False)
         self._run_async(
-            self._sandbox.stop(),
+            self._bridge.destroy(self.sandbox_id),
             on_success=self._on_destroy_success,
             on_error=self._on_destroy_error,
         )
@@ -418,23 +519,43 @@ class SandboxPanel(AnalysisPanelBase):
 
     def _on_restart(self) -> None:
         """Restart the sandbox environment."""
-        if self._sandbox is None:
+        if self._bridge is None or self.sandbox_id is None:
             return
 
         _logger.debug("sandbox_restart_started", sandbox_id=self.sandbox_id)
         self.restart_btn.setEnabled(False)
         self._run_async(
-            self._sandbox.restart(),
-            on_success=self._on_restart_success,
+            self._bridge.destroy(self.sandbox_id),
+            on_success=self._on_restart_destroy_success,
             on_error=self._on_restart_error,
         )
 
-    def _on_restart_success(self, _result: object) -> None:
-        """Handle successful sandbox restart.
+    def _on_restart_destroy_success(self, _result: object) -> None:
+        """Handle destroy phase of restart, proceed to create.
 
         Args:
             _result: Bridge call result (unused).
         """
+        if self._bridge is None:
+            self.restart_btn.setEnabled(True)
+            return
+
+        sandbox_type = self._selected_sandbox_type()
+        self._run_async(
+            self._bridge.create(sandbox_type=sandbox_type),
+            on_success=self._on_restart_create_success,
+            on_error=self._on_restart_error,
+        )
+
+    def _on_restart_create_success(self, result: object) -> None:
+        """Handle successful create phase of restart.
+
+        Args:
+            result: Dictionary with instance_id from bridge.
+        """
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            self.sandbox_id = str(typed.get("instance_id", "active"))
         self._log("[+] Sandbox restarted")
         self._clear_report_tabs()
         self.restart_btn.setEnabled(True)
@@ -463,8 +584,8 @@ class SandboxPanel(AnalysisPanelBase):
 
     def _on_run_binary(self) -> None:
         """Execute the selected binary inside the sandbox."""
-        if self._sandbox is None:
-            self._log("[!] No sandbox active")
+        if self._bridge is None:
+            self._log("[!] No sandbox bridge active")
             return
 
         binary_path = self._binary_path_input.text().strip()
@@ -478,51 +599,275 @@ class SandboxPanel(AnalysisPanelBase):
             return
 
         args = self._args_input.text().strip()
-        args_list = args.split() if args else []
+        args_list = args.split() if args else None
+        sandbox_type = self._selected_sandbox_type()
 
         self._log(f"[*] Executing: {binary.name} {args}")
         self._clear_report_tabs()
         self._run_btn.setEnabled(False)
+        self._pending_binary = binary
         _logger.debug("sandbox_binary_execution_started", binary=binary.name, exec_args=args)
 
-        sandbox_dest = f"input/{binary.name}"
-        self._pending_binary = binary
-        self._pending_args = args_list
         self._run_async(
-            self._sandbox.copy_to_sandbox(binary, sandbox_dest),
-            on_success=self._on_copy_to_sandbox_success,
-            on_error=self._on_run_binary_error,
-        )
-
-    def _on_copy_to_sandbox_success(self, _result: object) -> None:
-        """Handle successful file copy, proceed to run the binary.
-
-        Args:
-            _result: Bridge call result (unused).
-        """
-        if self._sandbox is None:
-            self._run_btn.setEnabled(True)
-            return
-
-        binary = self._pending_binary
-        args_list = self._pending_args
-        self._run_async(
-            self._sandbox.run_binary(binary, args_list),
+            self._bridge.run_binary(
+                binary_path=binary_path,
+                args=args_list,
+                sandbox_type=sandbox_type,
+            ),
             on_success=self._on_run_binary_success,
             on_error=self._on_run_binary_error,
         )
 
-    def _on_run_binary_success(self, _result: object) -> None:
+    def _on_run_binary_success(self, result: object) -> None:
         """Handle successful binary execution.
 
         Args:
-            _result: Bridge call result (unused).
+            result: Dictionary with execution report from bridge.
         """
         binary_name = self._pending_binary.name
-        self._log("[+] Execution started")
+        self._log("[+] Execution completed")
         self._run_btn.setEnabled(True)
         self.execution_completed.emit(binary_name)
         _logger.info("sandbox_binary_executed", binary=binary_name)
+
+        if isinstance(result, dict):
+            self._display_report_dict(cast("dict[str, Any]", result))
+
+    def _display_report_dict(self, report: dict[str, Any]) -> None:
+        """Populate output tabs from a bridge execution report dictionary.
+
+        Args:
+            report: Dictionary returned by the bridge's run_binary.
+        """
+        stdout = report.get("stdout")
+        stderr = report.get("stderr")
+        if isinstance(stdout, str) and stdout:
+            self._console_output.appendPlainText(f"[stdout] {stdout}")
+        if isinstance(stderr, str) and stderr:
+            self._console_output.appendPlainText(f"[stderr] {stderr}")
+
+        self._log(f"[*] Exit code: {report.get('exit_code')}, Duration: {report.get('duration_seconds')}s")
+
+        self._populate_file_changes(report.get("file_changes"))
+        self._populate_registry_changes(report.get("registry_changes"))
+        self._populate_network_activity(report.get("network_activity"))
+        self._populate_api_calls(report.get("api_calls"))
+        self._populate_dll_loads(report.get("dll_loads"))
+        self._populate_service_changes(report.get("service_changes"))
+        self._populate_kernel_objects(report.get("kernel_objects"))
+        self._populate_injection_events(report.get("injection_events"))
+        self._populate_resource_samples(report.get("resource_samples"))
+        self._populate_clipboard_events(report.get("clipboard_events"))
+
+    def _populate_file_changes(self, file_changes: object) -> None:
+        """Populate the file changes tree from report data.
+
+        Args:
+            file_changes: List of file change dictionaries.
+        """
+        if not isinstance(file_changes, list):
+            return
+        typed_changes = cast("list[object]", file_changes)
+        for raw_change in typed_changes:
+            if isinstance(raw_change, dict):
+                change = cast("dict[str, object]", raw_change)
+                item = QTreeWidgetItem([
+                    str(change.get("operation", "")),
+                    str(change.get("path", "")),
+                    str(change.get("size", "")),
+                ])
+                self._file_changes_tree.addTopLevelItem(item)
+
+    def _populate_registry_changes(self, registry_changes: object) -> None:
+        """Populate the registry changes tree from report data.
+
+        Args:
+            registry_changes: List of registry change dictionaries.
+        """
+        if not isinstance(registry_changes, list):
+            return
+        typed_regs = cast("list[object]", registry_changes)
+        for raw_reg in typed_regs:
+            if isinstance(raw_reg, dict):
+                reg = cast("dict[str, object]", raw_reg)
+                item = QTreeWidgetItem([
+                    str(reg.get("operation", "")),
+                    str(reg.get("key", "")),
+                    str(reg.get("value_data", "")),
+                ])
+                self._registry_changes_tree.addTopLevelItem(item)
+
+    def _populate_network_activity(self, network_activity: object) -> None:
+        """Populate the network activity tree from report data.
+
+        Args:
+            network_activity: List of network activity dictionaries.
+        """
+        if not isinstance(network_activity, list):
+            return
+        typed_acts = cast("list[object]", network_activity)
+        for raw_act in typed_acts:
+            if isinstance(raw_act, dict):
+                act = cast("dict[str, object]", raw_act)
+                sent = act.get("bytes_sent", 0)
+                recv = act.get("bytes_received", 0)
+                item = QTreeWidgetItem([
+                    str(act.get("protocol", "")),
+                    str(act.get("remote_address", "")),
+                    str(act.get("remote_port", "")),
+                    f"{sent}/{recv} bytes",
+                ])
+                self._network_tree.addTopLevelItem(item)
+
+    def _populate_api_calls(self, api_calls: object) -> None:
+        """Populate the API calls tree from report data.
+
+        Args:
+            api_calls: List of API call dictionaries.
+        """
+        if not isinstance(api_calls, list):
+            return
+        typed_calls = cast("list[object]", api_calls)
+        for raw_call in typed_calls:
+            if isinstance(raw_call, dict):
+                call = cast("dict[str, object]", raw_call)
+                item = QTreeWidgetItem([
+                    str(call.get("timestamp", "")),
+                    str(call.get("process", "")),
+                    str(call.get("api", "")),
+                    str(call.get("module", "")),
+                    str(call.get("args", "")),
+                    str(call.get("return_value", "")),
+                ])
+                self._api_calls_tree.addTopLevelItem(item)
+
+    def _populate_dll_loads(self, dll_loads: object) -> None:
+        """Populate the DLL loads tree from report data.
+
+        Args:
+            dll_loads: List of DLL load dictionaries.
+        """
+        if not isinstance(dll_loads, list):
+            return
+        typed_loads = cast("list[object]", dll_loads)
+        for raw_load in typed_loads:
+            if isinstance(raw_load, dict):
+                load = cast("dict[str, object]", raw_load)
+                item = QTreeWidgetItem([
+                    str(load.get("timestamp", "")),
+                    str(load.get("process", "")),
+                    str(load.get("dll_path", "")),
+                    str(load.get("base_addr", "")),
+                    str(load.get("size", "")),
+                ])
+                self._dll_loads_tree.addTopLevelItem(item)
+
+    def _populate_service_changes(self, service_changes: object) -> None:
+        """Populate the services tree from report data.
+
+        Args:
+            service_changes: List of service change dictionaries.
+        """
+        if not isinstance(service_changes, list):
+            return
+        typed_svcs = cast("list[object]", service_changes)
+        for raw_svc in typed_svcs:
+            if isinstance(raw_svc, dict):
+                svc = cast("dict[str, object]", raw_svc)
+                item = QTreeWidgetItem([
+                    str(svc.get("operation", "")),
+                    str(svc.get("name", "")),
+                    str(svc.get("binary_path", "")),
+                    str(svc.get("start_type", "")),
+                    str(svc.get("time", "")),
+                ])
+                self._services_tree.addTopLevelItem(item)
+
+    def _populate_kernel_objects(self, kernel_objects: object) -> None:
+        """Populate the kernel objects tree from report data.
+
+        Args:
+            kernel_objects: List of kernel object dictionaries.
+        """
+        if not isinstance(kernel_objects, list):
+            return
+        typed_objs = cast("list[object]", kernel_objects)
+        for raw_obj in typed_objs:
+            if isinstance(raw_obj, dict):
+                obj = cast("dict[str, object]", raw_obj)
+                item = QTreeWidgetItem([
+                    str(obj.get("type", "")),
+                    str(obj.get("name", "")),
+                    str(obj.get("process", "")),
+                    str(obj.get("operation", "")),
+                    str(obj.get("timestamp", "")),
+                ])
+                self._kernel_objects_tree.addTopLevelItem(item)
+
+    def _populate_injection_events(self, injection_events: object) -> None:
+        """Populate the injections tree from report data.
+
+        Args:
+            injection_events: List of injection event dictionaries.
+        """
+        if not isinstance(injection_events, list):
+            return
+        typed_injs = cast("list[object]", injection_events)
+        for raw_inj in typed_injs:
+            if isinstance(raw_inj, dict):
+                inj = cast("dict[str, object]", raw_inj)
+                item = QTreeWidgetItem([
+                    str(inj.get("type", "")),
+                    str(inj.get("source", "")),
+                    str(inj.get("target", "")),
+                    str(inj.get("apis", "")),
+                    str(inj.get("timestamp", "")),
+                ])
+                self._injections_tree.addTopLevelItem(item)
+
+    def _populate_resource_samples(self, resource_samples: object) -> None:
+        """Populate the resources tree from report data.
+
+        Args:
+            resource_samples: List of resource sample dictionaries.
+        """
+        if not isinstance(resource_samples, list):
+            return
+        typed_samples = cast("list[object]", resource_samples)
+        for raw_sample in typed_samples:
+            if isinstance(raw_sample, dict):
+                sample = cast("dict[str, object]", raw_sample)
+                item = QTreeWidgetItem([
+                    str(sample.get("timestamp", "")),
+                    str(sample.get("cpu_percent", "")),
+                    str(sample.get("mem_mb", "")),
+                    str(sample.get("disk_read", "")),
+                    str(sample.get("disk_write", "")),
+                    str(sample.get("net_sent", "")),
+                    str(sample.get("net_recv", "")),
+                ])
+                self._resources_tree.addTopLevelItem(item)
+
+    def _populate_clipboard_events(self, clipboard_events: object) -> None:
+        """Populate the clipboard tree from report data.
+
+        Args:
+            clipboard_events: List of clipboard event dictionaries.
+        """
+        if not isinstance(clipboard_events, list):
+            return
+        typed_clips = cast("list[object]", clipboard_events)
+        for raw_clip in typed_clips:
+            if isinstance(raw_clip, dict):
+                clip = cast("dict[str, object]", raw_clip)
+                item = QTreeWidgetItem([
+                    str(clip.get("timestamp", "")),
+                    str(clip.get("operation", "")),
+                    str(clip.get("format", "")),
+                    str(clip.get("preview", "")),
+                    str(clip.get("size", "")),
+                ])
+                self._clipboard_tree.addTopLevelItem(item)
 
     def _on_run_binary_error(self, exc: object) -> None:
         """Handle binary execution failure.
@@ -537,12 +882,12 @@ class SandboxPanel(AnalysisPanelBase):
 
     def _on_take_snapshot(self) -> None:
         """Take a snapshot of the current sandbox state."""
-        if self._sandbox is None:
+        if self._bridge is None or self.sandbox_id is None:
             return
 
         self.snapshot_btn.setEnabled(False)
         self._run_async(
-            self._sandbox.take_snapshot("manual_snapshot"),
+            self._bridge.snapshot_create(self.sandbox_id, "manual_snapshot"),
             on_success=self._on_take_snapshot_success,
             on_error=self._on_take_snapshot_error,
         )
@@ -551,9 +896,14 @@ class SandboxPanel(AnalysisPanelBase):
         """Handle successful snapshot creation.
 
         Args:
-            result: The snapshot ID from the bridge.
+            result: Dictionary with snapshot_id from bridge.
         """
-        snapshot_id = str(result) if result is not None else "unknown"
+        snapshot_id = "unknown"
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            snapshot_id = str(typed.get("snapshot_id", "unknown"))
+        elif result is not None:
+            snapshot_id = str(result)
         self._log(f"[+] Snapshot taken: {snapshot_id}")
         item = QTreeWidgetItem([snapshot_id, "manual_snapshot", "now"])
         self._snapshots_tree.addTopLevelItem(item)
@@ -572,7 +922,7 @@ class SandboxPanel(AnalysisPanelBase):
 
     def _on_restore_snapshot(self) -> None:
         """Restore the selected snapshot."""
-        if self._sandbox is None:
+        if self._bridge is None or self.sandbox_id is None:
             return
 
         selected = get_current_tree_item(self._snapshots_tree)
@@ -584,7 +934,7 @@ class SandboxPanel(AnalysisPanelBase):
         self.restore_btn.setEnabled(False)
         self._pending_snapshot_id = snapshot_id
         self._run_async(
-            self._sandbox.restore_snapshot(snapshot_id),
+            self._bridge.snapshot_restore(self.sandbox_id, snapshot_id),
             on_success=self._on_restore_snapshot_success,
             on_error=self._on_restore_snapshot_error,
         )
@@ -612,18 +962,606 @@ class SandboxPanel(AnalysisPanelBase):
         self.restore_btn.setEnabled(True)
         _logger.warning("sandbox_snapshot_restore_failed", snapshot_id=snapshot_id, error=str(exc))
 
-    def _poll_status(self) -> None:
-        """Poll the sandbox status periodically."""
-        if self._sandbox is None:
+    def _on_screenshot(self) -> None:
+        """Capture a screenshot of the sandbox display."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.screenshot_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.screenshot(self.sandbox_id),
+            on_success=self._on_screenshot_success,
+            on_error=self._on_screenshot_error,
+        )
+
+    def _on_screenshot_success(self, result: object) -> None:
+        """Handle successful screenshot capture.
+
+        Args:
+            result: Dictionary with screenshot path from bridge.
+        """
+        path = ""
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            path = str(typed.get("screenshot_path", ""))
+        self._log(f"[+] Screenshot saved: {path}")
+        self.screenshot_btn.setEnabled(True)
+
+    def _on_screenshot_error(self, exc: object) -> None:
+        """Handle screenshot capture failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Screenshot failed: {exc}")
+        self.screenshot_btn.setEnabled(True)
+
+    def _on_pcap_toggle(self) -> None:
+        """Toggle packet capture start/stop."""
+        if self._bridge is None or self.sandbox_id is None:
             return
 
-        try:
-            state = self._sandbox.state
-            status_text = state.status if hasattr(state, "status") else "Unknown"
-            self._status_indicator.setText(f"Active ({status_text})")
-        except (RuntimeError, AttributeError):
-            _logger.exception("sandbox_status_query_failed")
-            self._status_indicator.setText("Active (status unavailable)")
+        if self._pcap_capture_id is None:
+            self.pcap_btn.setEnabled(False)
+            self._run_async(
+                self._bridge.pcap_start(self.sandbox_id),
+                on_success=self._on_pcap_start_success,
+                on_error=self._on_pcap_start_error,
+            )
+        else:
+            self.pcap_btn.setEnabled(False)
+            self._run_async(
+                self._bridge.pcap_stop(self.sandbox_id, self._pcap_capture_id),
+                on_success=self._on_pcap_stop_success,
+                on_error=self._on_pcap_stop_error,
+            )
+
+    def _on_pcap_start_success(self, result: object) -> None:
+        """Handle successful PCAP capture start.
+
+        Args:
+            result: Dictionary with capture_id from bridge.
+        """
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            self._pcap_capture_id = str(typed.get("capture_id", ""))
+        else:
+            self._pcap_capture_id = "active"
+        self._log(f"[+] PCAP capture started: {self._pcap_capture_id}")
+        self.pcap_btn.setText("PCAP Stop")
+        self.pcap_btn.setEnabled(True)
+
+    def _on_pcap_start_error(self, exc: object) -> None:
+        """Handle PCAP capture start failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] PCAP start failed: {exc}")
+        self.pcap_btn.setEnabled(True)
+
+    def _on_pcap_stop_success(self, result: object) -> None:
+        """Handle successful PCAP capture stop.
+
+        Args:
+            result: Dictionary with pcap file path from bridge.
+        """
+        pcap_path = ""
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            pcap_path = str(typed.get("pcap_path", ""))
+        self._log(f"[+] PCAP capture stopped, saved: {pcap_path}")
+        self._pcap_capture_id = None
+        self.pcap_btn.setText("PCAP Start")
+        self.pcap_btn.setEnabled(True)
+
+    def _on_pcap_stop_error(self, exc: object) -> None:
+        """Handle PCAP capture stop failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] PCAP stop failed: {exc}")
+        self._pcap_capture_id = None
+        self.pcap_btn.setText("PCAP Start")
+        self.pcap_btn.setEnabled(True)
+
+    def _on_memory_dump(self) -> None:
+        """Dump guest memory from the sandbox."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.memdump_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.memory_dump(self.sandbox_id),
+            on_success=self._on_memory_dump_success,
+            on_error=self._on_memory_dump_error,
+        )
+
+    def _on_memory_dump_success(self, result: object) -> None:
+        """Handle successful memory dump.
+
+        Args:
+            result: Dictionary with dump file path from bridge.
+        """
+        dump_path = ""
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            dump_path = str(typed.get("dump_path", ""))
+        self._log(f"[+] Memory dump saved: {dump_path}")
+        self.memdump_btn.setEnabled(True)
+
+    def _on_memory_dump_error(self, exc: object) -> None:
+        """Handle memory dump failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Memory dump failed: {exc}")
+        self.memdump_btn.setEnabled(True)
+
+    def _on_extract_files(self) -> None:
+        """Extract files dropped during sandbox execution."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.extract_files_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.extract_dropped_files(self.sandbox_id),
+            on_success=self._on_extract_files_success,
+            on_error=self._on_extract_files_error,
+        )
+
+    def _on_extract_files_success(self, result: object) -> None:
+        """Handle successful file extraction.
+
+        Args:
+            result: Dictionary with ZIP archive path from bridge.
+        """
+        zip_path = ""
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            zip_path = str(typed.get("zip_path", ""))
+        self._log(f"[+] Dropped files extracted: {zip_path}")
+        self.extract_files_btn.setEnabled(True)
+
+    def _on_extract_files_error(self, exc: object) -> None:
+        """Handle file extraction failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] File extraction failed: {exc}")
+        self.extract_files_btn.setEnabled(True)
+
+    def _on_yara_scan(self) -> None:
+        """Run YARA scan against sandbox artifacts."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.yara_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.yara_scan(self.sandbox_id),
+            on_success=self._on_yara_scan_success,
+            on_error=self._on_yara_scan_error,
+        )
+
+    def _on_yara_scan_success(self, result: object) -> None:
+        """Handle successful YARA scan.
+
+        Args:
+            result: Dictionary with YARA match results from bridge.
+        """
+        match_count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_matches = typed.get("matches", [])
+            if isinstance(raw_matches, list):
+                typed_matches = cast("list[object]", raw_matches)
+                match_count = len(typed_matches)
+                for raw_match in typed_matches:
+                    if isinstance(raw_match, dict):
+                        m = cast("dict[str, object]", raw_match)
+                        self._log(
+                            f"[YARA] {m.get('rule', 'unknown')}: {m.get('strings', '')} in {m.get('file', '')}",
+                        )
+        self._log(f"[+] YARA scan complete: {match_count} matches")
+        self.yara_btn.setEnabled(True)
+
+    def _on_yara_scan_error(self, exc: object) -> None:
+        """Handle YARA scan failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] YARA scan failed: {exc}")
+        self.yara_btn.setEnabled(True)
+
+    def _on_extract_iocs(self) -> None:
+        """Extract IOCs from the last execution report."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.iocs_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.extract_iocs(self.sandbox_id),
+            on_success=self._on_extract_iocs_success,
+            on_error=self._on_extract_iocs_error,
+        )
+
+    def _on_extract_iocs_success(self, result: object) -> None:
+        """Handle successful IOC extraction.
+
+        Args:
+            result: Dictionary with list of IOC entries from bridge.
+        """
+        self._iocs_tree.clear()
+        ioc_count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_iocs = typed.get("iocs", [])
+            if isinstance(raw_iocs, list):
+                typed_iocs = cast("list[object]", raw_iocs)
+                for raw_ioc in typed_iocs:
+                    if isinstance(raw_ioc, dict):
+                        ioc = cast("dict[str, object]", raw_ioc)
+                        item = QTreeWidgetItem([
+                            str(ioc.get("ioc_type", "")),
+                            str(ioc.get("value", "")),
+                            str(ioc.get("source", "")),
+                            str(ioc.get("context", "")),
+                        ])
+                        self._iocs_tree.addTopLevelItem(item)
+                        ioc_count += 1
+        self._log(f"[+] IOC extraction complete: {ioc_count} indicators")
+        self.iocs_btn.setEnabled(True)
+
+    def _on_extract_iocs_error(self, exc: object) -> None:
+        """Handle IOC extraction failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] IOC extraction failed: {exc}")
+        self.iocs_btn.setEnabled(True)
+
+    def _on_timeline(self) -> None:
+        """Generate an event timeline from the last execution report."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.timeline_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.timeline(self.sandbox_id),
+            on_success=self._on_timeline_success,
+            on_error=self._on_timeline_error,
+        )
+
+    def _on_timeline_success(self, result: object) -> None:
+        """Handle successful timeline generation.
+
+        Args:
+            result: Dictionary with list of timeline events from bridge.
+        """
+        self._timeline_tree.clear()
+        event_count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_events = typed.get("events", [])
+            if isinstance(raw_events, list):
+                typed_events = cast("list[object]", raw_events)
+                for raw_event in typed_events:
+                    if isinstance(raw_event, dict):
+                        ev = cast("dict[str, object]", raw_event)
+                        item = QTreeWidgetItem([
+                            str(ev.get("timestamp", "")),
+                            str(ev.get("category", "")),
+                            str(ev.get("summary", "")),
+                        ])
+                        self._timeline_tree.addTopLevelItem(item)
+                        event_count += 1
+        self._log(f"[+] Timeline generated: {event_count} events")
+        self.timeline_btn.setEnabled(True)
+
+    def _on_timeline_error(self, exc: object) -> None:
+        """Handle timeline generation failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Timeline generation failed: {exc}")
+        self.timeline_btn.setEnabled(True)
+
+    def _on_detect_behaviors(self) -> None:
+        """Detect behavioral signatures from the last execution report."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.behaviors_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.detect_behaviors(self.sandbox_id),
+            on_success=self._on_detect_behaviors_success,
+            on_error=self._on_detect_behaviors_error,
+        )
+
+    def _on_detect_behaviors_success(self, result: object) -> None:
+        """Handle successful behavior detection.
+
+        Args:
+            result: Dictionary with list of behavior matches from bridge.
+        """
+        self._behaviors_tree.clear()
+        match_count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_matches = typed.get("matches", [])
+            if isinstance(raw_matches, list):
+                typed_matches = cast("list[object]", raw_matches)
+                for raw_match in typed_matches:
+                    if isinstance(raw_match, dict):
+                        m = cast("dict[str, object]", raw_match)
+                        item = QTreeWidgetItem([
+                            str(m.get("signature", "")),
+                            str(m.get("category", "")),
+                            str(m.get("severity", "")),
+                            str(m.get("mitre", "")),
+                            str(m.get("description", "")),
+                        ])
+                        self._behaviors_tree.addTopLevelItem(item)
+                        match_count += 1
+        self._log(f"[+] Behavior detection complete: {match_count} signatures matched")
+        self.behaviors_btn.setEnabled(True)
+
+    def _on_detect_behaviors_error(self, exc: object) -> None:
+        """Handle behavior detection failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Behavior detection failed: {exc}")
+        self.behaviors_btn.setEnabled(True)
+
+    def _on_copy_in(self) -> None:
+        """Copy a file into the sandbox."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+
+        source_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select File to Copy Into Sandbox",
+            "",
+            "All Files (*)",
+        )
+        if not source_path:
+            return
+
+        dest_path, ok = QInputDialog.getText(
+            self,
+            "Destination Path",
+            "Path inside sandbox:",
+        )
+        if not ok or not dest_path:
+            return
+
+        self._pending_copy_in_source = source_path
+        self._pending_copy_in_dest = dest_path
+        self.copy_in_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.copy_to(self.sandbox_id, source_path, dest_path),
+            on_success=self._on_copy_in_success,
+            on_error=self._on_copy_in_error,
+        )
+
+    def _on_copy_in_success(self, _result: object) -> None:
+        """Handle successful file copy into sandbox.
+
+        Args:
+            _result: Bridge call result (unused).
+        """
+        self._log(f"[+] Copied into sandbox: {self._pending_copy_in_source} -> {self._pending_copy_in_dest}")
+        self.copy_in_btn.setEnabled(True)
+
+    def _on_copy_in_error(self, exc: object) -> None:
+        """Handle file copy into sandbox failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Copy into sandbox failed: {exc}")
+        self.copy_in_btn.setEnabled(True)
+
+    def _on_copy_out(self) -> None:
+        """Copy a file out of the sandbox."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+
+        sandbox_path, ok = QInputDialog.getText(
+            self,
+            "Sandbox File Path",
+            "Path inside sandbox to copy out:",
+        )
+        if not ok or not sandbox_path:
+            return
+
+        dest_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save File From Sandbox",
+            "",
+            "All Files (*)",
+        )
+        if not dest_path:
+            return
+
+        self._pending_copy_out_source = sandbox_path
+        self._pending_copy_out_dest = dest_path
+        self.copy_out_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.copy_from(self.sandbox_id, sandbox_path, dest_path),
+            on_success=self._on_copy_out_success,
+            on_error=self._on_copy_out_error,
+        )
+
+    def _on_copy_out_success(self, _result: object) -> None:
+        """Handle successful file copy from sandbox.
+
+        Args:
+            _result: Bridge call result (unused).
+        """
+        self._log(f"[+] Copied from sandbox: {self._pending_copy_out_source} -> {self._pending_copy_out_dest}")
+        self.copy_out_btn.setEnabled(True)
+
+    def _on_copy_out_error(self, exc: object) -> None:
+        """Handle file copy from sandbox failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Copy from sandbox failed: {exc}")
+        self.copy_out_btn.setEnabled(True)
+
+    def _on_continue_vm(self) -> None:
+        """Resume execution of a paused sandbox VM."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.continue_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.cont(self.sandbox_id),
+            on_success=self._on_continue_vm_success,
+            on_error=self._on_continue_vm_error,
+        )
+
+    def _on_continue_vm_success(self, _result: object) -> None:
+        """Handle successful VM resume.
+
+        Args:
+            _result: Bridge call result (unused).
+        """
+        self._log("[+] VM execution resumed")
+        self.continue_btn.setEnabled(True)
+
+    def _on_continue_vm_error(self, exc: object) -> None:
+        """Handle VM resume failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] VM continue failed: {exc}")
+        self.continue_btn.setEnabled(True)
+
+    def _on_delete_snapshot(self) -> None:
+        """Delete the selected snapshot from the sandbox."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+
+        selected = get_current_tree_item(self._snapshots_tree)
+        if selected is None:
+            self._log("[!] No snapshot selected for deletion")
+            return
+
+        snapshot_name = selected.text(0)
+        self._pending_snapshot_id = snapshot_name
+        self.delete_snap_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.snapshot_delete(self.sandbox_id, snapshot_name),
+            on_success=self._on_delete_snapshot_success,
+            on_error=self._on_delete_snapshot_error,
+        )
+
+    def _on_delete_snapshot_success(self, _result: object) -> None:
+        """Handle successful snapshot deletion.
+
+        Args:
+            _result: Bridge call result (unused).
+        """
+        snapshot_name = self._pending_snapshot_id
+        self._log(f"[+] Snapshot deleted: {snapshot_name}")
+        selected = get_current_tree_item(self._snapshots_tree)
+        if selected is not None:
+            idx = self._snapshots_tree.indexOfTopLevelItem(selected)
+            if idx >= 0:
+                self._snapshots_tree.takeTopLevelItem(idx)
+        self.delete_snap_btn.setEnabled(True)
+
+    def _on_delete_snapshot_error(self, exc: object) -> None:
+        """Handle snapshot deletion failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Snapshot deletion failed: {exc}")
+        self.delete_snap_btn.setEnabled(True)
+
+    def _on_execute_command(self) -> None:
+        """Execute a command inside the sandbox."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+
+        command = self._cmd_input.text().strip()
+        if not command:
+            self._log("[!] No command specified")
+            return
+
+        self._exec_cmd_btn.setEnabled(False)
+        self._log(f"[*] Executing command: {command}")
+        self._run_async(
+            self._bridge.execute(self.sandbox_id, command),
+            on_success=self._on_execute_command_success,
+            on_error=self._on_execute_command_error,
+        )
+
+    def _on_execute_command_success(self, result: object) -> None:
+        """Handle successful command execution.
+
+        Args:
+            result: Dictionary with exit_code, stdout, stderr from bridge.
+        """
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            exit_code = typed.get("exit_code", "")
+            stdout = typed.get("stdout", "")
+            stderr = typed.get("stderr", "")
+            self._log(f"[+] Command exited with code {exit_code}")
+            if isinstance(stdout, str) and stdout:
+                self._console_output.appendPlainText(f"[stdout] {stdout}")
+            if isinstance(stderr, str) and stderr:
+                self._console_output.appendPlainText(f"[stderr] {stderr}")
+        else:
+            self._log("[+] Command executed")
+        self._exec_cmd_btn.setEnabled(True)
+
+    def _on_execute_command_error(self, exc: object) -> None:
+        """Handle command execution failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Command execution failed: {exc}")
+        self._exec_cmd_btn.setEnabled(True)
+
+    def _poll_status(self) -> None:
+        """Poll the sandbox status periodically."""
+        if self._bridge is None:
+            return
+
+        self._run_async(
+            self._bridge.status(),
+            on_success=self._on_poll_status_success,
+            on_error=self._on_poll_status_error,
+        )
+
+    def _on_poll_status_success(self, result: object) -> None:
+        """Handle successful status poll.
+
+        Args:
+            result: Status dictionary from bridge.
+        """
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            active = typed.get("active_count", 0)
+            self._status_indicator.setText(f"Active ({active} instances)")
+        else:
+            self._status_indicator.setText("Active")
+
+    def _on_poll_status_error(self, _exc: object) -> None:
+        """Handle status poll failure.
+
+        Args:
+            _exc: The exception from the failed operation.
+        """
+        self._status_indicator.setText("Active (status unavailable)")
 
     def _on_vnc_status_changed(self, *, connected: bool) -> None:
         """Handle VNC connection status changes.
@@ -638,16 +1576,29 @@ class SandboxPanel(AnalysisPanelBase):
 
     def _connect_vnc_display(self) -> None:
         """Connect the VNC widget to the sandbox VNC port if available."""
-        if self._vnc_widget is None or self._sandbox is None:
+        if self._vnc_widget is None or self._bridge is None or self.sandbox_id is None:
             return
 
-        vnc_port = getattr(self._sandbox, "vnc_port", None)
+        self._run_async(
+            self._bridge.get_vnc_port(self.sandbox_id),
+            on_success=self._on_vnc_port_received,
+            on_error=lambda _: _logger.debug("vnc_port_query_failed"),
+        )
+
+    def _on_vnc_port_received(self, result: object) -> None:
+        """Handle VNC port retrieval.
+
+        Args:
+            result: VNC port number or None.
+        """
+        if self._vnc_widget is None:
+            return
+        vnc_port = result if isinstance(result, int) else None
         if vnc_port is None:
-            _logger.debug("sandbox_vnc_port_not_available", sandbox_type=type(self._sandbox).__name__)
+            _logger.debug("sandbox_vnc_port_not_available")
             return
-
         self._log(f"[*] Connecting VNC display on port {vnc_port}...")
-        self._vnc_widget.connect_to_server("127.0.0.1", int(vnc_port))
+        self._vnc_widget.connect_to_server("127.0.0.1", vnc_port)
         _logger.info("vnc_display_connecting", port=vnc_port)
 
     def _disconnect_vnc_display(self) -> None:
@@ -660,6 +1611,17 @@ class SandboxPanel(AnalysisPanelBase):
         self._file_changes_tree.clear()
         self._registry_changes_tree.clear()
         self._network_tree.clear()
+        self._api_calls_tree.clear()
+        self._dll_loads_tree.clear()
+        self._services_tree.clear()
+        self._kernel_objects_tree.clear()
+        self._injections_tree.clear()
+        self._resources_tree.clear()
+        self._clipboard_tree.clear()
+        self._timeline_tree.clear()
+        self._iocs_tree.clear()
+        self._behaviors_tree.clear()
+        self._instances_tree.clear()
 
     def load_execution_report(self, report: ExecutionReport) -> None:
         """Display an execution report in the output tabs.

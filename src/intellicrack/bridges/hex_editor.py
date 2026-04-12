@@ -12,21 +12,30 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import builtins as _builtins_mod
+import hashlib
 import inspect as _inspect_mod
+import io
 import json
+import math
+import operator
 import os
 import struct
 import tempfile
 import uuid
+import zlib
+from itertools import cycle, islice
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.bridges.base import BridgeCapabilities, ToolBridgeBase
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ToolDefinition, ToolFunction, ToolName, ToolParameter
+from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, ToolName, ToolParameter
 
 
 if TYPE_CHECKING:
+    from fpdf import FPDF
+
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.disassembler import HexDisassembler
     from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
@@ -112,7 +121,39 @@ except (ImportError, OSError) as _exc:
 _JAVA_SIGNED_BYTE_THRESHOLD = 0x7F
 _PRINTABLE_MIN = 0x20
 _PRINTABLE_MAX = 0x7E
-_DEFAULT_POINTER_SIZE = 4
+_FLOAT32_BYTE_SIZE = 4
+_MIN_HEADER_SIZE = 4
+_BYTE_MASK = 0xFF
+_U16_MASK = 0xFFFF
+_U32_MASK = 0xFFFFFFFF
+_U64_MASK = 0xFFFFFFFFFFFFFFFF
+_BITS_PER_BYTE = 8
+_BIT_INDEX_MAX = 7
+_PE32_PLUS_MAGIC = 0x20B
+_ELF_CLASS_64 = 2
+_ELF_DATA_LE = 1
+_PE_LFANEW_OFFSET = 0x3C
+_PE_CHECKSUM_RELATIVE = 64
+_PE_COFF_HEADER_SIZE = 20
+_DOS_HEADER_SIZE = 64
+_PE_SECTION_ENTRY_SIZE = 40
+_MAX_PE_SECTIONS = 96
+_MAX_BOOKMARK_ENTRIES = 20
+_MAX_EP_BYTES = 256
+_MAX_BPS_DIFF_LEN = 256
+_MIN_BPS_AHEAD_MATCH = 4
+_CRC32_MASK = 0xFFFFFFFF
+_BPS_CMD_SOURCE_READ = 0
+_BPS_CMD_TARGET_READ = 1
+_BPS_CMD_SOURCE_COPY = 2
+_BPS_CMD_TARGET_COPY = 3
+_BPS_MIN_PATCH_SIZE = 12
+_UPS_MIN_PATCH_SIZE = 16
+_WHITESPACE_BYTES = frozenset({0x09, 0x0A, 0x0D})
+_PT_LOAD = 1
+_MAX_ELF_SEGMENTS = 64
+_NDB_MIN_FIELDS = 4
+_HDB_MIN_FIELDS = 3
 
 
 class HexEditorBridge(ToolBridgeBase):
@@ -138,6 +179,8 @@ class HexEditorBridge(ToolBridgeBase):
         self.tool_registry: ToolRegistry | None = None
         self._highlight_rules: dict[str, dict[str, Any]] = {}
         self._display_mode: str = "hex8"
+        self._color_mode: str = "none"
+        self._alignment_grid_size: int = 0
         self._transform_node_cache: dict[str, Any] | None = None
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
@@ -552,9 +595,10 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(
                             name="sandbox_type",
                             type="string",
-                            description="Sandbox type (docker, qemu, windows_sandbox).",
+                            description="Sandbox type ('windows' or 'qemu').",
                             required=False,
-                            default="docker",
+                            enum=["windows", "qemu"],
+                            default="windows",
                         ),
                     ],
                     returns="Dict with sandbox_path and status",
@@ -573,12 +617,13 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(
                             name="sandbox_type",
                             type="string",
-                            description="Sandbox type.",
+                            description="Sandbox type ('windows' or 'qemu').",
                             required=False,
-                            default="docker",
+                            enum=["windows", "qemu"],
+                            default="windows",
                         ),
                         ToolParameter(
-                            name="timeout",
+                            name="time_limit",
                             type="integer",
                             description="Execution timeout in seconds.",
                             required=False,
@@ -792,25 +837,42 @@ class HexEditorBridge(ToolBridgeBase):
                 ),
                 ToolFunction(
                     name="hex_editor.export_patches",
-                    description="Export document patches as IPS or IPS32.",
+                    description="Export document patches as IPS, IPS32, BPS, or UPS.",
                     parameters=[
-                        ToolParameter(name="patch_format", type="string", description="Patch format.", enum=["ips", "ips32"]),
+                        ToolParameter(
+                            name="patch_format",
+                            type="string",
+                            description="Patch format.",
+                            enum=["ips", "ips32", "bps", "ups"],
+                        ),
+                        ToolParameter(
+                            name="original_path",
+                            type="string",
+                            description="Path to the original file (required for BPS/UPS).",
+                            required=False,
+                        ),
                     ],
                     returns="Base64-encoded patch data",
                 ),
                 ToolFunction(
                     name="hex_editor.import_patches",
-                    description="Import and apply IPS/IPS32 patches.",
+                    description="Import and apply IPS/IPS32/BPS/UPS patches.",
                     parameters=[
-                        ToolParameter(name="data_b64", type="string", description="Base64-encoded IPS/IPS32 data."),
+                        ToolParameter(name="data_b64", type="string", description="Base64-encoded patch data."),
+                        ToolParameter(
+                            name="original_path",
+                            type="string",
+                            description="Path to the original file (required for BPS/UPS).",
+                            required=False,
+                        ),
                     ],
-                    returns="Number of patches applied",
+                    returns="Number of patches applied or dict with target_size",
                 ),
                 ToolFunction(
                     name="hex_editor.search_numeric",
                     description="Search for a numeric value in the document.",
                     parameters=[
-                        ToolParameter(name="value", type="integer", description="Value to search for."),
+                        ToolParameter(name="value", type="number", description="Value to search for."),
                         ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8."),
                         ToolParameter(
                             name="value_type",
@@ -830,6 +892,13 @@ class HexEditorBridge(ToolBridgeBase):
                         ),
                         ToolParameter(name="alignment", type="integer", description="Search alignment.", required=False, default=1),
                         ToolParameter(name="max_results", type="integer", description="Max results.", required=False, default=100),
+                        ToolParameter(
+                            name="tolerance",
+                            type="number",
+                            description="Acceptable difference for float comparisons.",
+                            required=False,
+                            default=1e-6,
+                        ),
                     ],
                     returns="List of {offset, length} dicts",
                 ),
@@ -899,6 +968,353 @@ class HexEditorBridge(ToolBridgeBase):
                     description="Get the current display mode.",
                     parameters=[],
                     returns="Display mode string",
+                ),
+                ToolFunction(
+                    name="hex_editor.fill_block",
+                    description="Fill a block with a repeating byte pattern.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Start offset."),
+                        ToolParameter(name="length", type="integer", description="Number of bytes to fill."),
+                        ToolParameter(name="pattern_hex", type="string", description="Hex pattern to repeat (e.g. '90' or 'DEADBEEF')."),
+                    ],
+                    returns="True if fill succeeded",
+                ),
+                ToolFunction(
+                    name="hex_editor.copy_block",
+                    description="Copy a block of bytes from one offset to another.",
+                    parameters=[
+                        ToolParameter(name="src_offset", type="integer", description="Source offset."),
+                        ToolParameter(name="length", type="integer", description="Number of bytes."),
+                        ToolParameter(name="dst_offset", type="integer", description="Destination offset."),
+                    ],
+                    returns="True if copy succeeded",
+                ),
+                ToolFunction(
+                    name="hex_editor.move_block",
+                    description="Move a block of bytes from one offset to another.",
+                    parameters=[
+                        ToolParameter(name="src_offset", type="integer", description="Source offset."),
+                        ToolParameter(name="length", type="integer", description="Number of bytes."),
+                        ToolParameter(name="dst_offset", type="integer", description="Destination offset."),
+                    ],
+                    returns="True if move succeeded",
+                ),
+                ToolFunction(
+                    name="hex_editor.swap_blocks",
+                    description="Swap two non-overlapping blocks of bytes.",
+                    parameters=[
+                        ToolParameter(name="offset_a", type="integer", description="Start of block A."),
+                        ToolParameter(name="len_a", type="integer", description="Length of block A."),
+                        ToolParameter(name="offset_b", type="integer", description="Start of block B."),
+                        ToolParameter(name="len_b", type="integer", description="Length of block B."),
+                    ],
+                    returns="True if swap succeeded",
+                ),
+                ToolFunction(
+                    name="hex_editor.apply_arithmetic_to_selection",
+                    description="Apply a bitwise arithmetic operation to the current selection.",
+                    parameters=[
+                        ToolParameter(
+                            name="operation",
+                            type="string",
+                            description="Operation name.",
+                            enum=["xor", "and", "or", "not", "shl", "shr", "rol", "ror"],
+                        ),
+                        ToolParameter(
+                            name="key_hex",
+                            type="string",
+                            description="Key/mask hex (ignored for NOT).",
+                            required=False,
+                            default="",
+                        ),
+                        ToolParameter(name="count", type="integer", description="Shift/rotate bit count.", required=False, default=1),
+                    ],
+                    returns="Dict with offset, length, operation",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_bit",
+                    description="Get the value of a specific bit at an offset.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Byte offset."),
+                        ToolParameter(name="bit_index", type="integer", description="Bit index (0=LSB, 7=MSB)."),
+                    ],
+                    returns="Boolean bit value",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_bit",
+                    description="Set or clear a specific bit at an offset.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Byte offset."),
+                        ToolParameter(name="bit_index", type="integer", description="Bit index (0=LSB, 7=MSB)."),
+                        ToolParameter(name="value", type="boolean", description="True to set, False to clear."),
+                    ],
+                    returns="True if bit was set",
+                ),
+                ToolFunction(
+                    name="hex_editor.toggle_bit",
+                    description="Toggle a specific bit at an offset.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="Byte offset."),
+                        ToolParameter(name="bit_index", type="integer", description="Bit index (0=LSB, 7=MSB)."),
+                    ],
+                    returns="New boolean bit value after toggle",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_va_base",
+                    description="Add a virtual address mapping for a file region.",
+                    parameters=[
+                        ToolParameter(name="file_offset", type="integer", description="File offset start."),
+                        ToolParameter(name="virtual_address", type="integer", description="Virtual address corresponding to file_offset."),
+                        ToolParameter(name="length", type="integer", description="Length of the mapped region."),
+                    ],
+                    returns="True if mapping was added",
+                ),
+                ToolFunction(
+                    name="hex_editor.remove_va_mapping",
+                    description="Remove a virtual address mapping by index.",
+                    parameters=[
+                        ToolParameter(name="index", type="integer", description="Mapping index."),
+                    ],
+                    returns="True if removed",
+                ),
+                ToolFunction(
+                    name="hex_editor.list_va_mappings",
+                    description="List all virtual address mappings.",
+                    parameters=[],
+                    returns="List of {file_offset, virtual_address, length} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.auto_detect_va_mappings",
+                    description="Auto-detect VA mappings from PE/ELF headers.",
+                    parameters=[],
+                    returns="List of {file_offset, virtual_address, length} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.file_offset_to_va",
+                    description="Convert a file offset to a virtual address.",
+                    parameters=[
+                        ToolParameter(name="offset", type="integer", description="File offset."),
+                    ],
+                    returns="Virtual address integer or null if not mapped",
+                ),
+                ToolFunction(
+                    name="hex_editor.va_to_file_offset",
+                    description="Convert a virtual address to a file offset.",
+                    parameters=[
+                        ToolParameter(name="va", type="integer", description="Virtual address."),
+                    ],
+                    returns="File offset integer or null if not mapped",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_strings",
+                    description="Extract strings from the document.",
+                    parameters=[
+                        ToolParameter(name="min_length", type="integer", description="Minimum string length.", required=False, default=4),
+                        ToolParameter(
+                            name="encoding",
+                            type="string",
+                            description="Encoding filter.",
+                            enum=["ascii+utf16", "ascii", "utf16"],
+                            required=False,
+                            default="ascii+utf16",
+                        ),
+                        ToolParameter(name="max_results", type="integer", description="Maximum results.", required=False, default=5000),
+                    ],
+                    returns="List of {offset, length, encoding, content} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.generate_structure_bookmarks",
+                    description="Auto-detect PE/ELF structure and create colored bookmarks for headers and sections.",
+                    parameters=[],
+                    returns="List of bookmark dicts created",
+                ),
+                ToolFunction(
+                    name="hex_editor.export_annotated_html",
+                    description="Export hex view as annotated HTML with bookmarks and highlights.",
+                    parameters=[
+                        ToolParameter(name="start", type="integer", description="Start offset.", required=False, default=0),
+                        ToolParameter(
+                            name="end",
+                            type="integer",
+                            description="End offset (0 = entire document).",
+                            required=False,
+                            default=0,
+                        ),
+                        ToolParameter(name="bytes_per_row", type="integer", description="Bytes per row.", required=False, default=16),
+                    ],
+                    returns="HTML string",
+                ),
+                ToolFunction(
+                    name="hex_editor.export_annotated_pdf",
+                    description="Export hex view as annotated PDF with bookmarks and structure highlights.",
+                    parameters=[
+                        ToolParameter(
+                            name="output_path",
+                            type="string",
+                            description="Filesystem path for the output PDF file.",
+                            required=True,
+                        ),
+                        ToolParameter(name="start", type="integer", description="Start offset.", required=False, default=0),
+                        ToolParameter(
+                            name="end",
+                            type="integer",
+                            description="End offset (0 = entire document).",
+                            required=False,
+                            default=0,
+                        ),
+                        ToolParameter(name="bytes_per_row", type="integer", description="Bytes per row.", required=False, default=16),
+                    ],
+                    returns="Output file path",
+                ),
+                ToolFunction(
+                    name="hex_editor.snap_to_alignment",
+                    description="Snap the cursor to the nearest alignment boundary.",
+                    parameters=[
+                        ToolParameter(
+                            name="alignment_size",
+                            type="integer",
+                            description="Alignment in bytes.",
+                            required=False,
+                            default=512,
+                        ),
+                    ],
+                    returns="New cursor offset after snapping",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_alignment_grid",
+                    description="Set the alignment grid size for visual display.",
+                    parameters=[
+                        ToolParameter(name="size", type="integer", description="Grid size in bytes (0 to disable)."),
+                    ],
+                    returns="True",
+                ),
+                ToolFunction(
+                    name="hex_editor.verify_pe_checksum",
+                    description="Verify the PE optional header checksum.",
+                    parameters=[],
+                    returns="Dict with stored, calculated, offset, valid",
+                ),
+                ToolFunction(
+                    name="hex_editor.repair_pe_checksum",
+                    description="Recalculate and write the correct PE checksum.",
+                    parameters=[],
+                    returns="Dict with old_checksum, new_checksum, offset",
+                ),
+                ToolFunction(
+                    name="hex_editor.base_convert",
+                    description="Convert a numeric value between bases and show all representations.",
+                    parameters=[
+                        ToolParameter(name="value", type="string", description="Value string (decimal, 0xHex, 0bBinary, 0oOctal)."),
+                        ToolParameter(name="from_base", type="string", description="Source base hint.", required=False, default="auto"),
+                    ],
+                    returns="Dict with decimal, hex, octal, binary, int/uint widths, float representations",
+                ),
+                ToolFunction(
+                    name="hex_editor.run_python_script",
+                    description="Execute a Python script with access to the hex document API.",
+                    parameters=[
+                        ToolParameter(name="source", type="string", description="Python source code."),
+                    ],
+                    returns="Dict with output, error, variables",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_chunk_size",
+                    description="Set the chunk size hint for large file I/O.",
+                    parameters=[
+                        ToolParameter(name="size_bytes", type="integer", description="Chunk size in bytes."),
+                    ],
+                    returns="True",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_memory_usage",
+                    description="Get current document memory usage estimate.",
+                    parameters=[],
+                    returns="Dict with usage_bytes, chunk_size, memory_budget",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_memory_budget",
+                    description="Set the memory budget hint for large file operations.",
+                    parameters=[
+                        ToolParameter(name="budget_bytes", type="integer", description="Memory budget in bytes."),
+                    ],
+                    returns="True",
+                ),
+                ToolFunction(
+                    name="hex_editor.set_color_mode",
+                    description="Set the byte color-mapping mode.",
+                    parameters=[
+                        ToolParameter(
+                            name="mode",
+                            type="string",
+                            description="Color mode.",
+                            enum=["none", "entropy", "byte_value", "template", "content_type"],
+                        ),
+                    ],
+                    returns="True",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_color_mode",
+                    description="Get the current byte color-mapping mode.",
+                    parameters=[],
+                    returns="Color mode string",
+                ),
+                ToolFunction(
+                    name="hex_editor.scan_die_signatures",
+                    description="Scan document against a DIE-style JSON signature database.",
+                    parameters=[
+                        ToolParameter(name="db_path", type="string", description="Path to the DIE JSON database file."),
+                    ],
+                    returns="List of {name, type, version, offset, details} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.scan_clamav_signatures",
+                    description="Scan document against ClamAV .ndb or .hdb signature files.",
+                    parameters=[
+                        ToolParameter(name="db_path", type="string", description="Path to the .ndb or .hdb file."),
+                    ],
+                    returns="List of {name, type, version, offset, details} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.scan_custom_signatures",
+                    description="Scan document against a custom JSON signature database.",
+                    parameters=[
+                        ToolParameter(name="sig_file", type="string", description="Path to the custom JSON signature file."),
+                    ],
+                    returns="List of {name, type, version, offset, details} dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.export_patches_bps",
+                    description="Export a BPS patch comparing the current document against original.",
+                    parameters=[
+                        ToolParameter(name="original_path", type="string", description="Path to the original unmodified file."),
+                    ],
+                    returns="Base64-encoded BPS patch data",
+                ),
+                ToolFunction(
+                    name="hex_editor.import_patches_bps",
+                    description="Import and apply a BPS patch.",
+                    parameters=[
+                        ToolParameter(name="patch_b64", type="string", description="Base64-encoded BPS patch data."),
+                        ToolParameter(name="original_path", type="string", description="Path to the original source file."),
+                    ],
+                    returns="Dict with target_size",
+                ),
+                ToolFunction(
+                    name="hex_editor.export_patches_ups",
+                    description="Export a UPS patch comparing the current document against original.",
+                    parameters=[
+                        ToolParameter(name="original_path", type="string", description="Path to the original unmodified file."),
+                    ],
+                    returns="Base64-encoded UPS patch data",
+                ),
+                ToolFunction(
+                    name="hex_editor.import_patches_ups",
+                    description="Import and apply a UPS patch.",
+                    parameters=[
+                        ToolParameter(name="patch_b64", type="string", description="Base64-encoded UPS patch data."),
+                        ToolParameter(name="original_path", type="string", description="Path to the original source file."),
+                    ],
+                    returns="Dict with target_size",
                 ),
             ],
         )
@@ -1989,22 +2405,23 @@ class HexEditorBridge(ToolBridgeBase):
     async def save_to_sandbox(
         self,
         dest_path: str,
-        sandbox_type: str = "docker",
+        sandbox_type: str = "windows",
     ) -> dict[str, Any]:
         """Save the current document into a sandbox environment.
 
-        Writes the document to a temporary file, then uses the sandbox
-        bridge to copy it into the sandbox at the given destination path.
+        Creates a sandbox instance and copies the document into it at the
+        given destination path.
 
         Args:
             dest_path: Destination path inside the sandbox.
-            sandbox_type: Sandbox type (docker, qemu, windows_sandbox).
+            sandbox_type: Sandbox type ('windows' or 'qemu').
 
         Returns:
-            dict[str, Any]: Dict with sandbox_path and status.
+            dict[str, Any]: Dict with sandbox_path, status, and instance_id.
 
         Raises:
             RuntimeError: If no document is open or sandbox unavailable.
+            TypeError: If sandbox bridge does not support create.
         """
         if self.document is None:
             msg = "no document open"
@@ -2028,12 +2445,31 @@ class HexEditorBridge(ToolBridgeBase):
             file_path_str = tmp_path
 
         try:
-            copy_fn = getattr(sandbox_bridge, "copy_to_sandbox", None)
+            create_fn = getattr(sandbox_bridge, "create", None)
+            if not callable(create_fn):
+                msg = "sandbox bridge does not support create"
+                raise TypeError(msg)
+
+            raw_create: object
+            if _inspect_mod.iscoroutinefunction(create_fn):
+                raw_create = await create_fn(sandbox_type=sandbox_type)
+            else:
+                raw_create = await asyncio.to_thread(create_fn, sandbox_type=sandbox_type)
+            create_result = cast("dict[str, Any]", raw_create)
+
+            instance_id: str = str(create_result.get("instance_id", ""))
+
+            copy_fn = getattr(sandbox_bridge, "copy_to", None)
             if callable(copy_fn):
                 if _inspect_mod.iscoroutinefunction(copy_fn):
-                    await copy_fn(file_path_str, dest_path, sandbox_type)
+                    await copy_fn(instance_id=instance_id, source=file_path_str, dest=dest_path)
                 else:
-                    await asyncio.to_thread(copy_fn, file_path_str, dest_path, sandbox_type)
+                    await asyncio.to_thread(
+                        copy_fn,
+                        instance_id=instance_id,
+                        source=file_path_str,
+                        dest=dest_path,
+                    )
         finally:
             if tmp_path is not None:
                 try:
@@ -2042,20 +2478,23 @@ class HexEditorBridge(ToolBridgeBase):
                     _logger.debug("tmp_file_cleanup_failed", path=tmp_path)
 
         _logger.info("saved_to_sandbox", dest=dest_path, sandbox_type=sandbox_type)
-        return {"sandbox_path": dest_path, "status": "copied"}
+        return {"sandbox_path": dest_path, "status": "copied", "instance_id": instance_id}
 
     async def test_in_sandbox(
         self,
         args: str = "",
-        sandbox_type: str = "docker",
-        max_wait: int = 30,
+        sandbox_type: str = "windows",
+        time_limit: int = 30,
     ) -> dict[str, Any]:
-        """Save to sandbox, execute the binary, and return the report.
+        """Execute the current document binary in a sandbox and return the report.
+
+        Uses the sandbox bridge's ``run_binary`` method which handles
+        instance creation, file copy, and execution end-to-end.
 
         Args:
             args: Command-line arguments for the binary.
-            sandbox_type: Sandbox type.
-            max_wait: Execution timeout in seconds.
+            sandbox_type: Sandbox type ('windows' or 'qemu').
+            time_limit: Execution timeout in seconds.
 
         Returns:
             dict[str, Any]: Dict with execution report including exit_code, stdout, stderr.
@@ -2068,13 +2507,10 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        file_name = "target.bin"
         file_path_str = self.document.file_path()
-        if file_path_str is not None:
-            file_name = Path(file_path_str).name
-
-        dest_path = f"/sandbox_workdir/{file_name}"
-        await self.save_to_sandbox(dest_path, sandbox_type)
+        if file_path_str is None:
+            msg = "document has no file path; save the document first"
+            raise RuntimeError(msg)
 
         if self.tool_registry is None:
             msg = "tool registry not set"
@@ -2090,14 +2526,27 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "sandbox bridge does not support run_binary"
             raise TypeError(msg)
 
+        args_list = args.split() if args else None
+
         if _inspect_mod.iscoroutinefunction(run_fn):
-            result = await run_fn(dest_path, args, max_wait)
+            result = await run_fn(
+                binary_path=file_path_str,
+                args=args_list,
+                sandbox_type=sandbox_type,
+                time_limit=time_limit,
+            )
         else:
-            result = await asyncio.to_thread(run_fn, dest_path, args, max_wait)
+            result = await asyncio.to_thread(
+                run_fn,
+                binary_path=file_path_str,
+                args=args_list,
+                sandbox_type=sandbox_type,
+                time_limit=time_limit,
+            )
 
         _logger.info(
             "sandbox_test_completed",
-            dest=dest_path,
+            binary_path=file_path_str,
             sandbox_type=sandbox_type,
         )
         if isinstance(result, dict):
@@ -2787,28 +3236,30 @@ class HexEditorBridge(ToolBridgeBase):
             patch_data = raw[pos : pos + size]
             pos += size
             if self.document is not None:
-                self.document.write_bytes(offset, list(patch_data))
+                self.document.write_bytes(offset, patch_data)
             count += 1
         return count
 
     async def search_numeric(
         self,
-        value: int,
+        value: float,
         size: int = 4,
         value_type: str = "uint",
         endianness: str = "little",
         alignment: int = 1,
         max_results: int = 100,
+        tolerance: float = 1e-6,
     ) -> list[dict[str, int]]:
         """Search for a numeric value in the document.
 
         Args:
-            value: Integer value to search for.
+            value: Numeric value to search for.
             size: Byte size of the value: 1, 2, 4, or 8.
             value_type: Value type interpretation: "uint", "int", or "float".
             endianness: Byte order: "little" or "big".
             alignment: Search step alignment in bytes.
             max_results: Maximum number of results to return.
+            tolerance: Acceptable difference for float comparisons.
 
         Returns:
             list[dict[str, int]]: List of dicts with offset and length.
@@ -2823,13 +3274,23 @@ class HexEditorBridge(ToolBridgeBase):
         big_endian = endianness == "big"
         if value_type == "float":
             if hasattr(self.document, "search_numeric_float"):
-                results = self.document.search_numeric_float(value, size, big_endian, alignment, max_results)
+                results = self.document.search_numeric_float(value, size, big_endian, tolerance, alignment, max_results)
                 _logger.debug("search_numeric_float_completed", matches=len(results))
                 return [{"offset": r[0], "length": r[1]} for r in results]
         elif hasattr(self.document, "search_numeric"):
             results = self.document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
             _logger.debug("search_numeric_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
+
+        if value_type == "float" and tolerance > 0.0:
+            return self._search_float_fallback(
+                float(value),
+                size,
+                big_endian=big_endian,
+                tolerance=tolerance,
+                alignment=alignment,
+                max_results=max_results,
+            )
 
         needle = self._pack_numeric_needle(value, size, value_type, big_endian=big_endian)
         doc_len: int = self.document.length()
@@ -2946,7 +3407,7 @@ class HexEditorBridge(ToolBridgeBase):
         return endian_char + fmt_char
 
     @staticmethod
-    def _pack_numeric_needle(value: int, size: int, value_type: str, *, big_endian: bool) -> bytes:
+    def _pack_numeric_needle(value: float, size: int, value_type: str, *, big_endian: bool) -> bytes:
         """Pack a numeric value into bytes for use as a search needle.
 
         Args:
@@ -2966,7 +3427,7 @@ class HexEditorBridge(ToolBridgeBase):
             if size not in {4, 8}:
                 msg = f"float size must be 4 or 8, got {size}"
                 raise ValueError(msg)
-            fmt_char = "f" if size == _DEFAULT_POINTER_SIZE else "d"
+            fmt_char = "f" if size == _FLOAT32_BYTE_SIZE else "d"
             return struct.pack(endian_char + fmt_char, float(value))
         if size not in {1, 2, 4, 8}:
             msg = f"numeric size must be 1, 2, 4, or 8, got {size}"
@@ -2975,6 +3436,70 @@ class HexEditorBridge(ToolBridgeBase):
         size_chars = {1: "b", 2: "h", 4: "i", 8: "q"}
         fmt_char = size_chars[size] if signed else size_chars[size].upper()
         return struct.pack(endian_char + fmt_char, value)
+
+    def _search_float_fallback(
+        self,
+        value: float,
+        size: int,
+        *,
+        big_endian: bool,
+        tolerance: float,
+        alignment: int,
+        max_results: int,
+    ) -> list[dict[str, int]]:
+        """Tolerance-based float search fallback when Rust extension is unavailable.
+
+        Scans document chunks, unpacking each aligned position as a float
+        and comparing against the target value within the given tolerance.
+
+        Args:
+            value: Target float value.
+            size: Byte width (4 for float32, 8 for float64).
+            big_endian: True for big-endian byte order.
+            tolerance: Maximum allowed absolute difference.
+            alignment: Search step alignment in bytes.
+            max_results: Maximum number of results to return.
+
+        Returns:
+            list[dict[str, int]]: List of dicts with offset and length.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If size is not 4 or 8.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if size not in {4, 8}:
+            msg = f"float size must be 4 or 8, got {size}"
+            raise ValueError(msg)
+
+        endian_prefix = ">" if big_endian else "<"
+        fmt = endian_prefix + ("f" if size == _FLOAT32_BYTE_SIZE else "d")
+        doc_len: int = self.document.length()
+        matches: list[dict[str, int]] = []
+        pos = 0
+        while pos <= doc_len - size and len(matches) < max_results:
+            chunk_len = min(65536, doc_len - pos)
+            raw = self.document.read(pos, chunk_len)
+            if isinstance(raw, bytes):
+                chunk = raw
+            elif isinstance(raw, bytearray) or not isinstance(raw, list):
+                chunk = bytes(raw)
+            else:
+                chunk = bytes(cast("list[int]", raw))
+            idx = 0
+            while idx <= len(chunk) - size and len(matches) < max_results:
+                abs_offset = pos + idx
+                if abs_offset % alignment == 0:
+                    candidate: float = struct.unpack(fmt, chunk[idx : idx + size])[0]
+                    if abs(candidate - value) <= tolerance:
+                        matches.append({"offset": abs_offset, "length": size})
+                idx += alignment
+            pos += chunk_len - size + 1
+
+        _logger.debug("search_numeric_float_fallback_completed", matches=len(matches))
+        return matches
 
     async def add_highlight_rule(
         self,
@@ -3099,7 +3624,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         self.document = _hexcore_mod.HexDocument.from_process_memory(pid, address, size)
-        self._cursor_position = 0
+        self._cursor_offset = 0
         self._selection = None
         self._state.binary_loaded = True
         _logger.info("process_memory_opened", pid=pid, address=hex(address), size=size)
@@ -3110,3 +3635,2504 @@ class HexEditorBridge(ToolBridgeBase):
         doc = self.document
         doc_length: int = doc.length() if doc is not None else size
         return {"pid": pid, "address": address, "size": size, "document_length": doc_length}
+
+    def _read_doc_bytes(self, offset: int, length: int) -> bytes:
+        """Read bytes from the document, handling all return types.
+
+        Args:
+            offset: Byte offset to read from.
+            length: Number of bytes to read.
+
+        Returns:
+            bytes: The read data.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        raw: object = self.document.read(offset, length)
+        if isinstance(raw, bytes):
+            return raw
+        if isinstance(raw, bytearray):
+            return bytes(raw)
+        if isinstance(raw, list):
+            return bytes(cast("list[int]", raw))
+        return bytes(cast("bytearray", raw))
+
+    def _read_all_doc_bytes(self) -> bytes:
+        """Read the entire document contents.
+
+        Returns:
+            bytes: Full document data.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        doc_len: int = self.document.length()
+        return self._read_doc_bytes(0, doc_len)
+
+    async def fill_block(self, offset: int, length: int, pattern_hex: str) -> bool:
+        """Fill a block with a repeating byte pattern.
+
+        Args:
+            offset: Start offset.
+            length: Number of bytes to fill.
+            pattern_hex: Hex pattern to repeat (e.g. '90' or 'DEADBEEF').
+
+        Returns:
+            bool: True if fill succeeded.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If pattern_hex is empty.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        pattern = bytes.fromhex(pattern_hex.replace(" ", ""))
+        if not pattern:
+            msg = "pattern must not be empty"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "fill_block"):
+            self.document.fill_block(offset, length, list(pattern))
+        else:
+            fill_data = bytes(islice(cycle(pattern), length))
+            self.document.write_bytes(offset, fill_data)
+
+        _logger.debug("fill_block", offset=hex(offset), length=length, pattern_len=len(pattern))
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, length, source="bridge")
+        return True
+
+    async def copy_block(self, src_offset: int, length: int, dst_offset: int) -> bool:
+        """Copy a block of bytes from one offset to another.
+
+        Args:
+            src_offset: Source offset.
+            length: Number of bytes to copy.
+            dst_offset: Destination offset.
+
+        Returns:
+            bool: True if copy succeeded.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self.document, "copy_block"):
+            self.document.copy_block(src_offset, length, dst_offset)
+        else:
+            data = self._read_doc_bytes(src_offset, length)
+            self.document.write_bytes(dst_offset, data)
+
+        _logger.debug("copy_block", src=hex(src_offset), dst=hex(dst_offset), length=length)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(dst_offset, length, source="bridge")
+        return True
+
+    async def move_block(self, src_offset: int, length: int, dst_offset: int) -> bool:
+        """Move a block of bytes from one offset to another.
+
+        Args:
+            src_offset: Source offset.
+            length: Number of bytes to move.
+            dst_offset: Destination offset.
+
+        Returns:
+            bool: True if move succeeded.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self.document, "move_block"):
+            self.document.move_block(src_offset, length, dst_offset)
+        else:
+            data = self._read_doc_bytes(src_offset, length)
+            self.document.write_bytes(src_offset, bytes(length))
+            self.document.write_bytes(dst_offset, data)
+
+        _logger.debug("move_block", src=hex(src_offset), dst=hex(dst_offset), length=length)
+        if self.state_holder is not None:
+            doc_len: int = self.document.length()
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
+        return True
+
+    async def swap_blocks(
+        self,
+        offset_a: int,
+        len_a: int,
+        offset_b: int,
+        len_b: int,
+    ) -> bool:
+        """Swap two non-overlapping blocks of bytes.
+
+        Args:
+            offset_a: Start of block A.
+            len_a: Length of block A.
+            offset_b: Start of block B.
+            len_b: Length of block B.
+
+        Returns:
+            bool: True if swap succeeded.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If blocks overlap.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        end_a = offset_a + len_a
+        end_b = offset_b + len_b
+        if offset_a < end_b and offset_b < end_a:
+            msg = "blocks overlap"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "swap_blocks"):
+            self.document.swap_blocks(offset_a, len_a, offset_b, len_b)
+        else:
+            data_a = self._read_doc_bytes(offset_a, len_a)
+            data_b = self._read_doc_bytes(offset_b, len_b)
+            self.document.write_bytes(offset_a, data_b)
+            self.document.write_bytes(offset_b, data_a)
+
+        _logger.debug("swap_blocks", a=hex(offset_a), b=hex(offset_b))
+        if self.state_holder is not None:
+            doc_len: int = self.document.length()
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
+        return True
+
+    async def apply_arithmetic_to_selection(
+        self,
+        operation: str,
+        key_hex: str = "",
+        count: int = 1,
+    ) -> dict[str, Any]:
+        """Apply a bitwise arithmetic operation to the current selection.
+
+        Args:
+            operation: One of xor, and, or, not, shl, shr, rol, ror.
+            key_hex: Key/mask as hex string (ignored for NOT).
+            count: Bit count for shift/rotate operations.
+
+        Returns:
+            dict[str, Any]: Dict with offset, length, and operation.
+
+        Raises:
+            RuntimeError: If no document is open or no selection.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if self._selection is None:
+            msg = "no selection active"
+            raise RuntimeError(msg)
+
+        start, end = self._selection
+        length = end - start + 1
+        data = bytearray(self._read_doc_bytes(start, length))
+        key = bytes.fromhex(key_hex.replace(" ", "")) if key_hex else b""
+
+        transform_map: dict[str, str] = {
+            "xor": "xor_repeating",
+            "and": "mask_and",
+            "or": "mask_or",
+            "not": "bit_invert",
+            "shl": "bit_shift_left",
+            "shr": "bit_shift_right",
+            "rol": "bit_rotate_left",
+            "ror": "bit_rotate_right",
+        }
+
+        used_native = False
+        if hasattr(self.document, "transform_data") and operation in transform_map:
+            params: dict[str, Any] = {}
+            if operation in {"xor", "and", "or"} and key:
+                params["key"] = key
+            if operation in {"shl", "shr", "rol", "ror"}:
+                params["count"] = bytes([count & 0xFF])
+            try:
+                result_raw = self.document.transform_data(transform_map[operation], start, length, params)
+                if isinstance(result_raw, bytes):
+                    result_data = result_raw
+                elif isinstance(result_raw, list):
+                    result_data = bytes(cast("list[int]", result_raw))
+                else:
+                    result_data = bytes(result_raw)
+                self.document.write_bytes(start, result_data)
+                used_native = True
+            except (TypeError, ValueError, RuntimeError):
+                pass
+
+        if not used_native:
+            result_data = bytes(self._apply_arithmetic_fallback(data, operation, key, count))
+            self.document.write_bytes(start, result_data)
+
+        _logger.debug("arithmetic_applied", operation=operation, offset=hex(start), length=length)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(start, length, source="bridge")
+        return {"offset": start, "length": length, "operation": operation}
+
+    @staticmethod
+    def _apply_arithmetic_fallback(
+        data: bytearray,
+        operation: str,
+        key: bytes,
+        count: int,
+    ) -> bytearray:
+        """Apply arithmetic operation in pure Python.
+
+        Args:
+            data: Input byte data.
+            operation: Operation name.
+            key: Key/mask bytes.
+            count: Bit count for shift/rotate.
+
+        Returns:
+            bytearray: Transformed data.
+        """
+        result = bytearray(len(data))
+        byte_mask = 0xFF
+        bits_per_byte = 8
+        for i, b in enumerate(data):
+            if operation == "xor" and key:
+                result[i] = b ^ key[i % len(key)]
+            elif operation == "and" and key:
+                result[i] = b & key[i % len(key)]
+            elif operation == "or" and key:
+                result[i] = b | key[i % len(key)]
+            elif operation == "not":
+                result[i] = (~b) & byte_mask
+            elif operation == "shl":
+                result[i] = (b << count) & byte_mask
+            elif operation == "shr":
+                result[i] = (b >> count) & byte_mask
+            elif operation == "rol":
+                shift = count % bits_per_byte
+                result[i] = ((b << shift) | (b >> (bits_per_byte - shift))) & byte_mask
+            elif operation == "ror":
+                shift = count % bits_per_byte
+                result[i] = ((b >> shift) | (b << (bits_per_byte - shift))) & byte_mask
+            else:
+                result[i] = b
+        return result
+
+    async def get_bit(self, offset: int, bit_index: int) -> bool:
+        """Get the value of a specific bit at an offset.
+
+        Args:
+            offset: Byte offset.
+            bit_index: Bit index (0=LSB, 7=MSB).
+
+        Returns:
+            bool: True if the bit is set.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If bit_index is not 0-7.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if not 0 <= bit_index <= _BIT_INDEX_MAX:
+            msg = f"bit_index must be 0-7, got {bit_index}"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "get_bit"):
+            result: bool = self.document.get_bit(offset, bit_index)
+            return result
+
+        byte_val = self._read_doc_bytes(offset, 1)[0]
+        return bool(byte_val & (1 << bit_index))
+
+    async def set_bit(self, offset: int, bit_index: int, *, value: bool) -> bool:
+        """Set or clear a specific bit at an offset.
+
+        Args:
+            offset: Byte offset.
+            bit_index: Bit index (0=LSB, 7=MSB).
+            value: True to set, False to clear.
+
+        Returns:
+            bool: True if the operation succeeded.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If bit_index is not 0-7.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if not 0 <= bit_index <= _BIT_INDEX_MAX:
+            msg = f"bit_index must be 0-7, got {bit_index}"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "set_bit"):
+            self.document.set_bit(offset, bit_index, value)
+        else:
+            byte_val = self._read_doc_bytes(offset, 1)[0]
+            if value:
+                byte_val |= 1 << bit_index
+            else:
+                byte_val &= ~(1 << bit_index) & 0xFF
+            self.document.write_bytes(offset, bytes([byte_val]))
+
+        _logger.debug("bit_set", offset=hex(offset), bit=bit_index, value=value)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, 1, source="bridge")
+        return True
+
+    async def toggle_bit(self, offset: int, bit_index: int) -> bool:
+        """Toggle a specific bit at an offset.
+
+        Args:
+            offset: Byte offset.
+            bit_index: Bit index (0=LSB, 7=MSB).
+
+        Returns:
+            bool: New bit value after toggle.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If bit_index is not 0-7.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if not 0 <= bit_index <= _BIT_INDEX_MAX:
+            msg = f"bit_index must be 0-7, got {bit_index}"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "toggle_bit"):
+            result: bool = self.document.toggle_bit(offset, bit_index)
+            if self.state_holder is not None:
+                self.state_holder.notify_data_modified(offset, 1, source="bridge")
+            return result
+
+        byte_val = self._read_doc_bytes(offset, 1)[0]
+        byte_val ^= 1 << bit_index
+        self.document.write_bytes(offset, bytes([byte_val]))
+        _logger.debug("bit_toggled", offset=hex(offset), bit=bit_index)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(offset, 1, source="bridge")
+        return bool(byte_val & (1 << bit_index))
+
+    async def set_va_base(
+        self,
+        file_offset: int,
+        virtual_address: int,
+        length: int,
+    ) -> bool:
+        """Add a virtual address mapping for a file region.
+
+        Args:
+            file_offset: File offset start.
+            virtual_address: Virtual address corresponding to file_offset.
+            length: Length of the mapped region.
+
+        Returns:
+            bool: True if the mapping was added.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self.document, "add_va_mapping"):
+            self.document.add_va_mapping(file_offset, virtual_address, length)
+        _logger.debug(
+            "va_mapping_added",
+            file_offset=hex(file_offset),
+            va=hex(virtual_address),
+            length=length,
+        )
+        if self.state_holder is not None:
+            mapping_count = (
+                len(self.document.list_va_mappings()) if self.document is not None and hasattr(self.document, "list_va_mappings") else 0
+            )
+            self.state_holder.notify_va_mapping_changed(mapping_count, source="bridge")
+        return True
+
+    async def remove_va_mapping(self, index: int) -> bool:
+        """Remove a virtual address mapping by index.
+
+        Args:
+            index: Mapping index.
+
+        Returns:
+            bool: True if removed.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self.document, "remove_va_mapping"):
+            result: bool = self.document.remove_va_mapping(index)
+            if result and self.state_holder is not None:
+                va_count = len(self.document.list_va_mappings()) if hasattr(self.document, "list_va_mappings") else 0
+                self.state_holder.notify_va_mapping_changed(va_count, source="bridge")
+            return result
+        return False
+
+    async def list_va_mappings(self) -> list[dict[str, int]]:
+        """List all virtual address mappings.
+
+        Returns:
+            list[dict[str, int]]: List of dicts with file_offset, virtual_address, length.
+        """
+        if self.document is None:
+            return []
+
+        if hasattr(self.document, "list_va_mappings"):
+            mappings: list[tuple[int, int, int]] = self.document.list_va_mappings()
+            return [{"file_offset": m[0], "virtual_address": m[1], "length": m[2]} for m in mappings]
+        return []
+
+    async def auto_detect_va_mappings(self) -> list[dict[str, int]]:
+        """Auto-detect VA mappings from PE or ELF headers.
+
+        Returns:
+            list[dict[str, int]]: List of detected mappings.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        doc_len: int = self.document.length()
+        if doc_len < _MIN_HEADER_SIZE:
+            return []
+
+        magic = self._read_doc_bytes(0, _MIN_HEADER_SIZE)
+
+        if magic[:2] == b"MZ":
+            return await self._detect_pe_va_mappings()
+        if magic[:_MIN_HEADER_SIZE] == b"\x7fELF":
+            return await self._detect_elf_va_mappings()
+        return []
+
+    async def _detect_pe_va_mappings(self) -> list[dict[str, int]]:
+        """Detect VA mappings from PE headers.
+
+        Returns:
+            list[dict[str, int]]: List of detected PE section mappings.
+        """
+        if self.document is None:
+            return []
+
+        try:
+            e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
+            if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
+                return []
+
+            coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
+            num_sections = struct.unpack_from("<H", coff_header, 2)[0]
+            opt_header_size = struct.unpack_from("<H", coff_header, 16)[0]
+            opt_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE
+            opt_header = self._read_doc_bytes(opt_offset, min(opt_header_size, _DOS_HEADER_SIZE))
+            image_base = (
+                struct.unpack_from("<Q", opt_header, 24)[0]
+                if struct.unpack_from("<H", opt_header, 0)[0] == _PE32_PLUS_MAGIC
+                else struct.unpack_from("<I", opt_header, 28)[0]
+            )
+
+            mappings: list[dict[str, int]] = [
+                {"file_offset": 0, "virtual_address": image_base, "length": e_lfanew},
+            ]
+            if hasattr(self.document, "add_va_mapping"):
+                self.document.add_va_mapping(0, image_base, e_lfanew)
+
+            self._parse_pe_sections_va(
+                opt_offset + opt_header_size,
+                min(num_sections, _MAX_PE_SECTIONS),
+                image_base,
+                mappings,
+            )
+
+            _logger.info("pe_va_mappings_detected", count=len(mappings))
+            if self.state_holder is not None:
+                self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning("pe_va_detection_failed", error=str(exc))
+            return []
+        else:
+            return mappings
+
+    def _parse_pe_sections_va(
+        self,
+        section_offset: int,
+        count: int,
+        image_base: int,
+        mappings: list[dict[str, int]],
+    ) -> None:
+        """Parse PE section headers and add VA mappings.
+
+        Args:
+            section_offset: File offset of the first section header.
+            count: Number of sections to parse.
+            image_base: PE image base address.
+            mappings: List to append mapping dicts to.
+        """
+        for i in range(count):
+            sec_data = self._read_doc_bytes(section_offset + i * _PE_SECTION_ENTRY_SIZE, _PE_SECTION_ENTRY_SIZE)
+            virtual_addr = struct.unpack_from("<I", sec_data, 12)[0]
+            raw_size = struct.unpack_from("<I", sec_data, 16)[0]
+            raw_offset = struct.unpack_from("<I", sec_data, 20)[0]
+            sec_length = max(struct.unpack_from("<I", sec_data, 8)[0], raw_size)
+            sec_va = image_base + virtual_addr
+            if self.document is not None and hasattr(self.document, "add_va_mapping"):
+                self.document.add_va_mapping(raw_offset, sec_va, sec_length)
+            mappings.append({"file_offset": raw_offset, "virtual_address": sec_va, "length": sec_length})
+
+    async def _detect_elf_va_mappings(self) -> list[dict[str, int]]:
+        """Detect VA mappings from ELF program headers.
+
+        Returns:
+            list[dict[str, int]]: List of detected ELF segment mappings.
+        """
+        if self.document is None:
+            return []
+
+        try:
+            ident = self._read_doc_bytes(0, 16)
+            is_64 = ident[4] == _ELF_CLASS_64
+            endian = "<" if ident[5] == _ELF_DATA_LE else ">"
+            phoff, phentsize, phnum = self._parse_elf_phdr_info(endian, is_64=is_64)
+
+            mappings: list[dict[str, int]] = []
+            for i in range(min(phnum, _MAX_ELF_SEGMENTS)):
+                phdr_data = self._read_doc_bytes(phoff + i * phentsize, phentsize)
+                if struct.unpack_from(f"{endian}I", phdr_data, 0)[0] != _PT_LOAD:
+                    continue
+                p_offset, p_vaddr, p_filesz = self._parse_elf_load_segment(phdr_data, endian, is_64=is_64)
+                if hasattr(self.document, "add_va_mapping"):
+                    self.document.add_va_mapping(p_offset, p_vaddr, p_filesz)
+                mappings.append({"file_offset": p_offset, "virtual_address": p_vaddr, "length": p_filesz})
+
+            _logger.info("elf_va_mappings_detected", count=len(mappings))
+            if self.state_holder is not None:
+                self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning("elf_va_detection_failed", error=str(exc))
+            return []
+        else:
+            return mappings
+
+    def _parse_elf_phdr_info(self, endian: str, *, is_64: bool) -> tuple[int, int, int]:
+        """Parse ELF header to extract program header table location.
+
+        Args:
+            endian: Endianness string ("<" or ">").
+            is_64: True for 64-bit ELF.
+
+        Returns:
+            tuple[int, int, int]: phoff, phentsize, phnum.
+        """
+        if is_64:
+            hdr = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
+            return (
+                struct.unpack_from(f"{endian}Q", hdr, 32)[0],
+                struct.unpack_from(f"{endian}H", hdr, 54)[0],
+                struct.unpack_from(f"{endian}H", hdr, 56)[0],
+            )
+        hdr = self._read_doc_bytes(0, 52)
+        return (
+            struct.unpack_from(f"{endian}I", hdr, 28)[0],
+            struct.unpack_from(f"{endian}H", hdr, 42)[0],
+            struct.unpack_from(f"{endian}H", hdr, 44)[0],
+        )
+
+    @staticmethod
+    def _parse_elf_load_segment(phdr_data: bytes, endian: str, *, is_64: bool) -> tuple[int, int, int]:
+        """Parse a PT_LOAD program header entry.
+
+        Args:
+            phdr_data: Raw program header bytes.
+            endian: Endianness string.
+            is_64: True for 64-bit ELF.
+
+        Returns:
+            tuple[int, int, int]: p_offset, p_vaddr, p_filesz.
+        """
+        if is_64:
+            return (
+                struct.unpack_from(f"{endian}Q", phdr_data, 8)[0],
+                struct.unpack_from(f"{endian}Q", phdr_data, 16)[0],
+                struct.unpack_from(f"{endian}Q", phdr_data, 32)[0],
+            )
+        return (
+            struct.unpack_from(f"{endian}I", phdr_data, 4)[0],
+            struct.unpack_from(f"{endian}I", phdr_data, 8)[0],
+            struct.unpack_from(f"{endian}I", phdr_data, 16)[0],
+        )
+
+    async def file_offset_to_va(self, offset: int) -> int | None:
+        """Convert a file offset to a virtual address.
+
+        Args:
+            offset: File offset.
+
+        Returns:
+            int | None: Virtual address, or None if not mapped.
+        """
+        if self.document is None:
+            return None
+
+        if hasattr(self.document, "file_offset_to_va"):
+            result: int | None = self.document.file_offset_to_va(offset)
+            return result
+        return None
+
+    async def va_to_file_offset(self, va: int) -> int | None:
+        """Convert a virtual address to a file offset.
+
+        Args:
+            va: Virtual address.
+
+        Returns:
+            int | None: File offset, or None if not mapped.
+        """
+        if self.document is None:
+            return None
+
+        if hasattr(self.document, "va_to_file_offset"):
+            result: int | None = self.document.va_to_file_offset(va)
+            return result
+        return None
+
+    async def get_strings(
+        self,
+        min_length: int = 4,
+        encoding: str = "ascii+utf16",
+        max_results: int = 5000,
+    ) -> list[dict[str, Any]]:
+        """Extract strings from the document.
+
+        Args:
+            min_length: Minimum string length to include.
+            encoding: Encoding filter: "ascii+utf16", "ascii", or "utf16".
+            max_results: Maximum number of strings to return.
+
+        Returns:
+            list[dict[str, Any]]: List of dicts with offset, length, encoding, content.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        include_ascii = encoding in {"ascii+utf16", "ascii"}
+        include_utf16 = encoding in {"ascii+utf16", "utf16"}
+
+        if hasattr(self.document, "extract_strings"):
+            raw_strings: list[Any] = self.document.extract_strings(
+                min_length,
+                include_ascii,
+                include_utf16,
+                max_results,
+            )
+            _logger.debug("strings_extracted", count=len(raw_strings), backend="rust")
+            if raw_strings:
+                first_item: Any = raw_strings[0]
+                if isinstance(first_item, dict):
+                    return cast("list[dict[str, Any]]", raw_strings)
+                converted: list[dict[str, Any]] = []
+                for s_item in raw_strings:
+                    if isinstance(s_item, tuple):
+                        tpl = cast("tuple[int, int, str, str]", s_item)
+                        converted.append({
+                            "offset": tpl[0],
+                            "length": tpl[1],
+                            "encoding": tpl[2],
+                            "content": tpl[3],
+                        })
+                    else:
+                        obj: Any = s_item
+                        converted.append({
+                            "offset": int(obj.offset) if hasattr(obj, "offset") else 0,
+                            "length": int(obj.length) if hasattr(obj, "length") else 0,
+                            "encoding": str(obj.encoding) if hasattr(obj, "encoding") else "ascii",
+                            "content": str(obj.content) if hasattr(obj, "content") else "",
+                        })
+                return converted
+            return []
+
+        data = self._read_all_doc_bytes()
+        return self._extract_strings_fallback(
+            data,
+            min_length,
+            max_results,
+            include_ascii=include_ascii,
+            include_utf16=include_utf16,
+        )
+
+    @staticmethod
+    def _extract_strings_fallback(
+        data: bytes,
+        min_length: int,
+        max_results: int,
+        *,
+        include_ascii: bool,
+        include_utf16: bool,
+    ) -> list[dict[str, Any]]:
+        """Extract strings using pure Python scanning.
+
+        Args:
+            data: Binary data to scan.
+            min_length: Minimum string length.
+            max_results: Maximum results.
+            include_ascii: Include ASCII strings.
+            include_utf16: Include UTF-16LE strings.
+
+        Returns:
+            list[dict[str, Any]]: List of string match dicts.
+        """
+        results: list[dict[str, Any]] = []
+        printable_min = 0x20
+        printable_max = 0x7E
+
+        if include_ascii:
+            run_start = -1
+            for i, b in enumerate(data):
+                if printable_min <= b <= printable_max or b in _WHITESPACE_BYTES:
+                    if run_start < 0:
+                        run_start = i
+                elif run_start >= 0:
+                    run_len = i - run_start
+                    if run_len >= min_length:
+                        content = data[run_start:i].decode("ascii", errors="replace")
+                        results.append({
+                            "offset": run_start,
+                            "length": run_len,
+                            "encoding": "ascii",
+                            "content": content,
+                        })
+                        if len(results) >= max_results:
+                            return results
+                    run_start = -1
+            if run_start >= 0:
+                run_len = len(data) - run_start
+                if run_len >= min_length:
+                    content = data[run_start:].decode("ascii", errors="replace")
+                    results.append({
+                        "offset": run_start,
+                        "length": run_len,
+                        "encoding": "ascii",
+                        "content": content,
+                    })
+
+        if include_utf16 and len(results) < max_results:
+            run_start_u16 = -1
+            i = 0
+            while i + 1 < len(data):
+                code_unit = data[i] | (data[i + 1] << 8)
+                if printable_min <= code_unit <= printable_max or code_unit in _WHITESPACE_BYTES:
+                    if run_start_u16 < 0:
+                        run_start_u16 = i
+                elif run_start_u16 >= 0:
+                    char_count = (i - run_start_u16) // 2
+                    if char_count >= min_length:
+                        content = data[run_start_u16:i].decode("utf-16le", errors="replace")
+                        results.append({
+                            "offset": run_start_u16,
+                            "length": i - run_start_u16,
+                            "encoding": "utf-16le",
+                            "content": content,
+                        })
+                        if len(results) >= max_results:
+                            return results
+                    run_start_u16 = -1
+                i += 2
+
+        results.sort(key=operator.itemgetter("offset"))
+        return results[:max_results]
+
+    async def generate_structure_bookmarks(self) -> list[dict[str, Any]]:
+        """Auto-detect PE/ELF structure and create colored bookmarks.
+
+        Returns:
+            list[dict[str, Any]]: List of bookmark dicts that were created.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        doc_len: int = self.document.length()
+        if doc_len < _MIN_HEADER_SIZE:
+            return []
+
+        magic = self._read_doc_bytes(0, _MIN_HEADER_SIZE)
+        if magic[:2] == b"MZ":
+            return self._bookmark_pe_structure()
+        if magic[:4] == b"\x7fELF":
+            return self._bookmark_elf_structure()
+        return []
+
+    def _bookmark_pe_structure(self) -> list[dict[str, Any]]:
+        """Create colored bookmarks for PE structure headers.
+
+        Returns:
+            list[dict[str, Any]]: Created bookmark dicts.
+        """
+        if self.document is None:
+            return []
+
+        bookmarks: list[dict[str, Any]] = []
+        colors = ("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4")
+
+        try:
+            e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
+            self._add_bm(bookmarks, 0, _DOS_HEADER_SIZE, "DOS Header", colors[0])
+            self._add_bm(bookmarks, e_lfanew, 4, "PE Signature", colors[1])
+
+            coff_offset = e_lfanew + 4
+            self._add_bm(bookmarks, coff_offset, _PE_COFF_HEADER_SIZE, "COFF Header", colors[1])
+
+            coff_header = self._read_doc_bytes(coff_offset, _PE_COFF_HEADER_SIZE)
+            num_sections = struct.unpack_from("<H", coff_header, 2)[0]
+            opt_size = struct.unpack_from("<H", coff_header, 16)[0]
+            opt_offset = coff_offset + _PE_COFF_HEADER_SIZE
+            if opt_size > 0:
+                self._add_bm(bookmarks, opt_offset, opt_size, "Optional Header", colors[2])
+
+            self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, colors[3])
+
+            _logger.info("pe_structure_bookmarked", bookmark_count=len(bookmarks))
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning("pe_structure_bookmark_failed", error=str(exc))
+        return bookmarks
+
+    def _add_bm(self, bookmarks: list[dict[str, Any]], offset: int, length: int, label: str, color: str) -> None:
+        """Add a bookmark to the document and tracking list.
+
+        Args:
+            bookmarks: List to append the bookmark dict to.
+            offset: Byte offset.
+            length: Length in bytes.
+            label: Bookmark label.
+            color: Color hex string.
+        """
+        if self.document is not None:
+            self.document.add_bookmark(offset, length, label, color)
+        bookmarks.append({"offset": offset, "length": length, "label": label, "color": color})
+
+    def _bookmark_pe_sections(
+        self,
+        section_table_offset: int,
+        num_sections: int,
+        bookmarks: list[dict[str, Any]],
+        color: str,
+    ) -> None:
+        """Bookmark PE section headers.
+
+        Args:
+            section_table_offset: File offset of the first section header.
+            num_sections: Number of section headers.
+            bookmarks: List to append bookmarks to.
+            color: Color hex string.
+        """
+        for i in range(min(num_sections, _MAX_BOOKMARK_ENTRIES)):
+            sec_off = section_table_offset + i * _PE_SECTION_ENTRY_SIZE
+            sec_name = self._read_doc_bytes(sec_off, 8).rstrip(b"\x00").decode("ascii", errors="replace")
+            self._add_bm(bookmarks, sec_off, _PE_SECTION_ENTRY_SIZE, f"Section: {sec_name}", color)
+
+    def _bookmark_elf_structure(self) -> list[dict[str, Any]]:
+        """Create colored bookmarks for ELF structure headers.
+
+        Returns:
+            list[dict[str, Any]]: Created bookmark dicts.
+        """
+        if self.document is None:
+            return []
+
+        bookmarks: list[dict[str, Any]] = []
+        colors = ("#FF6B6B", "#4ECDC4", "#45B7D1")
+
+        try:
+            ident = self._read_doc_bytes(0, 16)
+            is_64 = ident[4] == _ELF_CLASS_64
+            endian = "<" if ident[5] == _ELF_DATA_LE else ">"
+            ehdr_size, ph_info, sh_info = self._parse_elf_bookmark_info(endian, is_64=is_64)
+
+            self._add_bm(bookmarks, 0, ehdr_size, "ELF Header", colors[0])
+            for i in range(min(ph_info[2], _MAX_BOOKMARK_ENTRIES)):
+                self._add_bm(bookmarks, ph_info[0] + i * ph_info[1], ph_info[1], f"Program Header {i}", colors[1])
+            for i in range(min(sh_info[2], _MAX_BOOKMARK_ENTRIES)):
+                self._add_bm(bookmarks, sh_info[0] + i * sh_info[1], sh_info[1], f"Section Header {i}", colors[2])
+
+            _logger.info("elf_structure_bookmarked", bookmark_count=len(bookmarks))
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning("elf_structure_bookmark_failed", error=str(exc))
+        return bookmarks
+
+    def _parse_elf_bookmark_info(
+        self,
+        endian: str,
+        *,
+        is_64: bool,
+    ) -> tuple[int, tuple[int, int, int], tuple[int, int, int]]:
+        """Parse ELF header for bookmark generation.
+
+        Args:
+            endian: Endianness string.
+            is_64: True for 64-bit ELF.
+
+        Returns:
+            tuple[int, tuple[int, int, int], tuple[int, int, int]]:
+                ehdr_size, (phoff, phentsize, phnum), (shoff, shentsize, shnum).
+        """
+        if is_64:
+            hdr = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
+            return (
+                _DOS_HEADER_SIZE,
+                (
+                    struct.unpack_from(f"{endian}Q", hdr, 32)[0],
+                    struct.unpack_from(f"{endian}H", hdr, 54)[0],
+                    struct.unpack_from(f"{endian}H", hdr, 56)[0],
+                ),
+                (
+                    struct.unpack_from(f"{endian}Q", hdr, 40)[0],
+                    struct.unpack_from(f"{endian}H", hdr, 58)[0],
+                    struct.unpack_from(f"{endian}H", hdr, 60)[0],
+                ),
+            )
+        hdr = self._read_doc_bytes(0, 52)
+        return (
+            52,
+            (
+                struct.unpack_from(f"{endian}I", hdr, 28)[0],
+                struct.unpack_from(f"{endian}H", hdr, 42)[0],
+                struct.unpack_from(f"{endian}H", hdr, 44)[0],
+            ),
+            (
+                struct.unpack_from(f"{endian}I", hdr, 32)[0],
+                struct.unpack_from(f"{endian}H", hdr, 46)[0],
+                struct.unpack_from(f"{endian}H", hdr, 48)[0],
+            ),
+        )
+
+    async def export_annotated_html(
+        self,
+        start: int = 0,
+        end: int = 0,
+        bytes_per_row: int = 16,
+    ) -> str:
+        """Export hex view as annotated HTML with bookmarks and highlights.
+
+        Args:
+            start: Start offset.
+            end: End offset (0 = entire document).
+            bytes_per_row: Number of bytes per row.
+
+        Returns:
+            str: Complete HTML string.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        doc_len: int = self.document.length()
+        end = min(end if end > 0 else doc_len, doc_len)
+        start = max(0, start)
+
+        data = self._read_doc_bytes(start, end - start)
+        bookmarks = [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in self.document.list_bookmarks()]
+        bookmark_map = self._build_bookmark_map(bookmarks, start, end)
+
+        lines = self._html_header()
+        self._render_hex_rows(lines, data, start, bytes_per_row, bookmark_map)
+        lines.append("</table>")
+
+        if bookmarks:
+            lines.append("<div class='legend'><strong>Bookmarks:</strong><br>")
+            seen_labels: set[str] = set()
+            for bm in bookmarks:
+                label = bm["label"]
+                if label not in seen_labels:
+                    seen_labels.add(label)
+                    lines.append(
+                        f"<span class='legend-item' style='background:{bm['color']}40;color:{bm['color']}'>"
+                        f"{label} (0x{bm['offset']:X})</span>",
+                    )
+            lines.append("</div>")
+
+        lines.append("</body></html>")
+        _logger.debug("annotated_html_exported", start=start, end=end)
+        return "\n".join(lines)
+
+    async def export_annotated_pdf(
+        self,
+        output_path: str,
+        start: int = 0,
+        end: int = 0,
+        bytes_per_row: int = 16,
+    ) -> str:
+        """Export hex view as an annotated PDF with bookmarks and highlights.
+
+        Args:
+            output_path: Filesystem path for the output PDF file.
+            start: Start offset.
+            end: End offset (0 = entire document).
+            bytes_per_row: Number of bytes per row.
+
+        Returns:
+            str: Path of the written PDF file.
+
+        Raises:
+            ToolError: If no document is open or fpdf2 is unavailable.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise ToolError(msg)
+
+        doc_len: int = self.document.length()
+        actual_end = min(end if end > 0 else doc_len, doc_len)
+        actual_start = max(0, start)
+
+        data = self._read_doc_bytes(actual_start, actual_end - actual_start)
+        bookmarks_raw: list[tuple[int, int, str, str]] = self.document.list_bookmarks()
+        bookmarks: list[dict[str, object]] = [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in bookmarks_raw]
+        bookmark_map = self._build_bookmark_map(bookmarks, actual_start, actual_end)
+
+        result: str = await asyncio.to_thread(
+            _generate_pdf,
+            output_path,
+            data,
+            actual_start,
+            bytes_per_row,
+            bookmark_map,
+            bookmarks,
+            doc_len,
+        )
+        _logger.debug("annotated_pdf_exported", path=result, start=actual_start, end=actual_end)
+        return result
+
+    @staticmethod
+    def _build_bookmark_map(
+        bookmarks: list[dict[str, Any]],
+        start: int,
+        end: int,
+    ) -> dict[int, dict[str, Any]]:
+        """Build an offset-to-bookmark lookup map.
+
+        Args:
+            bookmarks: List of bookmark dicts.
+            start: Start offset.
+            end: End offset.
+
+        Returns:
+            dict[int, dict[str, Any]]: Map from offset to bookmark dict.
+        """
+        bm_map: dict[int, dict[str, Any]] = {}
+        for bm in bookmarks:
+            bm_start = bm["offset"]
+            bm_end = bm_start + bm["length"]
+            for off in range(max(bm_start, start), min(bm_end, end)):
+                bm_map[off] = bm
+        return bm_map
+
+    @staticmethod
+    def _html_header() -> list[str]:
+        """Generate the HTML header with CSS styles.
+
+        Returns:
+            list[str]: List of HTML header lines.
+        """
+        return [
+            "<!DOCTYPE html>",
+            "<html><head><meta charset='utf-8'>",
+            "<style>",
+            "body { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; background: #1e1e2e; color: #cdd6f4; }",
+            "table { border-collapse: collapse; }",
+            "td { padding: 1px 4px; white-space: pre; }",
+            ".offset { color: #89b4fa; }",
+            ".ascii { color: #a6e3a1; }",
+            ".hex { color: #cdd6f4; }",
+            ".bm { border-radius: 2px; padding: 0 2px; }",
+            ".legend { margin-top: 16px; }",
+            ".legend-item { display: inline-block; margin-right: 12px; padding: 2px 6px; border-radius: 3px; }",
+            "</style></head><body>",
+            "<h3>Hex Dump</h3>",
+            "<table>",
+        ]
+
+    @staticmethod
+    def _render_hex_rows(
+        lines: list[str],
+        data: bytes,
+        start: int,
+        bytes_per_row: int,
+        bookmark_map: dict[int, dict[str, Any]],
+    ) -> None:
+        """Render hex dump rows into the HTML lines list.
+
+        Args:
+            lines: List to append rendered HTML rows to.
+            data: Binary data to render.
+            start: Absolute start offset of the data.
+            bytes_per_row: Number of bytes per row.
+            bookmark_map: Map from absolute offset to bookmark dict.
+        """
+        for row_start in range(0, len(data), bytes_per_row):
+            abs_offset = start + row_start
+            row_data = data[row_start : row_start + bytes_per_row]
+            hex_cells: list[str] = []
+            ascii_cells: list[str] = []
+            for j, b in enumerate(row_data):
+                bm = bookmark_map.get(abs_offset + j)
+                hex_str = f"{b:02X}"
+                if bm is not None:
+                    hex_cells.append(f"<span class='bm' style='background:{bm['color']}40;color:{bm['color']}'>{hex_str}</span>")
+                else:
+                    hex_cells.append(f"<span class='hex'>{hex_str}</span>")
+                ch = chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
+                if ch in {"&", "<", ">"}:
+                    ch = f"&#{ord(ch)};"
+                ascii_cells.append(ch)
+            lines.append(
+                f"<tr><td class='offset'>{abs_offset:08X}</td>"
+                f"<td>{' '.join(hex_cells)}</td>"
+                f"<td class='ascii'>{''.join(ascii_cells)}</td></tr>",
+            )
+
+    async def snap_to_alignment(self, alignment_size: int = 512) -> int:
+        """Snap the cursor to the nearest alignment boundary.
+
+        Args:
+            alignment_size: Alignment boundary in bytes.
+
+        Returns:
+            int: New cursor offset after snapping.
+        """
+        if alignment_size <= 0:
+            alignment_size = 512
+        new_offset = (self._cursor_offset // alignment_size) * alignment_size
+        self._cursor_offset = new_offset
+        _logger.debug("cursor_snapped", offset=hex(new_offset), alignment=alignment_size)
+        if self.state_holder is not None:
+            self.state_holder.set_cursor(new_offset, source="bridge")
+        return new_offset
+
+    async def set_alignment_grid(self, size: int = 512) -> bool:
+        """Set the alignment grid size for visual display.
+
+        Args:
+            size: Grid size in bytes (0 to disable).
+
+        Returns:
+            bool: True always.
+        """
+        self._alignment_grid_size = size
+        _logger.debug("alignment_grid_set", size=size)
+        if self.state_holder is not None:
+            self.state_holder.notify_alignment_grid_changed(size, source="bridge")
+        return True
+
+    async def verify_pe_checksum(self) -> dict[str, Any]:
+        """Verify the PE optional header checksum.
+
+        Returns:
+            dict[str, Any]: Dict with stored, calculated, offset, valid.
+
+        Raises:
+            RuntimeError: If no document is open or file is not PE.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self.document, "verify_pe_checksum"):
+            result = self.document.verify_pe_checksum()
+            if isinstance(result, dict):
+                return cast("dict[str, Any]", result)
+
+        data = self._read_all_doc_bytes()
+        if data[:2] != b"MZ":
+            msg = "not a PE file"
+            raise RuntimeError(msg)
+
+        e_lfanew = struct.unpack_from("<I", data, 0x3C)[0]
+        if data[e_lfanew : e_lfanew + 4] != b"PE\x00\x00":
+            msg = "invalid PE signature"
+            raise RuntimeError(msg)
+
+        checksum_offset = e_lfanew + 4 + 20 + 64
+        if checksum_offset + 4 > len(data):
+            msg = "PE header too short for checksum field"
+            raise RuntimeError(msg)
+
+        stored = struct.unpack_from("<I", data, checksum_offset)[0]
+        calculated = self._compute_pe_checksum_static(data, checksum_offset)
+
+        _logger.debug(
+            "pe_checksum_verified",
+            stored=hex(stored),
+            calculated=hex(calculated),
+        )
+        return {
+            "stored": stored,
+            "calculated": calculated,
+            "offset": checksum_offset,
+            "valid": stored == calculated,
+        }
+
+    async def repair_pe_checksum(self) -> dict[str, Any]:
+        """Recalculate and write the correct PE checksum.
+
+        Returns:
+            dict[str, Any]: Dict with old_checksum, new_checksum, offset.
+
+        Raises:
+            RuntimeError: If no document is open or file is not PE.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        if hasattr(self.document, "repair_pe_checksum"):
+            self.document.repair_pe_checksum()
+            verify_result = await self.verify_pe_checksum()
+            return {
+                "old_checksum": 0,
+                "new_checksum": verify_result.get("calculated", 0),
+                "offset": verify_result.get("offset", 0),
+            }
+
+        verify_result = await self.verify_pe_checksum()
+        old_checksum = verify_result["stored"]
+        new_checksum = verify_result["calculated"]
+        checksum_offset = verify_result["offset"]
+
+        self.document.write_bytes(checksum_offset, struct.pack("<I", new_checksum))
+        _logger.info("pe_checksum_repaired", old=hex(old_checksum), new=hex(new_checksum))
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(checksum_offset, 4, source="bridge")
+        return {
+            "old_checksum": old_checksum,
+            "new_checksum": new_checksum,
+            "offset": checksum_offset,
+        }
+
+    @staticmethod
+    def _compute_pe_checksum_static(data: bytes, checksum_offset: int) -> int:
+        """Compute the PE checksum using the Windows algorithm.
+
+        Args:
+            data: Full file data.
+            checksum_offset: Byte offset of the CheckSum field.
+
+        Returns:
+            int: Computed checksum value.
+        """
+        checksum = 0
+        top = 1 << 32
+
+        for i in range(0, len(data) & ~1, 2):
+            if i == checksum_offset or i == checksum_offset + 2:
+                continue
+            word = data[i] | (data[i + 1] << 8)
+            checksum += word
+            if checksum >= top:
+                checksum = (checksum & 0xFFFFFFFF) + (checksum >> 32)
+
+        if len(data) & 1:
+            checksum += data[-1]
+            if checksum >= top:
+                checksum = (checksum & 0xFFFFFFFF) + (checksum >> 32)
+
+        checksum = (checksum & 0xFFFF) + (checksum >> 16)
+        checksum += checksum >> 16
+        return (checksum & 0xFFFF) + len(data)
+
+    @staticmethod
+    async def base_convert(value: str, from_base: str = "auto") -> dict[str, str]:
+        """Convert a numeric value between bases and show all representations.
+
+        Args:
+            value: Value string (decimal, 0xHex, 0bBinary, 0oOctal).
+            from_base: Source base hint (auto, decimal, hex, binary, octal).
+
+        Returns:
+            dict[str, str]: Dict with decimal, hex, octal, binary, and
+                integer width representations.
+        """
+        value = value.strip()
+        parsed: int
+
+        if from_base == "auto":
+            if value.startswith(("0x", "0X")):
+                parsed = int(value, 16)
+            elif value.startswith(("0b", "0B")):
+                parsed = int(value, 2)
+            elif value.startswith(("0o", "0O")):
+                parsed = int(value, 8)
+            else:
+                parsed = int(value)
+        elif from_base == "hex":
+            parsed = int(value.removeprefix("0x").removeprefix("0X"), 16)
+        elif from_base == "binary":
+            parsed = int(value.removeprefix("0b").removeprefix("0B"), 2)
+        elif from_base == "octal":
+            parsed = int(value.removeprefix("0o").removeprefix("0O"), 8)
+        else:
+            parsed = int(value)
+
+        result: dict[str, str] = {
+            "decimal": str(parsed),
+            "hex": hex(parsed),
+            "octal": oct(parsed),
+            "binary": bin(parsed),
+        }
+
+        byte_mask = 0xFF
+        u16_mask = 0xFFFF
+        u32_mask = 0xFFFFFFFF
+        u64_mask = 0xFFFFFFFFFFFFFFFF
+
+        if 0 <= parsed <= byte_mask:
+            result["uint8"] = str(parsed)
+            result["int8"] = str(struct.unpack("b", struct.pack("B", parsed))[0])
+        if 0 <= parsed <= u16_mask:
+            result["uint16_le"] = str(parsed)
+            result["int16_le"] = str(struct.unpack("<h", struct.pack("<H", parsed))[0])
+        if 0 <= parsed <= u32_mask:
+            result["uint32_le"] = str(parsed)
+            result["int32_le"] = str(struct.unpack("<i", struct.pack("<I", parsed))[0])
+        if 0 <= parsed <= u64_mask:
+            result["uint64_le"] = str(parsed)
+            result["int64_le"] = str(struct.unpack("<q", struct.pack("<Q", parsed))[0])
+
+        try:
+            if 0 <= parsed <= u32_mask:
+                float_val: float = struct.unpack("<f", struct.pack("<I", parsed))[0]
+                if math.isfinite(float_val):
+                    result["float32_le"] = str(float_val)
+            if 0 <= parsed <= u64_mask:
+                double_val: float = struct.unpack("<d", struct.pack("<Q", parsed))[0]
+                if math.isfinite(double_val):
+                    result["float64_le"] = str(double_val)
+        except (struct.error, OverflowError):
+            pass
+
+        _logger.debug("base_convert", input_value=value)
+        return result
+
+    async def run_python_script(self, source: str) -> dict[str, Any]:
+        """Execute a Python script with access to the hex document API.
+
+        Args:
+            source: Python source code.
+
+        Returns:
+            dict[str, Any]: Dict with output, error, and variables keys.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        stdout_capture = io.StringIO()
+        doc = self.document
+
+        class _DocAPI:
+            """Restricted document API for user scripts."""
+
+            @staticmethod
+            def read(offset: int, length: int) -> list[int]:
+                raw: object = doc.read(offset, length)
+                if isinstance(raw, (bytes, bytearray)):
+                    return list(raw)
+                if isinstance(raw, list):
+                    return cast("list[int]", raw)
+                return list(cast("bytearray", raw))
+
+            @staticmethod
+            def write(offset: int, data: bytes | list[int]) -> None:
+                if isinstance(data, list):
+                    data = bytes(data)
+                doc.write_bytes(offset, data)
+
+            @staticmethod
+            def insert(offset: int, data: bytes | list[int]) -> None:
+                if isinstance(data, list):
+                    data = bytes(data)
+                doc.insert_bytes(offset, data)
+
+            @staticmethod
+            def delete(offset: int, length: int) -> None:
+                doc.delete_bytes(offset, length)
+
+            @staticmethod
+            def length() -> int:
+                result: int = doc.length()
+                return result
+
+            @staticmethod
+            def search_hex(pattern: str) -> list[tuple[int, int]]:
+                results: list[tuple[int, int]] = doc.search_hex(pattern, 1000)
+                return results
+
+            @staticmethod
+            def search_text(text: str) -> list[tuple[int, int]]:
+                case_sensitive = True
+                results: list[tuple[int, int]] = doc.search_text(text, "utf-8", case_sensitive, 1000)
+                return results
+
+            @staticmethod
+            def add_bookmark(offset: int, length: int = 1, label: str = "Bookmark", color: str = "#FFFF00") -> int:
+                idx: int = doc.add_bookmark(offset, length, label, color)
+                return idx
+
+        forbidden_builtins = {"__import__", "eval", "exec", "open", "compile", "breakpoint"}
+        safe_builtins: dict[str, Any] = {k: v for k, v in vars(_builtins_mod).items() if k not in forbidden_builtins}
+
+        def safe_print(*args: object, **kwargs: object) -> None:
+            sep = str(kwargs.get("sep", " "))
+            end_val = str(kwargs.get("end", "\n"))
+            stdout_capture.write(sep.join(str(a) for a in args) + end_val)
+
+        namespace: dict[str, Any] = {
+            "__builtins__": safe_builtins,
+            "doc": _DocAPI(),
+            "print": safe_print,
+        }
+
+        error_str: str = ""
+        try:
+            compiled = compile(source, "<script>", "exec")
+            exec(compiled, namespace)  # noqa: S102
+        except SyntaxError as exc:
+            error_str = f"SyntaxError at line {exc.lineno}: {exc.msg}"
+        except (
+            NameError,
+            TypeError,
+            ValueError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            RuntimeError,
+            OSError,
+            ArithmeticError,
+            ImportError,
+            StopIteration,
+            AssertionError,
+            MemoryError,
+            RecursionError,
+            UnicodeError,
+            EOFError,
+            BufferError,
+            LookupError,
+        ) as exc:
+            error_str = f"{type(exc).__name__}: {exc}"
+
+        output = stdout_capture.getvalue()
+        user_vars: dict[str, str] = {}
+        skip_keys = {"__builtins__", "doc", "print"}
+        for k, v in namespace.items():
+            if k not in skip_keys and not k.startswith("_"):
+                try:
+                    user_vars[k] = repr(v)
+                except (RuntimeError, TypeError, ValueError):
+                    user_vars[k] = "<unrepresentable>"
+
+        _logger.info("python_script_executed", output_len=len(output), has_error=bool(error_str))
+        if self.state_holder is not None:
+            doc_len_val: int = self.document.length() if self.document is not None else 0
+            self.state_holder.notify_data_modified(0, doc_len_val, source="bridge")
+        return {"output": output, "error": error_str, "variables": user_vars}
+
+    async def set_chunk_size(self, size_bytes: int) -> bool:
+        """Set the chunk size hint for large file I/O.
+
+        Args:
+            size_bytes: Chunk size in bytes.
+
+        Returns:
+            bool: True always.
+        """
+        if self.document is not None and hasattr(self.document, "set_chunk_size_hint"):
+            self.document.set_chunk_size_hint(size_bytes)
+        _logger.debug("chunk_size_set", size=size_bytes)
+        return True
+
+    async def get_memory_usage(self) -> dict[str, int]:
+        """Get current document memory usage estimate.
+
+        Returns:
+            dict[str, int]: Dict with usage_bytes, chunk_size, memory_budget.
+        """
+        usage = 0
+        chunk = 0
+        budget = 0
+        if self.document is not None:
+            if hasattr(self.document, "get_document_memory_usage"):
+                usage = int(self.document.get_document_memory_usage())
+            if hasattr(self.document, "get_chunk_size_hint"):
+                chunk = int(self.document.get_chunk_size_hint())
+            if hasattr(self.document, "get_memory_budget_hint"):
+                budget = int(self.document.get_memory_budget_hint())
+        return {"usage_bytes": usage, "chunk_size": chunk, "memory_budget": budget}
+
+    async def set_memory_budget(self, budget_bytes: int) -> bool:
+        """Set the memory budget hint for large file operations.
+
+        Args:
+            budget_bytes: Memory budget in bytes.
+
+        Returns:
+            bool: True always.
+        """
+        if self.document is not None and hasattr(self.document, "set_memory_budget_hint"):
+            self.document.set_memory_budget_hint(budget_bytes)
+        _logger.debug("memory_budget_set", budget=budget_bytes)
+        return True
+
+    async def set_color_mode(self, mode: str) -> bool:
+        """Set the byte color-mapping mode.
+
+        Args:
+            mode: One of "none", "entropy", "byte_value", "template", "content_type".
+
+        Returns:
+            bool: True always.
+        """
+        self._color_mode = mode
+        _logger.debug("color_mode_set", mode=mode)
+        if self.state_holder is not None:
+            self.state_holder.notify_color_mode_changed(mode, source="bridge")
+        return True
+
+    async def get_color_mode(self) -> str:
+        """Get the current byte color-mapping mode.
+
+        Returns:
+            str: Current color mode string.
+        """
+        return self._color_mode
+
+    async def scan_die_signatures(self, db_path: str) -> list[dict[str, Any]]:
+        """Scan document against a DIE-style JSON signature database.
+
+        Args:
+            db_path: Path to the DIE JSON database file.
+
+        Returns:
+            list[dict[str, Any]]: List of match dicts with name, type, version, offset, details.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        db_text = await asyncio.to_thread(Path(db_path).read_text, encoding="utf-8")
+        db_entries: list[dict[str, Any]] = json.loads(db_text)
+        ep_bytes = self._read_doc_bytes(0, min(_MAX_EP_BYTES, self.document.length()))
+        results: list[dict[str, Any]] = []
+
+        for entry in db_entries:
+            sig_info = (str(entry.get("name", "unknown")), str(entry.get("type", "unknown")), str(entry.get("version", "")))
+            for pattern_info in list(entry.get("patterns", [])):
+                self._match_die_pattern(pattern_info, sig_info, ep_bytes, results)
+
+        _logger.info("die_scan_completed", matches=len(results))
+        return results
+
+    def _match_die_pattern(
+        self,
+        pattern_info: str | dict[str, str] | object,
+        sig_info: tuple[str, str, str],
+        ep_bytes: bytes,
+        results: list[dict[str, Any]],
+    ) -> None:
+        """Match a single DIE pattern against the document.
+
+        Args:
+            pattern_info: Pattern entry (string or dict).
+            sig_info: Tuple of (name, type, version).
+            ep_bytes: Entry point bytes for EP matching.
+            results: List to append matches to.
+        """
+        if isinstance(pattern_info, str):
+            hex_pattern, scan_offset = pattern_info, "ep"
+        elif isinstance(pattern_info, dict):
+            typed_info = cast("dict[str, Any]", pattern_info)
+            hex_pattern = str(typed_info.get("pattern", ""))
+            scan_offset = str(typed_info.get("offset", "ep"))
+        else:
+            return
+
+        try:
+            pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
+        except ValueError:
+            return
+
+        sig_name, sig_type, sig_version = sig_info
+
+        if scan_offset == "ep":
+            idx = ep_bytes.find(pattern_bytes)
+            if idx >= 0:
+                results.append({
+                    "name": sig_name,
+                    "type": sig_type,
+                    "version": sig_version,
+                    "offset": idx,
+                    "details": f"Entry point match at +{idx}",
+                })
+        elif scan_offset == "any":
+            idx = self._read_all_doc_bytes().find(pattern_bytes)
+            if idx >= 0:
+                results.append({
+                    "name": sig_name,
+                    "type": sig_type,
+                    "version": sig_version,
+                    "offset": idx,
+                    "details": f"Full scan match at 0x{idx:X}",
+                })
+        else:
+            try:
+                fixed_offset = int(scan_offset, 0)
+            except ValueError:
+                return
+            if self.document is not None and fixed_offset + len(pattern_bytes) <= self.document.length():
+                region = self._read_doc_bytes(fixed_offset, len(pattern_bytes))
+                if region == pattern_bytes:
+                    results.append({
+                        "name": sig_name,
+                        "type": sig_type,
+                        "version": sig_version,
+                        "offset": fixed_offset,
+                        "details": f"Fixed offset match at 0x{fixed_offset:X}",
+                    })
+
+    async def scan_clamav_signatures(self, db_path: str) -> list[dict[str, Any]]:
+        """Scan document against ClamAV .ndb or .hdb signature files.
+
+        Args:
+            db_path: Path to the .ndb or .hdb file.
+
+        Returns:
+            list[dict[str, Any]]: List of match dicts.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        path = Path(db_path)
+        suffix = path.suffix.lower()
+        lines_text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
+        lines = lines_text.splitlines()
+
+        if suffix == ".hdb":
+            return self._scan_clamav_hdb(lines)
+        return self._scan_clamav_ndb(lines)
+
+    def _scan_clamav_hdb(self, lines: list[str]) -> list[dict[str, Any]]:
+        """Scan ClamAV hash-based (.hdb) signatures.
+
+        Args:
+            lines: Lines from the .hdb file.
+
+        Returns:
+            list[dict[str, Any]]: Match results.
+        """
+        data = self._read_all_doc_bytes()
+        file_md5 = hashlib.md5(data).hexdigest()  # noqa: S324
+        file_size = len(data)
+        results: list[dict[str, Any]] = []
+        hdb_fields = 3
+
+        for line in lines:
+            parts = line.strip().split(":")
+            if len(parts) < hdb_fields:
+                continue
+            sig_md5 = parts[0].lower()
+            sig_name = parts[2]
+            try:
+                sig_size = int(parts[1])
+            except ValueError:
+                continue
+            if sig_md5 == file_md5 and sig_size == file_size:
+                results.append({
+                    "name": sig_name,
+                    "type": "hash",
+                    "version": "",
+                    "offset": 0,
+                    "details": f"MD5 hash match (size={file_size})",
+                })
+
+        _logger.info("clamav_hdb_scan_completed", matches=len(results))
+        return results
+
+    def _scan_clamav_ndb(self, lines: list[str]) -> list[dict[str, Any]]:
+        """Scan ClamAV pattern-based (.ndb) signatures.
+
+        Args:
+            lines: Lines from the .ndb file.
+
+        Returns:
+            list[dict[str, Any]]: Match results.
+        """
+        data = self._read_all_doc_bytes()
+        results: list[dict[str, Any]] = []
+        ndb_fields = 4
+
+        for line in lines:
+            parts = line.strip().split(":")
+            if len(parts) < ndb_fields:
+                continue
+            sig_name = parts[0]
+            sig_offset_spec = parts[2]
+            sig_hex = parts[3]
+            try:
+                clean_hex = sig_hex.replace("*", "").replace("?", "")
+                if not clean_hex:
+                    continue
+                pattern_bytes = bytes.fromhex(clean_hex)
+            except ValueError:
+                continue
+
+            if sig_offset_spec == "*":
+                idx = data.find(pattern_bytes)
+                if idx >= 0:
+                    results.append({
+                        "name": sig_name,
+                        "type": "ndb",
+                        "version": "",
+                        "offset": idx,
+                        "details": f"Pattern match at 0x{idx:X}",
+                    })
+            elif sig_offset_spec.startswith("EP") and data[: len(pattern_bytes)] == pattern_bytes:
+                results.append({
+                    "name": sig_name,
+                    "type": "ndb",
+                    "version": "",
+                    "offset": 0,
+                    "details": "Entry point match",
+                })
+            else:
+                try:
+                    offset_val = int(sig_offset_spec, 0)
+                except ValueError:
+                    continue
+                end_pos = offset_val + len(pattern_bytes)
+                if end_pos <= len(data) and data[offset_val:end_pos] == pattern_bytes:
+                    results.append({
+                        "name": sig_name,
+                        "type": "ndb",
+                        "version": "",
+                        "offset": offset_val,
+                        "details": f"Fixed offset match at 0x{offset_val:X}",
+                    })
+
+        _logger.info("clamav_ndb_scan_completed", matches=len(results))
+        return results
+
+    async def scan_custom_signatures(self, sig_file: str) -> list[dict[str, Any]]:
+        """Scan document against a custom JSON signature database.
+
+        Args:
+            sig_file: Path to the custom JSON signature file.
+
+        Returns:
+            list[dict[str, Any]]: List of match dicts.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        text = await asyncio.to_thread(Path(sig_file).read_text, encoding="utf-8")
+        entries: list[dict[str, str]] = json.loads(text)
+        data = self._read_all_doc_bytes()
+        results: list[dict[str, Any]] = []
+        max_ep_bytes = 256
+
+        for entry in entries:
+            sig_name = entry.get("name", "unknown")
+            hex_pattern = entry.get("pattern", "")
+            offset_spec = entry.get("offset", "any")
+            sig_type = entry.get("type", "unknown")
+
+            try:
+                pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
+            except ValueError:
+                continue
+
+            if offset_spec == "ep":
+                idx = data[:max_ep_bytes].find(pattern_bytes)
+                if idx >= 0:
+                    results.append({
+                        "name": sig_name,
+                        "type": sig_type,
+                        "version": "",
+                        "offset": idx,
+                        "details": f"Entry point match at +{idx}",
+                    })
+            elif offset_spec == "any":
+                idx = data.find(pattern_bytes)
+                if idx >= 0:
+                    results.append({
+                        "name": sig_name,
+                        "type": sig_type,
+                        "version": "",
+                        "offset": idx,
+                        "details": f"Full scan match at 0x{idx:X}",
+                    })
+            else:
+                try:
+                    fixed_offset = int(offset_spec, 0)
+                except ValueError:
+                    continue
+                end_pos = fixed_offset + len(pattern_bytes)
+                if end_pos <= len(data) and data[fixed_offset:end_pos] == pattern_bytes:
+                    results.append({
+                        "name": sig_name,
+                        "type": sig_type,
+                        "version": "",
+                        "offset": fixed_offset,
+                        "details": f"Fixed offset match at 0x{fixed_offset:X}",
+                    })
+
+        _logger.info("custom_sig_scan_completed", matches=len(results))
+        return results
+
+    async def export_patches_bps(self, original_path: str) -> str:
+        """Export a BPS patch comparing the current document against the original.
+
+        Args:
+            original_path: Path to the original unmodified file.
+
+        Returns:
+            str: Base64-encoded BPS patch data.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        source_data = await asyncio.to_thread(Path(original_path).read_bytes)
+        target_data = self._read_all_doc_bytes()
+
+        if hasattr(self.document, "export_patches_bps"):
+            raw: bytes = self.document.export_patches_bps(source_data)
+        else:
+            raw = self._build_bps_patch(source_data, target_data)
+
+        _logger.debug("bps_patch_exported", size=len(raw))
+        return base64.b64encode(raw).decode("ascii")
+
+    async def import_patches_bps(self, patch_b64: str, original_path: str) -> dict[str, int]:
+        """Import and apply a BPS patch.
+
+        Args:
+            patch_b64: Base64-encoded BPS patch data.
+            original_path: Path to the original source file.
+
+        Returns:
+            dict[str, int]: Dict with target_size.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        patch_data = base64.b64decode(patch_b64)
+        source_data = await asyncio.to_thread(Path(original_path).read_bytes)
+
+        if hasattr(self.document, "import_patches_bps"):
+            self.document.import_patches_bps(patch_data, source_data)
+        else:
+            target = self._apply_bps_patch(patch_data, source_data)
+            self.document.write_bytes(0, target)
+
+        doc_len: int = self.document.length()
+        _logger.info("bps_patch_imported", target_size=doc_len)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
+        return {"target_size": doc_len}
+
+    async def export_patches_ups(self, original_path: str) -> str:
+        """Export a UPS patch comparing the current document against the original.
+
+        Args:
+            original_path: Path to the original unmodified file.
+
+        Returns:
+            str: Base64-encoded UPS patch data.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        source_data = await asyncio.to_thread(Path(original_path).read_bytes)
+        target_data = self._read_all_doc_bytes()
+
+        if hasattr(self.document, "export_patches_ups"):
+            raw: bytes = self.document.export_patches_ups(source_data)
+        else:
+            raw = self._build_ups_patch(source_data, target_data)
+
+        _logger.debug("ups_patch_exported", size=len(raw))
+        return base64.b64encode(raw).decode("ascii")
+
+    async def import_patches_ups(self, patch_b64: str, original_path: str) -> dict[str, int]:
+        """Import and apply a UPS patch.
+
+        Args:
+            patch_b64: Base64-encoded UPS patch data.
+            original_path: Path to the original source file.
+
+        Returns:
+            dict[str, int]: Dict with target_size.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+
+        patch_data = base64.b64decode(patch_b64)
+        source_data = await asyncio.to_thread(Path(original_path).read_bytes)
+
+        if hasattr(self.document, "import_patches_ups"):
+            self.document.import_patches_ups(patch_data, source_data)
+        else:
+            target = self._apply_ups_patch(patch_data, source_data)
+            self.document.write_bytes(0, target)
+
+        doc_len: int = self.document.length()
+        _logger.info("ups_patch_imported", target_size=doc_len)
+        if self.state_holder is not None:
+            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
+        return {"target_size": doc_len}
+
+    @staticmethod
+    def _encode_bps_var_int(val: int) -> bytes:
+        """Encode a variable-length integer in BPS format.
+
+        Args:
+            val: Non-negative integer value.
+
+        Returns:
+            bytes: Encoded bytes.
+        """
+        result = bytearray()
+        while True:
+            byte = val & 0x7F
+            val >>= 7
+            if val == 0:
+                result.append(byte | 0x80)
+                break
+            result.append(byte)
+            val -= 1
+        return bytes(result)
+
+    @staticmethod
+    def _decode_bps_var_int(data: bytes, pos: int) -> tuple[int, int]:
+        """Decode a variable-length integer in BPS format.
+
+        Args:
+            data: Source byte array.
+            pos: Current read position.
+
+        Returns:
+            tuple[int, int]: Decoded value and new position.
+        """
+        result = 0
+        shift = 0
+        while pos < len(data):
+            byte = data[pos]
+            pos += 1
+            result += (byte & 0x7F) << shift
+            if byte & 0x80:
+                return result, pos
+            shift += 7
+            result += 1 << shift
+        return result, pos
+
+    @staticmethod
+    def _crc32_compute(data: bytes) -> int:
+        """Compute CRC32 of data using zlib.
+
+        Args:
+            data: Input bytes.
+
+        Returns:
+            int: CRC32 value as unsigned 32-bit integer.
+        """
+        return zlib.crc32(data) & _CRC32_MASK
+
+    def _build_bps_patch(self, source: bytes, target: bytes) -> bytes:
+        """Build a BPS patch from source and target data.
+
+        Args:
+            source: Original file data.
+            target: Modified file data.
+
+        Returns:
+            bytes: Complete BPS patch binary.
+        """
+        patch = bytearray(b"BPS1")
+        patch.extend(self._encode_bps_var_int(len(source)))
+        patch.extend(self._encode_bps_var_int(len(target)))
+        patch.extend(self._encode_bps_var_int(0))
+
+        src_pos = 0
+        tgt_pos = 0
+
+        while tgt_pos < len(target):
+            match_len = 0
+            while (
+                src_pos + match_len < len(source)
+                and tgt_pos + match_len < len(target)
+                and source[src_pos + match_len] == target[tgt_pos + match_len]
+            ):
+                match_len += 1
+
+            if match_len > 0:
+                patch.extend(self._encode_bps_var_int((match_len - 1) << 2))
+                src_pos += match_len
+                tgt_pos += match_len
+
+            if tgt_pos >= len(target):
+                break
+
+            diff_len = 0
+            max_diff = 256
+            while tgt_pos + diff_len < len(target) and diff_len < max_diff:
+                if src_pos + diff_len < len(source) and source[src_pos + diff_len] == target[tgt_pos + diff_len]:
+                    ahead = 0
+                    while (
+                        src_pos + diff_len + ahead < len(source)
+                        and tgt_pos + diff_len + ahead < len(target)
+                        and source[src_pos + diff_len + ahead] == target[tgt_pos + diff_len + ahead]
+                    ):
+                        ahead += 1
+                    min_ahead_match = 4
+                    if ahead >= min_ahead_match:
+                        break
+                diff_len += 1
+
+            if diff_len > 0:
+                patch.extend(self._encode_bps_var_int(((diff_len - 1) << 2) | 1))
+                patch.extend(target[tgt_pos : tgt_pos + diff_len])
+                src_pos += diff_len
+                tgt_pos += diff_len
+
+        source_crc = self._crc32_compute(source)
+        target_crc = self._crc32_compute(target)
+        patch.extend(struct.pack("<I", source_crc))
+        patch.extend(struct.pack("<I", target_crc))
+
+        patch_crc = self._crc32_compute(bytes(patch))
+        patch.extend(struct.pack("<I", patch_crc))
+        return bytes(patch)
+
+    def _apply_bps_patch(self, patch: bytes, source: bytes) -> bytes:
+        """Apply a BPS patch to produce the target data.
+
+        Args:
+            patch: BPS patch binary data.
+            source: Original source data.
+
+        Returns:
+            bytes: Patched target data.
+
+        Raises:
+            ValueError: If the patch is invalid or CRC verification fails.
+        """
+        self._validate_bps_header(patch, source)
+        footer_start = len(patch) - _BPS_MIN_PATCH_SIZE
+        stored_target_crc = struct.unpack_from("<I", patch, footer_start + 4)[0]
+
+        pos = 4
+        _, pos = self._decode_bps_var_int(patch, pos)
+        target_size, pos = self._decode_bps_var_int(patch, pos)
+        metadata_size, pos = self._decode_bps_var_int(patch, pos)
+        pos += metadata_size
+
+        target = bytearray(target_size)
+        state = [0, 0, 0]
+
+        while pos < footer_start:
+            action, pos = self._decode_bps_var_int(patch, pos)
+            pos = self._exec_bps_command(action, patch, source, target, pos, footer_start, state)
+
+        if self._crc32_compute(bytes(target)) != stored_target_crc:
+            msg = "target CRC mismatch"
+            raise ValueError(msg)
+        return bytes(target)
+
+    def _validate_bps_header(self, patch: bytes, source: bytes) -> None:
+        """Validate BPS patch header and CRC checksums.
+
+        Args:
+            patch: BPS patch data.
+            source: Original source data.
+
+        Raises:
+            ValueError: If validation fails.
+        """
+        if len(patch) < _BPS_MIN_PATCH_SIZE or patch[:4] != b"BPS1":
+            msg = "invalid BPS patch"
+            raise ValueError(msg)
+        if self._crc32_compute(patch[:-4]) != struct.unpack_from("<I", patch, len(patch) - 4)[0]:
+            msg = "BPS patch CRC mismatch"
+            raise ValueError(msg)
+        footer_start = len(patch) - _BPS_MIN_PATCH_SIZE
+        if self._crc32_compute(source) != struct.unpack_from("<I", patch, footer_start)[0]:
+            msg = "source CRC mismatch"
+            raise ValueError(msg)
+
+    def _exec_bps_command(
+        self,
+        action: int,
+        patch: bytes,
+        source: bytes,
+        target: bytearray,
+        pos: int,
+        footer_start: int,
+        state: list[int],
+    ) -> int:
+        """Execute a single BPS patch command.
+
+        Args:
+            action: Encoded action value.
+            patch: Full patch data.
+            source: Original source data.
+            target: Target buffer being built.
+            pos: Current read position in the patch.
+            footer_start: End-of-data marker position.
+            state: Mutable list [output_offset, source_rel_offset, target_rel_offset].
+
+        Returns:
+            int: Updated read position.
+        """
+        command = action & 3
+        length = (action >> 2) + 1
+
+        if command == _BPS_CMD_SOURCE_READ:
+            for _ in range(length):
+                if state[0] < len(target) and state[0] < len(source):
+                    target[state[0]] = source[state[0]]
+                state[0] += 1
+        elif command == _BPS_CMD_TARGET_READ:
+            for _ in range(length):
+                if pos < footer_start and state[0] < len(target):
+                    target[state[0]] = patch[pos]
+                    pos += 1
+                    state[0] += 1
+        elif command == _BPS_CMD_SOURCE_COPY:
+            offset_data, pos = self._decode_bps_var_int(patch, pos)
+            delta = -(offset_data >> 1) if offset_data & 1 else offset_data >> 1
+            state[1] += delta
+            for _ in range(length):
+                if 0 <= state[1] < len(source) and state[0] < len(target):
+                    target[state[0]] = source[state[1]]
+                state[1] += 1
+                state[0] += 1
+        elif command == _BPS_CMD_TARGET_COPY:
+            offset_data, pos = self._decode_bps_var_int(patch, pos)
+            delta = -(offset_data >> 1) if offset_data & 1 else offset_data >> 1
+            state[2] += delta
+            for _ in range(length):
+                if 0 <= state[2] < len(target) and state[0] < len(target):
+                    target[state[0]] = target[state[2]]
+                state[2] += 1
+                state[0] += 1
+        return pos
+
+    def _build_ups_patch(self, source: bytes, target: bytes) -> bytes:
+        """Build a UPS patch from source and target data.
+
+        Args:
+            source: Original file data.
+            target: Modified file data.
+
+        Returns:
+            bytes: Complete UPS patch binary.
+        """
+        patch = bytearray(b"UPS1")
+        patch.extend(self._encode_bps_var_int(len(source)))
+        patch.extend(self._encode_bps_var_int(len(target)))
+
+        max_len = max(len(source), len(target))
+        write_pos = 0
+        offset = 0
+
+        while offset < max_len:
+            src_byte = source[offset] if offset < len(source) else 0
+            tgt_byte = target[offset] if offset < len(target) else 0
+            xor_val = src_byte ^ tgt_byte
+
+            if xor_val != 0:
+                rel_offset = offset - write_pos
+                patch.extend(self._encode_bps_var_int(rel_offset))
+
+                while offset < max_len:
+                    s = source[offset] if offset < len(source) else 0
+                    t = target[offset] if offset < len(target) else 0
+                    x = s ^ t
+                    patch.append(x)
+                    offset += 1
+                    if x == 0:
+                        break
+                write_pos = offset
+            else:
+                offset += 1
+
+        source_crc = self._crc32_compute(source)
+        target_crc = self._crc32_compute(target)
+        patch.extend(struct.pack("<I", source_crc))
+        patch.extend(struct.pack("<I", target_crc))
+
+        patch_crc = self._crc32_compute(bytes(patch))
+        patch.extend(struct.pack("<I", patch_crc))
+        return bytes(patch)
+
+    def _apply_ups_patch(self, patch: bytes, source: bytes) -> bytes:
+        """Apply a UPS patch to produce the target data.
+
+        Args:
+            patch: UPS patch binary data.
+            source: Original source data.
+
+        Returns:
+            bytes: Patched target data.
+
+        Raises:
+            ValueError: If the patch is invalid or CRC verification fails.
+        """
+        min_patch_size = 16
+        if len(patch) < min_patch_size or patch[:4] != b"UPS1":
+            msg = "invalid UPS patch"
+            raise ValueError(msg)
+
+        patch_body_crc = self._crc32_compute(patch[:-4])
+        stored_patch_crc = struct.unpack_from("<I", patch, len(patch) - 4)[0]
+        if patch_body_crc != stored_patch_crc:
+            msg = "UPS patch CRC mismatch"
+            raise ValueError(msg)
+
+        footer_start = len(patch) - 12
+        stored_source_crc = struct.unpack_from("<I", patch, footer_start)[0]
+        stored_target_crc = struct.unpack_from("<I", patch, footer_start + 4)[0]
+
+        if self._crc32_compute(source) != stored_source_crc:
+            msg = "source CRC mismatch"
+            raise ValueError(msg)
+
+        pos = 4
+        _source_size, pos = self._decode_bps_var_int(patch, pos)
+        target_size, pos = self._decode_bps_var_int(patch, pos)
+
+        target = bytearray(source)
+        target_len = target_size
+        if len(target) < target_len:
+            target.extend(bytes(target_len - len(target)))
+        elif len(target) > target_len:
+            target = target[:target_len]
+
+        data_offset = 0
+        while pos < footer_start:
+            rel_offset, pos = self._decode_bps_var_int(patch, pos)
+            data_offset += rel_offset
+
+            while pos < footer_start:
+                xor_byte = patch[pos]
+                pos += 1
+                if xor_byte == 0:
+                    data_offset += 1
+                    break
+                if data_offset < len(target):
+                    target[data_offset] ^= xor_byte
+                data_offset += 1
+
+        if self._crc32_compute(bytes(target)) != stored_target_crc:
+            msg = "target CRC mismatch"
+            raise ValueError(msg)
+
+        return bytes(target)
+
+
+_PRINTABLE_PDF_LO = 32
+_PRINTABLE_PDF_HI = 126
+
+
+def _generate_pdf(
+    output_path: str,
+    data: bytes,
+    start_offset: int,
+    bytes_per_row: int,
+    bookmark_map: dict[int, dict[str, object]],
+    bookmarks: list[dict[str, object]],
+    doc_size: int,
+) -> str:
+    """Generate an annotated hex dump PDF.
+
+    Args:
+        output_path: Destination file path for the PDF.
+        data: Binary data to render.
+        start_offset: Absolute file offset of the first byte in data.
+        bytes_per_row: Number of bytes per hex row.
+        bookmark_map: Map from absolute offset to bookmark dict.
+        bookmarks: List of bookmark metadata dicts.
+        doc_size: Total document size in bytes.
+
+    Returns:
+        str: The written file path.
+    """
+    from fpdf import FPDF  # noqa: PLC0415
+
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=10)
+
+    pdf.add_page()
+    pdf.set_font("Courier", "B", 14)
+    pdf.cell(0, 10, "Hex Dump Report", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.set_font("Courier", "", 9)
+    pdf.cell(0, 6, f"Document size: {doc_size} bytes (0x{doc_size:X})", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(
+        0,
+        6,
+        f"Range: 0x{start_offset:08X} - 0x{start_offset + len(data):08X} ({len(data)} bytes)",
+        new_x="LMARGIN",
+        new_y="NEXT",
+    )
+    pdf.ln(4)
+
+    _pdf_render_bookmarks(pdf, bookmarks)
+
+    col_widths = (22.0, 2.7 * bytes_per_row + 4, 1.8 * bytes_per_row + 2)
+    pdf.set_font("Courier", "B", 7)
+    pdf.cell(col_widths[0], 4, "Offset")
+    pdf.cell(col_widths[1], 4, "Hex")
+    pdf.cell(col_widths[2], 4, "ASCII")
+    pdf.ln(4)
+    pdf.set_font("Courier", "", 6)
+
+    _pdf_render_hex_rows(pdf, data, start_offset, bytes_per_row, bookmark_map, col_widths)
+    pdf.output(output_path)
+    return output_path
+
+
+def _pdf_render_bookmarks(
+    pdf: FPDF,
+    bookmarks: list[dict[str, object]],
+) -> None:
+    """Render bookmark legend section into a PDF.
+
+    Args:
+        pdf: FPDF instance.
+        bookmarks: List of bookmark metadata dicts.
+    """
+    if not bookmarks:
+        return
+
+    pdf.set_font("Courier", "B", 10)
+    pdf.cell(0, 6, "Bookmarks:", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Courier", "", 8)
+    seen: set[str] = set()
+    for bm in bookmarks:
+        label = str(bm.get("label", ""))
+        if label and label not in seen:
+            seen.add(label)
+            pdf.cell(
+                0,
+                5,
+                f"  {label}: 0x{bm.get('offset', 0):X} ({bm.get('length', 0)} bytes)",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
+    pdf.ln(4)
+
+
+def _pdf_render_hex_rows(
+    pdf: FPDF,
+    data: bytes,
+    start_offset: int,
+    bytes_per_row: int,
+    bookmark_map: dict[int, dict[str, object]],
+    col_widths: tuple[float, float, float],
+) -> None:
+    """Render hex dump rows into a PDF.
+
+    Args:
+        pdf: FPDF instance.
+        data: Binary data to render.
+        start_offset: Absolute file offset of the first byte.
+        bytes_per_row: Bytes per row.
+        bookmark_map: Offset-to-bookmark lookup.
+        col_widths: Column widths as (offset, hex, ascii).
+    """
+    for row_start in range(0, len(data), bytes_per_row):
+        abs_off = start_offset + row_start
+        row_data = data[row_start : row_start + bytes_per_row]
+
+        hex_parts: list[str] = []
+        ascii_parts: list[str] = []
+        has_bookmark = False
+
+        for j, b in enumerate(row_data):
+            hex_parts.append(f"{b:02X}")
+            ascii_parts.append(chr(b) if _PRINTABLE_PDF_LO <= b <= _PRINTABLE_PDF_HI else ".")
+            if abs_off + j in bookmark_map:
+                has_bookmark = True
+
+        if has_bookmark:
+            pdf.set_fill_color(230, 240, 255)
+            pdf.cell(col_widths[0], 3.5, f"{abs_off:08X}", fill=True)
+            pdf.cell(col_widths[1], 3.5, " ".join(hex_parts), fill=True)
+            pdf.cell(col_widths[2], 3.5, "".join(ascii_parts), fill=True)
+        else:
+            pdf.cell(col_widths[0], 3.5, f"{abs_off:08X}")
+            pdf.cell(col_widths[1], 3.5, " ".join(hex_parts))
+            pdf.cell(col_widths[2], 3.5, "".join(ascii_parts))
+
+        pdf.ln(3.5)

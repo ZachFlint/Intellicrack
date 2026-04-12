@@ -9,69 +9,69 @@
           "version": "1.0.0",
           "rules": [
             {
-              "id": "reportUnknownVariableType",
+              "id": "reportArgumentType",
               "shortDescription": {
-                "text": "Type of \"gen_details\" is unknown"
+                "text": "Argument of type \"str\" cannot be assigned to parameter \"encoding\" of type \"Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']\" in function \"__init__\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ascii']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['utf-8']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['utf-16le']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['utf-16be']\""
+              }
+            },
+            {
+              "id": "reportMissingModuleSource",
+              "shortDescription": {
+                "text": "Import \"fpdf\" could not be resolved from source"
               }
             },
             {
               "id": "reportUnknownMemberType",
               "shortDescription": {
-                "text": "Type of \"get_generation\" is unknown"
+                "text": "Type of \"parse\" is partially unknown\n\u00a0\u00a0Type of \"parse\" is \"(obj: str | IOBase | PathLike[Unknown] | bytes | list[int]) -> (lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None)\""
               }
             },
             {
               "id": "reportAttributeAccessIssue",
               "shortDescription": {
-                "text": "Cannot access attribute \"get_generation\" for class \"LLMProvider\"\n\u00a0\u00a0Attribute \"get_generation\" is unknown"
+                "text": "Cannot access attribute \"_add_toolbar_line_edit\" for class \"CutterPanel*\"\n\u00a0\u00a0Attribute \"_add_toolbar_line_edit\" is unknown"
+              }
+            },
+            {
+              "id": "reportUnknownVariableType",
+              "shortDescription": {
+                "text": "Type of \"addr_text\" is unknown"
               }
             },
             {
               "id": "reportUnknownArgumentType",
               "shortDescription": {
-                "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"info\"\n\u00a0\u00a0Argument type is \"dict[str, Any | Unknown]\""
-              }
-            },
-            {
-              "id": "reportArgumentType",
-              "shortDescription": {
-                "text": "Argument of type \"str\" cannot be assigned to parameter \"dtype\" of type \"DtypeOption\" in function \"__init__\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"DtypeOption\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['auto']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['float32']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['float16']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['bfloat16']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['int8']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['int4']\""
-              }
-            },
-            {
-              "id": "reportUndefinedVariable",
-              "shortDescription": {
-                "text": "\"_PROC_COL_COUNT\" is not defined"
-              }
-            },
-            {
-              "id": "reportAssignmentType",
-              "shortDescription": {
-                "text": "Type \"Unknown | None\" is not assignable to declared type \"list[str]\"\n\u00a0\u00a0Type \"Unknown | None\" is not assignable to type \"list[str]\"\n\u00a0\u00a0\u00a0\u00a0\"None\" is not assignable to \"list[str]\""
-              }
-            },
-            {
-              "id": "reportOptionalIterable",
-              "shortDescription": {
-                "text": "Object of type \"None\" cannot be used as iterable value"
-              }
-            },
-            {
-              "id": "reportPrivateUsage",
-              "shortDescription": {
-                "text": "\"_api_key_input\" is protected and used outside of the class in which it is declared"
-              }
-            },
-            {
-              "id": "reportGeneralTypeIssues",
-              "shortDescription": {
-                "text": "\"object\" is not iterable\n\u00a0\u00a0\"__aiter__\" method not defined"
+                "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
               }
             },
             {
               "id": "reportCallIssue",
               "shortDescription": {
-                "text": "Argument missing for parameter \"content\""
+                "text": "No overloads for \"mapToGlobal\" match the provided arguments"
+              }
+            },
+            {
+              "id": "reportOptionalMemberAccess",
+              "shortDescription": {
+                "text": "\"mapToGlobal\" is not a known attribute of \"None\""
+              }
+            },
+            {
+              "id": "reportConstantRedefinition",
+              "shortDescription": {
+                "text": "\"_HAS_CFG_VIEW\" is constant (because it is uppercase) and cannot be redefined"
+              }
+            },
+            {
+              "id": "reportPossiblyUnboundVariable",
+              "shortDescription": {
+                "text": "\"CFGGraphView\" is possibly unbound"
+              }
+            },
+            {
+              "id": "reportUnnecessaryIsInstance",
+              "shortDescription": {
+                "text": "Unnecessary isinstance call; \"dict[str, object]\" is always an instance of \"dict[Unknown, Unknown]\""
               }
             }
           ]
@@ -79,10 +79,73 @@
       },
       "results": [
         {
-          "ruleId": "reportUnknownVariableType",
+          "ruleId": "reportArgumentType",
           "level": "error",
           "message": {
-            "text": "Type of \"gen_details\" is unknown"
+            "text": "Argument of type \"str\" cannot be assigned to parameter \"encoding\" of type \"Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']\" in function \"__init__\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ascii']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['utf-8']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['utf-16le']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['utf-16be']\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1951,
+                  "startColumn": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportMissingModuleSource",
+          "level": "warning",
+          "message": {
+            "text": "Import \"fpdf\" could not be resolved from source"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportMissingModuleSource",
+          "level": "warning",
+          "message": {
+            "text": "Import \"fpdf\" could not be resolved from source"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6031,
+                  "startColumn": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"parse\" is partially unknown\n\u00a0\u00a0Type of \"parse\" is \"(obj: str | IOBase | PathLike[Unknown] | bytes | list[int]) -> (lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None)\""
           },
           "locations": [
             {
@@ -92,7 +155,217 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 667,
+                  "startLine": 1946,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportMissingModuleSource",
+          "level": "warning",
+          "message": {
+            "text": "Import \"PIL\" could not be resolved from source"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2437,
+                  "startColumn": 18
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportMissingModuleSource",
+          "level": "warning",
+          "message": {
+            "text": "Import \"PIL.Image\" could not be resolved from source"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2437,
+                  "startColumn": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_goto_input\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 144,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_add_toolbar_line_edit\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 144,
+                  "startColumn": 28
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportAttributeAccessIssue",
+          "level": "error",
+          "message": {
+            "text": "Cannot access attribute \"_add_toolbar_line_edit\" for class \"CutterPanel*\"\n\u00a0\u00a0Attribute \"_add_toolbar_line_edit\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 144,
+                  "startColumn": 33
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_find_func_input\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_add_toolbar_line_edit\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 33
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportAttributeAccessIssue",
+          "level": "error",
+          "message": {
+            "text": "Cannot access attribute \"_add_toolbar_line_edit\" for class \"CutterPanel*\"\n\u00a0\u00a0Attribute \"_add_toolbar_line_edit\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 38
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownVariableType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"addr_text\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1061,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_goto_input\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1061,
                   "startColumn": 21
                 }
               }
@@ -103,39 +376,39 @@
           "ruleId": "reportUnknownMemberType",
           "level": "error",
           "message": {
-            "text": "Type of \"get_generation\" is unknown"
+            "text": "Type of \"text\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/core/orchestrator.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 667,
-                  "startColumn": 41
+                  "startLine": 1061,
+                  "startColumn": 21
                 }
               }
             }
           ]
         },
         {
-          "ruleId": "reportAttributeAccessIssue",
+          "ruleId": "reportUnknownMemberType",
           "level": "error",
           "message": {
-            "text": "Cannot access attribute \"get_generation\" for class \"LLMProvider\"\n\u00a0\u00a0Attribute \"get_generation\" is unknown"
+            "text": "Type of \"strip\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/core/orchestrator.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 667,
-                  "startColumn": 50
+                  "startLine": 1061,
+                  "startColumn": 21
                 }
               }
             }
@@ -145,18 +418,228 @@
           "ruleId": "reportUnknownArgumentType",
           "level": "error",
           "message": {
-            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"info\"\n\u00a0\u00a0Argument type is \"dict[str, Any | Unknown]\""
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/core/orchestrator.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 670,
-                  "startColumn": 31
+                  "startLine": 1066,
+                  "startColumn": 27
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"startswith\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1066,
+                  "startColumn": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"x\" in function \"__new__\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1066,
+                  "startColumn": 81
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownVariableType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"name\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1098,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_find_func_input\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1098,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"text\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1098,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"strip\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1098,
+                  "startColumn": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"name\" in function \"get_function_address\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1103,
+                  "startColumn": 47
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"name\" in function \"_on_find_func_result\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1104,
+                  "startColumn": 63
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"_goto_input\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1119,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"setText\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1119,
+                  "startColumn": 9
                 }
               }
             }
@@ -166,17 +649,38 @@
           "ruleId": "reportArgumentType",
           "level": "error",
           "message": {
-            "text": "Argument of type \"str\" cannot be assigned to parameter \"dtype\" of type \"DtypeOption\" in function \"__init__\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"DtypeOption\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['auto']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['float32']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['float16']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['bfloat16']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['int8']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['int4']\""
+            "text": "Argument of type \"object\" cannot be assigned to parameter \"p\" of type \"QPoint\" in function \"itemAt\"\n\u00a0\u00a0\"object\" is not assignable to \"QPoint\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/providers/local_transformers.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 434,
+                  "startLine": 1128,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportCallIssue",
+          "level": "error",
+          "message": {
+            "text": "No overloads for \"mapToGlobal\" match the provided arguments"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1162,
                   "startColumn": 19
                 }
               }
@@ -184,21 +688,231 @@
           ]
         },
         {
-          "ruleId": "reportUnknownMemberType",
+          "ruleId": "reportUnknownArgumentType",
           "level": "error",
           "message": {
-            "text": "Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown] | object\""
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"p\" in function \"exec\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 843,
-                  "startColumn": 54
+                  "startLine": 1162,
+                  "startColumn": 19
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportOptionalMemberAccess",
+          "level": "error",
+          "message": {
+            "text": "\"mapToGlobal\" is not a known attribute of \"None\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1162,
+                  "startColumn": 46
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument of type \"object\" cannot be assigned to parameter \"a0\" of type \"QPointF\" in function \"mapToGlobal\"\n\u00a0\u00a0\"object\" is not assignable to \"QPointF\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1162,
+                  "startColumn": 58
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportConstantRedefinition",
+          "level": "error",
+          "message": {
+            "text": "\"_HAS_CFG_VIEW\" is constant (because it is uppercase) and cannot be redefined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 100,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportConstantRedefinition",
+          "level": "error",
+          "message": {
+            "text": "\"_HAS_CFG_VIEW\" is constant (because it is uppercase) and cannot be redefined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 102,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportConstantRedefinition",
+          "level": "error",
+          "message": {
+            "text": "\"_HAS_HIGHLIGHTER\" is constant (because it is uppercase) and cannot be redefined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 107,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportConstantRedefinition",
+          "level": "error",
+          "message": {
+            "text": "\"_HAS_HIGHLIGHTER\" is constant (because it is uppercase) and cannot be redefined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 109,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportPossiblyUnboundVariable",
+          "level": "error",
+          "message": {
+            "text": "\"CFGGraphView\" is possibly unbound"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 244,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportPossiblyUnboundVariable",
+          "level": "error",
+          "message": {
+            "text": "\"PythonSyntaxHighlighter\" is possibly unbound"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 827,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnnecessaryIsInstance",
+          "level": "error",
+          "message": {
+            "text": "Unnecessary isinstance call; \"dict[str, object]\" is always an instance of \"dict[Unknown, Unknown]\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1547,
+                  "startColumn": 60
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportPossiblyUnboundVariable",
+          "level": "error",
+          "message": {
+            "text": "\"CFGGraphView\" is possibly unbound"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1734,
+                  "startColumn": 57
                 }
               }
             }
@@ -208,39 +922,102 @@
           "ruleId": "reportUnknownMemberType",
           "level": "error",
           "message": {
-            "text": "Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown]\""
+            "text": "Type of \"load_graph\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 854,
-                  "startColumn": 43
+                  "startLine": 1736,
+                  "startColumn": 13
                 }
               }
             }
           ]
         },
         {
-          "ruleId": "reportUnknownMemberType",
+          "ruleId": "reportAttributeAccessIssue",
           "level": "error",
           "message": {
-            "text": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+            "text": "Cannot access attribute \"load_graph\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"load_graph\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 854,
-                  "startColumn": 43
+                  "startLine": 1736,
+                  "startColumn": 28
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownVariableType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"s\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1745,
+                  "startColumn": 66
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownVariableType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"d\" is unknown"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1749,
+                  "startColumn": 66
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument of type \"dict[str, QAction | None]\" cannot be assigned to parameter \"actions\" of type \"dict[str, object]\" in function \"_dispatch_func_menu_action\"\n\u00a0\u00a0\"dict[str, QAction | None]\" is not assignable to \"dict[str, object]\"\n\u00a0\u00a0\u00a0\u00a0Type parameter \"_VT@dict\" is invariant, but \"QAction | None\" is not the same as \"object\"\n\u00a0\u00a0\u00a0\u00a0Consider switching from \"dict\" to \"Mapping\" which is covariant in the value type"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1865,
+                  "startColumn": 49
                 }
               }
             }
@@ -256,243 +1033,12 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 854,
-                  "startColumn": 43
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown] | object\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 854,
-                  "startColumn": 95
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown] | object\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 856,
-                  "startColumn": 63
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"result\" is partially unknown\n\u00a0\u00a0Type of \"result\" is \"dict[Unknown, Unknown] | object\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 858,
-                  "startColumn": 59
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"unload_model\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1887,
-                  "startColumn": 45
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"future\" in function \"run_until_complete\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1887,
-                  "startColumn": 45
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"unload_model\" for class \"LLMProviderBase\"\n\u00a0\u00a0Attribute \"unload_model\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1887,
-                  "startColumn": 54
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument of type \"int | None\" cannot be assigned to parameter \"element\" of type \"int\" in function \"add\"\n\u00a0\u00a0Type \"int | None\" is not assignable to type \"int\"\n\u00a0\u00a0\u00a0\u00a0\"None\" is not assignable to \"int\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 513,
-                  "startColumn": 34
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUndefinedVariable",
-          "level": "error",
-          "message": {
-            "text": "\"_PROC_COL_COUNT\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 527,
-                  "startColumn": 38
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"stop\" in function \"__new__\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 527,
-                  "startColumn": 38
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUndefinedVariable",
-          "level": "error",
-          "message": {
-            "text": "\"QColor\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 530,
-                  "startColumn": 48
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"brush\" in function \"setBackground\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/process_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 530,
-                  "startColumn": 48
+                  "startLine": 1944,
+                  "startColumn": 35
                 }
               }
             }
@@ -502,165 +1048,18 @@
           "ruleId": "reportUnknownVariableType",
           "level": "error",
           "message": {
-            "text": "Type of \"snapshots\" is partially unknown\n\u00a0\u00a0Type of \"snapshots\" is \"Unknown | None\""
+            "text": "Type of \"c\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 421,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAssignmentType",
-          "level": "error",
-          "message": {
-            "text": "Type \"Unknown | None\" is not assignable to declared type \"list[str]\"\n\u00a0\u00a0Type \"Unknown | None\" is not assignable to type \"list[str]\"\n\u00a0\u00a0\u00a0\u00a0\"None\" is not assignable to \"list[str]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 421,
-                  "startColumn": 36
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"list_snapshots\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 421,
-                  "startColumn": 57
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"coro\" in function \"run_bridge_coroutine\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 421,
-                  "startColumn": 57
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"list_snapshots\" for class \"SandboxBase\"\n\u00a0\u00a0Attribute \"list_snapshots\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 421,
-                  "startColumn": 71
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"delete_snapshot\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 448,
-                  "startColumn": 34
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"coro\" in function \"run_bridge_coroutine\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 448,
-                  "startColumn": 34
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"delete_snapshot\" for class \"SandboxBase\"\n\u00a0\u00a0Attribute \"delete_snapshot\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 448,
-                  "startColumn": 48
+                  "startLine": 1944,
+                  "startColumn": 42
                 }
               }
             }
@@ -670,815 +1069,17 @@
           "ruleId": "reportUnknownVariableType",
           "level": "error",
           "message": {
-            "text": "Type of \"idx\" is unknown"
+            "text": "Type of \"b\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 449,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"indexOfTopLevelItem\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 449,
-                  "startColumn": 19
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"indexOfTopLevelItem\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"indexOfTopLevelItem\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 449,
-                  "startColumn": 40
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"takeTopLevelItem\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 451,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"takeTopLevelItem\" for class \"QTreeWidget\"\n\u00a0\u00a0Attribute \"takeTopLevelItem\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 451,
-                  "startColumn": 38
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportOptionalIterable",
-          "level": "error",
-          "message": {
-            "text": "Object of type \"None\" cannot be used as iterable value"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/sandbox_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 492,
-                  "startColumn": 28
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"dict[Unknown, Unknown]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/stack_viewer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 522,
-                  "startColumn": 88
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"obj\" in function \"len\"\n\u00a0\u00a0Argument type is \"dict[Unknown, Unknown]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/stack_viewer.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 527,
-                  "startColumn": 92
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportPrivateUsage",
-          "level": "error",
-          "message": {
-            "text": "\"_api_key_input\" is protected and used outside of the class in which it is declared"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1121,
-                  "startColumn": 33
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportPrivateUsage",
-          "level": "error",
-          "message": {
-            "text": "\"_api_key_input\" is protected and used outside of the class in which it is declared"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1251,
-                  "startColumn": 37
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportPrivateUsage",
-          "level": "error",
-          "message": {
-            "text": "\"_api_key_input\" is protected and used outside of the class in which it is declared"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1260,
-                  "startColumn": 37
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownVariableType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"status\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1799,
-                  "startColumn": 39
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportGeneralTypeIssues",
-          "level": "error",
-          "message": {
-            "text": "\"object\" is not iterable\n\u00a0\u00a0\"__aiter__\" method not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1799,
-                  "startColumn": 49
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"debug\"\n\u00a0\u00a0Argument type is \"dict[str, Unknown]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1800,
-                  "startColumn": 77
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownVariableType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"device_info\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1874,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"get_device_info\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1874,
-                  "startColumn": 58
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"get_device_info\" for class \"LLMProviderBase\"\n\u00a0\u00a0Attribute \"get_device_info\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1874,
-                  "startColumn": 70
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownVariableType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"device_type\" is partially unknown\n\u00a0\u00a0Type of \"device_type\" is \"object | Unknown\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1875,
-                  "startColumn": 25
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Unknown | Overload[(key: str, default: None = None, /) -> (object | None), (key: str, default: object, /) -> object, (key: str, default: _T@get, /) -> (object | _T@get)]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1875,
-                  "startColumn": 39
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"extra\" in function \"info\"\n\u00a0\u00a0Argument type is \"dict[str, object | Unknown]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/provider_config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1876,
-                  "startColumn": 78
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"set_tab_content\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1582,
-                  "startColumn": 30
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportCallIssue",
-          "level": "error",
-          "message": {
-            "text": "Argument missing for parameter \"content\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1584,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"activate_tab\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1585,
-                  "startColumn": 27
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument of type \"str\" cannot be assigned to parameter \"tab_name\" of type \"OutputType\" in function \"clear_tab\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1593,
-                  "startColumn": 24
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportArgumentType",
-          "level": "error",
-          "message": {
-            "text": "Argument of type \"str\" cannot be assigned to parameter \"tool_id\" of type \"OutputType\" in function \"get_embedded_tool\"\n\u00a0\u00a0Type \"str\" is not assignable to type \"OutputType\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['ghidra']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['frida']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['radare2']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['x64dbg']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['log']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['licensing']\"\n\u00a0\u00a0\u00a0\u00a0\"str\" is not assignable to type \"Literal['scripts']\"\n  ..."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1604,
-                  "startColumn": 39
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportCallIssue",
-          "level": "error",
-          "message": {
-            "text": "Expected 1 positional argument"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1614,
-                  "startColumn": 52
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"add_hook_entry\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1623,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"add_hook_entry\" for class \"FridaPanelProtocol\"\n\u00a0\u00a0Attribute \"add_hook_entry\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1623,
-                  "startColumn": 31
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"get_sandbox\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1632,
-                  "startColumn": 20
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownVariableType",
-          "level": "error",
-          "message": {
-            "text": "Return type is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1632,
-                  "startColumn": 20
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"get_sandbox\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"get_sandbox\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1632,
-                  "startColumn": 40
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"load_execution_report\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1642,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"load_execution_report\" for class \"SandboxPanelProtocol\"\n\u00a0\u00a0Attribute \"load_execution_report\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1642,
-                  "startColumn": 33
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownVariableType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"selected_id\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1654,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"get_selected_id\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1654,
-                  "startColumn": 31
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"get_selected_id\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_selected_id\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1654,
-                  "startColumn": 50
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownVariableType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"current_script\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1656,
-                  "startColumn": 17
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"get_current_script\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1656,
-                  "startColumn": 34
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"get_current_script\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"get_current_script\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1656,
+                  "startLine": 2435,
                   "startColumn": 53
                 }
               }
@@ -1489,18 +1090,60 @@
           "ruleId": "reportUnknownVariableType",
           "level": "error",
           "message": {
-            "text": "Return type, \"tuple[Unknown | str | None, Unknown | str | None]\", is partially unknown"
+            "text": "Type of \"child\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1657,
-                  "startColumn": 16
+                  "startLine": 2640,
+                  "startColumn": 17
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_data_inspector.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 286,
+                  "startColumn": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument of type \"QTextDocument | None\" cannot be assigned to parameter \"parent\" of type \"QTextDocument\" in function \"__init__\"\n\u00a0\u00a0Type \"QTextDocument | None\" is not assignable to type \"QTextDocument\"\n\u00a0\u00a0\u00a0\u00a0\"None\" is not assignable to \"QTextDocument\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 590,
+                  "startColumn": 34
                 }
               }
             }
@@ -1510,18 +1153,291 @@
           "ruleId": "reportUnknownMemberType",
           "level": "error",
           "message": {
-            "text": "Type of \"get_highlighter\" is unknown"
+            "text": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_signatures.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1665,
-                  "startColumn": 16
+                  "startLine": 105,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"object\" in function \"__new__\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_signatures.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 105,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownMemberType",
+          "level": "error",
+          "message": {
+            "text": "Type of \"get\" is partially unknown\n\u00a0\u00a0Type of \"get\" is \"Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_signatures.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 106,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is unknown\n\u00a0\u00a0Argument corresponds to parameter \"object\" in function \"__new__\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_signatures.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 106,
+                  "startColumn": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 288,
+                  "startColumn": 27
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 317,
+                  "startColumn": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 334,
+                  "startColumn": 32
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 350,
+                  "startColumn": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 365,
+                  "startColumn": 33
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 395,
+                  "startColumn": 38
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 415,
+                  "startColumn": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 429,
+                  "startColumn": 33
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 443,
+                  "startColumn": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "reportUnknownArgumentType",
+          "level": "error",
+          "message": {
+            "text": "Argument type is partially unknown\n\u00a0\u00a0Argument corresponds to parameter \"o\" in function \"__new__\"\n\u00a0\u00a0Argument type is \"list[Unknown] | bytearray\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_templates.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 457,
+                  "startColumn": 33
                 }
               }
             }
@@ -1531,165 +1447,39 @@
           "ruleId": "reportUnknownVariableType",
           "level": "error",
           "message": {
-            "text": "Return type is unknown"
+            "text": "Type of \"s\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1665,
-                  "startColumn": 16
+                  "startLine": 1477,
+                  "startColumn": 46
                 }
               }
             }
           ]
         },
         {
-          "ruleId": "reportAttributeAccessIssue",
+          "ruleId": "reportUnknownVariableType",
           "level": "error",
           "message": {
-            "text": "Cannot access attribute \"get_highlighter\" for class \"ToolOutputPanel*\"\n\u00a0\u00a0Attribute \"get_highlighter\" is unknown"
+            "text": "Type of \"e\" is unknown"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
+                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1665,
-                  "startColumn": 21
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"set_x64dbg_bridge\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1676,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"set_x64dbg_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_x64dbg_bridge\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1676,
-                  "startColumn": 31
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"set_frida_bridge\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1678,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"set_frida_bridge\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_frida_bridge\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1678,
-                  "startColumn": 31
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportUnknownMemberType",
-          "level": "error",
-          "message": {
-            "text": "Type of \"set_backend\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1696,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "reportAttributeAccessIssue",
-          "level": "error",
-          "message": {
-            "text": "Cannot access attribute \"set_backend\" for class \"QWidget\"\n\u00a0\u00a0Attribute \"set_backend\" is unknown"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/tools.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1696,
-                  "startColumn": 32
+                  "startLine": 1518,
+                  "startColumn": 46
                 }
               }
             }
@@ -1700,7 +1490,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:40:06.415590"
+          "endTimeUtc": "2026-04-11T07:07:01.357005+00:00"
         }
       ]
     }

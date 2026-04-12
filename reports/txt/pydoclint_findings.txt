@@ -1,1 +1,71 @@
-No findings.
+22 findings in src/intellicrack/sandbox/base.py
+
+440: DOC201: Method `SandboxBase.run_command` does not have a return section in docstring
+
+440: DOC203: Method `SandboxBase.run_command` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+467: DOC201: Method `SandboxBase.run_binary` does not have a return section in docstring
+
+467: DOC203: Method `SandboxBase.run_binary` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+539: DOC201: Method `SandboxBase.take_snapshot` does not have a return section in docstring
+
+539: DOC203: Method `SandboxBase.take_snapshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+571: DOC201: Method `SandboxBase.list_snapshots` does not have a return section in docstring
+
+571: DOC203: Method `SandboxBase.list_snapshots` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+599: DOC201: Method `SandboxBase.start_pcap_capture` does not have a return section in docstring
+
+599: DOC203: Method `SandboxBase.start_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+608: DOC201: Method `SandboxBase.stop_pcap_capture` does not have a return section in docstring
+
+608: DOC203: Method `SandboxBase.stop_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+626: DOC201: Method `SandboxBase.capture_screenshot` does not have a return section in docstring
+
+626: DOC203: Method `SandboxBase.capture_screenshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+642: DOC201: Method `SandboxBase.apply_anti_evasion` does not have a return section in docstring
+
+642: DOC203: Method `SandboxBase.apply_anti_evasion` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+658: DOC201: Method `SandboxBase.dump_memory` does not have a return section in docstring
+
+658: DOC203: Method `SandboxBase.dump_memory` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+674: DOC201: Method `SandboxBase.extract_dropped_files` does not have a return section in docstring
+
+674: DOC203: Method `SandboxBase.extract_dropped_files` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+690: DOC201: Method `SandboxBase.yara_scan` does not have a return section in docstring
+
+690: DOC203: Method `SandboxBase.yara_scan` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+
+2 findings in src/intellicrack/bridges/schemas.py
+
+28: DOC201: Function `_assert_never` does not have a return section in docstring
+
+28: DOC203: Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+
+2 findings in src/intellicrack/ui/panels/hex_editor/_process_memory.py
+
+65: DOC602: Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)
+
+65: DOC603: Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)
+
+
+2 findings in src/intellicrack/ui/panels/process_panel/_base.py
+
+55: DOC602: Class `ProcessPanel`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)
+
+55: DOC603: Class `ProcessPanel`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [tool_closed: , tool_started: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)
+
+
+1 findings in src/intellicrack/providers/base.py
+
+304: DOC503: Method `LLMProviderBase._retry_with_backoff` exceptions in the "Raises" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions'].

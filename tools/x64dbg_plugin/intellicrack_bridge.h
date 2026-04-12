@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <string>
+#include <atomic>
 
 #define PLUGIN_NAME "Intellicrack Bridge"
 #define PLUGIN_VERSION 1
@@ -37,8 +38,8 @@ struct PluginState {
     HANDLE stop_event;
     uint64_t current_address;
     uint64_t module_base;
-    bool debugging;
-    bool paused;
+    std::atomic<bool> debugging;
+    std::atomic<bool> paused;
 };
 
 extern PluginState g_state;

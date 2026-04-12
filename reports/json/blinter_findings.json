@@ -1,6 +1,6 @@
 {
   "tool": "blinter",
-  "generated": "2026-04-05T20:21:04.846095+00:00",
+  "generated": "2026-04-11T07:08:56.442383+00:00",
   "total_findings": 3,
   "total_files": 3,
   "files": [
@@ -33,7 +33,7 @@
       ]
     },
     {
-      "path": "scripts/build-cli-launcher.cmd",
+      "path": "scripts\\build-cli-launcher.cmd",
       "count": 1,
       "findings": [
         {

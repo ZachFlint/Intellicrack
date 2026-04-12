@@ -241,11 +241,6 @@ def _default_tools() -> dict[ToolName, ToolConfig]:
             auto_install=False,
             startup_timeout_seconds=5,
         ),
-        ToolName.BINARY: ToolConfig(
-            enabled=True,
-            auto_install=False,
-            startup_timeout_seconds=5,
-        ),
     }
 
 

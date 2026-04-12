@@ -1,3 +1,71 @@
+22 findings in tests/test_sandbox\test_analysis.py
+
+tests/test_sandbox\test_analysis.py:502:141: E501 line too long (141 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:520:141: E501 line too long (160 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:531:141: E501 line too long (161 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:542:141: E501 line too long (149 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:553:141: E501 line too long (147 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:575:141: E501 line too long (181 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:586:141: E501 line too long (160 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:613:141: E501 line too long (153 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:645:141: E501 line too long (142 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:670:141: E501 line too long (149 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:681:141: E501 line too long (201 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:692:141: E501 line too long (178 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:703:141: E501 line too long (169 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:714:141: E501 line too long (181 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:726:141: E501 line too long (167 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:737:141: E501 line too long (169 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:779:141: E501 line too long (165 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:790:141: E501 line too long (171 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:801:141: E501 line too long (174 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:812:141: E501 line too long (161 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:833:141: E501 line too long (160 > 140 characters)
+
+tests/test_sandbox\test_analysis.py:849:141: E501 line too long (162 > 140 characters)
+
+
+9 findings in src/intellicrack/bridges\ghidra.py
+
+src/intellicrack/bridges\ghidra.py:2898:141: E501 line too long (146 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:3350:141: E501 line too long (144 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:3431:141: E501 line too long (161 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:3874:141: E501 line too long (192 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:3953:141: E501 line too long (203 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:4018:141: E501 line too long (205 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:4297:141: E501 line too long (146 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:4641:141: E501 line too long (162 > 140 characters)
+
+src/intellicrack/bridges\ghidra.py:4754:141: E501 line too long (142 > 140 characters)
+
+
 7 findings in tests/test_hexcore_e2e\test_hashing.py
 
 tests/test_hexcore_e2e\test_hashing.py:285:141: E501 line too long (154 > 140 characters)
@@ -13,6 +81,17 @@ tests/test_hexcore_e2e\test_hashing.py:353:141: E501 line too long (159 > 140 ch
 tests/test_hexcore_e2e\test_hashing.py:362:141: E501 line too long (145 > 140 characters)
 
 tests/test_hexcore_e2e\test_hashing.py:363:141: E501 line too long (147 > 140 characters)
+
+
+4 findings in src/intellicrack/sandbox\windows.py
+
+src/intellicrack/sandbox\windows.py:464:141: E501 line too long (160 > 140 characters)
+
+src/intellicrack/sandbox\windows.py:1048:141: E501 line too long (174 > 140 characters)
+
+src/intellicrack/sandbox\windows.py:1053:141: E501 line too long (152 > 140 characters)
+
+src/intellicrack/sandbox\windows.py:1069:141: E501 line too long (141 > 140 characters)
 
 
 4 findings in tests/test_hexcore_e2e\test_bridge_hash_advanced.py
@@ -39,18 +118,18 @@ tests/test_hexcore_e2e\test_hexpat_parser_e2e.py:29:1: E402 module level import 
 
 3 findings in tests/test_bridges\test_x64dbg_new_methods.py
 
-tests/test_bridges\test_x64dbg_new_methods.py:206:9: F841 local variable '_buf_addr' is assigned to but never used
+tests/test_bridges\test_x64dbg_new_methods.py:262:9: F841 local variable '_buf_addr' is assigned to but never used
 
-tests/test_bridges\test_x64dbg_new_methods.py:221:9: F841 local variable '_buf_addr' is assigned to but never used
+tests/test_bridges\test_x64dbg_new_methods.py:277:9: F841 local variable '_buf_addr' is assigned to but never used
 
-tests/test_bridges\test_x64dbg_new_methods.py:236:9: F841 local variable '_buf_addr' is assigned to but never used
+tests/test_bridges\test_x64dbg_new_methods.py:292:9: F841 local variable '_buf_addr' is assigned to but never used
 
 
 2 findings in src/intellicrack/core\orchestrator.py
 
-src/intellicrack/core\orchestrator.py:528:141: E501 line too long (146 > 140 characters)
+src/intellicrack/core\orchestrator.py:540:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/core\orchestrator.py:575:141: E501 line too long (232 > 140 characters)
+src/intellicrack/core\orchestrator.py:587:141: E501 line too long (232 > 140 characters)
 
 
 2 findings in src/intellicrack/core\script_gen.py
@@ -65,6 +144,20 @@ src/intellicrack/core\script_gen.py:705:141: E501 line too long (142 > 140 chara
 src/intellicrack/providers\xpu_utils.py:528:141: E501 line too long (146 > 140 characters)
 
 src/intellicrack/providers\xpu_utils.py:557:141: E501 line too long (179 > 140 characters)
+
+
+2 findings in src/intellicrack/sandbox\qemu.py
+
+src/intellicrack/sandbox\qemu.py:2524:141: E501 line too long (142 > 140 characters)
+
+src/intellicrack/sandbox\qemu.py:2533:141: E501 line too long (163 > 140 characters)
+
+
+2 findings in tests/test_bridges\test_cutter.py
+
+tests/test_bridges\test_cutter.py:28:1: F401 'asyncio' imported but unused
+
+tests/test_bridges\test_cutter.py:158:5: F811 redefinition of unused 'asyncio' from line 28
 
 
 2 findings in tests/test_hexcore_e2e\test_hexpat_type_system_e2e.py
@@ -95,19 +188,19 @@ tests/test_providers\test_agentic_capabilities.py:196:9: F841 local variable '_c
 tests/test_providers\test_agentic_capabilities.py:217:9: F841 local variable '_chunks' is assigned to but never used
 
 
-1 findings in src/intellicrack/bridges\ghidra.py
+1 findings in src/intellicrack/bridges\process.py
 
-src/intellicrack/bridges\ghidra.py:2410:141: E501 line too long (146 > 140 characters)
+src/intellicrack/bridges\process.py:750:141: E501 line too long (215 > 140 characters)
 
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:2980:141: E501 line too long (143 > 140 characters)
+src/intellicrack/bridges\x64dbg.py:3537:141: E501 line too long (143 > 140 characters)
 
 
 1 findings in src/intellicrack/core\config.py
 
-src/intellicrack/core\config.py:315:141: E501 line too long (149 > 140 characters)
+src/intellicrack/core\config.py:310:141: E501 line too long (149 > 140 characters)
 
 
 1 findings in src/intellicrack/core\hexpat\type_system.py
@@ -115,14 +208,9 @@ src/intellicrack/core\config.py:315:141: E501 line too long (149 > 140 character
 src/intellicrack/core\hexpat\type_system.py:232:141: E501 line too long (160 > 140 characters)
 
 
-1 findings in src/intellicrack/sandbox\windows.py
-
-src/intellicrack/sandbox\windows.py:450:141: E501 line too long (160 > 140 characters)
-
-
 1 findings in src/intellicrack/ui\chat.py
 
-src/intellicrack/ui\chat.py:478:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
+src/intellicrack/ui\chat.py:487:13: F824 `nonlocal content_label` is unused: name is never assigned in scope
 
 
 1 findings in src/intellicrack/ui\tool_config.py
@@ -138,3 +226,8 @@ tests/test_core\test_main.py:52:9: F841 local variable '_store' is assigned to b
 1 findings in tests/test_hexcore_e2e\test_hexpat_compiler_e2e.py
 
 tests/test_hexcore_e2e\test_hexpat_compiler_e2e.py:18:1: E402 module level import not at top of file
+
+
+1 findings in tests/test_ui\test_process_panel.py
+
+tests/test_ui\test_process_panel.py:24:5: F401 'tests.test_ui.conftest.SignalRecorder as SignalRecorderType' imported but unused

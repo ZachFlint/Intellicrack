@@ -41,6 +41,7 @@ from intellicrack.ui.highlighter import (
     get_highlighter_for_language,
 )
 from intellicrack.ui.panel_dock import DetachedPanelWindow
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -110,6 +111,14 @@ class HexEditorPanelProtocol(ToolWidget, Protocol):
             offset: Target byte offset.
         """
         _ = (self, offset)
+
+    def set_state_holder(self, state_holder: HexDocumentState) -> None:
+        """Attach a shared state holder for bridge-GUI synchronization.
+
+        Args:
+            state_holder: The shared HexDocumentState instance.
+        """
+        _ = (self, state_holder)
 
 
 @runtime_checkable
@@ -241,6 +250,16 @@ class ProcessPanelProtocol(ToolWidget, Protocol):
         _ = self
         return cast("pyqtBoundSignal", pyqtSignal())
 
+    @property
+    def process_detached(self) -> pyqtBoundSignal:
+        """Get the signal emitted when a process is detached.
+
+        Returns:
+            pyqtBoundSignal: The process-detached signal.
+        """
+        _ = self
+        return cast("pyqtBoundSignal", pyqtSignal())
+
     def get_selected_pid(self) -> int | None:
         """Get the currently selected process ID.
 
@@ -250,30 +269,47 @@ class ProcessPanelProtocol(ToolWidget, Protocol):
         _ = self
         return None
 
-
-@runtime_checkable
-class BinaryPanelProtocol(ToolWidget, Protocol):
-    """Protocol for binary hex viewer and patching panel."""
-
-    def load_file(self, file_path: Path | str) -> bool:
-        """Load a binary file for viewing and patching.
+    def set_bridge(self, bridge: ProcessBridge) -> None:
+        """Set the ProcessBridge instance.
 
         Args:
-            file_path: Path to the binary file.
+            bridge: ProcessBridge instance for process operations.
+        """
+        _ = (self, bridge)
+
+    def get_bridge(self) -> ProcessBridge | None:
+        """Get the current ProcessBridge instance.
 
         Returns:
-            bool: True if the file was loaded successfully.
+            ProcessBridge | None: The bridge or None.
         """
-        _ = (self, file_path)
-        return False
+        _ = self
+        return None
 
 
 @runtime_checkable
 class SandboxPanelProtocol(ToolWidget, Protocol):
     """Protocol for sandbox management panel."""
 
+    def set_bridge(self, bridge: SandboxBridge) -> None:
+        """Set the sandbox bridge for all operations.
+
+        Args:
+            bridge: SandboxBridge instance.
+        """
+        _ = (self, bridge)
+
+    def get_bridge(self) -> SandboxBridge | None:
+        """Get the current sandbox bridge.
+
+        Returns:
+            SandboxBridge | None: The attached bridge or None.
+        """
+        _ = self
+        return None
+
     def set_sandbox(self, sandbox: SandboxBase) -> None:
-        """Set the sandbox backend instance.
+        """Set the sandbox backend (deprecated).
 
         Args:
             sandbox: SandboxBase implementation.
@@ -281,7 +317,7 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         _ = (self, sandbox)
 
     def get_sandbox(self) -> SandboxBase | None:
-        """Get the current sandbox backend.
+        """Get the current sandbox backend (deprecated).
 
         Returns:
             SandboxBase | None: The attached sandbox or None.
@@ -290,7 +326,7 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
         return None
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
-        """Set the sandbox manager for type-aware sandbox creation.
+        """Set the sandbox manager (deprecated).
 
         Args:
             manager: SandboxManager instance.
@@ -305,6 +341,9 @@ if TYPE_CHECKING:
     from intellicrack.bridges.cutter import CutterBridge
     from intellicrack.bridges.frida_bridge import FridaBridge
     from intellicrack.bridges.ghidra import GhidraBridge
+    from intellicrack.bridges.hex_state import HexDocumentState
+    from intellicrack.bridges.process import ProcessBridge
+    from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.bridges.x64dbg import X64DbgBridge
     from intellicrack.core.script_gen import ScriptManager, ScriptValidator
     from intellicrack.core.tools import ToolRegistry
@@ -936,23 +975,22 @@ class ToolOutputPanel(QFrame):
         self.script_panel: ScriptManagerPanel | None = None
         self.stack_panel: StackViewerPanel | None = None
         self._hex_editor_panel: HexEditorPanelProtocol | None = None
-        self._hex_tools_panel: QWidget | None = None
         self._x64dbg_widget: X64DbgWidgetProtocol | None = None
         self._cutter_widget: CutterWidgetProtocol | None = None
         self._ghidra_widget: GhidraWidgetProtocol | None = None
         self._frida_panel: FridaPanelProtocol | None = None
         self._process_panel: ProcessPanelProtocol | None = None
-        self._binary_panel: BinaryPanelProtocol | None = None
         self.sandbox_panel: SandboxPanelProtocol | None = None
 
         self.x64dbg_bridge: Any | None = None
         self.ghidra_bridge: Any | None = None
         self.cutter_bridge: Any | None = None
         self.frida_bridge: Any | None = None
+        self.process_bridge: Any | None = None
 
         self._tool_registry: Any | None = None
 
-        self._pending_sandbox_backend: Any | None = None
+        self._pending_sandbox_bridge: Any | None = None
         self._pending_script_backend: Any | None = None
         self._pending_script_validator: Any | None = None
 
@@ -1059,27 +1097,6 @@ class ToolOutputPanel(QFrame):
             return None
         else:
             return self._hex_editor_panel
-
-    def add_hex_tools_tab(self) -> QWidget | None:
-        """Add the hex analysis tools panel as a tab.
-
-        Returns:
-            QWidget | None: The created HexToolsPanel or None on failure.
-        """
-        if self._hex_tools_panel is not None:
-            return self._hex_tools_panel
-
-        try:
-            panel_module = importlib.import_module(".panels.hex_tools_panel", "intellicrack.ui")
-            panel = panel_module.HexToolsPanel()
-            self._hex_tools_panel = panel
-            self.tab_widget.addTab(panel, "Hex Tools")
-            _logger.info("hex_tools_tab_added")
-        except (RuntimeError, ImportError, AttributeError) as exc:
-            _logger.warning("hex_tools_tab_add_failed", error=str(exc))
-            return None
-        else:
-            return self._hex_tools_panel
 
     def add_x64dbg_tab(self, *, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
         """Add the x64dbg debugger as a native panel tab.
@@ -1258,8 +1275,10 @@ class ToolOutputPanel(QFrame):
             if bridge is None:
                 try:
                     bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
-                    bridge = bridge_module.FridaBridge()
-                except (RuntimeError, ImportError, AttributeError) as bridge_err:
+                    new_bridge = bridge_module.FridaBridge()
+                    run_bridge_coroutine(new_bridge.initialize())
+                    bridge = new_bridge
+                except (RuntimeError, ImportError, AttributeError, OSError) as bridge_err:
                     _logger.warning("frida_bridge_create_failed", error=str(bridge_err))
 
             if bridge is not None:
@@ -1278,6 +1297,9 @@ class ToolOutputPanel(QFrame):
     def add_process_tab(self) -> ProcessPanelProtocol | None:
         """Add the process management panel as a tab.
 
+        Creates the ProcessPanel widget, wires a ProcessBridge
+        (from registry or freshly initialized), and adds it as a tab.
+
         Returns:
             ProcessPanelProtocol | None: The created ProcessPanel or None if creation failed.
         """
@@ -1293,37 +1315,36 @@ class ToolOutputPanel(QFrame):
             self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
             self.tab_widget.addTab(qwidget, "Process")
             self.panels["process"] = qwidget
+
+            bridge: Any | None = None
+            reg_getter = getattr(self._tool_registry, "get_process_bridge", None)
+            if callable(reg_getter):
+                try:
+                    bridge = reg_getter()
+                    _logger.info("process_bridge_from_registry", source="registry")
+                except (RuntimeError, ImportError, AttributeError):
+                    _logger.debug("process_bridge_registry_fallback", exc_info=True)
+
+            if bridge is None:
+                try:
+                    bridge_module = importlib.import_module("intellicrack.bridges.process")
+                    new_bridge = bridge_module.ProcessBridge()
+                    run_bridge_coroutine(new_bridge.initialize())
+                    bridge = new_bridge
+                except (RuntimeError, ImportError, AttributeError, OSError) as bridge_err:
+                    _logger.warning("process_bridge_create_failed", error=str(bridge_err))
+
+            if bridge is not None:
+                self._process_panel.set_bridge(bridge)
+                self.process_bridge = bridge
+                _logger.info("process_bridge_set", bridge_type=type(bridge).__name__)
+
             _logger.info("process_tab_added", tab="Processes")
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("process_tab_add_failed", error=str(e))
             return None
         else:
             return self._process_panel
-
-    def add_binary_tab(self) -> BinaryPanelProtocol | None:
-        """Add the binary hex viewer and patching panel as a tab.
-
-        Returns:
-            BinaryPanelProtocol | None: The created BinaryPanel or None if creation failed.
-        """
-        if self._binary_panel is not None:
-            return self._binary_panel
-
-        try:
-            panel_module = importlib.import_module(".panels.binary_panel", "intellicrack.ui")
-            raw_widget = panel_module.BinaryPanel()
-            self._binary_panel = cast("BinaryPanelProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._binary_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("binary"))
-            self._binary_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("binary"))
-            self.tab_widget.addTab(qwidget, "Binary")
-            self.panels["binary"] = qwidget
-            _logger.info("binary_tab_added", tab="Binary")
-        except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.warning("binary_tab_add_failed", error=str(e))
-            return None
-        else:
-            return self._binary_panel
 
     def add_sandbox_tab(self) -> SandboxPanelProtocol | None:
         """Add the sandbox management panel as a tab.
@@ -1350,10 +1371,10 @@ class ToolOutputPanel(QFrame):
             self.tab_widget.addTab(qwidget, "Sandbox")
             self.panels["sandbox"] = qwidget
 
-            if self._pending_sandbox_backend is not None:
-                if hasattr(self.sandbox_panel, "set_sandbox"):
-                    self.sandbox_panel.set_sandbox(self._pending_sandbox_backend)
-                self._pending_sandbox_backend = None
+            if self._pending_sandbox_bridge is not None:
+                if hasattr(self.sandbox_panel, "set_bridge"):
+                    self.sandbox_panel.set_bridge(self._pending_sandbox_bridge)
+                self._pending_sandbox_bridge = None
 
             monitor_cls = getattr(sandbox_config_mod, "SandboxMonitorWidget", None)
             if monitor_cls is not None:
@@ -1390,28 +1411,6 @@ class ToolOutputPanel(QFrame):
         success = self._ghidra_widget.load_binary(path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._ghidra_widget))
-        return success
-
-    def open_in_binary(self, file_path: Path | str) -> bool:
-        """Open a file in the binary hex viewer panel.
-
-        Args:
-            file_path: Path to the binary file.
-
-        Returns:
-            bool: True if the file was opened successfully.
-        """
-        if self._binary_panel is None:
-            widget = self.add_binary_tab()
-            if widget is None:
-                return False
-
-        if self._binary_panel is None:
-            return False
-
-        success = self._binary_panel.load_file(file_path)
-        if success:
-            self._activate_tab_by_widget(cast("QWidget", self._binary_panel))
         return success
 
     def open_in_hex_editor(self, file_path: Path | str) -> bool:
@@ -1482,6 +1481,7 @@ class ToolOutputPanel(QFrame):
         if self._cutter_widget is None:
             return False
 
+        self._cutter_widget.start_tool()
         path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._cutter_widget.analyze_binary(path)
         if success:
@@ -1600,8 +1600,7 @@ class ToolOutputPanel(QFrame):
             ("_x64dbg_widget", "x64dbg_bridge"),
             ("_hex_editor_panel", None),
             ("_frida_panel", "frida_bridge"),
-            ("_process_panel", None),
-            ("_binary_panel", None),
+            ("_process_panel", "process_bridge"),
             ("_sandbox_panel", None),
             ("analysis_panel", None),
             ("script_panel", None),
@@ -1670,10 +1669,6 @@ class ToolOutputPanel(QFrame):
             self._process_panel.stop_tool()
             self._process_panel = None
 
-        if self._binary_panel is not None:
-            self._binary_panel.stop_tool()
-            self._binary_panel = None
-
         if self.sandbox_panel is not None:
             self.sandbox_panel.stop_tool()
             self.sandbox_panel = None
@@ -1687,7 +1682,7 @@ class ToolOutputPanel(QFrame):
         if self.stack_panel is not None:
             self.stack_panel = None
 
-        for attr_name in ("x64dbg_bridge", "ghidra_bridge", "cutter_bridge", "frida_bridge"):
+        for attr_name in ("x64dbg_bridge", "ghidra_bridge", "cutter_bridge", "frida_bridge", "process_bridge"):
             if getattr(self, attr_name, None) is not None:
                 setattr(self, attr_name, None)
                 _logger.debug("bridge_reference_released", bridge=attr_name)
@@ -1849,6 +1844,7 @@ class ToolOutputPanel(QFrame):
             "ghidra": "_ghidra_widget",
             "cutter": "_cutter_widget",
             "x64dbg": "_x64dbg_widget",
+            "process": "_process_panel",
         }
         attr_name = panel_map.get(tool_id.lower())
         if attr_name is None:
@@ -1932,12 +1928,23 @@ class ToolOutputPanel(QFrame):
                 hook_id=str(hook_info.get("hook_id", "")),
             )
 
+    def get_sandbox_bridge(self) -> SandboxBridge | None:
+        """Get the sandbox bridge from the sandbox panel.
+
+        Returns:
+            SandboxBridge | None: Sandbox bridge or None.
+        """
+        if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "get_bridge"):
+            return self.sandbox_panel.get_bridge()
+        return None
+
     def get_sandbox_backend(self) -> SandboxBase | None:
-        """Get the sandbox backend from the sandbox panel.
+        """Get the sandbox backend from the sandbox panel (deprecated).
 
         Returns:
             SandboxBase | None: Sandbox backend or None.
         """
+        _logger.warning("get_sandbox_backend_deprecated", msg="Use get_sandbox_bridge() instead")
         if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "get_sandbox"):
             return self.sandbox_panel.get_sandbox()
         return None
@@ -2077,23 +2084,31 @@ class ToolOutputPanel(QFrame):
         if hasattr(self.stack_panel, "set_frida_bridge") and self.frida_bridge is not None:
             self.stack_panel.set_frida_bridge(self.frida_bridge)
 
-    def wire_sandbox_backend(self, sandbox: object, manager: object | None = None) -> None:
-        """Wire a sandbox backend and optional manager to the sandbox panel.
+    def wire_sandbox_bridge(self, bridge: SandboxBridge) -> None:
+        """Wire a sandbox bridge to the sandbox panel.
 
-        Stores the backend for deferred wiring if the panel hasn't been
-        created yet. If the panel exists, wires immediately. When a
-        manager is provided, it is also forwarded to the panel.
+        Stores the bridge for deferred wiring if the panel hasn't been
+        created yet. If the panel exists, wires immediately.
 
         Args:
-            sandbox: Sandbox backend instance.
-            manager: Optional SandboxManager instance for type-aware creation.
+            bridge: SandboxBridge instance.
         """
-        self._pending_sandbox_backend = sandbox
-        if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "set_sandbox"):
-            self.sandbox_panel.set_sandbox(cast("SandboxBase", sandbox))
-            self._pending_sandbox_backend = None
-        if manager is not None and self.sandbox_panel is not None and hasattr(self.sandbox_panel, "set_sandbox_manager"):
-            self.sandbox_panel.set_sandbox_manager(cast("SandboxManager", manager))
+        self._pending_sandbox_bridge = bridge
+        if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "set_bridge"):
+            self.sandbox_panel.set_bridge(bridge)
+            self._pending_sandbox_bridge = None
+
+    def wire_sandbox_backend(self, sandbox: object, manager: object | None = None) -> None:
+        """Wire a sandbox backend and optional manager (deprecated).
+
+        Use ``wire_sandbox_bridge`` instead.
+
+        Args:
+            sandbox: Sandbox backend instance (unused in new path).
+            manager: Optional SandboxManager instance (unused in new path).
+        """
+        _ = (self, sandbox, manager)
+        _logger.warning("wire_sandbox_backend_deprecated", msg="Use wire_sandbox_bridge() instead")
 
     def wire_script_backend(self, backend: object, validator: object | None = None) -> None:
         """Wire a script generation backend to the script manager.
@@ -2144,12 +2159,10 @@ class ToolOutputPanel(QFrame):
         """
         tab_openers: dict[str, Callable[[], object]] = {
             "Hex Editor": self.add_hex_editor_tab,
-            "Hex Tools": self.add_hex_tools_tab,
             "Frida": self.add_frida_tab,
             "Ghidra": self.add_ghidra_tab,
             "Cutter": self.add_cutter_tab,
             "Process": self.add_process_tab,
-            "Binary": self.add_binary_tab,
             "Sandbox": self.add_sandbox_tab,
             "Analysis": self.add_analysis_panel,
             "Scripts": self.add_script_panel,

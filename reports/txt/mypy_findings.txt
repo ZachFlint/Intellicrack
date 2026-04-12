@@ -87,83 +87,6 @@ tests\test_hexcore_e2e\test_bridge_transforms_deep.py:456: error: Argument 2 to 
 tests\test_hexcore_e2e\test_bridge_transforms_deep.py:466: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
 
-37 findings in src\intellicrack\bridges\cutter.py
-
-src\intellicrack\bridges\cutter.py:168: error: Redundant cast to "list[Any]"  [redundant-cast]
-
-src\intellicrack\bridges\cutter.py:179: error: Function "r2pipe.open" is not valid as a type  [valid-type]
-
-src\intellicrack\bridges\cutter.py:179: note: Perhaps you need "Callable[...]" or a callback protocol?
-
-src\intellicrack\bridges\cutter.py:195: error: Function "r2pipe.open" is not valid as a type  [valid-type]
-
-src\intellicrack\bridges\cutter.py:195: note: Perhaps you need "Callable[...]" or a callback protocol?
-
-src\intellicrack\bridges\cutter.py:204: error: Function "r2pipe.open" is not valid as a type  [valid-type]
-
-src\intellicrack\bridges\cutter.py:204: note: Perhaps you need "Callable[...]" or a callback protocol?
-
-src\intellicrack\bridges\cutter.py:240: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:607: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:630: error: Function "r2pipe.open" is not valid as a type  [valid-type]
-
-src\intellicrack\bridges\cutter.py:630: note: Perhaps you need "Callable[...]" or a callback protocol?
-
-src\intellicrack\bridges\cutter.py:632: error: Function does not return a value (it only ever returns None)  [func-returns-value]
-
-src\intellicrack\bridges\cutter.py:632: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
-
-src\intellicrack\bridges\cutter.py:633: error: "None" has no attribute "cmd"  [attr-defined]
-
-src\intellicrack\bridges\cutter.py:641: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:649: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:742: error: Function does not return a value (it only ever returns None)  [func-returns-value]
-
-src\intellicrack\bridges\cutter.py:742: error: Argument 1 to "to_thread" has incompatible type "Callable[[str, list[str] | None], open_sync]"; expected "Callable[[str, list[str] | None], None]"  [arg-type]
-
-src\intellicrack\bridges\cutter.py:794: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:823: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:867: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:941: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:975: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1015: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1058: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1101: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1149: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1173: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1193: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1217: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1239: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1296: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1325: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1346: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1366: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1404: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\bridges\cutter.py:1446: error: Statement is unreachable  [unreachable]
-
-
 31 findings in tests\test_hexcore_e2e\test_bridge_new_capabilities.py
 
 tests\test_hexcore_e2e\test_bridge_new_capabilities.py:69: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
@@ -227,6 +150,63 @@ tests\test_hexcore_e2e\test_bridge_new_capabilities.py:534: error: Incompatible 
 tests\test_hexcore_e2e\test_bridge_new_capabilities.py:548: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, int]]")  [assignment]
 
 tests\test_hexcore_e2e\test_bridge_new_capabilities.py:561: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+27 findings in tests\test_bridges\test_cutter.py
+
+tests\test_bridges\test_cutter.py:161: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:195: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:657: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:678: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:700: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:718: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:831: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:839: error: Incompatible types in assignment (expression has type "_FailingQuitR2", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:847: error: Incompatible types in assignment (expression has type "_FailingQuitR2", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:920: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:994: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1007: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1077: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1098: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1117: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1137: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1164: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1175: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1193: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1209: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1228: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1245: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1263: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1281: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1292: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1308: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
+
+tests\test_bridges\test_cutter.py:1317: error: Incompatible types in assignment (expression has type "_CommandRecorder", variable has type "None")  [assignment]
 
 
 26 findings in tests\test_hexcore_e2e\test_bridge_display_modes_complete.py
@@ -347,7 +327,7 @@ tests\test_hexcore_e2e\test_bridge_concurrent.py:120: error: Incompatible types 
 
 tests\test_hexcore_e2e\test_bridge_concurrent.py:140: error: "HexEditorBridge" has no attribute "cursor_offset"; maybe "_cursor_offset"?  [attr-defined]
 
-tests\test_hexcore_e2e\test_bridge_concurrent.py:153: error: "HexEditorBridge" has no attribute "selection"; maybe "_selection" or "get_selection"?  [attr-defined]
+tests\test_hexcore_e2e\test_bridge_concurrent.py:153: error: "HexEditorBridge" has no attribute "selection"; maybe "_selection"?  [attr-defined]
 
 tests\test_hexcore_e2e\test_bridge_concurrent.py:178: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
@@ -461,7 +441,7 @@ tests\test_ui\test_sandbox_panel_fixes.py:162: error: "SandboxPanel" has no attr
 
 tests\test_ui\test_sandbox_panel_fixes.py:168: error: "SandboxPanel" has no attribute "set_sandbox_controls_active"; maybe "_set_sandbox_controls_active"?  [attr-defined]
 
-tests\test_ui\test_sandbox_panel_fixes.py:170: error: "SandboxPanel" has no attribute "on_destroy_success"; maybe "_on_destroy_success" or "_on_restart_success"?  [attr-defined]
+tests\test_ui\test_sandbox_panel_fixes.py:170: error: "SandboxPanel" has no attribute "on_destroy_success"; maybe "_on_destroy_success"?  [attr-defined]
 
 tests\test_ui\test_sandbox_panel_fixes.py:172: error: "SandboxPanel" has no attribute "status_indicator"; maybe "_status_indicator"?  [attr-defined]
 
@@ -694,6 +674,39 @@ src\intellicrack\ui\provider_config.py:1734: error: Statement is unreachable  [u
 src\intellicrack\ui\provider_config.py:2347: error: Statement is unreachable  [unreachable]
 
 
+15 findings in tests\test_bridges\test_frida_bridge.py
+
+tests\test_bridges\test_frida_bridge.py:401: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:432: error: Incompatible types in assignment (expression has type "object", variable has type "list[FridaProcessEntry]")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:582: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:587: error: Incompatible types in assignment (expression has type "object", variable has type "bytes")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:594: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:595: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:602: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:607: error: Incompatible types in assignment (expression has type "object", variable has type "bytes")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:614: error: Incompatible types in assignment (expression has type "object", variable has type "HookInfo")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:619: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:629: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:641: error: Incompatible types in assignment (expression has type "object", variable has type "StalkerTrace")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:662: error: Incompatible types in assignment (expression has type "object", variable has type "list[ChildProcessInfo]")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:674: error: Incompatible types in assignment (expression has type "object", variable has type "list[CrashInfo]")  [assignment]
+
+tests\test_bridges\test_frida_bridge.py:687: error: Incompatible types in assignment (expression has type "object", variable has type "list[FridaProcessEntry]")  [assignment]
+
+
 15 findings in tests\test_hexcore_e2e\test_bridge_yara_deep.py
 
 tests\test_hexcore_e2e\test_bridge_yara_deep.py:136: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, Any]]")  [assignment]
@@ -756,37 +769,6 @@ tests\test_core\test_process_manager.py:477: error: "ProcessManager" has no attr
 tests\test_core\test_process_manager.py:482: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
 
 tests\test_core\test_process_manager.py:508: error: "ProcessManager" has no attribute "external_pids"; maybe "_external_pids"?  [attr-defined]
-
-
-14 findings in tests\test_bridges\test_frida_bridge.py
-
-tests\test_bridges\test_frida_bridge.py:400: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:583: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:588: error: Incompatible types in assignment (expression has type "object", variable has type "bytes")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:595: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:596: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:603: error: Incompatible types in assignment (expression has type "object", variable has type "int")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:608: error: Incompatible types in assignment (expression has type "object", variable has type "bytes")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:615: error: Incompatible types in assignment (expression has type "object", variable has type "HookInfo")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:620: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:630: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:642: error: Incompatible types in assignment (expression has type "object", variable has type "StalkerTrace")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:663: error: Incompatible types in assignment (expression has type "object", variable has type "list[ChildProcessInfo]")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:675: error: Incompatible types in assignment (expression has type "object", variable has type "list[CrashInfo]")  [assignment]
-
-tests\test_bridges\test_frida_bridge.py:688: error: Incompatible types in assignment (expression has type "object", variable has type "list[dict[str, object]]")  [assignment]
 
 
 14 findings in tests\test_hexcore_e2e\test_bridge_display.py
@@ -974,29 +956,6 @@ tests\test_hexcore_e2e\test_bridge_compare_files.py:211: error: Incompatible typ
 tests\test_hexcore_e2e\test_bridge_compare_files.py:226: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
 
-10 findings in tests\test_ui\test_binary_panel_fixes.py
-
-tests\test_ui\test_binary_panel_fixes.py:283: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:290: error: "BinaryPanel" has no attribute "on_prev_page"; maybe "_on_prev_page"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:297: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:298: error: "BinaryPanel" has no attribute "on_prev_page"; maybe "_on_prev_page"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:312: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:321: error: "BinaryPanel" has no attribute "on_next_page"; maybe "_on_next_page"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:360: error: "BinaryPanel" has no attribute "on_hex_cell_changed"; maybe "_on_hex_cell_changed"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:379: error: "BinaryPanel" has no attribute "on_hex_cell_changed"; maybe "_on_hex_cell_changed"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:416: error: "BinaryPanel" has no attribute "on_apply_patch"; maybe "_on_apply_patch"?  [attr-defined]
-
-tests\test_ui\test_binary_panel_fixes.py:432: error: "BinaryPanel" has no attribute "on_hex_cell_changed"; maybe "_on_hex_cell_changed"?  [attr-defined]
-
-
 9 findings in tests\test_hexcore_e2e\test_bridge_lifecycle.py
 
 tests\test_hexcore_e2e\test_bridge_lifecycle.py:50: error: Incompatible types in assignment (expression has type "object", variable has type "bool")  [assignment]
@@ -1037,6 +996,27 @@ tests\test_hexcore_e2e\test_bridge_copy_as.py:140: error: Incompatible types in 
 tests\test_hexcore_e2e\test_bridge_copy_as.py:152: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
 
 tests\test_hexcore_e2e\test_bridge_copy_as.py:164: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+9 findings in src\intellicrack\ui\panels\cutter_panel.py
+
+src\intellicrack\ui\panels\cutter_panel.py:1128: error: No overload variant of "itemAt" of "QTreeWidget" matches argument type "object"  [call-overload]
+
+src\intellicrack\ui\panels\cutter_panel.py:1128: note: Possible overload variants:
+
+src\intellicrack\ui\panels\cutter_panel.py:1128: note:     def itemAt(self, p: QPoint) -> QTreeWidgetItem | None
+
+src\intellicrack\ui\panels\cutter_panel.py:1128: note:     def itemAt(self, ax: int, ay: int) -> QTreeWidgetItem | None
+
+src\intellicrack\ui\panels\cutter_panel.py:1162: error: Item "None" of "QWidget | None" has no attribute "mapToGlobal"  [union-attr]
+
+src\intellicrack\ui\panels\cutter_panel.py:1162: error: No overload variant of "mapToGlobal" of "QWidget" matches argument type "object"  [call-overload]
+
+src\intellicrack\ui\panels\cutter_panel.py:1162: note: Possible overload variants:
+
+src\intellicrack\ui\panels\cutter_panel.py:1162: note:     def mapToGlobal(self, a0: QPoint) -> QPoint
+
+src\intellicrack\ui\panels\cutter_panel.py:1162: note:     def mapToGlobal(self, a0: QPointF) -> QPointF
 
 
 9 findings in tests\test_ui\test_app_embedded_tools.py
@@ -1136,6 +1116,23 @@ tests\test_hexcore_e2e\test_hex_document_state.py:133: error: Argument 1 to "set
 tests\test_hexcore_e2e\test_hex_document_state.py:688: error: Argument 1 to "set_document" of "HexDocumentState" has incompatible type "object"; expected "HexDocumentFull | None"  [arg-type]
 
 
+7 findings in src\intellicrack\bridges\cutter.py
+
+src\intellicrack\bridges\cutter.py:180: error: Redundant cast to "list[Any]"  [redundant-cast]
+
+src\intellicrack\bridges\cutter.py:746: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\cutter.py:746: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\cutter.py:752: error: Returning Any from function declared to return "r2pipe.open? | None"  [no-any-return]
+
+src\intellicrack\bridges\cutter.py:755: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\cutter.py:755: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\cutter.py:1828: error: Redundant cast to "list[Any]"  [redundant-cast]
+
+
 7 findings in tests\test_bridges\test_x64dbg_events.py
 
 tests\test_bridges\test_x64dbg_events.py:100: error: "X64DbgBridge" has no attribute "handle_event"; maybe "_handle_event"?  [attr-defined]
@@ -1204,6 +1201,32 @@ tests\test_hexcore_e2e\test_bridge_ai_context.py:120: error: Incompatible types 
 tests\test_hexcore_e2e\test_bridge_ai_context.py:132: error: Incompatible types in assignment (expression has type "object", variable has type "dict[str, Any]")  [assignment]
 
 
+5 findings in tests\test_bridges\test_schemas.py
+
+tests\test_bridges\test_schemas.py:115: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+tests\test_bridges\test_schemas.py:329: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+tests\test_bridges\test_schemas.py:336: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+tests\test_bridges\test_schemas.py:476: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+tests\test_bridges\test_schemas.py:485: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+
+5 findings in tests\test_bridges\test_process_bridge.py
+
+tests\test_bridges\test_process_bridge.py:226: error: Unsupported operand types for > ("str" and "int")  [operator]
+
+tests\test_bridges\test_process_bridge.py:226: note: Left operand is of type "int | str | float"
+
+tests\test_bridges\test_process_bridge.py:490: error: Unsupported operand types for < ("int" and "object")  [operator]
+
+tests\test_bridges\test_process_bridge.py:495: error: Unsupported operand types for < ("int" and "object")  [operator]
+
+tests\test_bridges\test_process_bridge.py:502: error: Unsupported operand types for < ("int" and "object")  [operator]
+
+
 5 findings in tests\test_providers\test_model_discovery.py
 
 tests\test_providers\test_model_discovery.py:21: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
@@ -1230,24 +1253,13 @@ tests\test_providers\test_local_transformers_provider.py:534: error: "LocalTrans
 
 4 findings in tests\test_hexcore_e2e\conftest.py
 
-tests\test_hexcore_e2e\conftest.py:78: error: Returning Any from function declared to return Module  [no-any-return]
+tests\test_hexcore_e2e\conftest.py:80: error: Returning Any from function declared to return Module  [no-any-return]
 
-tests\test_hexcore_e2e\conftest.py:91: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
+tests\test_hexcore_e2e\conftest.py:93: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
 
-tests\test_hexcore_e2e\conftest.py:118: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
+tests\test_hexcore_e2e\conftest.py:120: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
 
-tests\test_hexcore_e2e\conftest.py:132: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
-
-
-4 findings in src\intellicrack\ui\panels\binary_panel.py
-
-src\intellicrack\ui\panels\binary_panel.py:45: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-src\intellicrack\ui\panels\binary_panel.py:634: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\panels\binary_panel.py:815: error: Statement is unreachable  [unreachable]
-
-src\intellicrack\ui\panels\binary_panel.py:869: error: Statement is unreachable  [unreachable]
+tests\test_hexcore_e2e\conftest.py:134: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
 
 
 4 findings in tests\test_ui\test_graph_view.py
@@ -1267,9 +1279,9 @@ src\intellicrack\ui\app.py:68: error: Incompatible types in assignment (expressi
 
 src\intellicrack\ui\app.py:69: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\app.py:352: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:353: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\app.py:804: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:805: error: Statement is unreachable  [unreachable]
 
 
 3 findings in src\intellicrack\core\hexpat\stdlib.py
@@ -1281,6 +1293,15 @@ src\intellicrack\core\hexpat\stdlib.py:169: error: Argument "byteorder" to "from
 src\intellicrack\core\hexpat\stdlib.py:561: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
 
 
+3 findings in src\intellicrack\sandbox\analysis.py
+
+src\intellicrack\sandbox\analysis.py:503: error: Incompatible types in assignment (expression has type "RegistryChange", variable has type "FileChange")  [assignment]
+
+src\intellicrack\sandbox\analysis.py:504: error: TypedDict "FileChange" has no key "key"  [typeddict-item]
+
+src\intellicrack\sandbox\analysis.py:507: error: Argument 1 to "_scan_text" has incompatible type "object"; expected "str"  [arg-type]
+
+
 3 findings in tests\test_hexcore_e2e\test_bridge_state_integration.py
 
 tests\test_hexcore_e2e\test_bridge_state_integration.py:236: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
@@ -1288,6 +1309,24 @@ tests\test_hexcore_e2e\test_bridge_state_integration.py:236: error: Incompatible
 tests\test_hexcore_e2e\test_bridge_state_integration.py:263: error: Argument 1 to "remove_template" of "HexEditorBridge" has incompatible type "object"; expected "str"  [arg-type]
 
 tests\test_hexcore_e2e\test_bridge_state_integration.py:300: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+
+
+3 findings in src\intellicrack\ui\panels\ghidra_panel.py
+
+src\intellicrack\ui\panels\ghidra_panel.py:1865: error: Argument 2 to "_dispatch_func_menu_action" of "GhidraPanel" has incompatible type "dict[str, QAction | None]"; expected "dict[str, object]"  [arg-type]
+
+src\intellicrack\ui\panels\ghidra_panel.py:1865: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+
+src\intellicrack\ui\panels\ghidra_panel.py:1865: note: Consider using "Mapping" instead, which is covariant in the value type
+
+
+3 findings in src\intellicrack\ui\panels\hex_editor\panel.py
+
+src\intellicrack\ui\panels\hex_editor\panel.py:224: error: Incompatible types in assignment (expression has type "QComboBox | None", base class "TransformsMixin" defined the type as "QComboBox")  [assignment]
+
+src\intellicrack\ui\panels\hex_editor\panel.py:225: error: Incompatible types in assignment (expression has type "QLineEdit | None", base class "TransformsMixin" defined the type as "QLineEdit")  [assignment]
+
+src\intellicrack\ui\panels\hex_editor\panel.py:226: error: Incompatible types in assignment (expression has type "QSpinBox | None", base class "TransformsMixin" defined the type as "QSpinBox")  [assignment]
 
 
 3 findings in tests\test_ui\test_tool_panel_detach.py
@@ -1352,11 +1391,25 @@ src\intellicrack\core\template_manager.py:317: error: Returning Any from functio
 src\intellicrack\core\template_manager.py:329: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
 
 
+2 findings in src\intellicrack\bridges\sandbox_bridge.py
+
+src\intellicrack\bridges\sandbox_bridge.py:1572: error: Function "intellicrack.bridges.sandbox_bridge.SandboxBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\sandbox_bridge.py:1572: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+
 2 findings in tests\test_ui\test_font_manager.py
 
 tests\test_ui\test_font_manager.py:146: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 tests\test_ui\test_font_manager.py:187: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+
+
+2 findings in src\intellicrack\ui\panels\x64dbg_panel.py
+
+src\intellicrack\ui\panels\x64dbg_panel.py:2499: error: "appendPlainText" of "QPlainTextEdit" does not return a value (it only ever returns None)  [func-returns-value]
+
+src\intellicrack\ui\panels\x64dbg_panel.py:2499: error: "_refresh_state" of "X64DbgPanel" does not return a value (it only ever returns None)  [func-returns-value]
 
 
 1 findings in src\intellicrack\core\hexpat\evaluator.py
@@ -1386,7 +1439,17 @@ tests\core\test_process_manager_leaks.py:110: error: "ProcessManager" has no att
 
 1 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:205: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
+src\intellicrack\sandbox\qemu.py:230: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
+
+
+1 findings in src\intellicrack\bridges\process.py
+
+src\intellicrack\bridges\process.py:1015: error: Returning Any from function declared to return "float"  [no-any-return]
+
+
+1 findings in src\intellicrack\bridges\ghidra.py
+
+src\intellicrack\bridges\ghidra.py:1951: error: Argument "encoding" to "StringInfo" has incompatible type "str"; expected "Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']"  [arg-type]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py
@@ -1434,9 +1497,14 @@ tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.
 src\intellicrack\providers\local_transformers.py:64: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 
+1 findings in tests\test_providers\test_local_xpu_e2e.py
+
+tests\test_providers\test_local_xpu_e2e.py:77: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:1733: error: Name "data" already defined on line 1727  [no-redef]
+src\intellicrack\bridges\hex_editor.py:2149: error: Name "data" already defined on line 2143  [no-redef]
 
 
 1 findings in tests\test_hexcore_e2e\test_bridge_error_handling.py
@@ -1449,9 +1517,24 @@ tests\test_hexcore_e2e\test_bridge_error_handling.py:81: error: Incompatible typ
 tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
+1 findings in tests\test_providers\test_e2e_chat.py
+
+tests\test_providers\test_e2e_chat.py:90: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+
+1 findings in tests\test_providers\test_agentic_capabilities.py
+
+tests\test_providers\test_agentic_capabilities.py:54: error: "type[ToolName]" has no attribute "BINARY"  [attr-defined]
+
+
 1 findings in src\intellicrack\ui\win32_embed.py
 
 src\intellicrack\ui\win32_embed.py:119: error: Argument 1 to "createWindowContainer" of "QWidget" has incompatible type "object"; expected "QWindow | None"  [arg-type]
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_scripting.py
+
+src\intellicrack\ui\panels\hex_editor\_scripting.py:590: error: Argument 1 to "_PythonSyntaxHighlighter" has incompatible type "QTextDocument | None"; expected "QTextDocument"  [arg-type]
 
 
 1 findings in tests\test_ui\test_panel_dock.py

@@ -26,7 +26,7 @@ from intellicrack.core.tools import ToolRegistry, ToolStatus
 from intellicrack.core.types import ToolError, ToolName
 
 
-_BRIDGE_COUNT_ALL: Final[int] = 8
+_BRIDGE_COUNT_ALL: Final[int] = 7
 
 
 @pytest.fixture
@@ -61,13 +61,7 @@ def test_get_tool_definitions_empty(registry: ToolRegistry) -> None:
 
 def test_get_returns_none_before_init(registry: ToolRegistry) -> None:
     """Verify get returns None for unregistered tool."""
-    assert registry.get(ToolName.BINARY) is None
-
-
-def test_get_binary_bridge_raises(registry: ToolRegistry) -> None:
-    """Verify get_binary_bridge raises when not registered."""
-    with pytest.raises(ToolError):
-        registry.get_binary_bridge()
+    assert registry.get(ToolName.PROCESS) is None
 
 
 def test_get_process_bridge_raises(registry: ToolRegistry) -> None:
@@ -162,7 +156,6 @@ async def test_initialize_creates_bridges(tmp_path: Path) -> None:
     await reg.initialize()
     available = reg.get_available_tools()
     assert len(available) == _BRIDGE_COUNT_ALL
-    assert ToolName.BINARY in available
     assert ToolName.PROCESS in available
     assert ToolName.FRIDA in available
     assert ToolName.GHIDRA in available
@@ -185,22 +178,6 @@ async def test_initialize_idempotent(tmp_path: Path) -> None:
     await reg.initialize()
     await reg.initialize()
     assert len(reg.get_available_tools()) == _BRIDGE_COUNT_ALL
-    await reg.shutdown()
-
-
-@pytest.mark.asyncio
-async def test_get_binary_bridge_after_init(tmp_path: Path) -> None:
-    """Verify get_binary_bridge works after initialization.
-
-    Args:
-        tmp_path: Pytest temporary directory.
-    """
-    tools_dir = tmp_path / "tools"
-    tools_dir.mkdir()
-    reg = ToolRegistry(tools_dir=tools_dir)
-    await reg.initialize()
-    bridge = reg.get_binary_bridge()
-    assert bridge is not None
     await reg.shutdown()
 
 

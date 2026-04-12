@@ -1,19 +1,13 @@
 {
   "tool": "uncalled",
-  "generated": "2026-04-10T20:02:38.003001+00:00",
-  "total_findings": 66,
-  "total_files": 31,
+  "generated": "2026-04-11T07:08:00.733103+00:00",
+  "total_findings": 81,
+  "total_files": 30,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
       "count": 7,
       "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: clear_highlight_rules",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function clear_highlight_rules"
-        },
         {
           "line": null,
           "column": null,
@@ -25,6 +19,12 @@
           "column": null,
           "message": "Unused function: contextMenuEvent",
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function contextMenuEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: keyPressEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function keyPressEvent"
         },
         {
           "line": null,
@@ -49,6 +49,54 @@
           "column": null,
           "message": "Unused function: wheelEvent",
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py: Unused function wheelEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\tools.py",
+      "count": 7,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: add_frida_hook_entry",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function add_frida_hook_entry"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_bridge_for_tool",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_bridge_for_tool"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_highlighter",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_highlighter"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_sandbox_backend",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_sandbox_backend"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: load_sandbox_report",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function load_sandbox_report"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: log_frida_message",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function log_frida_message"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: wire_sandbox_backend",
+          "raw": "src\\intellicrack\\ui\\tools.py: Unused function wire_sandbox_backend"
         }
       ]
     },
@@ -95,6 +143,48 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: chunk_size_kb",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function chunk_size_kb"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: memory_budget_mb",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function memory_budget_mb"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: minimumSizeHint",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function minimumSizeHint"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: mouseMoveEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function mouseMoveEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: paintEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function paintEvent"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: prefetch_on_scroll",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function prefetch_on_scroll"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\core\\types.py",
       "count": 5,
       "findings": [
@@ -131,9 +221,51 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py",
-      "count": 4,
+      "path": "src\\intellicrack\\ui\\panels\\qt_compat.py",
+      "count": 5,
       "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: edit_table_item",
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function edit_table_item"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: key_event_key",
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function key_event_key"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: qt_key_page_down",
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function qt_key_page_down"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: qt_key_page_up",
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function qt_key_page_up"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: wheel_angle_delta_y",
+          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function wheel_angle_delta_y"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: keyPressEvent",
+          "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function keyPressEvent"
+        },
         {
           "line": null,
           "column": null,
@@ -233,6 +365,24 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\_win32_types.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_kernel32",
+          "raw": "src\\intellicrack\\bridges\\_win32_types.py: Unused function get_kernel32"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_psapi",
+          "raw": "src\\intellicrack\\bridges\\_win32_types.py: Unused function get_psapi"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\base.py",
       "count": 2,
       "findings": [
@@ -287,6 +437,24 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\logging.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_structlog_logger",
+          "raw": "src\\intellicrack\\core\\logging.py: Unused function get_structlog_logger"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: log_binary_operation",
+          "raw": "src\\intellicrack\\core\\logging.py: Unused function log_binary_operation"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\providers\\local_transformers.py",
       "count": 2,
       "findings": [
@@ -337,42 +505,6 @@
           "column": null,
           "message": "Unused function: paintEvent",
           "raw": "src\\intellicrack\\ui\\dialogs\\splash_screen.py: Unused function paintEvent"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: mouseMoveEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function mouseMoveEvent"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: paintEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py: Unused function paintEvent"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: paintEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py: Unused function paintEvent"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: sizeHint",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_tools_panel.py: Unused function sizeHint"
         }
       ]
     },
@@ -467,18 +599,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\logging.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_structlog_logger",
-          "raw": "src\\intellicrack\\core\\logging.py: Unused function get_structlog_logger"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\script_gen.py",
       "count": 1,
       "findings": [
@@ -487,18 +607,6 @@
           "column": null,
           "message": "Unused function: prepare_ai_prompt",
           "raw": "src\\intellicrack\\core\\script_gen.py: Unused function prepare_ai_prompt"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\transform_pipeline.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: preview",
-          "raw": "src\\intellicrack\\core\\transform_pipeline.py: Unused function preview"
         }
       ]
     },
@@ -527,18 +635,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\binary_panel.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: wheelEvent",
-          "raw": "src\\intellicrack\\ui\\panels\\binary_panel.py: Unused function wheelEvent"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\graph_view.py",
       "count": 1,
       "findings": [
@@ -551,14 +647,14 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\qt_compat.py",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py",
       "count": 1,
       "findings": [
         {
           "line": null,
           "column": null,
-          "message": "Unused function: edit_table_item",
-          "raw": "src\\intellicrack\\ui\\panels\\qt_compat.py: Unused function edit_table_item"
+          "message": "Unused function: highlightBlock",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py: Unused function highlightBlock"
         }
       ]
     },
@@ -571,18 +667,6 @@
           "column": null,
           "message": "Unused function: get_source_name",
           "raw": "src\\intellicrack\\ui\\panels\\stack_viewer.py: Unused function get_source_name"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\tools.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: get_highlighter",
-          "raw": "src\\intellicrack\\ui\\tools.py: Unused function get_highlighter"
         }
       ]
     }

@@ -17,27 +17,35 @@ import shutil
 import socket
 import tempfile
 import time
+import zipfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import psutil
 
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.sandbox.base import (
+    ApiCall,
+    ClipboardEvent,
+    DllLoadEvent,
     ExecutionReport,
     ExecutionResult,
     FileChange,
+    InjectionEvent,
+    KernelObjectActivity,
     NetworkActivity,
     ProcessActivity,
     RegistryChange,
+    ResourceSample,
     SandboxBase,
     SandboxConfig,
     SandboxError,
     SandboxTimeoutError,
+    ServiceChange,
     validate_file_operation,
     validate_process_operation,
     validate_registry_operation,
@@ -59,6 +67,13 @@ _SNAPSHOT_LINE_MIN_PARTS = 2
 _FILE_LOG_MIN_PARTS = 3
 _NETWORK_LOG_MIN_PARTS = 4
 _PROCESS_LOG_MIN_PARTS = 4
+_SERVICE_LOG_MIN_PARTS = 6
+_KERNEL_OBJ_LOG_MIN_PARTS = 6
+_DLL_LOG_MIN_PARTS = 6
+_INJECTION_LOG_MIN_PARTS = 7
+_RESOURCE_LOG_MIN_PARTS = 7
+_CLIPBOARD_LOG_MIN_PARTS = 7
+_API_TRACE_LOG_MIN_PARTS = 7
 _RETURNCODE_SUCCESS = 0
 
 _ERR_NO_FREE_PORTS = "no free ports"
@@ -89,6 +104,16 @@ _PIDFILE_RETRY_DELAY = 2.0
 PIDFILE_MAX_RETRIES: int = _PIDFILE_MAX_RETRIES
 PIDFILE_RETRY_DELAY: float = _PIDFILE_RETRY_DELAY
 _ERR_UNSUPPORTED_GUEST_OS = "unsupported guest OS"
+_ERR_PCAP_START_FAILED = "packet capture start failed"
+_ERR_PCAP_STOP_FAILED = "packet capture stop failed"
+_ERR_PCAP_NOT_ACTIVE = "no active packet capture with this ID"
+_ERR_SCREENSHOT_FAILED = "screenshot capture failed"
+_ERR_ANTI_EVASION_FAILED = "anti-evasion application failed"
+_ERR_MEMORY_DUMP_FAILED = "memory dump failed"
+_ERR_EXTRACT_FILES_FAILED = "dropped file extraction failed"
+_ERR_YARA_SCAN_FAILED = "YARA scan failed"
+_ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
+_YARA_MATCH_MIN_FIELDS = 3
 
 
 class GuestOS(Enum):
@@ -359,6 +384,26 @@ class QMPClient:
             "arguments": {"command-line": "info snapshots"},
         })
 
+    async def execute_command(
+        self,
+        command: dict[str, object],
+        time_limit: float = 10.0,
+    ) -> QMPResponse:
+        """Execute an arbitrary QMP command.
+
+        Public wrapper around the internal command dispatch for use by
+        the sandbox implementation when QMP operations are needed that
+        do not have a dedicated convenience method.
+
+        Args:
+            command: QMP command dictionary with 'execute' key.
+            time_limit: Response timeout in seconds.
+
+        Returns:
+            QMPResponse: QMP response with success status and data.
+        """
+        return await self._send_command(command, time_limit)
+
 
 class GuestAgentClient:
     """Client for communicating with the QEMU guest agent.
@@ -591,6 +636,7 @@ class QEMUSandbox(SandboxBase):
         self._pidfile_path: Path | None = None
         self._qemu_pid: int | None = None
         self._vnc_port: int | None = None
+        self._active_captures: dict[str, Path] = {}
 
     @property
     def qemu_config(self) -> QEMUConfig:
@@ -1899,6 +1945,248 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         return activities
 
+    async def _parse_service_log(self) -> list[ServiceChange]:
+        """Parse service monitoring log.
+
+        Returns:
+            list[ServiceChange]: List of service changes detected during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "service_monitor.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[ServiceChange] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _SERVICE_LOG_MIN_PARTS:
+                    results.append(
+                        ServiceChange(
+                            timestamp=parts[0],
+                            operation=parts[1],
+                            service_name=parts[2],
+                            display_name=parts[3],
+                            binary_path=parts[4],
+                            start_type=parts[5],
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("service_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
+    async def _parse_kernel_object_log(self) -> list[KernelObjectActivity]:
+        """Parse kernel object monitoring log.
+
+        Returns:
+            list[KernelObjectActivity]: List of kernel object activity detected during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "kernel_object_monitor.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[KernelObjectActivity] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _KERNEL_OBJ_LOG_MIN_PARTS:
+                    results.append(
+                        KernelObjectActivity(
+                            timestamp=parts[0],
+                            object_type=parts[1],
+                            name=parts[2],
+                            pid=int(parts[3]) if parts[3].isdigit() else 0,
+                            process_name=parts[4],
+                            operation=parts[5],
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("kernel_object_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
+    async def _parse_dll_log(self) -> list[DllLoadEvent]:
+        """Parse DLL monitoring log.
+
+        Returns:
+            list[DllLoadEvent]: List of DLL load events detected during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "dll_monitor.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[DllLoadEvent] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _DLL_LOG_MIN_PARTS:
+                    results.append(
+                        DllLoadEvent(
+                            timestamp=parts[0],
+                            pid=int(parts[1]) if parts[1].isdigit() else 0,
+                            process_name=parts[2],
+                            dll_path=parts[3],
+                            base_address=parts[4],
+                            size=int(parts[5]) if parts[5].isdigit() else 0,
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("dll_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
+    async def _parse_injection_log(self) -> list[InjectionEvent]:
+        """Parse injection monitoring log.
+
+        Returns:
+            list[InjectionEvent]: List of injection events detected during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "injection_monitor.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[InjectionEvent] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _INJECTION_LOG_MIN_PARTS:
+                    results.append(
+                        InjectionEvent(
+                            timestamp=parts[0],
+                            source_pid=int(parts[1]) if parts[1].isdigit() else 0,
+                            source_name=parts[2],
+                            target_pid=int(parts[3]) if parts[3].isdigit() else 0,
+                            target_name=parts[4],
+                            injection_type=parts[5],
+                            api_calls=[a.strip() for a in parts[6].split(",") if a.strip()],
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("injection_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
+    async def _parse_resource_log(self) -> list[ResourceSample]:
+        """Parse resource monitoring log.
+
+        Returns:
+            list[ResourceSample]: List of resource usage samples collected during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "resource_monitor.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[ResourceSample] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _RESOURCE_LOG_MIN_PARTS:
+                    results.append(
+                        ResourceSample(
+                            timestamp=parts[0],
+                            cpu_percent=float(parts[1]) if parts[1] else 0.0,
+                            memory_mb=float(parts[2]) if parts[2] else 0.0,
+                            disk_read_bytes=int(parts[3]) if parts[3].isdigit() else 0,
+                            disk_write_bytes=int(parts[4]) if parts[4].isdigit() else 0,
+                            net_sent_bytes=int(parts[5]) if parts[5].isdigit() else 0,
+                            net_recv_bytes=int(parts[6]) if parts[6].isdigit() else 0,
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("resource_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
+    async def _parse_clipboard_log(self) -> list[ClipboardEvent]:
+        """Parse clipboard monitoring log.
+
+        Returns:
+            list[ClipboardEvent]: List of clipboard events detected during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "clipboard_monitor.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[ClipboardEvent] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _CLIPBOARD_LOG_MIN_PARTS:
+                    results.append(
+                        ClipboardEvent(
+                            timestamp=parts[0],
+                            operation=parts[1],
+                            format=parts[2],
+                            content_preview=parts[3],
+                            size_bytes=int(parts[4]) if parts[4].isdigit() else 0,
+                            pid=int(parts[5]) if parts[5].isdigit() else 0,
+                            process_name=parts[6],
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("clipboard_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
+    async def _parse_api_trace_log(self) -> list[ApiCall]:
+        """Parse API trace monitoring log.
+
+        Returns:
+            list[ApiCall]: List of API calls captured during execution.
+        """
+        if self._shared_folder is None:
+            return []
+
+        log_path = self._shared_folder / "logs" / "api_trace.log"
+        if not await asyncio.to_thread(log_path.exists):
+            return []
+
+        results: list[ApiCall] = []
+        try:
+            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
+            for line in raw_text.splitlines():
+                parts = line.split("|")
+                if len(parts) >= _API_TRACE_LOG_MIN_PARTS:
+                    results.append(
+                        ApiCall(
+                            timestamp=parts[0],
+                            process_name=parts[1],
+                            pid=int(parts[2]) if parts[2].isdigit() else 0,
+                            api_name=parts[3],
+                            module=parts[4],
+                            arguments=[a.strip() for a in parts[5].split(",") if a.strip()],
+                            return_value=parts[6],
+                        ),
+                    )
+        except (OSError, ValueError) as e:
+            _logger.warning("api_trace_log_parse_failed", extra={"error": str(e)})
+
+        return results
+
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.
 
@@ -2036,3 +2324,452 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             raise SandboxError(_ERR_SNAPSHOT_DELETE)
 
         _logger.info("snapshot_deleted", extra={"snapshot_name": name})
+
+    async def start_pcap_capture(self) -> str:
+        """Start packet capture on the sandbox network.
+
+        Returns:
+            str: Capture identifier for stopping later.
+
+        Raises:
+            SandboxError: If capture cannot be started.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+
+        capture_id = f"pcap_{secrets.token_hex(8)}"
+        pcap_path = self._shared_folder / "output" / f"{capture_id}.pcap"
+
+        result = await self._qmp.execute_command({
+            "execute": "object-add",
+            "arguments": {
+                "qom-type": "filter-dump",
+                "id": capture_id,
+                "netdev": "net0",
+                "filename": str(pcap_path),
+            },
+        })
+
+        if not result.success:
+            _logger.warning("pcap_start_failed", error=result.error, capture_id=capture_id)
+            raise SandboxError(_ERR_PCAP_START_FAILED)
+
+        self._active_captures[capture_id] = pcap_path
+        _logger.info("pcap_capture_started", capture_id=capture_id, path=str(pcap_path))
+        return capture_id
+
+    async def stop_pcap_capture(self, capture_id: str, output_path: Path | None = None) -> Path:
+        """Stop packet capture and retrieve the PCAP file.
+
+        Args:
+            capture_id: Capture identifier from start_pcap_capture.
+            output_path: Optional path to save the PCAP file.
+
+        Returns:
+            Path: Path to the saved PCAP file.
+
+        Raises:
+            SandboxError: If capture cannot be stopped.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        if capture_id not in self._active_captures:
+            raise SandboxError(_ERR_PCAP_NOT_ACTIVE)
+
+        result = await self._qmp.execute_command({
+            "execute": "object-del",
+            "arguments": {"id": capture_id},
+        })
+
+        if not result.success:
+            _logger.warning("pcap_stop_failed", error=result.error, capture_id=capture_id)
+            raise SandboxError(_ERR_PCAP_STOP_FAILED)
+
+        pcap_path = self._active_captures.pop(capture_id)
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, pcap_path, output_path)
+            _logger.info("pcap_saved", capture_id=capture_id, path=str(output_path))
+            return output_path
+
+        _logger.info("pcap_capture_stopped", capture_id=capture_id, path=str(pcap_path))
+        return pcap_path
+
+    async def capture_screenshot(self, output_path: Path | None = None) -> Path:
+        """Capture a screenshot of the sandbox display.
+
+        Args:
+            output_path: Optional path to save the screenshot.
+
+        Returns:
+            Path: Path to the saved screenshot file.
+
+        Raises:
+            SandboxError: If screenshot cannot be captured.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+
+        screenshot_id = secrets.token_hex(8)
+        ppm_path = self._shared_folder / "output" / f"screenshot_{screenshot_id}.ppm"
+
+        result = await self._qmp.execute_command({
+            "execute": "screendump",
+            "arguments": {"filename": str(ppm_path)},
+        })
+
+        if not result.success:
+            _logger.warning("screenshot_failed", error=result.error)
+            raise SandboxError(_ERR_SCREENSHOT_FAILED)
+
+        await asyncio.sleep(0.5)
+
+        final_path: Path = ppm_path
+        try:
+            from PIL import Image  # noqa: PLC0415
+
+            png_path = ppm_path.with_suffix(".png")
+
+            def _convert_to_png() -> None:
+                img = Image.open(str(ppm_path))
+                try:
+                    img.save(str(png_path), format="PNG")
+                finally:
+                    img.close()
+
+            await asyncio.to_thread(_convert_to_png)
+            await asyncio.to_thread(ppm_path.unlink, missing_ok=True)
+            final_path = png_path
+        except ImportError:
+            _logger.debug("pil_not_available_keeping_ppm")
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, final_path, output_path)
+            _logger.info("screenshot_saved", path=str(output_path))
+            return output_path
+
+        _logger.info("screenshot_captured", path=str(final_path))
+        return final_path
+
+    async def apply_anti_evasion(self, profile: str = "default") -> dict[str, Any]:
+        """Apply anti-evasion techniques to make the sandbox less detectable.
+
+        Args:
+            profile: Anti-evasion profile name.
+
+        Returns:
+            dict[str, Any]: Dictionary describing applied techniques.
+
+        Raises:
+            SandboxError: If anti-evasion cannot be applied.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_NOT_RUNNING)
+
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        applied: dict[str, Any] = {"profile": profile, "techniques": []}
+        techniques: list[str] = []
+
+        smbios_entries: list[dict[str, str]]
+        if profile == "workstation":
+            smbios_entries = [
+                {"type": "1", "manufacturer": "Dell Inc.", "product": "OptiPlex 7090", "serial": f"SVC{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": "Dell Inc.", "product": "0WN7Y6"},
+                {"type": "3", "manufacturer": "Dell Inc.", "chassis-type": "3"},
+            ]
+        elif profile == "laptop":
+            smbios_entries = [
+                {"type": "1", "manufacturer": "Lenovo", "product": "ThinkPad T14 Gen 3", "serial": f"PF{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": "Lenovo", "product": "21AHS00000"},
+                {"type": "3", "manufacturer": "Lenovo", "chassis-type": "10"},
+            ]
+        else:
+            smbios_entries = [
+                {"type": "1", "manufacturer": "HP", "product": "HP EliteDesk 800 G6", "serial": f"MXL{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": "HP", "product": "8767"},
+                {"type": "3", "manufacturer": "HP", "chassis-type": "3"},
+            ]
+
+        for entry in smbios_entries:
+            smbios_args = ",".join(f"{k}={v}" for k, v in entry.items())
+            result = await self._qmp.execute_command({
+                "execute": "human-monitor-command",
+                "arguments": {"command-line": f"smbios -e {smbios_args}"},
+            })
+            if result.success:
+                techniques.append(f"smbios_type_{entry['type']}")
+
+        cpuid_result = await self._qmp.execute_command({
+            "execute": "human-monitor-command",
+            "arguments": {"command-line": "cpu-add model=host,hv-vendor-id=AuthenticAMD"},
+        })
+        if cpuid_result.success:
+            techniques.append("cpuid_hypervisor_mask")
+
+        if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
+            registry_commands = [
+                'reg add "HKLM\\HARDWARE\\DESCRIPTION\\System\\BIOS" /v SystemManufacturer /t REG_SZ /d "HP" /f',
+                'reg add "HKLM\\HARDWARE\\DESCRIPTION\\System\\BIOS" /v SystemProductName /t REG_SZ /d "HP EliteDesk 800 G6" /f',
+                f'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion" /v ProductId /t REG_SZ /d "{secrets.token_hex(8).upper()}" /f',
+                'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum" /v 0 /t REG_SZ /d "WDC WD10EZEX-00BBHA0" /f',
+            ]
+            for cmd in registry_commands:
+                exit_code, _, _ = await self._agent.send_command(cmd)
+                if exit_code == 0:
+                    techniques.append("registry_patch")
+
+            mac_octets = ", ".join(str(secrets.randbelow(256)) for _ in range(5))
+            mac_cmd = f"powershell -Command \"Set-NetAdapter -Name Ethernet -MacAddress ('00-{{0:02X}}-{{1:02X}}-{{2:02X}}-{{3:02X}}-{{4:02X}}' -f {mac_octets})\""
+            exit_code, _, _ = await self._agent.send_command(mac_cmd)
+            if exit_code == 0:
+                techniques.append("mac_address_randomize")
+
+        applied["techniques"] = techniques
+        applied["count"] = len(techniques)
+        _logger.info("anti_evasion_applied", profile=profile, technique_count=len(techniques))
+        return applied
+
+    async def dump_memory(self, output_path: Path | None = None) -> Path:
+        """Dump guest memory to a file.
+
+        Args:
+            output_path: Optional path to save the memory dump.
+
+        Returns:
+            Path: Path to the saved memory dump file.
+
+        Raises:
+            SandboxError: If memory dump fails.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+
+        dump_id = secrets.token_hex(8)
+        dump_path = self._shared_folder / "output" / f"memdump_{dump_id}.raw"
+
+        result = await self._qmp.execute_command({
+            "execute": "dump-guest-memory",
+            "arguments": {
+                "paging": False,
+                "protocol": f"file:{dump_path}",
+            },
+        })
+
+        if not result.success:
+            _logger.warning("memory_dump_failed", error=result.error)
+            raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
+
+        _logger.info("memory_dump_created", path=str(dump_path))
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, dump_path, output_path)
+            _logger.info("memory_dump_saved", path=str(output_path))
+            return output_path
+
+        return dump_path
+
+    async def extract_dropped_files(self, output_path: Path | None = None) -> Path:
+        """Extract files created by the binary during execution.
+
+        Args:
+            output_path: Optional path to save the ZIP archive.
+
+        Returns:
+            Path: Path to ZIP archive of extracted files.
+
+        Raises:
+            SandboxError: If extraction fails.
+        """
+        if self.state.status != "running":
+            raise SandboxError(_ERR_NOT_RUNNING)
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+
+        extract_id = secrets.token_hex(8)
+        staging_dir = self._shared_folder / "output" / f"dropped_{extract_id}"
+        await asyncio.to_thread(staging_dir.mkdir, parents=True, exist_ok=True)
+
+        guest_dirs: list[str]
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            guest_dirs = [
+                r"C:\Users\Public\Downloads",
+                r"C:\Windows\Temp",
+                r"C:\Users\Default\AppData\Local\Temp",
+            ]
+            shared_base = self.GUEST_SHARED_PATH_WINDOWS
+        else:
+            guest_dirs = [
+                "/tmp",  # noqa: S108
+                "/var/tmp",  # noqa: S108
+                "/home",
+            ]
+            shared_base = self.GUEST_SHARED_PATH_LINUX
+
+        if self._agent is not None and self._agent.is_connected:
+            for guest_dir in guest_dirs:
+                if self._qemu_config.guest_os == GuestOS.WINDOWS:
+                    copy_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'
+                else:
+                    dir_name = Path(guest_dir).name
+                    copy_cmd = f'cp -r "{guest_dir}" "{shared_base}/output/dropped_{extract_id}/{dir_name}" 2>/dev/null'
+                await self._agent.send_command(copy_cmd, time_limit=30.0)
+
+        zip_filename = f"dropped_files_{extract_id}.zip"
+        zip_path = self._shared_folder / "output" / zip_filename
+
+        def _create_zip() -> None:
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                if staging_dir.exists():
+                    for file_path in staging_dir.rglob("*"):
+                        if file_path.is_file():
+                            arcname = file_path.relative_to(staging_dir)
+                            zf.write(file_path, arcname)
+
+        await asyncio.to_thread(_create_zip)
+
+        try:
+            await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
+        except OSError as e:
+            _logger.debug("staging_dir_cleanup_failed", error=str(e))
+
+        _logger.info("dropped_files_extracted", zip_path=str(zip_path))
+
+        if output_path is not None:
+            await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, zip_path, output_path)
+            return output_path
+
+        return zip_path
+
+    async def yara_scan(
+        self,
+        rules_path: str | None = None,
+        scan_target: str = "files",
+    ) -> list[dict[str, Any]]:
+        """Run YARA rules against sandbox artifacts.
+
+        Args:
+            rules_path: Path to YARA rules file. Uses built-in rules if None.
+            scan_target: What to scan - 'files' for dropped files, 'memory' for memory dump.
+
+        Returns:
+            list[dict[str, Any]]: List of YARA match dictionaries.
+
+        Raises:
+            SandboxError: If scan fails.
+        """
+        try:
+            import yara  # noqa: PLC0415
+        except ImportError as exc:
+            raise SandboxError(_ERR_YARA_NOT_AVAILABLE) from exc
+
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+
+        yara_compile: Any = getattr(yara, "compile")  # noqa: B009
+        compiled_rules: Any
+        if rules_path is not None:
+            compiled_rules = await asyncio.to_thread(yara_compile, filepath=rules_path)
+        else:
+            default_rules = """
+rule SuspiciousStrings {
+    strings:
+        $s1 = "cmd.exe" nocase
+        $s2 = "powershell" nocase
+        $s3 = "CreateRemoteThread"
+        $s4 = "VirtualAllocEx"
+        $s5 = "WriteProcessMemory"
+        $s6 = "NtUnmapViewOfSection"
+        $s7 = "WScript.Shell"
+        $s8 = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+    condition:
+        any of them
+}
+
+rule PackedBinary {
+    strings:
+        $upx = "UPX!"
+        $aspack = ".aspack"
+        $themida = ".themida"
+    condition:
+        any of them
+}
+"""
+            compiled_rules = await asyncio.to_thread(yara_compile, source=default_rules)
+
+        def _format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
+            rule: str = getattr(m, "rule", "")
+            namespace: str = getattr(m, "namespace", "")
+            tags: list[str] = list(getattr(m, "tags", []))
+            raw_strings: list[Any] = list(getattr(m, "strings", []))
+            formatted_strings: list[dict[str, Any]] = []
+            for s in raw_strings:
+                if len(s) >= _YARA_MATCH_MIN_FIELDS:
+                    data_val: Any = s[2]
+                    formatted_strings.append({
+                        "offset": s[0],
+                        "identifier": s[1],
+                        "data": data_val.hex() if isinstance(data_val, bytes) else str(data_val),
+                    })
+            return {
+                "rule": rule,
+                "namespace": namespace,
+                "tags": tags,
+                "strings": formatted_strings,
+                "source": source,
+                "scan_type": scan_type,
+            }
+
+        matches: list[dict[str, Any]] = []
+        output_dir = self._shared_folder / "output"
+
+        if scan_target == "memory":
+            dump_files = await asyncio.to_thread(lambda: list(output_dir.glob("memdump_*.raw")))
+            for dump_file in dump_files:
+                file_matches: list[Any] = await asyncio.to_thread(compiled_rules.match, filepath=str(dump_file))
+                matches.extend(_format_yara_match(ym, str(dump_file), "memory") for ym in file_matches)
+        else:
+            scan_files: list[Path] = []
+            zip_files = await asyncio.to_thread(lambda: list(output_dir.glob("dropped_files_*.zip")))
+            if zip_files:
+                extract_dir = output_dir / f"yara_scan_{secrets.token_hex(4)}"
+                await asyncio.to_thread(extract_dir.mkdir, parents=True, exist_ok=True)
+
+                def _extract_zips() -> list[Path]:
+                    extracted: list[Path] = []
+                    for zf_path in zip_files:
+                        with zipfile.ZipFile(zf_path, "r") as zf:
+                            zf.extractall(extract_dir)
+                    extracted.extend(fp for fp in extract_dir.rglob("*") if fp.is_file())
+                    return extracted
+
+                scan_files = await asyncio.to_thread(_extract_zips)
+            else:
+                input_dir = self._shared_folder / "input"
+                scan_files = await asyncio.to_thread(lambda: [f for f in input_dir.iterdir() if f.is_file()])
+
+            for scan_file in scan_files:
+                try:
+                    file_matches = await asyncio.to_thread(compiled_rules.match, filepath=str(scan_file))
+                    matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
+                except (OSError, RuntimeError) as e:
+                    _logger.debug("yara_file_scan_error", file=str(scan_file), error=str(e))
+
+        _logger.info("yara_scan_complete", match_count=len(matches), scan_target=scan_target)
+        return matches

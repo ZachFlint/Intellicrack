@@ -11,13 +11,27 @@
             {
               "id": "general",
               "shortDescription": {
-                "text": "Unused function: supports_arch"
+                "text": "Unused function: get_kernel32"
               }
             }
           ]
         }
       },
       "results": [
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_kernel32"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_psapi"
+          }
+        },
         {
           "ruleId": "general",
           "level": "warning",
@@ -36,14 +50,105 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: reset_instance"
+            "text": "Unused function: bridge_script_path"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: generate_keygen_from_analysis"
+            "text": "Unused function: clear_selection"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_current_state"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: disassemble_to_lines"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_disassembler"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_supported_architectures"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: read_fixed_string"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: can_compile_to_json"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: compile_to_json"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: execute_bytes"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_pattern"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: load_source"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: all_names"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_structlog_logger"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: log_binary_operation"
           }
         },
         {
@@ -51,6 +156,48 @@
           "level": "warning",
           "message": {
             "text": "Unused function: prepare_ai_prompt"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: bootstrap_builtins"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: delete_user_template"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: list_all_templates"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: list_hexpat_by_category"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: load_template"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: save_user_template"
           }
         },
         {
@@ -78,21 +225,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: is_hash"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "Unused function: is_readable"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused function: is_text_based"
           }
         },
         {
@@ -106,28 +239,14 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: requires_hardware_id"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused function: signature"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused function: summary"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "Unused function: do_GET"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: log_request"
           }
         },
         {
@@ -176,7 +295,161 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "Unused function: mark_stage_failed"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: paintEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "Unused function: highlightBlock"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: wheelEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: highlightBlock"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: chunk_size_kb"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: memory_budget_mb"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: minimumSizeHint"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: mouseMoveEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: paintEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: prefetch_on_scroll"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: clear_highlights"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: contextMenuEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: keyPressEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: mouseMoveEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: mouseReleaseEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: paintEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: wheelEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: edit_table_item"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: key_event_key"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: qt_key_page_down"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: qt_key_page_up"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: wheel_angle_delta_y"
           }
         },
         {
@@ -190,14 +463,42 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: code_font_family"
+            "text": "Unused function: keyPressEvent"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: reset_instance"
+            "text": "Unused function: keyReleaseEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: mouseMoveEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: mouseReleaseEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: paintEvent"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: code_font_family"
           }
         },
         {
@@ -211,14 +512,14 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: list_available_icons"
+            "text": "Unused function: icon_exists"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: reset_instance"
+            "text": "Unused function: list_available_icons"
           }
         },
         {
@@ -239,7 +540,49 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: reset_instance"
+            "text": "Unused function: add_frida_hook_entry"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_bridge_for_tool"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_highlighter"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_sandbox_backend"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: load_sandbox_report"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: log_frida_message"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: wire_sandbox_backend"
           }
         }
       ],
@@ -247,7 +590,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:38:49.258225"
+          "endTimeUtc": "2026-04-11T07:08:00.733103+00:00"
         }
       ]
     }

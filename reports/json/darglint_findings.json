@@ -1,8 +1,8 @@
 {
   "tool": "darglint",
-  "generated": "2026-04-05T20:15:39.712599+00:00",
-  "total_findings": 55,
-  "total_files": 2,
+  "generated": "2026-04-11T07:08:49.740482+00:00",
+  "total_findings": 60,
+  "total_files": 3,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\base.py",
@@ -407,52 +407,98 @@
       "count": 6,
       "findings": [
         {
-          "line": 415,
+          "line": 427,
           "column": null,
           "function": "_run_agent_loop",
           "code": "DAR401",
           "message": "[_run_agent_loop] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:415: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:427: DAR401: -r CancelledError"
         },
         {
-          "line": 420,
+          "line": 432,
           "column": null,
           "function": "_run_agent_loop",
           "code": "DAR402",
           "message": "[_run_agent_loop] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:420: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:432: DAR402: +r asyncio.CancelledError"
         },
         {
-          "line": 896,
+          "line": 942,
           "column": null,
           "function": "_stream_response",
           "code": "DAR401",
           "message": "[_stream_response] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:896: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:942: DAR401: -r CancelledError"
         },
         {
-          "line": 916,
+          "line": 962,
           "column": null,
           "function": "_stream_response",
           "code": "DAR402",
           "message": "[_stream_response] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:916: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:962: DAR402: +r asyncio.CancelledError"
         },
         {
-          "line": 1013,
+          "line": 1059,
           "column": null,
           "function": "_execute_tool_calls",
           "code": "DAR401",
           "message": "[_execute_tool_calls] -r CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1013: DAR401: -r CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1059: DAR401: -r CancelledError"
         },
         {
-          "line": 1023,
+          "line": 1069,
           "column": null,
           "function": "_execute_tool_calls",
           "code": "DAR402",
           "message": "[_execute_tool_calls] +r asyncio.CancelledError",
-          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1023: DAR402: +r asyncio.CancelledError"
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1069: DAR402: +r asyncio.CancelledError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 132,
+          "column": null,
+          "function": "length",
+          "code": "DAR202",
+          "message": "[length] + return",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py:length:132: DAR202: + return"
+        },
+        {
+          "line": 144,
+          "column": null,
+          "function": "read",
+          "code": "DAR202",
+          "message": "[read] + return",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py:read:144: DAR202: + return"
+        },
+        {
+          "line": 183,
+          "column": null,
+          "function": "search_hex",
+          "code": "DAR202",
+          "message": "[search_hex] + return",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py:search_hex:183: DAR202: + return"
+        },
+        {
+          "line": 200,
+          "column": null,
+          "function": "search_text",
+          "code": "DAR202",
+          "message": "[search_text] + return",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py:search_text:200: DAR202: + return"
+        },
+        {
+          "line": 223,
+          "column": null,
+          "function": "add_bookmark",
+          "code": "DAR202",
+          "message": "[add_bookmark] + return",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py:add_bookmark:223: DAR202: + return"
         }
       ]
     }

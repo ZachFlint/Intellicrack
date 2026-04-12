@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execSync } = require('child_process');
 
 let input = '';
 process.stdin.on('data', (chunk) => (input += chunk));
@@ -24,15 +25,16 @@ process.stdin.on('end', () => {
         const projectName = data.workspace?.current_dir?.split(/[\/\\]/).pop() || 'Unknown';
         const sessionId = data.session_id || '';
         const transcriptPath = data.transcript_path || '';
+        const workingDir = data.workspace?.current_dir || process.cwd();
 
-        const cost = data.cost?.total_cost_usd || 0;
-        const formattedCost = `$${cost.toFixed(4)}`;
-
-        const linesAdded = data.cost?.total_lines_added || 0;
-        const linesRemoved = data.cost?.total_lines_removed || 0;
+        const gitStats = getGitStats(workingDir);
 
         const totalTokens = calculateSessionTokens(sessionId, transcriptPath);
-        const contextPercentage = calculateContextPercentage(transcriptPath, modelId, data.context_window);
+        const contextPercentage = calculateContextPercentage(
+            transcriptPath,
+            modelId,
+            data.context_window
+        );
 
         const formattedTokens = formatTokenCount(totalTokens);
         const { text: contextText, color: contextColor } =
@@ -45,15 +47,97 @@ process.stdin.on('end', () => {
             `${brightMagenta}${projectName}${reset} ${brightRed}|${reset} ` +
                 `${cyan}[${model}]${reset} ${brightRed}|${reset} ` +
                 `Tokens: ${orangeGold}${formattedTokens}${reset} ${brightRed}|${reset} ` +
-                `${green}${formattedCost}${reset} ${brightRed}|${reset} ` +
                 `Context: ${contextColored}${contextText}${reset} ${brightRed}|${reset} ` +
-                `Lines added: ${brightGreen}${linesAdded}${reset} ${brightRed}|${reset} ` +
-                `Lines removed: ${brightRed}${linesRemoved}${reset}`
+                `+${brightGreen}${gitStats.added}${reset} ` +
+                `-${brightRed}${gitStats.removed}${reset} ${brightRed}|${reset} ` +
+                `Last commit: ${yellow}${gitStats.lastCommitAge}${reset}`
         );
     } catch (error) {
-        console.log('[Claude] Intellicrack | $0.0000');
+        console.log('[Claude] Intellicrack | Error');
     }
 });
+
+let gitCache = { timestamp: 0, result: null };
+
+function getGitStats(workingDir) {
+    const now = Date.now();
+    if (gitCache.result && now - gitCache.timestamp < 2000) {
+        return gitCache.result;
+    }
+
+    const fallback = { added: 0, removed: 0, lastCommitAge: 'unknown' };
+
+    try {
+        const execOpts = {
+            cwd: workingDir,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+            timeout: 3000,
+            windowsHide: true,
+        };
+
+        let added = 0;
+        let removed = 0;
+
+        try {
+            const unstaged = execSync('git diff --numstat', execOpts).trim();
+            const staged = execSync('git diff --cached --numstat', execOpts).trim();
+            const combined = [unstaged, staged].filter(Boolean).join('\n');
+
+            for (const line of combined.split('\n')) {
+                if (!line.trim()) continue;
+                const parts = line.split('\t');
+                if (parts.length < 3) continue;
+                const a = parseInt(parts[0], 10);
+                const r = parseInt(parts[1], 10);
+                if (!isNaN(a)) added += a;
+                if (!isNaN(r)) removed += r;
+            }
+        } catch (e) {
+            // not a git repo or git not available
+        }
+
+        let lastCommitAge = 'no commits';
+        try {
+            const timestamp = execSync('git log -1 --format=%ct', execOpts).trim();
+            const commitEpoch = parseInt(timestamp, 10);
+            if (!isNaN(commitEpoch)) {
+                lastCommitAge = formatRelativeTime(commitEpoch);
+            }
+        } catch (e) {
+            // no commits yet
+        }
+
+        const result = { added, removed, lastCommitAge };
+        gitCache = { timestamp: now, result };
+        return result;
+    } catch (error) {
+        return fallback;
+    }
+}
+
+function formatRelativeTime(epochSeconds) {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const diffSeconds = nowSeconds - epochSeconds;
+
+    if (diffSeconds < 0) return 'just now';
+    if (diffSeconds < 60) return `${diffSeconds}s ago`;
+
+    const minutes = Math.floor(diffSeconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+
+    const years = Math.floor(days / 365);
+    return `${years}y ago`;
+}
 
 function calculateSessionTokens(sessionId, transcriptPath) {
     if (!sessionId || !transcriptPath || !fs.existsSync(transcriptPath)) {
@@ -239,71 +323,6 @@ function calculateContextPercentage(transcriptPath, modelId, contextWindow) {
     } catch (error) {
         return 0;
     }
-}
-
-function extractTokensFromEntry(entry) {
-    const tokens = {
-        inputTokens: 0,
-        outputTokens: 0,
-        cacheCreationTokens: 0,
-        cacheReadTokens: 0,
-        totalTokens: 0,
-    };
-
-    const sources = [];
-    const isAssistant = entry.type === 'assistant';
-
-    if (isAssistant) {
-        if (entry.message?.usage) sources.push(entry.message.usage);
-        if (entry.usage) sources.push(entry.usage);
-    } else {
-        if (entry.usage) sources.push(entry.usage);
-        if (entry.message?.usage) sources.push(entry.message.usage);
-    }
-    sources.push(entry);
-
-    for (const source of sources) {
-        if (!source || typeof source !== 'object') continue;
-
-        const inputFields = ['input_tokens', 'inputTokens', 'prompt_tokens'];
-        const outputFields = ['output_tokens', 'outputTokens', 'completion_tokens'];
-        const cacheCreationFields = [
-            'cache_creation_tokens',
-            'cache_creation_input_tokens',
-            'cacheCreationInputTokens',
-        ];
-        const cacheReadFields = [
-            'cache_read_input_tokens',
-            'cache_read_tokens',
-            'cacheReadInputTokens',
-        ];
-
-        const input = extractField(source, inputFields);
-        const output = extractField(source, outputFields);
-        const cacheCreation = extractField(source, cacheCreationFields);
-        const cacheRead = extractField(source, cacheReadFields);
-
-        if (input > 0 || output > 0) {
-            tokens.inputTokens = input;
-            tokens.outputTokens = output;
-            tokens.cacheCreationTokens = cacheCreation;
-            tokens.cacheReadTokens = cacheRead;
-            tokens.totalTokens = input + output + cacheCreation + cacheRead;
-            break;
-        }
-    }
-
-    return tokens;
-}
-
-function extractField(obj, fieldNames) {
-    for (const field of fieldNames) {
-        const value = obj[field];
-        if (value && value > 0) {
-            return parseInt(value, 10);
-        }
-    }
-    return 0;
 }
 
 function formatTokenCount(tokens) {

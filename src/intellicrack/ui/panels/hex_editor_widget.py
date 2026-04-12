@@ -383,6 +383,12 @@ class HexEditorWidget(QAbstractScrollArea):
         self._display_mode: str = "hex8"
         self.encoding: str = "ascii"
         self._highlight_rules: list[HighlightRule] = []
+        self._color_mode: str = "none"
+        self._alignment_grid_size: int = 0
+        self._va_mappings: list[tuple[int, int, int]] = []
+        self._show_va: bool = False
+        self._entropy_cache: list[float] = []
+        self._content_class_cache: list[int] = []
 
         self._setup_font()
         self._colors = _get_hex_editor_colors()
@@ -458,6 +464,44 @@ class HexEditorWidget(QAbstractScrollArea):
         self._display_mode = mode
         self._calculate_layout()
         self._update_viewport()
+
+    def set_alignment_grid_size(self, size: int) -> None:
+        """Set the alignment grid column width and refresh the viewport.
+
+        Args:
+            size: Grid alignment size in bytes. Use 0 to disable alignment grid.
+        """
+        self._alignment_grid_size = size
+        self.update()
+
+    def set_color_mode(self, mode: str) -> None:
+        """Change the byte color-mapping mode.
+
+        Precomputes any required caches (e.g. entropy data) when the
+        mode requires per-byte coloring.
+
+        Args:
+            mode: Color mode string (``"none"``, ``"entropy"``,
+                ``"byte_value"``, ``"content_type"``).
+        """
+        self._color_mode = mode
+        if mode == "entropy" and self._document is not None:
+            entropy_fn = getattr(self._document, "entropy_map", None)
+            if callable(entropy_fn):
+                try:
+                    raw_ent: Any = entropy_fn(256)
+                    self._entropy_cache = [float(v) for v in raw_ent]
+                except (ValueError, TypeError, AttributeError):
+                    self._entropy_cache = []
+        elif mode == "content_type" and self._document is not None:
+            class_fn = getattr(self._document, "content_classification", None)
+            if callable(class_fn):
+                try:
+                    raw_cls: Any = class_fn(256)
+                    self._content_class_cache = [int(v) for v in raw_cls]
+                except (ValueError, TypeError, AttributeError):
+                    self._content_class_cache = []
+        self.update()
 
     def _visible_row_count(self) -> int:
         """Calculate the number of rows visible in the viewport.

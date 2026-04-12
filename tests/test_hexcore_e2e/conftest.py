@@ -12,6 +12,8 @@ so that the entire suite is skipped when hexcore is not built.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import math
 import struct
 import zipfile
@@ -213,6 +215,255 @@ def _build_zip_binary(directory: Path) -> Path:
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(ZIP_CONTENT_NAME, ZIP_CONTENT_DATA.decode("ascii"))
     return zip_path
+
+
+PE_FULL_OPT_HEADER_MAGIC_PE32 = 0x10B
+PE_FULL_IMAGE_BASE = 0x00400000
+PE_FULL_NUM_SECTIONS = 2
+PE_FULL_TEXT_VADDR = 0x1000
+PE_FULL_TEXT_RAW_OFFSET = 0x200
+PE_FULL_TEXT_SIZE = 0x200
+PE_FULL_DATA_VADDR = 0x2000
+PE_FULL_DATA_RAW_OFFSET = 0x400
+PE_FULL_DATA_SIZE = 0x100
+PE_FULL_CHECKSUM_FIELD_OFFSET = 64
+
+ELF_LOAD_PHENTSIZE = 56
+ELF_LOAD_PHNUM = 2
+ELF_LOAD1_OFFSET = 0x1000
+ELF_LOAD1_VADDR = 0x400000
+ELF_LOAD1_FILESZ = 0x200
+ELF_LOAD2_OFFSET = 0x2000
+ELF_LOAD2_VADDR = 0x401000
+ELF_LOAD2_FILESZ = 0x100
+
+STRING_TEST_SIZE = 512
+STRING_TEST_ASCII_OFFSET = 0x10
+STRING_TEST_UTF16_OFFSET = 0x80
+STRING_TEST_ASCII_CONTENT = "Hello World!"
+STRING_TEST_UTF16_CONTENT = "Test String"
+
+PT_LOAD_TYPE = 1
+
+
+def _build_pe_binary_full() -> bytes:
+    """Construct a PE binary with Optional Header magic, ImageBase, and two sections.
+
+    Returns:
+        bytes: A byte string containing a PE32 with .text and .data sections.
+    """
+    total_size = PE_FULL_DATA_RAW_OFFSET + PE_FULL_DATA_SIZE
+    data = bytearray(total_size)
+    data[:2] = b"MZ"
+    struct.pack_into("<H", data, 2, 0x0090)
+    struct.pack_into("<I", data, PE_LFANEW_OFFSET, PE_SIGNATURE_OFFSET)
+
+    pe = PE_SIGNATURE_OFFSET
+    data[pe : pe + 4] = b"PE\x00\x00"
+    struct.pack_into("<H", data, pe + 4, PE_COFF_MACHINE_AMD64)
+    struct.pack_into("<H", data, pe + 6, PE_FULL_NUM_SECTIONS)
+    struct.pack_into("<I", data, pe + 8, 0)
+    struct.pack_into("<H", data, pe + 16, 0)
+    struct.pack_into("<H", data, pe + 20, PE_OPTIONAL_HEADER_SIZE)
+
+    opt = pe + 24
+    struct.pack_into("<H", data, opt, PE_FULL_OPT_HEADER_MAGIC_PE32)
+    struct.pack_into("<I", data, opt + 28, PE_FULL_IMAGE_BASE)
+    struct.pack_into("<I", data, opt + PE_FULL_CHECKSUM_FIELD_OFFSET, 0)
+
+    sec_table = opt + PE_OPTIONAL_HEADER_SIZE
+
+    data[sec_table : sec_table + 8] = b".text\x00\x00\x00"
+    struct.pack_into("<I", data, sec_table + 8, PE_FULL_TEXT_SIZE)
+    struct.pack_into("<I", data, sec_table + 12, PE_FULL_TEXT_VADDR)
+    struct.pack_into("<I", data, sec_table + 16, PE_FULL_TEXT_SIZE)
+    struct.pack_into("<I", data, sec_table + 20, PE_FULL_TEXT_RAW_OFFSET)
+    struct.pack_into("<I", data, sec_table + 36, PE_SECTION_CHARACTERISTICS)
+
+    sec2 = sec_table + 40
+    data[sec2 : sec2 + 8] = b".data\x00\x00\x00"
+    struct.pack_into("<I", data, sec2 + 8, PE_FULL_DATA_SIZE)
+    struct.pack_into("<I", data, sec2 + 12, PE_FULL_DATA_VADDR)
+    struct.pack_into("<I", data, sec2 + 16, PE_FULL_DATA_SIZE)
+    struct.pack_into("<I", data, sec2 + 20, PE_FULL_DATA_RAW_OFFSET)
+    struct.pack_into("<I", data, sec2 + 36, 0xC0000040)
+
+    data[PE_FULL_TEXT_RAW_OFFSET : PE_FULL_TEXT_RAW_OFFSET + 4] = b"\xcc\xcc\xcc\xcc"
+    data[PE_FULL_DATA_RAW_OFFSET : PE_FULL_DATA_RAW_OFFSET + 4] = b"\x00\x01\x02\x03"
+    return bytes(data)
+
+
+def _build_elf_binary_with_loads() -> bytes:
+    """Construct an ELF64 binary with two PT_LOAD program headers.
+
+    Returns:
+        bytes: A byte string containing a valid ELF64 with two PT_LOAD segments.
+    """
+    phdr_table_offset = ELF_PHOFF
+    min_size = max(
+        phdr_table_offset + ELF_LOAD_PHENTSIZE * ELF_LOAD_PHNUM,
+        ELF_LOAD2_OFFSET + ELF_LOAD2_FILESZ,
+    )
+    data = bytearray(min_size)
+
+    data[:4] = b"\x7fELF"
+    data[4] = ELF_CLASS64
+    data[5] = ELF_DATA_LSB
+    data[6] = ELF_VERSION_CURRENT
+    struct.pack_into("<H", data, 16, ELF_TYPE_EXEC)
+    struct.pack_into("<H", data, 18, ELF_MACHINE_X86_64)
+    struct.pack_into("<I", data, 20, ELF_VERSION_CURRENT)
+    struct.pack_into("<Q", data, 24, ELF_ENTRY_ADDR)
+    struct.pack_into("<Q", data, 32, phdr_table_offset)
+    struct.pack_into("<H", data, 54, ELF_LOAD_PHENTSIZE)
+    struct.pack_into("<H", data, 56, ELF_LOAD_PHNUM)
+
+    phdr1 = phdr_table_offset
+    struct.pack_into("<I", data, phdr1, PT_LOAD_TYPE)
+    struct.pack_into("<I", data, phdr1 + 4, 0x5)
+    struct.pack_into("<Q", data, phdr1 + 8, ELF_LOAD1_OFFSET)
+    struct.pack_into("<Q", data, phdr1 + 16, ELF_LOAD1_VADDR)
+    struct.pack_into("<Q", data, phdr1 + 24, ELF_LOAD1_VADDR)
+    struct.pack_into("<Q", data, phdr1 + 32, ELF_LOAD1_FILESZ)
+    struct.pack_into("<Q", data, phdr1 + 40, ELF_LOAD1_FILESZ)
+    struct.pack_into("<Q", data, phdr1 + 48, 0x1000)
+
+    phdr2 = phdr_table_offset + ELF_LOAD_PHENTSIZE
+    struct.pack_into("<I", data, phdr2, PT_LOAD_TYPE)
+    struct.pack_into("<I", data, phdr2 + 4, 0x6)
+    struct.pack_into("<Q", data, phdr2 + 8, ELF_LOAD2_OFFSET)
+    struct.pack_into("<Q", data, phdr2 + 16, ELF_LOAD2_VADDR)
+    struct.pack_into("<Q", data, phdr2 + 24, ELF_LOAD2_VADDR)
+    struct.pack_into("<Q", data, phdr2 + 32, ELF_LOAD2_FILESZ)
+    struct.pack_into("<Q", data, phdr2 + 40, ELF_LOAD2_FILESZ)
+    struct.pack_into("<Q", data, phdr2 + 48, 0x1000)
+
+    for i in range(ELF_LOAD1_FILESZ):
+        if ELF_LOAD1_OFFSET + i < len(data):
+            data[ELF_LOAD1_OFFSET + i] = i & 0xFF
+    for i in range(ELF_LOAD2_FILESZ):
+        if ELF_LOAD2_OFFSET + i < len(data):
+            data[ELF_LOAD2_OFFSET + i] = (0xFF - i) & 0xFF
+
+    return bytes(data)
+
+
+def _build_string_test_data() -> bytes:
+    """Construct a 512-byte buffer with embedded ASCII and UTF-16LE strings.
+
+    Returns:
+        bytes: Buffer with known strings at predictable offsets.
+    """
+    data = bytearray(STRING_TEST_SIZE)
+    rng_seed = 42
+    for i in range(STRING_TEST_SIZE):
+        rng_seed = (rng_seed * 1103515245 + 12345) & 0x7FFFFFFF
+        data[i] = (rng_seed >> 16) & 0xFF
+
+    ascii_bytes = STRING_TEST_ASCII_CONTENT.encode("ascii")
+    data[STRING_TEST_ASCII_OFFSET : STRING_TEST_ASCII_OFFSET + len(ascii_bytes)] = ascii_bytes
+
+    utf16_bytes = STRING_TEST_UTF16_CONTENT.encode("utf-16-le")
+    data[STRING_TEST_UTF16_OFFSET : STRING_TEST_UTF16_OFFSET + len(utf16_bytes)] = utf16_bytes
+
+    return bytes(data)
+
+
+def _build_sig_db_files(directory: Path) -> Path:
+    """Write test signature database files to a directory.
+
+    Args:
+        directory: Target directory for signature files.
+
+    Returns:
+        Path: The directory containing the created files.
+    """
+    die_db = [
+        {
+            "name": "MZ Executable",
+            "type": "PE",
+            "version": "1.0",
+            "patterns": [{"pattern": "4D5A", "offset": "ep"}],
+        },
+    ]
+    (directory / "die_test.json").write_text(json.dumps(die_db), encoding="utf-8")
+
+    known_data = b"MZ" + b"\x00" * 62
+    md5_hash = hashlib.md5(known_data).hexdigest()  # noqa: S324
+    hdb_line = f"{md5_hash}:{len(known_data)}:TestSig.HDB\n"
+    (directory / "test.hdb").write_text(hdb_line, encoding="utf-8")
+
+    ndb_line = "TestSig.NDB:0:*:4D5A\n"
+    (directory / "test.ndb").write_text(ndb_line, encoding="utf-8")
+
+    custom_db = [
+        {"name": "MZ EP Match", "pattern": "4D5A", "offset": "ep", "type": "pe_detect"},
+        {"name": "Any Byte Match", "pattern": "DEADBEEF", "offset": "any", "type": "marker"},
+        {"name": "Fixed Offset Match", "pattern": "00010203", "offset": "0", "type": "header"},
+    ]
+    (directory / "custom.json").write_text(json.dumps(custom_db), encoding="utf-8")
+
+    return directory
+
+
+@pytest.fixture
+def pe_binary_full(tmp_path: Path) -> Path:
+    """Write a PE binary with full Optional Header to disk.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+
+    Returns:
+        Path: Path to the enhanced PE file.
+    """
+    p = tmp_path / "test_full.exe"
+    p.write_bytes(_build_pe_binary_full())
+    return p
+
+
+@pytest.fixture
+def elf_binary_with_loads(tmp_path: Path) -> Path:
+    """Write an ELF64 binary with two PT_LOAD segments to disk.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+
+    Returns:
+        Path: Path to the ELF file with program headers.
+    """
+    p = tmp_path / "test_loads.elf"
+    p.write_bytes(_build_elf_binary_with_loads())
+    return p
+
+
+@pytest.fixture
+def string_test_data(tmp_path: Path) -> Path:
+    """Write a 512-byte file with embedded test strings to disk.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+
+    Returns:
+        Path: Path to the string test data file.
+    """
+    p = tmp_path / "strings.bin"
+    p.write_bytes(_build_string_test_data())
+    return p
+
+
+@pytest.fixture
+def sig_db_dir(tmp_path: Path) -> Path:
+    """Create a directory of test signature database files.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+
+    Returns:
+        Path: Path to the directory containing signature files.
+    """
+    sig_dir = tmp_path / "sig_db"
+    sig_dir.mkdir()
+    return _build_sig_db_files(sig_dir)
 
 
 @pytest.fixture

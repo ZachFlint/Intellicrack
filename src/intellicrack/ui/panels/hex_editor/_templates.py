@@ -6,9 +6,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Final, cast
 
-from PyQt6.QtWidgets import QComboBox, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFileDialog,
+    QMessageBox,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QWidget,
+)
 
 from intellicrack.ui.panels.hex_editor._base import logger
 from intellicrack.ui.resources.theme_manager import ThemeManager
@@ -16,6 +24,10 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 
 _TEMPLATE_COLOR_DARK: Final[str] = "#44FF44"
 _TEMPLATE_COLOR_LIGHT: Final[str] = "#2E7D32"
+_MAGIC_MIN_LEN: Final[int] = 2
+_DOS_HEADER_SIZE: Final[int] = 0x40
+_ELF_CLASS_64: Final[int] = 2
+_MAX_BOOKMARK_SECTIONS: Final[int] = 20
 
 
 def _get_default_template_color() -> str:
@@ -177,3 +189,308 @@ class TemplatesMixin:
         idx = self._template_combo.findText(template_name)
         if idx >= 0:
             self._template_combo.setCurrentIndex(idx)
+
+    def _on_import_template(self) -> None:
+        """Import a template from a JSON file and register it."""
+        if self.document is None:
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        result = QFileDialog.getOpenFileName(
+            parent,
+            "Import Template",
+            "",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        file_path = result[0] if result else ""
+        if not file_path:
+            return
+
+        try:
+            json_str = Path(file_path).read_text(encoding="utf-8")
+            name: str = self.document.register_json_template(json_str)
+        except (OSError, ValueError, AttributeError) as exc:
+            QMessageBox.warning(parent, "Import Template", f"Import failed:\n{exc}")
+            logger.debug("template_import_failed", error=str(exc))
+        else:
+            self._populate_template_combo()
+            self._select_template(name)
+            logger.info("template_imported", name=name)
+
+    def _on_export_template(self) -> None:
+        """Export the selected template to a JSON file."""
+        if self.document is None or self._template_combo is None:
+            return
+
+        name = self._template_combo.currentText()
+        if not name:
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        result = QFileDialog.getSaveFileName(
+            parent,
+            "Export Template",
+            f"{name}.json",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        save_path = result[0] if result else ""
+        if not save_path:
+            return
+
+        try:
+            json_str: str = self.document.export_template_json(name)
+            Path(save_path).write_text(json_str, encoding="utf-8")
+        except (OSError, ValueError, AttributeError) as exc:
+            QMessageBox.warning(parent, "Export Template", f"Export failed:\n{exc}")
+            logger.debug("template_export_failed", error=str(exc))
+        else:
+            logger.info("template_exported", name=name, path=save_path)
+
+    def _on_remove_template(self) -> None:
+        """Remove the selected template from the registry."""
+        if self.document is None or self._template_combo is None:
+            return
+
+        name = self._template_combo.currentText()
+        if not name:
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        reply = QMessageBox.question(
+            parent,
+            "Remove Template",
+            f"Remove template '{name}'?",
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            self.document.remove_template(name)
+        except (AttributeError, ValueError) as exc:
+            logger.debug("template_remove_failed", error=str(exc))
+        else:
+            self._populate_template_combo()
+            logger.info("template_removed", name=name)
+
+    def _on_auto_bookmark_structure(self) -> None:
+        """Automatically create bookmarks for PE/ELF structure regions."""
+        if self.document is None:
+            return
+
+        try:
+            magic_raw: object = self.document.read(0, 4)
+        except (AttributeError, ValueError):
+            return
+
+        if isinstance(magic_raw, bytes):
+            magic = magic_raw
+        elif isinstance(magic_raw, (list, bytearray)):
+            magic = bytes(magic_raw)
+        else:
+            return
+
+        if len(magic) < _MAGIC_MIN_LEN:
+            return
+
+        if magic[:_MAGIC_MIN_LEN] == b"\x4d\x5a":
+            self._bookmark_pe_structure()
+        elif magic[:4] == b"\x7fELF":
+            self._bookmark_elf_structure()
+        else:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.information(
+                parent,
+                "Auto Bookmark",
+                "Unsupported file format (PE and ELF supported).",
+            )
+
+    def _bookmark_pe_structure(self) -> None:
+        """Create colored bookmarks for PE file structure regions."""
+        if self.document is None:
+            return
+
+        try:
+            dos_raw: object = self.document.read(0, 64)
+            if isinstance(dos_raw, bytes):
+                dos_data = dos_raw
+            elif isinstance(dos_raw, (list, bytearray)):
+                dos_data = bytes(dos_raw)
+            else:
+                return
+        except (AttributeError, ValueError):
+            return
+
+        self.document.add_bookmark(0, 64, "DOS Header", "#FF6B6B")
+
+        if len(dos_data) < _DOS_HEADER_SIZE:
+            return
+        e_lfanew = int.from_bytes(dos_data[0x3C:_DOS_HEADER_SIZE], "little")
+
+        try:
+            pe_sig_raw: object = self.document.read(e_lfanew, 4)
+            if isinstance(pe_sig_raw, bytes):
+                pe_sig = pe_sig_raw
+            elif isinstance(pe_sig_raw, (list, bytearray)):
+                pe_sig = bytes(pe_sig_raw)
+            else:
+                return
+        except (AttributeError, ValueError):
+            return
+
+        if pe_sig != b"PE\x00\x00":
+            return
+
+        self.document.add_bookmark(e_lfanew, 24, "PE File Header", "#4ECDC4")
+
+        try:
+            hdr_raw: object = self.document.read(e_lfanew + 20, 2)
+            if isinstance(hdr_raw, bytes):
+                hdr_data = hdr_raw
+            elif isinstance(hdr_raw, (list, bytearray)):
+                hdr_data = bytes(hdr_raw)
+            else:
+                return
+        except (AttributeError, ValueError):
+            return
+
+        opt_size = int.from_bytes(hdr_data[:2], "little")
+        if opt_size > 0:
+            self.document.add_bookmark(e_lfanew + 24, opt_size, "Optional Header", "#4ECDC4")
+
+        try:
+            num_sections_raw: object = self.document.read(e_lfanew + 6, 2)
+            if isinstance(num_sections_raw, bytes):
+                ns_data = num_sections_raw
+            elif isinstance(num_sections_raw, (list, bytearray)):
+                ns_data = bytes(num_sections_raw)
+            else:
+                return
+        except (AttributeError, ValueError):
+            return
+
+        num_sections = int.from_bytes(ns_data[:2], "little")
+        section_offset = e_lfanew + 24 + opt_size
+
+        self._bookmark_pe_sections(section_offset, num_sections)
+        self._refresh_bookmarks()
+        logger.info("pe_structure_bookmarked", sections=num_sections)
+
+    def _bookmark_pe_sections(self, section_offset: int, num_sections: int) -> None:
+        """Create bookmarks for each PE section header.
+
+        Args:
+            section_offset: Byte offset of the first section header.
+            num_sections: Total number of sections to bookmark.
+        """
+        if self.document is None:
+            return
+        section_colors = ["#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8"]
+        for i in range(min(num_sections, _MAX_BOOKMARK_SECTIONS)):
+            sec_off = section_offset + i * 40
+            try:
+                sec_raw: object = self.document.read(sec_off, 8)
+                if isinstance(sec_raw, bytes):
+                    sec_name = sec_raw.rstrip(b"\x00").decode("ascii", errors="replace")
+                elif isinstance(sec_raw, (list, bytearray)):
+                    sec_name = bytes(sec_raw).rstrip(b"\x00").decode("ascii", errors="replace")
+                else:
+                    sec_name = f"Section {i}"
+            except (AttributeError, ValueError):
+                sec_name = f"Section {i}"
+            color = section_colors[i % len(section_colors)]
+            self.document.add_bookmark(sec_off, 40, sec_name, color)
+
+    def _bookmark_elf_structure(self) -> None:
+        """Create colored bookmarks for ELF file structure regions."""
+        if self.document is None:
+            return
+
+        self.document.add_bookmark(0, 64, "ELF Header", "#FF6B6B")
+
+        try:
+            ident_raw: object = self.document.read(4, 1)
+            if isinstance(ident_raw, bytes):
+                ei_class = ident_raw[0]
+            elif isinstance(ident_raw, (list, bytearray)):
+                ei_class = bytes(ident_raw)[0]
+            else:
+                return
+        except (AttributeError, ValueError):
+            return
+
+        is_64 = ei_class == _ELF_CLASS_64
+
+        if is_64:
+            try:
+                hdr_raw: object = self.document.read(32, 16)
+                if isinstance(hdr_raw, bytes):
+                    hdr = hdr_raw
+                elif isinstance(hdr_raw, (list, bytearray)):
+                    hdr = bytes(hdr_raw)
+                else:
+                    return
+            except (AttributeError, ValueError):
+                return
+
+            ph_offset = int.from_bytes(hdr[0:8], "little")
+            sh_offset = int.from_bytes(hdr[8:16], "little")
+
+            try:
+                count_raw: object = self.document.read(56, 4)
+                if isinstance(count_raw, bytes):
+                    count_data = count_raw
+                elif isinstance(count_raw, (list, bytearray)):
+                    count_data = bytes(count_raw)
+                else:
+                    return
+            except (AttributeError, ValueError):
+                return
+
+            ph_count = int.from_bytes(count_data[0:2], "little")
+            sh_count = int.from_bytes(count_data[2:4], "little")
+        else:
+            try:
+                hdr_raw = self.document.read(28, 8)
+                if isinstance(hdr_raw, bytes):
+                    hdr = hdr_raw
+                elif isinstance(hdr_raw, (list, bytearray)):
+                    hdr = bytes(hdr_raw)
+                else:
+                    return
+            except (AttributeError, ValueError):
+                return
+
+            ph_offset = int.from_bytes(hdr[0:4], "little")
+            sh_offset = int.from_bytes(hdr[4:8], "little")
+            ph_count = 0
+            sh_count = 0
+
+        if ph_offset > 0 and ph_count > 0:
+            ph_entry_size = 56 if is_64 else 32
+            self.document.add_bookmark(
+                ph_offset,
+                ph_entry_size * ph_count,
+                "Program Headers",
+                "#4ECDC4",
+            )
+
+        if sh_offset > 0 and sh_count > 0:
+            sh_entry_size = 64 if is_64 else 40
+            self.document.add_bookmark(
+                sh_offset,
+                sh_entry_size * sh_count,
+                "Section Headers",
+                "#45B7D1",
+            )
+
+        self._refresh_bookmarks()
+        logger.info("elf_structure_bookmarked")
+
+    def _refresh_bookmarks(self) -> None:
+        """Refresh the bookmarks display after modification.
+
+        Delegates to the bookmarks mixin if available.
+        """
+        refresh_fn = getattr(self, "_refresh_bookmarks_tree", None)
+        if callable(refresh_fn):
+            refresh_fn()

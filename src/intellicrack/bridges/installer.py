@@ -184,15 +184,6 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
         version_command=[],
         min_version="",
     ),
-    ToolName.BINARY: ToolInfo(
-        name=ToolName.BINARY,
-        display_name="Binary Operations",
-        common_paths=[],
-        executables=[],
-        download_url="",
-        version_command=[],
-        min_version="",
-    ),
 }
 
 
@@ -248,7 +239,7 @@ class ToolInstaller:
         if tool == ToolName.FRIDA:
             return await self._find_frida()
 
-        if tool in {ToolName.PROCESS, ToolName.BINARY}:
+        if tool == ToolName.PROCESS:
             return Path("builtin")
 
         for common_path in tool_info.common_paths:
@@ -441,7 +432,7 @@ class ToolInstaller:
         Returns:
             bool: True if installation is valid and meets minimum version.
         """
-        if tool in {ToolName.PROCESS, ToolName.BINARY}:
+        if tool == ToolName.PROCESS:
             return True
 
         tool_info = TOOL_REGISTRY.get(tool)
@@ -486,7 +477,7 @@ class ToolInstaller:
         if tool == ToolName.FRIDA:
             return await self._install_frida()
 
-        if tool in {ToolName.PROCESS, ToolName.BINARY}:
+        if tool == ToolName.PROCESS:
             return InstallResult(success=True, path=Path("builtin"))
 
         if not tool_info.download_url:

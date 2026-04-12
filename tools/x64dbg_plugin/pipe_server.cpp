@@ -6,6 +6,7 @@
 #include "pipe_server.h"
 #include <cstring>
 #include <cstdio>
+#include <sstream>
 
 namespace intellicrack {
 
@@ -65,14 +66,8 @@ void PipeServer::stop() {
         SetEvent(m_stop_event);
     }
 
-    if (m_pipe_handle != INVALID_HANDLE_VALUE) {
-        DisconnectNamedPipe(m_pipe_handle);
-        CloseHandle(m_pipe_handle);
-        m_pipe_handle = INVALID_HANDLE_VALUE;
-    }
-
     if (m_server_thread) {
-        WaitForSingleObject(m_server_thread, 2000);
+        WaitForSingleObject(m_server_thread, 5000);
         CloseHandle(m_server_thread);
         m_server_thread = nullptr;
     }
@@ -284,7 +279,7 @@ bool PipeServer::read_data(char* buffer, uint32_t length) {
     if (!result) {
         if (GetLastError() == ERROR_IO_PENDING) {
             HANDLE wait_handles[2] = { overlapped.hEvent, m_stop_event };
-            DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, INFINITE);
+            DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, 30000);
 
             if (wait_result == WAIT_OBJECT_0) {
                 GetOverlappedResult(m_pipe_handle, &overlapped, &bytes_read, FALSE);
@@ -306,11 +301,10 @@ bool PipeServer::read_data(char* buffer, uint32_t length) {
 }
 
 bool PipeServer::send_event(const std::string& event_type, const std::string& data) {
-    char event_json[4096];
-    snprintf(event_json, sizeof(event_json),
-        R"({"type":"event","event":"%s","data":%s})",
-        event_type.c_str(), data.c_str());
-    return broadcast_event(event_json);
+    std::ostringstream ss;
+    ss << R"({"type":"event","event":")" << event_type
+       << R"(","data":)" << data << '}';
+    return broadcast_event(ss.str());
 }
 
 bool PipeServer::broadcast_event(const std::string& event_json) {
@@ -327,21 +321,16 @@ bool PipeServer::broadcast_event(const std::string& event_json) {
 }
 
 std::string PipeServer::serialize_response(const PipeResponse& response) {
-    char buffer[8192];
-
+    std::ostringstream ss;
+    ss << R"({"id":)" << response.id;
     if (response.success) {
-        snprintf(buffer, sizeof(buffer),
-            R"({"id":%u,"success":true,"result":%s})",
-            response.id,
-            response.result.empty() ? "null" : response.result.c_str());
+        ss << R"(,"success":true,"result":)"
+           << (response.result.empty() ? "null" : response.result);
     } else {
-        snprintf(buffer, sizeof(buffer),
-            R"({"id":%u,"success":false,"error":"%s"})",
-            response.id,
-            response.error.c_str());
+        ss << R"(,"success":false,"error":")" << response.error << '"';
     }
-
-    return std::string(buffer);
+    ss << '}';
+    return ss.str();
 }
 
 bool PipeServer::parse_message(const std::string& json, PipeMessage& msg) {
@@ -367,7 +356,14 @@ bool PipeServer::parse_message(const std::string& json, PipeMessage& msg) {
         if (json[pos] == '"') {
             size_t start = pos + 1;
             size_t end = json.find('"', start);
-            while (end != std::string::npos && end > 0 && json[end - 1] == '\\') {
+            while (end != std::string::npos && end > start) {
+                size_t bs_count = 0;
+                size_t check_pos = end;
+                while (check_pos > start && json[check_pos - 1] == '\\') {
+                    bs_count++;
+                    check_pos--;
+                }
+                if (bs_count % 2 == 0) break;
                 end = json.find('"', end + 1);
             }
             if (end != std::string::npos) {

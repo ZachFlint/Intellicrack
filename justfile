@@ -341,7 +341,7 @@ taplo *FLAGS:
 # Run pre-commit hooks natively and output sorted findings
 [group('lint')]
 precommit-hooks *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName precommit-hooks -DisplayName "Pre-commit Hooks" -Command "{{ pixi }} python scripts/precommit_hooks.py {{ FLAGS }}" -Pixi "{{ pixi }}" -Processor lint_report -ReportFormats 'txt','json','xml','csv','sarif' -SuppressStderr
+    @& scripts/run-lint-tool.ps1 -ToolName precommit-hooks -DisplayName "Pre-commit Hooks" -Command "{{ pixi }} python scripts/precommit_hooks.py {{ FLAGS }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif' -SuppressStderr
 
 # Run PSScriptAnalyzer on PowerShell files and output sorted findings
 [group('lint')]
@@ -407,6 +407,11 @@ nul-cleanup:
 generate-structure:
     @& scripts/generate-structure.ps1 -Pixi "{{ pixi }}"
 
+[doc('Regenerate CHANGELOG.md from git history using git-cliff (pass MESSAGE to include a pending commit)')]
+[group('git')]
+changelog MESSAGE='':
+    @& scripts/update-changelog.ps1 -Pixi "{{ pixi }}" -Message '{{ MESSAGE }}'
+
 [doc('Auto-generate commit message via Gemini API, skip hooks, push to origin (flags passed to git push)')]
 [group('git')]
 git-commit *FLAGS:
@@ -467,10 +472,10 @@ generate-map:
 open-map:
     @$ErrorActionPreference = 'Stop'; $e = [char]27; function Write-Step { param($msg) Write-Host "$e[36m[MAP]$e[0m $msg" }; function Write-Success { param($msg) Write-Host "  $e[32m[OK]$e[0m $msg" }; function Write-Fail { param($msg) Write-Host "  $e[31m[FAIL]$e[0m $msg" }; $htmlPath = "IntellicrackKnowledgeGraph.html"; if (-not (Test-Path $htmlPath)) { Write-Fail "Knowledge map not found. Run 'just generate-map' first."; exit 1 }; Write-Step "Opening knowledge map in browser..."; Start-Process $htmlPath; Write-Success "Opened in browser"
 
-[doc('Run all development tools sequentially with progress tracking (filter: python|rust|dashboard, --skip tool1,tool2)')]
+[doc('Run all development tools with parallel linting (filter: python|rust|dashboard, --skip tool1,tool2, --workers N)')]
 [group('reports')]
 run-all-tools *FLAGS:
-    @& scripts/run-all-tools.ps1 -Flags "{{ FLAGS }}"
+    @{{ pixi }} python scripts/run-all-tools.py {{ FLAGS }}
 
 # Kill all development processes with automatic elevation
 [group('system')]
@@ -490,47 +495,47 @@ install-rust-tools:
 [doc('Run Clippy linter on Rust hexcore crate')]
 [group('lint')]
 clippy:
-    @& scripts/run-lint-tool.ps1 -ToolName clippy -DisplayName Clippy -Command "{{ pixi }} cargo clippy --all-targets -- -W clippy::all -W clippy::pedantic" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName clippy -DisplayName Clippy -Command "{{ pixi }} cargo clippy --all-targets -- -W clippy::all -W clippy::pedantic" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Check Rust formatting with rustfmt')]
 [group('lint')]
 rustfmt:
-    @& scripts/run-lint-tool.ps1 -ToolName rustfmt -DisplayName RustFmt -Command "{{ pixi }} cargo fmt -- --check" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName rustfmt -DisplayName RustFmt -Command "{{ pixi }} cargo fmt -- --check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run cargo-deny license and advisory checks on Rust hexcore crate')]
 [group('lint')]
 cargo-deny:
-    @& scripts/run-lint-tool.ps1 -ToolName cargo-deny -DisplayName CargoDeny -Command "{{ pixi }} cargo deny check" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName cargo-deny -DisplayName CargoDeny -Command "{{ pixi }} cargo deny check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run Rust tests with cargo-nextest')]
 [group('lint')]
 nextest:
-    @& scripts/run-lint-tool.ps1 -ToolName nextest -DisplayName Nextest -Command "{{ pixi }} cargo nextest run --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName nextest -DisplayName Nextest -Command "{{ pixi }} cargo nextest run --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run code coverage with cargo-llvm-cov on Rust hexcore crate')]
 [group('lint')]
 llvm-cov:
-    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Detect unused Rust dependencies with cargo-machete')]
 [group('lint')]
 machete:
-    @& scripts/run-lint-tool.ps1 -ToolName machete -DisplayName Machete -Command "{{ pixi }} cargo machete" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName machete -DisplayName Machete -Command "{{ pixi }} cargo machete" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run mutation testing with cargo-mutants on Rust hexcore crate (standalone, slow)')]
 [group('lint')]
 mutants:
-    @& scripts/run-lint-tool.ps1 -ToolName mutants -DisplayName Mutants -Command "{{ pixi }} cargo mutants --no-shuffle --timeout 60" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName mutants -DisplayName Mutants -Command "{{ pixi }} cargo mutants --no-shuffle --timeout 60" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run rust-code-analysis complexity metrics on Rust hexcore crate')]
 [group('lint')]
 rust-code-analysis:
-    @& scripts/run-lint-tool.ps1 -ToolName rust-code-analysis -DisplayName RustAnalysis -Command "{{ pixi }} rust-code-analysis-cli -m -p src/" -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName rust-code-analysis -DisplayName RustAnalysis -Command "{{ pixi }} rust-code-analysis-cli -m -p src/" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run typos spell checker on Rust hexcore crate')]
 [group('lint')]
 typos:
-    @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos ." -TextMode -Pixi "{{ pixi }}" -Processor lint_report -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos ." -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Generate unified HTML lint dashboard from all tool findings')]
 [group('reports')]

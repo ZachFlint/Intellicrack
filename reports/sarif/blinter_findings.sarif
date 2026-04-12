@@ -7,15 +7,86 @@
         "driver": {
           "name": "blinter",
           "version": "1.0.0",
-          "rules": []
+          "rules": [
+            {
+              "id": "E018",
+              "shortDescription": {
+                "text": "Unix line endings detected"
+              }
+            }
+          ]
         }
       },
-      "results": [],
+      "results": [
+        {
+          "ruleId": "E018",
+          "level": "error",
+          "message": {
+            "text": "Unix line endings detected"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Intellicrack.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E018",
+          "level": "error",
+          "message": {
+            "text": "Unix line endings detected"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "REMOVE_NUL.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "E018",
+          "level": "error",
+          "message": {
+            "text": "Unix line endings detected"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "scripts/build-cli-launcher.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:34:38.077167"
+          "endTimeUtc": "2026-04-11T07:08:56.442383+00:00"
         }
       ]
     }

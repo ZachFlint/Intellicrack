@@ -75,6 +75,7 @@ if TYPE_CHECKING:
 
     from PyQt6.QtGui import QCloseEvent
 
+    from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
 
@@ -711,9 +712,9 @@ class MainWindow(QMainWindow):
         self.process_btn.clicked.connect(self._on_open_process)
         toolbar.addWidget(self.process_btn)
 
-        self._binary_btn = QPushButton("Binary")
+        self._binary_btn = QPushButton("Open Binary")
         self._binary_btn.setObjectName("tool_button")
-        self._binary_btn.setToolTip("Open Binary Hex Viewer")
+        self._binary_btn.setToolTip("Load a binary file into Intellicrack")
         self._binary_btn.clicked.connect(self._on_open_binary)
         toolbar.addWidget(self._binary_btn)
 
@@ -836,6 +837,7 @@ class MainWindow(QMainWindow):
         self.stream_chunk_received.connect(self._on_stream_chunk)
         self.status_update.connect(self._update_status)
         self.tool_panel.address_clicked.connect(self._on_address_clicked)
+        self.tool_panel.hex_context_ready.connect(self._on_hex_context_ready)
         self.bridge_analysis_received.connect(self._on_bridge_analysis_activated)
 
     def _configure_orchestrator(self) -> None:
@@ -1071,6 +1073,19 @@ class MainWindow(QMainWindow):
         self.tool_panel.set_current_address(address)
         self.status_update.emit(f"Navigated to 0x{address:08X}")
 
+    def _on_hex_context_ready(self, context_text: str) -> None:
+        """Handle hex editor context ready for AI analysis.
+
+        Inserts the formatted hex editor context into the chat input
+        so the user can review and submit it as a prompt.
+
+        Args:
+            context_text: Formatted hex context string.
+        """
+        self._chat_panel.insert_context_text(context_text)
+        self.status_update.emit("Hex context loaded into chat input")
+        _logger.info("hex_context_forwarded_to_chat", length=len(context_text))
+
     def _on_load_binary(self) -> None:
         """Handle load binary action."""
         path, _ = QFileDialog.getOpenFileName(
@@ -1232,47 +1247,21 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Import", "Session manager unavailable.")
 
     def _on_save_patched_binary(self) -> None:
-        """Save the currently loaded binary with applied patches."""
-        binary_panel = self.tool_panel.get_panel("binary")
-        if binary_panel is None:
-            QMessageBox.information(self, "Save", "No binary panel loaded.")
+        """Save the currently loaded binary with applied patches via the hex editor."""
+        hex_panel = self.tool_panel.get_panel("hex_editor")
+        if hex_panel is None:
+            QMessageBox.information(self, "Save", "No hex editor loaded.")
             return
 
-        file_data: bytes | None = None
-        get_file_data = getattr(binary_panel, "get_file_data", None)
-        if callable(get_file_data):
-            raw_data = get_file_data()
-            if isinstance(raw_data, (bytes, bytearray)):
-                file_data = bytes(raw_data)
-
-        if file_data is None:
-            QMessageBox.information(self, "Save", "No binary data available.")
-            return
-
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Patched Binary",
-            "",
-            "Executable Files (*.exe *.dll *.so *.dylib);;All Files (*)",
-        )
-        if path:
-            Path(path).write_bytes(file_data)
-
-            patches: list[object] = []
-            get_patches = getattr(binary_panel, "get_patches", None)
-            if callable(get_patches):
-                raw_patches = get_patches()
-                if isinstance(raw_patches, list):
-                    patches = cast("list[object]", raw_patches)
-
-            report_path = Path(path).with_suffix(".patch_report.txt")
-            with report_path.open("w", encoding="utf-8") as f:
-                f.write(f"Patch Report for {Path(path).name}\n")
-                f.write(f"{'=' * 40}\n")
-                f.write(f"Total patches applied: {len(patches)}\n\n")
-                f.writelines(f"Patch {i}: {patch}\n" for i, patch in enumerate(patches, 1))
-
-            QMessageBox.information(self, "Save", f"Patched binary saved to {path}\nReport: {report_path}")
+        save_as_fn = getattr(hex_panel, "save_as", None)
+        if callable(save_as_fn):
+            save_as_fn()
+        else:
+            save_fn = getattr(hex_panel, "save", None)
+            if callable(save_fn):
+                save_fn()
+            else:
+                QMessageBox.information(self, "Save", "Hex editor does not support saving.")
 
     def _on_export_analysis(self) -> None:
         """Export the current bridge analysis to a JSON file."""
@@ -1637,6 +1626,34 @@ class MainWindow(QMainWindow):
         del settings
         self.status_update.emit("Sandbox settings saved")
 
+    def _get_or_create_sandbox_bridge(self) -> SandboxBridge:
+        """Get an existing SandboxBridge from the tool registry or create a new one.
+
+        Returns:
+            SandboxBridge: An initialized SandboxBridge instance.
+        """
+        from intellicrack.bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
+
+        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+        if tool_reg is not None:
+            getter = getattr(tool_reg, "get_sandbox_bridge", None)
+            if callable(getter):
+                try:
+                    bridge = getter()
+                    if isinstance(bridge, _SandboxBridge):
+                        return bridge
+                except (RuntimeError, ImportError, AttributeError):
+                    _logger.debug("sandbox_bridge_registry_lookup_failed", exc_info=True)
+
+        bridge = _SandboxBridge()
+        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+
+        try:
+            run_bridge_coroutine(bridge.initialize())
+        except (RuntimeError, OSError):
+            _logger.debug("sandbox_bridge_initialize_failed", exc_info=True)
+        return bridge
+
     def _on_open_sandbox(self) -> None:
         """Handle open sandbox action."""
         if not SandboxConfigDialog().is_sandbox_available():
@@ -1647,16 +1664,13 @@ class MainWindow(QMainWindow):
             )
             return
 
-        async def open_sandbox() -> object:
-            available_types = await self.sandbox_manager.get_available_types()
-            if not available_types:
-                return None
+        bridge = self._get_or_create_sandbox_bridge()
 
-            sandbox_type = available_types[0]
-            return await self.sandbox_manager.create(
-                sandbox_type=sandbox_type,
-                auto_start=True,
-            )
+        async def open_sandbox() -> object:
+            available = await bridge.is_available()
+            if not available:
+                return None
+            return await bridge.create()
 
         def on_sandbox_opened(result: object) -> None:
             if result is None:
@@ -1670,10 +1684,10 @@ class MainWindow(QMainWindow):
                 self.status_update.emit("No sandbox available")
             else:
                 self._sandbox_btn.setChecked(True)
-                self.tool_panel.wire_sandbox_backend(result)
-                report_path = getattr(result, "last_report_path", None)
-                if isinstance(report_path, str):
-                    self.tool_panel.load_sandbox_report(report_path)
+                self.tool_panel.wire_sandbox_bridge(bridge)
+                instance_id = cast("dict[str, object]", result).get("instance_id") if isinstance(result, dict) else None
+                if isinstance(instance_id, str):
+                    _logger.info("sandbox_opened_via_bridge", instance_id=instance_id)
                 self.status_update.emit("Sandbox opened")
 
         def on_sandbox_error(e: Exception) -> None:
@@ -1850,21 +1864,6 @@ class MainWindow(QMainWindow):
                 self._show_tool_error("Frida", "Failed to initialize Frida panel")
                 return
             panel.start_tool()
-
-            frida_bridge = self.tool_panel.get_bridge_for_tool("frida")
-            if frida_bridge is not None:
-                set_handler = getattr(frida_bridge, "set_message_handler", None)
-                if callable(set_handler):
-
-                    def _frida_msg_handler(message: object) -> None:
-                        text = message if isinstance(message, str) else str(message)
-                        self.tool_panel.log_frida_message(text)
-                        if isinstance(message, dict):
-                            msg_dict = cast("dict[str, object]", message)
-                            if msg_dict.get("type") == "hook":
-                                self.tool_panel.add_frida_hook_entry(msg_dict)
-
-                    set_handler(_frida_msg_handler)
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Frida", error=str(e))
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
@@ -1973,14 +1972,8 @@ class MainWindow(QMainWindow):
         task.add_done_callback(_on_done)
 
     def _on_open_binary(self) -> None:
-        """Open binary hex viewer panel."""
-        panel = self.tool_panel.add_binary_tab()
-        if panel is None:
-            self._show_tool_error("Binary", "Failed to initialize Binary panel")
-            return
-        panel.start_tool()
-        if self.current_binary is not None:
-            self.tool_panel.open_in_binary(self.current_binary)
+        """Open a binary file into Intellicrack."""
+        self._on_load_binary()
 
     def _on_open_sandbox_panel(self) -> None:
         """Open sandbox manager panel."""
@@ -1988,12 +1981,14 @@ class MainWindow(QMainWindow):
         if panel is None:
             self._show_tool_error("Sandbox", "Failed to initialize Sandbox panel")
             return
-        self.tool_panel.wire_sandbox_backend(self.sandbox_manager, manager=self.sandbox_manager)
+
+        bridge = self._get_or_create_sandbox_bridge()
+        self.tool_panel.wire_sandbox_bridge(bridge)
         panel.start_tool()
 
-        sandbox_backend = self.tool_panel.get_sandbox_backend()
-        if sandbox_backend is not None:
-            _logger.debug("sandbox_backend_available", backend_type=type(sandbox_backend).__name__)
+        sandbox_bridge = self.tool_panel.get_sandbox_bridge()
+        if sandbox_bridge is not None:
+            _logger.debug("sandbox_bridge_available", bridge_type=type(sandbox_bridge).__name__)
 
         sandbox_widget = self.tool_panel.get_active_tool_widget("sandbox")
         if sandbox_widget is not None:

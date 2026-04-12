@@ -137,7 +137,9 @@ impl PieceTable {
         } else if offset == 0 {
             self.pieces.insert(0, new_piece);
         } else {
-            let (piece_idx, inner_offset) = self.find_piece(offset).unwrap();
+            let (piece_idx, inner_offset) = self
+                .find_piece(offset)
+                .expect("invariant: offset within bounds after guard");
 
             if inner_offset == 0 {
                 self.pieces.insert(piece_idx, new_piece);
@@ -193,11 +195,23 @@ impl PieceTable {
         };
 
         let (end_piece_idx, end_inner) = if end >= self.total_length {
-            (self.pieces.len() - 1, self.pieces.last().unwrap().length)
+            (
+                self.pieces.len() - 1,
+                self.pieces
+                    .last()
+                    .expect("invariant: pieces non-empty after length guard")
+                    .length,
+            )
         } else {
             match self.find_piece(end) {
                 Some(v) => v,
-                None => (self.pieces.len() - 1, self.pieces.last().unwrap().length),
+                None => (
+                    self.pieces.len() - 1,
+                    self.pieces
+                        .last()
+                        .expect("invariant: pieces non-empty after length guard")
+                        .length,
+                ),
             }
         };
 

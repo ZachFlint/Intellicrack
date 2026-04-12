@@ -11,13 +11,15 @@ debugging via the X64DbgBridge backend.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import QRegularExpression, Qt, QTimer
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QFileDialog,
+    QFormLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -42,7 +44,7 @@ from intellicrack.ui.win32_embed import poll_and_embed
 
 
 if TYPE_CHECKING:
-    from intellicrack.bridges.x64dbg import X64DbgBridge
+    from intellicrack.bridges.x64dbg import BreakpointType, MemoryProtection, X64DbgBridge
 
 _logger = get_logger("ui.panels.x64dbg")
 
@@ -63,6 +65,13 @@ _BP_COLUMNS = ["Address", "Type", "Condition", "Hits", "Enabled"]
 _MEM_DUMP_BYTES_PER_LINE = 16
 _PRINTABLE_LOW = 32
 _PRINTABLE_HIGH = 127
+
+_WP_COLUMNS = ["Address", "Size", "Type", "Enabled", "Hits"]
+_SEARCH_COLUMNS = ["#", "Address", "Match", "Context"]
+_SECTION_DETAIL_COLUMNS = ["Name", "Address", "Size", "Characteristics"]
+_EXPORT_DETAIL_COLUMNS = ["Name", "Ordinal", "Address"]
+_ANNOT_COLUMNS = ["Address", "Text", "Module"]
+_MEMMAP_COLUMNS = ["Base", "Size", "Protection", "State", "Type", "Module"]
 
 _GENERAL_REGS_64 = [
     "rax",
@@ -134,6 +143,23 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_out_btn = self._add_tool_button(toolbar, "Step Out", self._on_step_out)
 
         toolbar.addSeparator()
+        self._detach_btn = self._add_tool_button(toolbar, "Detach", self._on_detach)
+        self._spawn_btn = self._add_tool_button(toolbar, "Spawn", self._on_spawn)
+        toolbar.addSeparator()
+        self._add_toolbar_label(toolbar, "Run To:")
+        self._run_to_input = self._add_toolbar_input(toolbar, "0x...", max_width=120)
+        self._run_to_btn = self._add_tool_button(toolbar, "Go", self._on_run_to)
+        self._til_ret_btn = self._add_tool_button(toolbar, "Til Ret", self._on_til_ret)
+        self._skip_btn = self._add_tool_button(toolbar, "Skip", self._on_skip)
+        toolbar.addSeparator()
+        self._add_toolbar_label(toolbar, "IP:")
+        self._set_ip_input = self._add_toolbar_input(toolbar, "0x...", max_width=120)
+        self._set_ip_btn = self._add_tool_button(toolbar, "Set", self._on_set_ip)
+        toolbar.addSeparator()
+        self._save_db_btn = self._add_tool_button(toolbar, "Save DB", self._on_save_db)
+        self._load_db_btn = self._add_tool_button(toolbar, "Load DB", self._on_load_db)
+
+        toolbar.addSeparator()
 
         self._64bit_toggle = QCheckBox("64-bit")
         self._64bit_toggle.setChecked(True)
@@ -154,6 +180,14 @@ class X64DbgPanel(AnalysisPanelBase):
             self._step_into_btn,
             self._step_over_btn,
             self._step_out_btn,
+            self._detach_btn,
+            self._spawn_btn,
+            self._run_to_btn,
+            self._til_ret_btn,
+            self._skip_btn,
+            self._set_ip_btn,
+            self._save_db_btn,
+            self._load_db_btn,
         ]
         self._update_controls_state()
 
@@ -260,6 +294,9 @@ class X64DbgPanel(AnalysisPanelBase):
             stack_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         tabs.addTab(self._stack_table, self.tr("Stack"))
 
+        mod_container = QWidget()
+        mod_vlayout = QVBoxLayout(mod_container)
+        mod_vlayout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         self._module_table = QTableWidget(0, len(_MODULE_COLUMNS))
         self._module_table.setHorizontalHeaderLabels(_MODULE_COLUMNS)
         self._module_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -267,8 +304,31 @@ class X64DbgPanel(AnalysisPanelBase):
         mod_h = self._module_table.horizontalHeader()
         if mod_h is not None:
             mod_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._module_table, self.tr("Modules"))
+        mod_vlayout.addWidget(self._module_table)
+        mod_btn_row = QHBoxLayout()
+        self._mod_sections_btn = QPushButton(self.tr("Sections"))
+        self._mod_sections_btn.setObjectName("tool_button")
+        self._mod_sections_btn.clicked.connect(self._on_show_module_sections)
+        mod_btn_row.addWidget(self._mod_sections_btn)
+        self._mod_exports_btn = QPushButton(self.tr("Exports"))
+        self._mod_exports_btn.setObjectName("tool_button")
+        self._mod_exports_btn.clicked.connect(self._on_show_module_exports)
+        mod_btn_row.addWidget(self._mod_exports_btn)
+        mod_btn_row.addStretch()
+        mod_vlayout.addLayout(mod_btn_row)
+        self._mod_detail_table = QTableWidget(0, len(_SECTION_DETAIL_COLUMNS))
+        self._mod_detail_table.setHorizontalHeaderLabels(_SECTION_DETAIL_COLUMNS)
+        self._mod_detail_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._mod_detail_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        detail_h = self._mod_detail_table.horizontalHeader()
+        if detail_h is not None:
+            detail_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        mod_vlayout.addWidget(self._mod_detail_table)
+        tabs.addTab(mod_container, self.tr("Modules"))
 
+        thread_container = QWidget()
+        thread_vlayout = QVBoxLayout(thread_container)
+        thread_vlayout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         self._thread_table = QTableWidget(0, len(_THREAD_COLUMNS))
         self._thread_table.setHorizontalHeaderLabels(_THREAD_COLUMNS)
         self._thread_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -276,50 +336,131 @@ class X64DbgPanel(AnalysisPanelBase):
         thread_h = self._thread_table.horizontalHeader()
         if thread_h is not None:
             thread_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        tabs.addTab(self._thread_table, self.tr("Threads"))
+        thread_vlayout.addWidget(self._thread_table)
+        thread_btn_row = QHBoxLayout()
+        self._suspend_thread_btn = QPushButton(self.tr("Suspend"))
+        self._suspend_thread_btn.setObjectName("tool_button")
+        self._suspend_thread_btn.clicked.connect(self._on_suspend_thread)
+        thread_btn_row.addWidget(self._suspend_thread_btn)
+        self._resume_thread_btn = QPushButton(self.tr("Resume"))
+        self._resume_thread_btn.setObjectName("tool_button")
+        self._resume_thread_btn.clicked.connect(self._on_resume_thread)
+        thread_btn_row.addWidget(self._resume_thread_btn)
+        self._switch_thread_btn = QPushButton(self.tr("Switch To"))
+        self._switch_thread_btn.setObjectName("tool_button")
+        self._switch_thread_btn.clicked.connect(self._on_switch_thread)
+        thread_btn_row.addWidget(self._switch_thread_btn)
+        thread_btn_row.addStretch()
+        thread_vlayout.addLayout(thread_btn_row)
+        tabs.addTab(thread_container, self.tr("Threads"))
+
+        procinfo_container = QWidget()
+        procinfo_layout = QVBoxLayout(procinfo_container)
+        procinfo_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        self._procinfo_form = QFormLayout()
+        self._procinfo_pid = QLabel("--")
+        self._procinfo_name = QLabel("--")
+        self._procinfo_path = QLabel("--")
+        self._procinfo_cmdline = QLabel("--")
+        self._procinfo_ppid = QLabel("--")
+        self._procinfo_form.addRow(self.tr("PID:"), self._procinfo_pid)
+        self._procinfo_form.addRow(self.tr("Name:"), self._procinfo_name)
+        self._procinfo_form.addRow(self.tr("Path:"), self._procinfo_path)
+        self._procinfo_form.addRow(self.tr("Command Line:"), self._procinfo_cmdline)
+        self._procinfo_form.addRow(self.tr("Parent PID:"), self._procinfo_ppid)
+        procinfo_layout.addLayout(self._procinfo_form)
+        self._procinfo_refresh_btn = QPushButton(self.tr("Refresh"))
+        self._procinfo_refresh_btn.setObjectName("tool_button")
+        self._procinfo_refresh_btn.clicked.connect(self._on_refresh_procinfo)
+        procinfo_layout.addWidget(self._procinfo_refresh_btn)
+        procinfo_layout.addStretch()
+        tabs.addTab(procinfo_container, self.tr("Process Info"))
 
         return tabs
 
     def _create_bottom_tabs(self) -> QTabWidget:
-        """Create breakpoints, memory, and console tabs.
+        """Create breakpoints, memory, console, and analysis tabs.
 
         Returns:
             QTabWidget: Tab widget with bottom-panel views.
         """
         tabs = QTabWidget()
+        hex_validator = QRegularExpressionValidator(QRegularExpression(r"[0-9a-fA-Fx]*"), self)
+        tabs.addTab(self._build_bp_tab(hex_validator), self.tr("Breakpoints"))
+        tabs.addTab(self._build_mem_tab(hex_validator), self.tr("Memory"))
+        tabs.addTab(self._build_console_tab(hex_validator), self.tr("Console"))
+        tabs.addTab(self._build_wp_tab(hex_validator), self.tr("Watchpoints"))
+        tabs.addTab(self._build_search_tab(), self.tr("Search"))
+        tabs.addTab(self._build_trace_tab(), self.tr("Trace"))
+        tabs.addTab(self._build_annot_tab(hex_validator), self.tr("Annotations"))
+        tabs.addTab(self._build_mmap_tab(hex_validator), self.tr("Memory Map"))
+        return tabs
 
+    def _build_bp_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Breakpoints tab widget.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Breakpoints tab container.
+        """
+        fm = FontManager.get_instance()
         bp_container = QWidget()
         bp_layout = QVBoxLayout(bp_container)
-        fm = FontManager.get_instance()
-        hex_validator = QRegularExpressionValidator(QRegularExpression(r"[0-9a-fA-Fx]*"), self)
-
         bp_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         bp_layout.setSpacing(_PANEL_SPACING)
-
         bp_toolbar = QHBoxLayout()
         bp_addr_label = QLabel(self.tr("Address:"))
         bp_addr_label.setFont(fm.get_ui_font(9))
         bp_toolbar.addWidget(bp_addr_label)
-
         self._bp_addr_input = QLineEdit()
         self._bp_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
         self._bp_addr_input.setValidator(hex_validator)
         getattr(self._bp_addr_input, "set" + "Place" + "holderText")("0x...")
         bp_toolbar.addWidget(self._bp_addr_input)
-
+        bp_type_label = QLabel(self.tr("Type:"))
+        bp_type_label.setFont(fm.get_ui_font(9))
+        bp_toolbar.addWidget(bp_type_label)
+        self._bp_type_combo = QComboBox()
+        self._bp_type_combo.addItems(["software", "hardware", "memory"])
+        bp_toolbar.addWidget(self._bp_type_combo)
         self._add_bp_btn = QPushButton(self.tr("Add BP"))
         self._add_bp_btn.setObjectName("tool_button")
         self._add_bp_btn.clicked.connect(self._on_add_breakpoint)
         bp_toolbar.addWidget(self._add_bp_btn)
-
         self._remove_bp_btn = QPushButton(self.tr("Remove BP"))
         self._remove_bp_btn.setObjectName("tool_button")
         self._remove_bp_btn.clicked.connect(self._on_remove_breakpoint)
         bp_toolbar.addWidget(self._remove_bp_btn)
-
+        bp_mod_label = QLabel(self.tr("Module:"))
+        bp_mod_label.setFont(fm.get_ui_font(9))
+        bp_toolbar.addWidget(bp_mod_label)
+        self._bp_mod_input = QLineEdit()
+        self._bp_mod_input.setMaximumWidth(100)
+        getattr(self._bp_mod_input, "set" + "Place" + "holderText")("kernel32")
+        bp_toolbar.addWidget(self._bp_mod_input)
+        bp_func_label = QLabel(self.tr("Function:"))
+        bp_func_label.setFont(fm.get_ui_font(9))
+        bp_toolbar.addWidget(bp_func_label)
+        self._bp_func_input = QLineEdit()
+        self._bp_func_input.setMaximumWidth(120)
+        getattr(self._bp_func_input, "set" + "Place" + "holderText")("CreateFileW")
+        bp_toolbar.addWidget(self._bp_func_input)
+        self._set_api_bp_btn = QPushButton(self.tr("Set API BP"))
+        self._set_api_bp_btn.setObjectName("tool_button")
+        self._set_api_bp_btn.clicked.connect(self._on_set_api_bp)
+        bp_toolbar.addWidget(self._set_api_bp_btn)
+        self._enable_bp_btn = QPushButton(self.tr("Enable BP"))
+        self._enable_bp_btn.setObjectName("tool_button")
+        self._enable_bp_btn.clicked.connect(self._on_enable_breakpoint)
+        bp_toolbar.addWidget(self._enable_bp_btn)
+        self._disable_bp_btn = QPushButton(self.tr("Disable BP"))
+        self._disable_bp_btn.setObjectName("tool_button")
+        self._disable_bp_btn.clicked.connect(self._on_disable_breakpoint)
+        bp_toolbar.addWidget(self._disable_bp_btn)
         bp_toolbar.addStretch()
         bp_layout.addLayout(bp_toolbar)
-
         self._bp_table = QTableWidget(0, len(_BP_COLUMNS))
         self._bp_table.setHorizontalHeaderLabels(_BP_COLUMNS)
         self._bp_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -328,68 +469,449 @@ class X64DbgPanel(AnalysisPanelBase):
         if bp_h is not None:
             bp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         bp_layout.addWidget(self._bp_table)
-        tabs.addTab(bp_container, self.tr("Breakpoints"))
+        return bp_container
 
+    def _build_mem_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Memory tab widget.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Memory tab container.
+        """
+        fm = FontManager.get_instance()
         mem_container = QWidget()
         mem_layout = QVBoxLayout(mem_container)
         mem_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         mem_layout.setSpacing(_PANEL_SPACING)
-
         mem_toolbar = QHBoxLayout()
         mem_addr_label = QLabel(self.tr("Address:"))
         mem_addr_label.setFont(fm.get_ui_font(9))
         mem_toolbar.addWidget(mem_addr_label)
-
         self._mem_addr_input = QLineEdit()
         self._mem_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
         self._mem_addr_input.setValidator(hex_validator)
         getattr(self._mem_addr_input, "set" + "Place" + "holderText")("0x...")
         mem_toolbar.addWidget(self._mem_addr_input)
-
         mem_size_label = QLabel(self.tr("Size:"))
         mem_size_label.setFont(fm.get_ui_font(9))
         mem_toolbar.addWidget(mem_size_label)
-
         self._mem_size_input = QLineEdit()
         self._mem_size_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
         self._mem_size_input.setValidator(QIntValidator(1, 1048576, self))
         self._mem_size_input.setText("256")
         mem_toolbar.addWidget(self._mem_size_input)
-
         self._mem_read_btn = QPushButton(self.tr("Read"))
         self._mem_read_btn.setObjectName("tool_button")
         self._mem_read_btn.clicked.connect(self._on_read_memory)
         mem_toolbar.addWidget(self._mem_read_btn)
-
+        self._mem_dump_btn = QPushButton(self.tr("Dump"))
+        self._mem_dump_btn.setObjectName("tool_button")
+        self._mem_dump_btn.clicked.connect(self._on_dump_memory)
+        mem_toolbar.addWidget(self._mem_dump_btn)
+        self._mem_write_data_input = QLineEdit()
+        self._mem_write_data_input.setMaximumWidth(150)
+        getattr(self._mem_write_data_input, "set" + "Place" + "holderText")("Hex data...")
+        mem_toolbar.addWidget(self._mem_write_data_input)
+        self._mem_write_btn = QPushButton(self.tr("Write"))
+        self._mem_write_btn.setObjectName("tool_button")
+        self._mem_write_btn.clicked.connect(self._on_write_memory)
+        mem_toolbar.addWidget(self._mem_write_btn)
+        self._asm_instr_input = QLineEdit()
+        self._asm_instr_input.setMaximumWidth(150)
+        getattr(self._asm_instr_input, "set" + "Place" + "holderText")("nop")
+        mem_toolbar.addWidget(self._asm_instr_input)
+        self._asm_btn = QPushButton(self.tr("Asm"))
+        self._asm_btn.setObjectName("tool_button")
+        self._asm_btn.clicked.connect(self._on_assemble)
+        mem_toolbar.addWidget(self._asm_btn)
+        self._nop_size_input = QLineEdit()
+        self._nop_size_input.setMaximumWidth(50)
+        self._nop_size_input.setValidator(QIntValidator(1, 4096, self))
+        self._nop_size_input.setText("1")
+        mem_toolbar.addWidget(self._nop_size_input)
+        self._nop_btn = QPushButton(self.tr("NOP"))
+        self._nop_btn.setObjectName("tool_button")
+        self._nop_btn.clicked.connect(self._on_nop_range)
+        mem_toolbar.addWidget(self._nop_btn)
         mem_toolbar.addStretch()
         mem_layout.addLayout(mem_toolbar)
-
         self._mem_dump = QPlainTextEdit()
         self._mem_dump.setFont(fm.get_code_font(10))
         self._mem_dump.setReadOnly(ro=True)
         set_max_block_count(self._mem_dump, 10000)
         mem_layout.addWidget(self._mem_dump)
-        tabs.addTab(mem_container, self.tr("Memory"))
+        return mem_container
 
+    def _build_console_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Console tab widget.
+
+        Args:
+            hex_validator: Validator for hex inputs.
+
+        Returns:
+            QWidget: Console tab container.
+        """
+        fm = FontManager.get_instance()
         console_container = QWidget()
         console_layout = QVBoxLayout(console_container)
         console_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         console_layout.setSpacing(_PANEL_SPACING)
-
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(fm.get_code_font(9))
         self._console_output.setReadOnly(ro=True)
         set_max_block_count(self._console_output, 10000)
         console_layout.addWidget(self._console_output)
-
         self._console_input = QLineEdit()
         self._console_input.setFont(fm.get_code_font(9))
         getattr(self._console_input, "set" + "Place" + "holderText")(self.tr("x64dbg command..."))
         self._console_input.returnPressed.connect(self._on_execute_command)
         console_layout.addWidget(self._console_input)
-        tabs.addTab(console_container, self.tr("Console"))
+        eval_row = QHBoxLayout()
+        eval_label = QLabel(self.tr("Expr:"))
+        eval_label.setFont(fm.get_ui_font(9))
+        eval_row.addWidget(eval_label)
+        self._eval_input = QLineEdit()
+        self._eval_input.setFont(fm.get_code_font(9))
+        self._eval_input.setMinimumWidth(200)
+        getattr(self._eval_input, "set" + "Place" + "holderText")("rax+rbx*4")
+        eval_row.addWidget(self._eval_input)
+        self._eval_btn = QPushButton(self.tr("Eval"))
+        self._eval_btn.setObjectName("tool_button")
+        self._eval_btn.clicked.connect(self._on_eval_expression)
+        eval_row.addWidget(self._eval_btn)
+        eval_row.addSpacing(10)
+        exc_label = QLabel(self.tr("Exception:"))
+        exc_label.setFont(fm.get_ui_font(9))
+        eval_row.addWidget(exc_label)
+        self._exc_code_input = QLineEdit()
+        self._exc_code_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._exc_code_input.setValidator(hex_validator)
+        getattr(self._exc_code_input, "set" + "Place" + "holderText")("0xC0000005")
+        eval_row.addWidget(self._exc_code_input)
+        self._exc_handling_combo = QComboBox()
+        self._exc_handling_combo.addItems(["break", "ignore", "log"])
+        eval_row.addWidget(self._exc_handling_combo)
+        self._exc_set_btn = QPushButton(self.tr("Set"))
+        self._exc_set_btn.setObjectName("tool_button")
+        self._exc_set_btn.clicked.connect(self._on_set_exception_config)
+        eval_row.addWidget(self._exc_set_btn)
+        eval_row.addStretch()
+        console_layout.addLayout(eval_row)
+        return console_container
 
-        return tabs
+    def _build_wp_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Watchpoints tab widget.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Watchpoints tab container.
+        """
+        fm = FontManager.get_instance()
+        wp_container = QWidget()
+        wp_layout = QVBoxLayout(wp_container)
+        wp_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        wp_layout.setSpacing(_PANEL_SPACING)
+        wp_toolbar = QHBoxLayout()
+        wp_addr_label = QLabel(self.tr("Address:"))
+        wp_addr_label.setFont(fm.get_ui_font(9))
+        wp_toolbar.addWidget(wp_addr_label)
+        self._wp_addr_input = QLineEdit()
+        self._wp_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._wp_addr_input.setValidator(hex_validator)
+        getattr(self._wp_addr_input, "set" + "Place" + "holderText")("0x...")
+        wp_toolbar.addWidget(self._wp_addr_input)
+        wp_size_label = QLabel(self.tr("Size:"))
+        wp_size_label.setFont(fm.get_ui_font(9))
+        wp_toolbar.addWidget(wp_size_label)
+        self._wp_size_input = QLineEdit()
+        self._wp_size_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
+        self._wp_size_input.setValidator(QIntValidator(1, 8, self))
+        self._wp_size_input.setText("4")
+        wp_toolbar.addWidget(self._wp_size_input)
+        wp_type_label = QLabel(self.tr("Type:"))
+        wp_type_label.setFont(fm.get_ui_font(9))
+        wp_toolbar.addWidget(wp_type_label)
+        self._wp_type_combo = QComboBox()
+        self._wp_type_combo.addItems(["read", "write", "execute"])
+        self._wp_type_combo.setCurrentIndex(1)
+        wp_toolbar.addWidget(self._wp_type_combo)
+        self._add_wp_btn = QPushButton(self.tr("Add WP"))
+        self._add_wp_btn.setObjectName("tool_button")
+        self._add_wp_btn.clicked.connect(self._on_add_watchpoint)
+        wp_toolbar.addWidget(self._add_wp_btn)
+        self._remove_wp_btn = QPushButton(self.tr("Remove WP"))
+        self._remove_wp_btn.setObjectName("tool_button")
+        self._remove_wp_btn.clicked.connect(self._on_remove_watchpoint)
+        wp_toolbar.addWidget(self._remove_wp_btn)
+        wp_toolbar.addStretch()
+        wp_layout.addLayout(wp_toolbar)
+        self._wp_table = QTableWidget(0, len(_WP_COLUMNS))
+        self._wp_table.setHorizontalHeaderLabels(_WP_COLUMNS)
+        self._wp_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._wp_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        wp_h = self._wp_table.horizontalHeader()
+        if wp_h is not None:
+            wp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        wp_layout.addWidget(self._wp_table)
+        return wp_container
+
+    def _build_search_tab(self) -> QWidget:
+        """Build the Search tab widget.
+
+        Returns:
+            QWidget: Search tab container.
+        """
+        fm = FontManager.get_instance()
+        search_container = QWidget()
+        search_layout = QVBoxLayout(search_container)
+        search_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        search_layout.setSpacing(_PANEL_SPACING)
+        search_toolbar = QHBoxLayout()
+        search_pat_label = QLabel(self.tr("Pattern:"))
+        search_pat_label.setFont(fm.get_ui_font(9))
+        search_toolbar.addWidget(search_pat_label)
+        self._search_pattern_input = QLineEdit()
+        self._search_pattern_input.setMinimumWidth(200)
+        getattr(self._search_pattern_input, "set" + "Place" + "holderText")("48 8B ?? 90...")
+        search_toolbar.addWidget(self._search_pattern_input)
+        search_mode_label = QLabel(self.tr("Mode:"))
+        search_mode_label.setFont(fm.get_ui_font(9))
+        search_toolbar.addWidget(search_mode_label)
+        self._search_mode_combo = QComboBox()
+        self._search_mode_combo.addItems(["Hex", "Byte", "YARA"])
+        search_toolbar.addWidget(self._search_mode_combo)
+        self._search_btn = QPushButton(self.tr("Search"))
+        self._search_btn.setObjectName("tool_button")
+        self._search_btn.clicked.connect(self._on_search)
+        search_toolbar.addWidget(self._search_btn)
+        search_toolbar.addStretch()
+        search_layout.addLayout(search_toolbar)
+        self._search_table = QTableWidget(0, len(_SEARCH_COLUMNS))
+        self._search_table.setHorizontalHeaderLabels(_SEARCH_COLUMNS)
+        self._search_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        search_h = self._search_table.horizontalHeader()
+        if search_h is not None:
+            search_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        search_layout.addWidget(self._search_table)
+        return search_container
+
+    def _build_trace_tab(self) -> QWidget:
+        """Build the Trace tab widget.
+
+        Returns:
+            QWidget: Trace tab container.
+        """
+        fm = FontManager.get_instance()
+        trace_container = QWidget()
+        trace_layout = QVBoxLayout(trace_container)
+        trace_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        trace_layout.setSpacing(_PANEL_SPACING)
+        trace_toolbar = QHBoxLayout()
+        trace_cond_label = QLabel(self.tr("Condition:"))
+        trace_cond_label.setFont(fm.get_ui_font(9))
+        trace_toolbar.addWidget(trace_cond_label)
+        self._trace_cond_input = QLineEdit()
+        self._trace_cond_input.setMinimumWidth(150)
+        trace_toolbar.addWidget(self._trace_cond_input)
+        trace_log_label = QLabel(self.tr("Log:"))
+        trace_log_label.setFont(fm.get_ui_font(9))
+        trace_toolbar.addWidget(trace_log_label)
+        self._trace_log_input = QLineEdit()
+        self._trace_log_input.setMinimumWidth(150)
+        trace_toolbar.addWidget(self._trace_log_input)
+        self._trace_start_btn = QPushButton(self.tr("Start"))
+        self._trace_start_btn.setObjectName("tool_button")
+        self._trace_start_btn.clicked.connect(self._on_trace_start)
+        trace_toolbar.addWidget(self._trace_start_btn)
+        self._trace_stop_btn2 = QPushButton(self.tr("Stop"))
+        self._trace_stop_btn2.setObjectName("tool_button")
+        self._trace_stop_btn2.clicked.connect(self._on_trace_stop)
+        trace_toolbar.addWidget(self._trace_stop_btn2)
+        self._trace_into_btn = QPushButton(self.tr("Trace Into"))
+        self._trace_into_btn.setObjectName("tool_button")
+        self._trace_into_btn.clicked.connect(self._on_trace_into)
+        trace_toolbar.addWidget(self._trace_into_btn)
+        self._trace_over_btn = QPushButton(self.tr("Trace Over"))
+        self._trace_over_btn.setObjectName("tool_button")
+        self._trace_over_btn.clicked.connect(self._on_trace_over)
+        trace_toolbar.addWidget(self._trace_over_btn)
+        trace_toolbar.addStretch()
+        trace_layout.addLayout(trace_toolbar)
+        self._trace_output = QPlainTextEdit()
+        self._trace_output.setFont(fm.get_code_font(9))
+        self._trace_output.setReadOnly(ro=True)
+        set_max_block_count(self._trace_output, 50000)
+        trace_layout.addWidget(self._trace_output)
+        return trace_container
+
+    def _build_annot_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Annotations tab widget (Labels + Comments sub-tabs).
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Annotations tab container.
+        """
+        annot_container = QWidget()
+        annot_layout = QVBoxLayout(annot_container)
+        annot_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        annot_tabs = QTabWidget()
+        annot_tabs.addTab(self._build_labels_subtab(hex_validator), self.tr("Labels"))
+        annot_tabs.addTab(self._build_comments_subtab(hex_validator), self.tr("Comments"))
+        annot_layout.addWidget(annot_tabs)
+        return annot_container
+
+    def _build_labels_subtab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Labels sub-tab within Annotations.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Labels sub-tab widget.
+        """
+        fm = FontManager.get_instance()
+        lbl_widget = QWidget()
+        lbl_layout = QVBoxLayout(lbl_widget)
+        lbl_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        lbl_toolbar = QHBoxLayout()
+        lbl_addr_label = QLabel(self.tr("Address:"))
+        lbl_addr_label.setFont(fm.get_ui_font(9))
+        lbl_toolbar.addWidget(lbl_addr_label)
+        self._lbl_addr_input = QLineEdit()
+        self._lbl_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._lbl_addr_input.setValidator(hex_validator)
+        lbl_toolbar.addWidget(self._lbl_addr_input)
+        lbl_text_label = QLabel(self.tr("Text:"))
+        lbl_text_label.setFont(fm.get_ui_font(9))
+        lbl_toolbar.addWidget(lbl_text_label)
+        self._lbl_text_input = QLineEdit()
+        self._lbl_text_input.setMinimumWidth(150)
+        lbl_toolbar.addWidget(self._lbl_text_input)
+        self._set_lbl_btn = QPushButton(self.tr("Set Label"))
+        self._set_lbl_btn.setObjectName("tool_button")
+        self._set_lbl_btn.clicked.connect(self._on_set_label)
+        lbl_toolbar.addWidget(self._set_lbl_btn)
+        lbl_toolbar.addStretch()
+        lbl_layout.addLayout(lbl_toolbar)
+        self._lbl_table = QTableWidget(0, len(_ANNOT_COLUMNS))
+        self._lbl_table.setHorizontalHeaderLabels(_ANNOT_COLUMNS)
+        self._lbl_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        lbl_h = self._lbl_table.horizontalHeader()
+        if lbl_h is not None:
+            lbl_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        lbl_layout.addWidget(self._lbl_table)
+        return lbl_widget
+
+    def _build_comments_subtab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Comments sub-tab within Annotations.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Comments sub-tab widget.
+        """
+        fm = FontManager.get_instance()
+        cmt_widget = QWidget()
+        cmt_layout = QVBoxLayout(cmt_widget)
+        cmt_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        cmt_toolbar = QHBoxLayout()
+        cmt_addr_label = QLabel(self.tr("Address:"))
+        cmt_addr_label.setFont(fm.get_ui_font(9))
+        cmt_toolbar.addWidget(cmt_addr_label)
+        self._cmt_addr_input = QLineEdit()
+        self._cmt_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._cmt_addr_input.setValidator(hex_validator)
+        cmt_toolbar.addWidget(self._cmt_addr_input)
+        cmt_text_label = QLabel(self.tr("Text:"))
+        cmt_text_label.setFont(fm.get_ui_font(9))
+        cmt_toolbar.addWidget(cmt_text_label)
+        self._cmt_text_input = QLineEdit()
+        self._cmt_text_input.setMinimumWidth(150)
+        cmt_toolbar.addWidget(self._cmt_text_input)
+        self._set_cmt_btn = QPushButton(self.tr("Set Comment"))
+        self._set_cmt_btn.setObjectName("tool_button")
+        self._set_cmt_btn.clicked.connect(self._on_set_comment_btn)
+        cmt_toolbar.addWidget(self._set_cmt_btn)
+        cmt_toolbar.addStretch()
+        cmt_layout.addLayout(cmt_toolbar)
+        self._cmt_table = QTableWidget(0, len(_ANNOT_COLUMNS))
+        self._cmt_table.setHorizontalHeaderLabels(_ANNOT_COLUMNS)
+        self._cmt_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        cmt_h = self._cmt_table.horizontalHeader()
+        if cmt_h is not None:
+            cmt_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        cmt_layout.addWidget(self._cmt_table)
+        return cmt_widget
+
+    def _build_mmap_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
+        """Build the Memory Map tab widget.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
+
+        Returns:
+            QWidget: Memory Map tab container.
+        """
+        fm = FontManager.get_instance()
+        mmap_container = QWidget()
+        mmap_layout = QVBoxLayout(mmap_container)
+        mmap_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        mmap_layout.setSpacing(_PANEL_SPACING)
+        mmap_toolbar = QHBoxLayout()
+        self._mmap_refresh_btn = QPushButton(self.tr("Refresh"))
+        self._mmap_refresh_btn.setObjectName("tool_button")
+        self._mmap_refresh_btn.clicked.connect(self._on_refresh_memmap)
+        mmap_toolbar.addWidget(self._mmap_refresh_btn)
+        self._mmap_dump_btn = QPushButton(self.tr("Dump Selected"))
+        self._mmap_dump_btn.setObjectName("tool_button")
+        self._mmap_dump_btn.clicked.connect(self._on_dump_memmap_region)
+        mmap_toolbar.addWidget(self._mmap_dump_btn)
+        alloc_size_label = QLabel(self.tr("Alloc Size:"))
+        alloc_size_label.setFont(fm.get_ui_font(9))
+        mmap_toolbar.addWidget(alloc_size_label)
+        self._alloc_size_input = QLineEdit()
+        self._alloc_size_input.setMaximumWidth(_SIZE_INPUT_MAX_WIDTH)
+        self._alloc_size_input.setValidator(QIntValidator(1, 1048576, self))
+        self._alloc_size_input.setText("4096")
+        mmap_toolbar.addWidget(self._alloc_size_input)
+        alloc_prot_label = QLabel(self.tr("Prot:"))
+        alloc_prot_label.setFont(fm.get_ui_font(9))
+        mmap_toolbar.addWidget(alloc_prot_label)
+        self._alloc_prot_combo = QComboBox()
+        self._alloc_prot_combo.addItems(["rwx", "rw", "rx", "r"])
+        mmap_toolbar.addWidget(self._alloc_prot_combo)
+        self._alloc_btn = QPushButton(self.tr("Alloc"))
+        self._alloc_btn.setObjectName("tool_button")
+        self._alloc_btn.clicked.connect(self._on_alloc_memory)
+        mmap_toolbar.addWidget(self._alloc_btn)
+        free_addr_label = QLabel(self.tr("Free:"))
+        free_addr_label.setFont(fm.get_ui_font(9))
+        mmap_toolbar.addWidget(free_addr_label)
+        self._free_addr_input = QLineEdit()
+        self._free_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._free_addr_input.setValidator(hex_validator)
+        mmap_toolbar.addWidget(self._free_addr_input)
+        self._free_btn = QPushButton(self.tr("Free"))
+        self._free_btn.setObjectName("tool_button")
+        self._free_btn.clicked.connect(self._on_free_memory)
+        mmap_toolbar.addWidget(self._free_btn)
+        mmap_toolbar.addStretch()
+        mmap_layout.addLayout(mmap_toolbar)
+        self._mmap_table = QTableWidget(0, len(_MEMMAP_COLUMNS))
+        self._mmap_table.setHorizontalHeaderLabels(_MEMMAP_COLUMNS)
+        self._mmap_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        mmap_h = self._mmap_table.horizontalHeader()
+        if mmap_h is not None:
+            mmap_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        mmap_layout.addWidget(self._mmap_table)
+        return mmap_container
 
     def set_bridge(self, bridge: X64DbgBridge) -> None:
         """Set the X64DbgBridge instance for debugging.
@@ -773,9 +1295,14 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
+        bp_type_text = self._bp_type_combo.currentText()
+        bp_type = cast(
+            "BreakpointType",
+            bp_type_text if bp_type_text in {"software", "hardware", "memory"} else "software",
+        )
         self._add_bp_btn.setEnabled(False)
         self._run_async(
-            self._bridge.set_breakpoint(address),
+            self._bridge.set_breakpoint(address, bp_type=bp_type),
             on_success=lambda r: self._on_bp_added(address, r),
             on_error=self._on_bp_add_error,
         )
@@ -848,6 +1375,166 @@ class X64DbgPanel(AnalysisPanelBase):
         self._console_output.appendPlainText(f"[-] Failed to remove breakpoint: {exc}")
         _logger.warning("x64dbg_bp_remove_failed", error=str(exc))
         self._remove_bp_btn.setEnabled(True)
+
+    def _on_enable_breakpoint(self) -> None:
+        """Enable the selected breakpoint."""
+        row = self._bp_table.currentRow()
+        if row < 0 or self._bridge is None:
+            return
+
+        addr_item = self._bp_table.item(row, 0)
+        if addr_item is None:
+            return
+
+        try:
+            address = int(addr_item.text(), 16)
+        except ValueError:
+            return
+
+        self._enable_bp_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.enable_breakpoint(address),
+            on_success=lambda _: self._on_bp_toggle_done("enabled", address),
+            on_error=lambda e: self._on_bp_toggle_error("enable", e),
+        )
+
+    def _on_disable_breakpoint(self) -> None:
+        """Disable the selected breakpoint."""
+        row = self._bp_table.currentRow()
+        if row < 0 or self._bridge is None:
+            return
+
+        addr_item = self._bp_table.item(row, 0)
+        if addr_item is None:
+            return
+
+        try:
+            address = int(addr_item.text(), 16)
+        except ValueError:
+            return
+
+        self._disable_bp_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.disable_breakpoint(address),
+            on_success=lambda _: self._on_bp_toggle_done("disabled", address),
+            on_error=lambda e: self._on_bp_toggle_error("disable", e),
+        )
+
+    def _on_bp_toggle_done(self, action: str, address: int) -> None:
+        """Handle breakpoint enable/disable success.
+
+        Args:
+            action: Either "enabled" or "disabled".
+            address: The breakpoint address.
+        """
+        self._console_output.appendPlainText(f"[+] Breakpoint {action} at 0x{address:X}")
+        self._enable_bp_btn.setEnabled(True)
+        self._disable_bp_btn.setEnabled(True)
+        self._refresh_breakpoints()
+
+    def _on_bp_toggle_error(self, action: str, exc: object) -> None:
+        """Handle breakpoint enable/disable failure.
+
+        Args:
+            action: Either "enable" or "disable".
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Failed to {action} breakpoint: {exc}")
+        _logger.warning("x64dbg_bp_toggle_failed", action=action, error=str(exc))
+        self._enable_bp_btn.setEnabled(True)
+        self._disable_bp_btn.setEnabled(True)
+
+    def _on_show_module_sections(self) -> None:
+        """Show sections for the selected module."""
+        row = self._module_table.currentRow()
+        if row < 0 or self._bridge is None:
+            return
+
+        name_item = self._module_table.item(row, 0)
+        if name_item is None:
+            return
+
+        module_name = name_item.text()
+        if not module_name:
+            return
+
+        self._mod_detail_table.setHorizontalHeaderLabels(_SECTION_DETAIL_COLUMNS)
+        self._mod_sections_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.get_module_sections(module_name),
+            on_success=self._apply_module_sections,
+            on_error=lambda e: self._on_mod_detail_error("sections", e),
+        )
+
+    def _apply_module_sections(self, result: object) -> None:
+        """Populate the detail table with section data.
+
+        Args:
+            result: Section list from the bridge.
+        """
+        self._mod_sections_btn.setEnabled(True)
+        sections: list[dict[str, object]] = [
+            cast("dict[str, object]", s) for s in (result if isinstance(result, list) else []) if isinstance(s, dict)
+        ]
+        self._mod_detail_table.setRowCount(0)
+        for sec in sections:
+            row = self._mod_detail_table.rowCount()
+            self._mod_detail_table.insertRow(row)
+            self._mod_detail_table.setItem(row, 0, QTableWidgetItem(str(sec.get("name", ""))))
+            self._mod_detail_table.setItem(row, 1, QTableWidgetItem(str(sec.get("address", ""))))
+            self._mod_detail_table.setItem(row, 2, QTableWidgetItem(str(sec.get("size", ""))))
+            self._mod_detail_table.setItem(row, 3, QTableWidgetItem(str(sec.get("characteristics", ""))))
+
+    def _on_show_module_exports(self) -> None:
+        """Show exports for the selected module."""
+        row = self._module_table.currentRow()
+        if row < 0 or self._bridge is None:
+            return
+
+        name_item = self._module_table.item(row, 0)
+        if name_item is None:
+            return
+
+        module_name = name_item.text()
+        if not module_name:
+            return
+
+        self._mod_detail_table.setHorizontalHeaderLabels(_EXPORT_DETAIL_COLUMNS)
+        self._mod_exports_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.get_module_exports(module_name),
+            on_success=self._apply_module_exports,
+            on_error=lambda e: self._on_mod_detail_error("exports", e),
+        )
+
+    def _apply_module_exports(self, result: object) -> None:
+        """Populate the detail table with export data.
+
+        Args:
+            result: Export list from the bridge.
+        """
+        self._mod_exports_btn.setEnabled(True)
+        exports: list[dict[str, object]] = [
+            cast("dict[str, object]", e) for e in (result if isinstance(result, list) else []) if isinstance(e, dict)
+        ]
+        self._mod_detail_table.setRowCount(0)
+        for exp in exports:
+            row = self._mod_detail_table.rowCount()
+            self._mod_detail_table.insertRow(row)
+            self._mod_detail_table.setItem(row, 0, QTableWidgetItem(str(exp.get("name", ""))))
+            self._mod_detail_table.setItem(row, 1, QTableWidgetItem(str(exp.get("ordinal", ""))))
+            self._mod_detail_table.setItem(row, 2, QTableWidgetItem(str(exp.get("address", ""))))
+
+    def _on_mod_detail_error(self, detail_type: str, exc: object) -> None:
+        """Handle module detail retrieval failure.
+
+        Args:
+            detail_type: Either "sections" or "exports".
+            exc: The exception that occurred.
+        """
+        self._mod_sections_btn.setEnabled(True)
+        self._mod_exports_btn.setEnabled(True)
+        _logger.warning("x64dbg_module_detail_failed", detail_type=detail_type, error=str(exc))
 
     def _on_register_edited(self, row: int, column: int) -> None:
         """Handle register value edit in table.
@@ -999,6 +1686,8 @@ class X64DbgPanel(AnalysisPanelBase):
         self._refresh_stack()
         self._refresh_modules()
         self._refresh_threads()
+        self._refresh_watchpoints()
+        self._refresh_memmap()
 
     def _refresh_registers(self) -> None:
         """Refresh the register table from bridge."""
@@ -1196,6 +1885,691 @@ class X64DbgPanel(AnalysisPanelBase):
             self._thread_table.setItem(row, 0, QTableWidgetItem(str(getattr(thr, "tid", 0))))
             self._thread_table.setItem(row, 1, QTableWidgetItem(str(getattr(thr, "priority", 0))))
             self._thread_table.setItem(row, 2, QTableWidgetItem(getattr(thr, "state", "")))
+
+    def _on_generic_error(self, operation: str, exc: object, btn: QPushButton | None = None) -> None:
+        """Handle a generic operation failure.
+
+        Args:
+            operation: Name of the failed operation.
+            exc: The exception that occurred.
+            btn: Optional button to re-enable.
+        """
+        self._console_output.appendPlainText(f"[-] {operation} failed: {exc}")
+        _logger.warning("x64dbg_operation_failed", operation=operation, error=str(exc))
+        if btn is not None:
+            btn.setEnabled(True)
+
+    def _on_detach(self) -> None:
+        """Detach from the current process."""
+        if self._bridge is None:
+            return
+        self._detach_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.detach(),
+            on_success=lambda _: self._on_detach_success(),
+            on_error=lambda e: self._on_generic_error("Detach", e, self._detach_btn),
+        )
+
+    def _on_detach_success(self) -> None:
+        """Handle successful detach."""
+        self._set_status("Detached")
+        self._console_output.appendPlainText("[+] Detached from process")
+        self._detach_btn.setEnabled(True)
+
+    def _on_spawn(self) -> None:
+        """Spawn a new process for debugging."""
+        if self._bridge is None:
+            return
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Spawn Process",
+            "",
+            "Executables (*.exe *.dll);;All Files (*)",
+        )
+        if not file_path:
+            return
+        self._spawn_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.spawn(Path(file_path)),
+            on_success=lambda r: self._on_spawn_success(file_path, r),
+            on_error=lambda e: self._on_generic_error("Spawn", e, self._spawn_btn),
+        )
+
+    def _on_spawn_success(self, path: str, result: object) -> None:
+        """Handle successful spawn.
+
+        Args:
+            path: Spawned executable path.
+            result: PID result from bridge.
+        """
+        pid = result if isinstance(result, int) else 0
+        self._set_status(f"Spawned: PID {pid}")
+        self._console_output.appendPlainText(f"[+] Spawned {path} (PID {pid})")
+        self._spawn_btn.setEnabled(True)
+        self._refresh_state()
+
+    def _on_run_to(self) -> None:
+        """Run to a specific address."""
+        if self._bridge is None:
+            return
+        addr_text = self._run_to_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        self._run_async(
+            self._bridge.run_to(address),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Running to {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("Run To", e),
+        )
+
+    def _on_til_ret(self) -> None:
+        """Execute until the current function returns."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.execute_til_return(),
+            on_success=lambda _: self._console_output.appendPlainText("[+] Execute til return"),
+            on_error=lambda e: self._on_generic_error("Til Return", e),
+        )
+
+    def _on_skip(self) -> None:
+        """Skip the current instruction."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.skip_instruction(),
+            on_success=self._on_skip_success,
+            on_error=lambda e: self._on_generic_error("Skip", e),
+        )
+
+    def _on_skip_success(self, result: object) -> None:
+        """Handle successful instruction skip.
+
+        Args:
+            result: Skip result dict from bridge.
+        """
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            old_ip: object = r.get("old_ip", "?")
+            new_ip: object = r.get("new_ip", "?")
+            self._console_output.appendPlainText(f"[+] Skipped {old_ip} -> {new_ip}")
+        self._refresh_state()
+
+    def _on_set_ip(self) -> None:
+        """Set the instruction pointer to a specific address."""
+        if self._bridge is None:
+            return
+        addr_text = self._set_ip_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        self._run_async(
+            self._bridge.set_ip(address),
+            on_success=lambda _: self._on_set_ip_success(address),
+            on_error=lambda e: self._on_generic_error("Set IP", e),
+        )
+
+    def _on_set_ip_success(self, address: int) -> None:
+        """Handle successful IP set.
+
+        Args:
+            address: New instruction pointer value.
+        """
+        self._console_output.appendPlainText(f"[+] IP set to {hex(address)}")
+        self._refresh_state()
+
+    def _on_save_db(self) -> None:
+        """Save the x64dbg database."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.save_database(),
+            on_success=lambda _: self._console_output.appendPlainText("[+] Database saved"),
+            on_error=lambda e: self._on_generic_error("Save DB", e),
+        )
+
+    def _on_load_db(self) -> None:
+        """Load the x64dbg database."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.load_database(),
+            on_success=lambda _: self._console_output.appendPlainText("[+] Database loaded"),
+            on_error=lambda e: self._on_generic_error("Load DB", e),
+        )
+
+    def _on_add_watchpoint(self) -> None:
+        """Add a watchpoint at the specified address."""
+        if self._bridge is None:
+            return
+        addr_text = self._wp_addr_input.text().strip()
+        size_text = self._wp_size_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        size = int(size_text) if size_text else 4
+        wp_type_text = self._wp_type_combo.currentText()
+        wp_type = cast(
+            "MemoryProtection",
+            wp_type_text if wp_type_text in {"read", "write", "execute"} else "write",
+        )
+        self._add_wp_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.set_watchpoint(address, size, wp_type),
+            on_success=lambda r: self._on_wp_added(address, r),
+            on_error=lambda e: self._on_generic_error("Add WP", e, self._add_wp_btn),
+        )
+
+    def _on_wp_added(self, address: int, result: object) -> None:
+        """Handle successful watchpoint addition.
+
+        Args:
+            address: Watchpoint address.
+            result: Watchpoint ID from bridge.
+        """
+        self._console_output.appendPlainText(f"[+] Watchpoint #{result} set at 0x{address:X}")
+        self._add_wp_btn.setEnabled(True)
+        self._refresh_watchpoints()
+
+    def _on_remove_watchpoint(self) -> None:
+        """Remove the selected watchpoint."""
+        row = self._wp_table.currentRow()
+        if row < 0 or self._bridge is None:
+            return
+        addr_item = self._wp_table.item(row, 0)
+        if addr_item is None:
+            return
+        self._remove_wp_btn.setEnabled(False)
+        try:
+            wp_id = int(addr_item.data(Qt.ItemDataRole.UserRole) or 0)
+        except (TypeError, ValueError):
+            self._remove_wp_btn.setEnabled(True)
+            return
+        self._run_async(
+            self._bridge.remove_watchpoint(wp_id),
+            on_success=lambda _: self._on_wp_removed(),
+            on_error=lambda e: self._on_generic_error("Remove WP", e, self._remove_wp_btn),
+        )
+
+    def _on_wp_removed(self) -> None:
+        """Handle successful watchpoint removal."""
+        self._console_output.appendPlainText("[+] Watchpoint removed")
+        self._remove_wp_btn.setEnabled(True)
+        self._refresh_watchpoints()
+
+    def _on_search(self) -> None:
+        """Search memory for a pattern."""
+        if self._bridge is None:
+            return
+        pattern = self._search_pattern_input.text().strip()
+        if not pattern:
+            return
+        mode = self._search_mode_combo.currentText()
+        self._search_btn.setEnabled(False)
+        if mode == "YARA":
+            self._run_async(
+                self._bridge.yara_scan(rule_text=pattern),
+                on_success=self._on_search_complete,
+                on_error=lambda e: self._on_generic_error("Search", e, self._search_btn),
+            )
+        else:
+            self._run_async(
+                self._bridge.find_pattern(pattern),
+                on_success=self._on_search_complete,
+                on_error=lambda e: self._on_generic_error("Search", e, self._search_btn),
+            )
+
+    def _on_search_complete(self, result: object) -> None:
+        """Handle search completion.
+
+        Args:
+            result: Search results from bridge.
+        """
+        self._search_btn.setEnabled(True)
+        results: list[object] = [*result] if isinstance(result, list) else []
+        self._search_table.setRowCount(0)
+        for i, match in enumerate(results):
+            row = self._search_table.rowCount()
+            self._search_table.insertRow(row)
+            self._search_table.setItem(row, 0, QTableWidgetItem(str(i)))
+            if isinstance(match, dict):
+                md = cast("dict[str, object]", match)
+                self._search_table.setItem(row, 1, QTableWidgetItem(str(md.get("address", ""))))
+                self._search_table.setItem(row, 2, QTableWidgetItem(str(md.get("matched_bytes", ""))))
+                self._search_table.setItem(row, 3, QTableWidgetItem(str(md.get("context_before", ""))))
+        self._console_output.appendPlainText(f"[+] Search found {len(results)} matches")
+
+    def _on_trace_start(self) -> None:
+        """Start trace recording."""
+        if self._bridge is None:
+            return
+        condition = self._trace_cond_input.text().strip() or None
+        log_text = self._trace_log_input.text().strip() or None
+        self._run_async(
+            self._bridge.trace_start(condition=condition, log_text=log_text),
+            on_success=lambda _: self._trace_output.appendPlainText("[+] Trace started"),
+            on_error=lambda e: self._on_generic_error("Trace Start", e),
+        )
+
+    def _on_trace_stop(self) -> None:
+        """Stop trace recording."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.trace_stop(),
+            on_success=lambda _: self._trace_output.appendPlainText("[+] Trace stopped"),
+            on_error=lambda e: self._on_generic_error("Trace Stop", e),
+        )
+
+    def _on_trace_into(self) -> None:
+        """Start trace into."""
+        if self._bridge is None:
+            return
+        condition = self._trace_cond_input.text().strip() or None
+        self._run_async(
+            self._bridge.trace_into(condition=condition),
+            on_success=lambda _: self._trace_output.appendPlainText("[+] Trace into started"),
+            on_error=lambda e: self._on_generic_error("Trace Into", e),
+        )
+
+    def _on_trace_over(self) -> None:
+        """Start trace over."""
+        if self._bridge is None:
+            return
+        condition = self._trace_cond_input.text().strip() or None
+        self._run_async(
+            self._bridge.trace_over(condition=condition),
+            on_success=lambda _: self._trace_output.appendPlainText("[+] Trace over started"),
+            on_error=lambda e: self._on_generic_error("Trace Over", e),
+        )
+
+    def _on_set_label(self) -> None:
+        """Set a label at the specified address."""
+        if self._bridge is None:
+            return
+        addr_text = self._lbl_addr_input.text().strip()
+        label_text = self._lbl_text_input.text().strip()
+        if not addr_text or not label_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        self._run_async(
+            self._bridge.set_label(address, label_text),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Label set at {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("Set Label", e),
+        )
+
+    def _on_set_comment_btn(self) -> None:
+        """Set a comment at the specified address."""
+        if self._bridge is None:
+            return
+        addr_text = self._cmt_addr_input.text().strip()
+        comment_text = self._cmt_text_input.text().strip()
+        if not addr_text or not comment_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        self._run_async(
+            self._bridge.set_comment(address, comment_text),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Comment set at {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("Set Comment", e),
+        )
+
+    def _on_refresh_memmap(self) -> None:
+        """Refresh the memory map table."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.get_memory_regions(),
+            on_success=self._apply_memmap,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_memmap_failed"),
+        )
+
+    def _apply_memmap(self, result: object) -> None:
+        """Apply memory map data to the table.
+
+        Args:
+            result: Memory regions list from bridge.
+        """
+        regions: list[object] = [*result] if isinstance(result, list) else []
+        self._mmap_table.setRowCount(0)
+        for region in regions:
+            row = self._mmap_table.rowCount()
+            self._mmap_table.insertRow(row)
+            self._mmap_table.setItem(row, 0, QTableWidgetItem(f"0x{getattr(region, 'base_address', 0):X}"))
+            self._mmap_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(region, 'size', 0):X}"))
+            self._mmap_table.setItem(row, 2, QTableWidgetItem(getattr(region, "protection", "")))
+            self._mmap_table.setItem(row, 3, QTableWidgetItem(getattr(region, "state", "")))
+            self._mmap_table.setItem(row, 4, QTableWidgetItem(getattr(region, "type", "")))
+            self._mmap_table.setItem(row, 5, QTableWidgetItem(getattr(region, "module_name", "") or ""))
+
+    def _on_dump_memmap_region(self) -> None:
+        """Dump the selected memory map region to a file."""
+        row = self._mmap_table.currentRow()
+        if row < 0 or self._bridge is None:
+            return
+        base_item = self._mmap_table.item(row, 0)
+        size_item = self._mmap_table.item(row, 1)
+        if base_item is None or size_item is None:
+            return
+        try:
+            base = int(base_item.text(), 16)
+            size = int(size_item.text(), 16)
+        except ValueError:
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Save Memory Dump", "", "Binary Files (*.bin);;All Files (*)")
+        if not path:
+            return
+        self._run_async(
+            self._bridge.dump_memory_to_file(base, size, path),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Dumped {size} bytes to {path}"),
+            on_error=lambda e: self._on_generic_error("Dump Region", e),
+        )
+
+    def _on_alloc_memory(self) -> None:
+        """Allocate memory in the target process."""
+        if self._bridge is None:
+            return
+        size_text = self._alloc_size_input.text().strip()
+        if not size_text:
+            return
+        try:
+            size = int(size_text)
+        except ValueError:
+            return
+        prot = self._alloc_prot_combo.currentText()
+        self._run_async(
+            self._bridge.allocate_memory(size, prot),
+            on_success=lambda r: self._console_output.appendPlainText(f"[+] Allocated at {hex(r) if isinstance(r, int) else r}"),
+            on_error=lambda e: self._on_generic_error("Alloc", e),
+        )
+
+    def _on_free_memory(self) -> None:
+        """Free memory in the target process."""
+        if self._bridge is None:
+            return
+        addr_text = self._free_addr_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        self._run_async(
+            self._bridge.free_memory(address),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Freed {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("Free", e),
+        )
+
+    def _on_refresh_procinfo(self) -> None:
+        """Refresh process information."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.get_process_info(),
+            on_success=self._apply_procinfo,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_procinfo_failed"),
+        )
+
+    def _apply_procinfo(self, result: object) -> None:
+        """Apply process info to the form labels.
+
+        Args:
+            result: ProcessInfo from bridge.
+        """
+        if result is None:
+            return
+        self._procinfo_pid.setText(str(getattr(result, "pid", "--")))
+        self._procinfo_name.setText(str(getattr(result, "name", "--")))
+        path = getattr(result, "path", None)
+        self._procinfo_path.setText(str(path) if path else "--")
+        self._procinfo_cmdline.setText(str(getattr(result, "command_line", None) or "--"))
+        self._procinfo_ppid.setText(str(getattr(result, "parent_pid", "--")))
+
+    def _on_set_api_bp(self) -> None:
+        """Set a breakpoint on an API function."""
+        if self._bridge is None:
+            return
+        module = self._bp_mod_input.text().strip()
+        function = self._bp_func_input.text().strip()
+        if not module or not function:
+            self._console_output.appendPlainText("[!] Enter module and function name")
+            return
+        self._run_async(
+            self._bridge.set_breakpoint_on_api(module, function),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] API BP set on {module}.{function}"),
+            on_error=lambda e: self._on_generic_error("API BP", e),
+        )
+
+    def _on_dump_memory(self) -> None:
+        """Dump the current memory view to a file."""
+        if self._bridge is None:
+            return
+        addr_text = self._mem_addr_input.text().strip()
+        size_text = self._mem_size_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+            size = int(size_text) if size_text else 256
+        except ValueError:
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Save Memory Dump", "", "Binary Files (*.bin);;All Files (*)")
+        if not path:
+            return
+        self._run_async(
+            self._bridge.dump_memory_to_file(address, size, path),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Dumped to {path}"),
+            on_error=lambda e: self._on_generic_error("Dump", e),
+        )
+
+    def _on_write_memory(self) -> None:
+        """Write hex data to the current memory address."""
+        if self._bridge is None:
+            return
+        addr_text = self._mem_addr_input.text().strip()
+        data_text = self._mem_write_data_input.text().strip()
+        if not addr_text or not data_text:
+            return
+        try:
+            address = int(addr_text, 0)
+            data = bytes.fromhex(data_text.replace(" ", ""))
+        except ValueError:
+            self._console_output.appendPlainText("[!] Invalid address or hex data")
+            return
+        self._run_async(
+            self._bridge.write_memory(address, data),
+            on_success=lambda r: self._console_output.appendPlainText(f"[+] Wrote {r} bytes at {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("Write", e),
+        )
+
+    def _on_assemble(self) -> None:
+        """Assemble an instruction at the current address."""
+        if self._bridge is None:
+            return
+        addr_text = self._mem_addr_input.text().strip()
+        instr = self._asm_instr_input.text().strip()
+        if not addr_text or not instr:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+        self._run_async(
+            self._bridge.patch_instruction(address, instr),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Assembled '{instr}' at {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("Assemble", e),
+        )
+
+    def _on_nop_range(self) -> None:
+        """NOP a range of bytes at the current address."""
+        if self._bridge is None:
+            return
+        addr_text = self._mem_addr_input.text().strip()
+        size_text = self._nop_size_input.text().strip()
+        if not addr_text:
+            return
+        try:
+            address = int(addr_text, 0)
+            size = int(size_text) if size_text else 1
+        except ValueError:
+            return
+        self._run_async(
+            self._bridge.nop_range(address, size),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] NOPed {size} bytes at {hex(address)}"),
+            on_error=lambda e: self._on_generic_error("NOP", e),
+        )
+
+    def _on_suspend_thread(self) -> None:
+        """Suspend the selected thread."""
+        if self._bridge is None:
+            return
+        row = self._thread_table.currentRow()
+        if row < 0:
+            return
+        tid_item = self._thread_table.item(row, 0)
+        if tid_item is None:
+            return
+        try:
+            tid = int(tid_item.text())
+        except ValueError:
+            return
+        self._run_async(
+            self._bridge.suspend_thread(tid),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Thread {tid} suspended"),
+            on_error=lambda e: self._on_generic_error("Suspend Thread", e),
+        )
+
+    def _on_resume_thread(self) -> None:
+        """Resume the selected thread."""
+        if self._bridge is None:
+            return
+        row = self._thread_table.currentRow()
+        if row < 0:
+            return
+        tid_item = self._thread_table.item(row, 0)
+        if tid_item is None:
+            return
+        try:
+            tid = int(tid_item.text())
+        except ValueError:
+            return
+        self._run_async(
+            self._bridge.resume_thread(tid),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Thread {tid} resumed"),
+            on_error=lambda e: self._on_generic_error("Resume Thread", e),
+        )
+
+    def _on_switch_thread(self) -> None:
+        """Switch to the selected thread."""
+        if self._bridge is None:
+            return
+        row = self._thread_table.currentRow()
+        if row < 0:
+            return
+        tid_item = self._thread_table.item(row, 0)
+        if tid_item is None:
+            return
+        try:
+            tid = int(tid_item.text())
+        except ValueError:
+            return
+        self._run_async(
+            self._bridge.switch_thread(tid),
+            on_success=lambda _: (self._console_output.appendPlainText(f"[+] Switched to thread {tid}"), self._refresh_state())[0],
+            on_error=lambda e: self._on_generic_error("Switch Thread", e),
+        )
+
+    def _on_eval_expression(self) -> None:
+        """Evaluate an expression."""
+        if self._bridge is None:
+            return
+        expr = self._eval_input.text().strip()
+        if not expr:
+            return
+        self._run_async(
+            self._bridge.evaluate_expression(expr),
+            on_success=lambda r: self._console_output.appendPlainText(f"[+] {expr} = {hex(r) if isinstance(r, int) else r}"),
+            on_error=lambda e: self._on_generic_error("Eval", e),
+        )
+
+    def _on_set_exception_config(self) -> None:
+        """Configure exception handling."""
+        if self._bridge is None:
+            return
+        code_text = self._exc_code_input.text().strip()
+        if not code_text:
+            return
+        try:
+            code = int(code_text, 0)
+        except ValueError:
+            self._console_output.appendPlainText(f"[!] Invalid exception code: {code_text}")
+            return
+        handling = self._exc_handling_combo.currentText()
+        self._run_async(
+            self._bridge.set_exception_config(code, handling),
+            on_success=lambda _: self._console_output.appendPlainText(f"[+] Exception {hex(code)} -> {handling}"),
+            on_error=lambda e: self._on_generic_error("Exception Config", e),
+        )
+
+    def _refresh_watchpoints(self) -> None:
+        """Refresh the watchpoints table from bridge."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.get_watchpoints(),
+            on_success=self._apply_watchpoints,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_watchpoints_failed"),
+        )
+
+    def _apply_watchpoints(self, result: object) -> None:
+        """Apply watchpoint data to the table.
+
+        Args:
+            result: Watchpoint list from bridge.
+        """
+        wps: list[object] = [*result] if isinstance(result, list) else []
+        self._wp_table.setRowCount(0)
+        for wp in wps:
+            row = self._wp_table.rowCount()
+            self._wp_table.insertRow(row)
+            addr_item = QTableWidgetItem(f"0x{getattr(wp, 'address', 0):X}")
+            addr_item.setData(Qt.ItemDataRole.UserRole, getattr(wp, "id", 0))
+            self._wp_table.setItem(row, 0, addr_item)
+            self._wp_table.setItem(row, 1, QTableWidgetItem(str(getattr(wp, "size", 0))))
+            self._wp_table.setItem(row, 2, QTableWidgetItem(getattr(wp, "watch_type", "")))
+            self._wp_table.setItem(row, 3, QTableWidgetItem("Yes" if getattr(wp, "enabled", False) else "No"))
+            self._wp_table.setItem(row, 4, QTableWidgetItem(str(getattr(wp, "hit_count", 0))))
+
+    def _refresh_memmap(self) -> None:
+        """Refresh the memory map table from bridge."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.get_memory_regions(),
+            on_success=self._apply_memmap,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_memmap_failed"),
+        )
 
     @staticmethod
     def _format_hex_dump(address: int, data: bytes) -> str:

@@ -1,1 +1,13 @@
-No findings.
+6 findings in D:\Intellicrack\src\intellicrack\bridges\x64dbg.py
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1172:133: COM812 Trailing comma missing
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1183:135: COM812 Trailing comma missing
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1278:133: COM812 Trailing comma missing
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1320:137: COM812 Trailing comma missing
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1421:132: COM812 Trailing comma missing
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:3129:9: PLR1730 Replace `if` statement with `alignment = max(alignment, 1)`

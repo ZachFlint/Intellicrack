@@ -1,1 +1,1 @@
--p vscode_pytest --collect-only tests --rootdir=d:\Intellicrack
+tests/test_scripts/test_commit_message.py -v --timeout=30 --no-header -p no:cacheprovider

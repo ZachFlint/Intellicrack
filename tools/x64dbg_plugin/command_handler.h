@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <functional>
 #include <cstdint>
+#include <set>
 
 namespace intellicrack {
 
@@ -71,6 +72,25 @@ private:
     PipeResponse cmd_goto(const PipeMessage& msg);
     PipeResponse cmd_status(const PipeMessage& msg);
     PipeResponse cmd_ping(const PipeMessage& msg);
+
+    PipeResponse cmd_lbl_list(const PipeMessage& msg);
+    PipeResponse cmd_cmt_list(const PipeMessage& msg);
+    PipeResponse cmd_stack_trace(const PipeMessage& msg);
+    PipeResponse cmd_eval(const PipeMessage& msg);
+    PipeResponse cmd_ref_search(const PipeMessage& msg);
+    PipeResponse cmd_cfg(const PipeMessage& msg);
+    PipeResponse cmd_patch_list(const PipeMessage& msg);
+    PipeResponse cmd_patch_restore(const PipeMessage& msg);
+    PipeResponse cmd_seh_chain(const PipeMessage& msg);
+    PipeResponse cmd_peb_read(const PipeMessage& msg);
+    PipeResponse cmd_teb_read(const PipeMessage& msg);
+    PipeResponse cmd_pe_directories(const PipeMessage& msg);
+    PipeResponse cmd_watch_add(const PipeMessage& msg);
+    PipeResponse cmd_watch_remove(const PipeMessage& msg);
+    PipeResponse cmd_watch_list(const PipeMessage& msg);
+    PipeResponse cmd_trace_record(const PipeMessage& msg);
+    PipeResponse cmd_plugin_list(const PipeMessage& msg);
+    PipeResponse cmd_thread_detail(const PipeMessage& msg);
 
     uint64_t parse_address(const std::string& addr_str);
     std::string format_address(uint64_t addr);

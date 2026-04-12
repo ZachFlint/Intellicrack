@@ -11,7 +11,7 @@
             {
               "id": "general",
               "shortDescription": {
-                "text": "BinaryBridge::_detect_architecture - cognitive complexity 18 (exceeds threshold)"
+                "text": "FridaBridge::call_system_function - cognitive complexity 16 (exceeds threshold)"
               }
             }
           ]
@@ -22,28 +22,196 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "BinaryBridge::_detect_architecture - cognitive complexity 18 (exceeds threshold)"
+            "text": "FridaBridge::call_system_function - cognitive complexity 16 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "BinaryBridge::_get_imports_internal - cognitive complexity 18 (exceeds threshold)"
+            "text": "FridaBridge::java_hook_method - cognitive complexity 16 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "FridaBridge::hook_function - cognitive complexity 29 (exceeds threshold)"
+            "text": "FridaBridge::allocate_memory - cognitive complexity 18 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "ToolInstaller::_download_file - cognitive complexity 16 (exceeds threshold)"
+            "text": "FridaBridge::call_function - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "FridaBridge::allocate_string - cognitive complexity 19 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "FridaBridge::stalker_follow - cognitive complexity 19 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "FridaBridge::hook_function - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "FridaBridge::replace_function - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "FridaBridge::shutdown - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "FridaBridge::objc_hook_method - cognitive complexity 29 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "GhidraBridge::search_bytes - cognitive complexity 27 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_apply_ups_patch - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_apply_ips_patches - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_match_die_pattern - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::apply_arithmetic_to_selection - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::calculate_hash_custom_crc - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::save_to_sandbox - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::scan_custom_signatures - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_scan_clamav_ndb - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_search_float_fallback - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_build_ups_patch - cognitive complexity 23 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::search_numeric - cognitive complexity 24 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::base_convert - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_build_bps_patch - cognitive complexity 26 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::copy_as - cognitive complexity 30 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_exec_bps_command - cognitive complexity 32 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorBridge::_extract_strings_fallback - cognitive complexity 48 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ToolInstaller::get_version - cognitive complexity 16 (exceeds threshold)"
           }
         },
         {
@@ -64,7 +232,28 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "ProcessBridge::_query_thread_state - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "ProcessBridge::list_processes - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessBridge::list_processes_detailed - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessBridge::read_peb - cognitive complexity 16 (exceeds threshold)"
           }
         },
         {
@@ -78,7 +267,42 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "ProcessBridge::get_memory_map - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessBridge::adjust_token_privilege - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessBridge::get_mitigation_policies - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "ProcessBridge::search_pattern - cognitive complexity 21 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessBridge::stack_walk - cognitive complexity 26 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessBridge::set_thread_context - cognitive complexity 40 (exceeds threshold)"
           }
         },
         {
@@ -92,13 +316,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "X64DbgBridge::get_stack_trace - cognitive complexity 16 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "X64DbgBridge::_get_threads - cognitive complexity 17 (exceeds threshold)"
           }
         },
@@ -106,21 +323,259 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "LicenseAnalyzer::_detect_crypto_apis - cognitive complexity 16 (exceeds threshold)"
+            "text": "X64DbgBridge::yara_scan - cognitive complexity 18 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "LicenseAnalyzer::_detect_key_format - cognitive complexity 21 (exceeds threshold)"
+            "text": "X64DbgBridge::get_stack_trace - cognitive complexity 19 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "LicenseAnalyzer::_detect_algorithms - cognitive complexity 29 (exceeds threshold)"
+            "text": "X64DbgBridge::get_comments - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "X64DbgBridge::get_labels - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "X64DbgBridge::get_watchpoints - cognitive complexity 27 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "X64DbgBridge::get_breakpoints - cognitive complexity 43 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexDisassembler::_resolve_arch_mode - cognitive complexity 28 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexDisassembler::auto_detect_arch - cognitive complexity 60 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_stmt - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_sizeof_type_node - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_binary - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_assign - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_read_primitive - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_expr - cognitive complexity 19 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_cast - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_for - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_stmt_collect - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_format_value - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_eval_array_type - cognitive complexity 23 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_apply_numeric_op - cognitive complexity 24 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatEvaluator::_build_builtins - cognitive complexity 62 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatLexer::_scan_number - cognitive complexity 46 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatLexer::_scan_operator - cognitive complexity 83 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatParser::_parse_statement - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatParser::_parse_prefix - cognitive complexity 22 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatParser::_parse_expression - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatternRegistry::match_file - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatPreprocessor::_process_source - cognitive complexity 22 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatPreprocessor::_process_conditionals - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "extract_pragmas_fast - cognitive complexity 28 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatPreprocessor::process - cognitive complexity 32 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatCodegen::_eval_const_expr - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatCodegen::generate - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatLexer::_skip_whitespace_and_comments - cognitive complexity 23 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatCodegen::_gen_regular_field - cognitive complexity 26 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexPatLexer::_read_multi_char_operator - cognitive complexity 26 (exceeds threshold)"
           }
         },
         {
@@ -134,7 +589,70 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Orchestrator::_run_agent_loop - cognitive complexity 16 (exceeds threshold)"
+            "text": "Orchestrator::_run_agent_loop - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "_extract_imports - cognitive complexity 19 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessManager::_sync_cleanup - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ToolRegistry::execute_tool_call - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "RustTransformNode::process - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "_eval_ast_node - cognitive complexity 45 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "CredentialStore::validate - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "CredentialStore::migrate_from_env - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "AnthropicProvider::chat_stream - cognitive complexity 28 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "LLMProviderBase::_convert_messages_to_openai_format - cognitive complexity 23 (exceeds threshold)"
           }
         },
         {
@@ -162,13 +680,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "GoogleProvider::chat_stream - cognitive complexity 17 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "GoogleProvider::_parse_response - cognitive complexity 18 (exceeds threshold)"
           }
         },
@@ -176,35 +687,28 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "GrokProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
+            "text": "GoogleProvider::_convert_messages_to_provider_format - cognitive complexity 21 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "GrokProvider::chat_stream - cognitive complexity 20 (exceeds threshold)"
+            "text": "GoogleProvider::chat_stream - cognitive complexity 39 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "HuggingFaceProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
+            "text": "GrokProvider::chat_stream - cognitive complexity 36 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "HuggingFaceProvider::list_models - cognitive complexity 17 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "HuggingFaceProvider::chat_stream - cognitive complexity 38 (exceeds threshold)"
+            "text": "HuggingFaceProvider::chat_stream - cognitive complexity 60 (exceeds threshold)"
           }
         },
         {
@@ -212,6 +716,13 @@
           "level": "warning",
           "message": {
             "text": "LocalTransformersProvider::_stream_generate - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "LocalTransformersProvider::chat_stream - cognitive complexity 21 (exceeds threshold)"
           }
         },
         {
@@ -232,13 +743,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "OllamaProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "OllamaProvider::pull_model - cognitive complexity 18 (exceeds threshold)"
           }
         },
@@ -246,35 +750,28 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "OllamaProvider::chat_stream - cognitive complexity 24 (exceeds threshold)"
+            "text": "OllamaProvider::chat_stream - cognitive complexity 34 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "OpenAIProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
+            "text": "OpenAIProvider::chat_stream - cognitive complexity 36 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "OpenAIProvider::chat_stream - cognitive complexity 20 (exceeds threshold)"
+            "text": "OpenRouterProvider::list_models - cognitive complexity 18 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "OpenRouterProvider::_convert_messages_to_provider_format - cognitive complexity 17 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "OpenRouterProvider::chat_stream - cognitive complexity 38 (exceeds threshold)"
+            "text": "OpenRouterProvider::chat_stream - cognitive complexity 60 (exceeds threshold)"
           }
         },
         {
@@ -295,14 +792,21 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "SandboxManager::create - cognitive complexity 16 (exceeds threshold)"
+            "text": "_detect_beaconing - cognitive complexity 16 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "QEMUSandbox::_build_qemu_command - cognitive complexity 16 (exceeds threshold)"
+            "text": "extract_iocs - cognitive complexity 43 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SandboxManager::create - cognitive complexity 21 (exceeds threshold)"
           }
         },
         {
@@ -316,7 +820,49 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "QEMUSandbox::_build_qemu_command - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "QEMUSandbox::apply_anti_evasion - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "GuestAgentClient::send_command - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "QEMUSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "QEMUSandbox::extract_dropped_files - cognitive complexity 26 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "WindowsSandbox::extract_dropped_files - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "WindowsSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)"
           }
         },
         {
@@ -330,35 +876,350 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "BinaryPanel::_extract_strings - cognitive complexity 16 (exceeds threshold)"
+            "text": "GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "BinaryPanel::_parse_sections - cognitive complexity 24 (exceeds threshold)"
+            "text": "GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "CredentialSourceDetector::_load_env_file_vars - cognitive complexity 30 (exceeds threshold)"
+            "text": "CFGGraphScene::_compute_layers - cognitive complexity 19 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "SandboxTestWorker::run - cognitive complexity 20 (exceeds threshold)"
+            "text": "CalculatorMixin::_on_convert - cognitive complexity 19 (exceeds threshold)"
           }
         },
         {
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "SessionManagerDialog::_load_sessions_from_disk - cognitive complexity 19 (exceeds threshold)"
+            "text": "DataInspectorMixin::_on_bit_toggled - cognitive complexity 19 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "DisassemblyMixin::_on_disassemble - cognitive complexity 27 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HashingMixin::_on_verify_pe_checksum - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HighlightingMixin::_on_add_highlight_rule - cognitive complexity 23 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatchesMixin::_on_export_patches - cognitive complexity 22 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatchesMixin::_update_patches - cognitive complexity 30 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatchesMixin::_on_import_patches - cognitive complexity 32 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatternEditorMixin::_on_pattern_save - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatternEditorMixin::_apply_via_interpreter - cognitive complexity 19 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatternEditorMixin::_on_pattern_apply - cognitive complexity 21 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatternEditorMixin::_on_pattern_open - cognitive complexity 21 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "PatternEditorMixin::_on_pattern_compile - cognitive complexity 23 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProcessMemoryDialog::_list_regions_procfs - cognitive complexity 22 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "NumericSearchWorker::_search_fallback - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SearchMixin::_on_numeric_search - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SectionsMixin::_auto_detect_file_type - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SectionsMixin::_populate_strings - cognitive complexity 27 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SectionsMixin::_populate_imports - cognitive complexity 29 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SectionsMixin::_populate_exports - cognitive complexity 30 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SignatureScanWorker::_scan_custom - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SignatureScanWorker::_scan_clamav_ndb - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SignatureScanWorker::_scan_die - cognitive complexity 32 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "TransformsMixin::_on_apply_arithmetic - cognitive complexity 21 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "TransformsMixin::_apply_arithmetic_op - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "TransformsMixin::_on_transform_apply - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "TransformsMixin::_on_pipeline_execute - cognitive complexity 32 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "YaraMixin::_on_yara_scan - cognitive complexity 30 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorPanel::load_file - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorPanel::set_state_holder - cognitive complexity 38 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorWidget::contextMenuEvent - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorWidget::_paint_ascii_byte - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorWidget::_do_paste - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorWidget::copy_as_format - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorWidget::keyPressEvent - cognitive complexity 42 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "HexEditorWidget::_format_group - cognitive complexity 48 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "_find_hxd_executable - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ModulesTab::_refresh_handles - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ThreadsTab::_on_seh_enumerate - cognitive complexity 18 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProviderSettingsWidget::_load_xpu_settings - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ProviderSettingsWidget::get_provider_device_info - cognitive complexity 16 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "CredentialSourceDetector::_load_env_file_vars - cognitive complexity 24 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ModelRefreshWorker::_fetch_anthropic_models - cognitive complexity 28 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SandboxTestWorker::run - cognitive complexity 21 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "SessionManagerDialog::_load_sessions_from_disk - cognitive complexity 21 (exceeds threshold)"
           }
         },
         {
@@ -372,6 +1233,20 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "SessionManagerDialog::_update_details - cognitive complexity 25 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ToolStatusCheckWorker::_check_ghidra - cognitive complexity 20 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "ToolInstallWorker::_install_tool - cognitive complexity 22 (exceeds threshold)"
           }
         },
@@ -379,7 +1254,14 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "ToolOutputPanel::_on_tab_close_requested - cognitive complexity 39 (exceeds threshold)"
+            "text": "ToolOutputPanel::_wire_hex_editor_state - cognitive complexity 17 (exceeds threshold)"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "ToolOutputPanel::_on_tab_close_requested - cognitive complexity 27 (exceeds threshold)"
           }
         }
       ],
@@ -387,7 +1269,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-02-24T19:38:32.242905"
+          "endTimeUtc": "2026-04-11T07:07:43.663743+00:00"
         }
       ]
     }

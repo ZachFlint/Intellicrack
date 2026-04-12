@@ -10,7 +10,7 @@ This module defines the base class for sandbox implementations that provide isol
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import SandboxError, SandboxTimeoutError
@@ -32,6 +32,12 @@ _ERR_EXEC_NOT_IMPL = "Sandbox execution not implemented"
 _ERR_BINARY_EXEC_NOT_IMPL = "Binary execution not implemented"
 _ERR_FILE_COPY_NOT_IMPL = "File copy not implemented"
 _ERR_SNAPSHOTS_NOT_SUPPORTED = "Snapshots not supported by this sandbox type"
+_ERR_PCAP_NOT_IMPL = "Packet capture not implemented"
+_ERR_SCREENSHOT_NOT_IMPL = "Screenshot capture not implemented"
+_ERR_ANTI_EVASION_NOT_IMPL = "Anti-evasion not implemented"
+_ERR_MEMORY_DUMP_NOT_IMPL = "Memory dump not implemented"
+_ERR_EXTRACT_FILES_NOT_IMPL = "Dropped file extraction not implemented"
+_ERR_YARA_SCAN_NOT_IMPL = "YARA scan not implemented"
 
 SandboxStatus = Literal["stopped", "starting", "running", "stopping", "error"]
 ExecutionResult = Literal["success", "timeout", "error", "crashed"]
@@ -151,6 +157,117 @@ class ProcessActivity(TypedDict):
     timestamp: str
 
 
+class ApiCall(TypedDict):
+    """Represents a captured API call in the sandbox."""
+
+    timestamp: str
+    process_name: str
+    pid: int
+    api_name: str
+    module: str
+    arguments: list[str]
+    return_value: str
+
+
+class ServiceChange(TypedDict):
+    """Represents a Windows service change in the sandbox."""
+
+    service_name: str
+    display_name: str
+    binary_path: str
+    start_type: str
+    operation: str
+    timestamp: str
+
+
+class KernelObjectActivity(TypedDict):
+    """Represents kernel object activity in the sandbox."""
+
+    object_type: str
+    name: str
+    pid: int
+    process_name: str
+    operation: str
+    timestamp: str
+
+
+class DllLoadEvent(TypedDict):
+    """Represents a DLL load event in the sandbox."""
+
+    timestamp: str
+    pid: int
+    process_name: str
+    dll_path: str
+    base_address: str
+    size: int
+
+
+class InjectionEvent(TypedDict):
+    """Represents a process injection event detected in the sandbox."""
+
+    timestamp: str
+    source_pid: int
+    source_name: str
+    target_pid: int
+    target_name: str
+    injection_type: str
+    api_calls: list[str]
+
+
+class ResourceSample(TypedDict):
+    """Represents a resource usage sample from the sandbox."""
+
+    timestamp: str
+    cpu_percent: float
+    memory_mb: float
+    disk_read_bytes: int
+    disk_write_bytes: int
+    net_sent_bytes: int
+    net_recv_bytes: int
+
+
+class ClipboardEvent(TypedDict):
+    """Represents clipboard activity in the sandbox."""
+
+    timestamp: str
+    operation: str
+    format: str
+    content_preview: str
+    size_bytes: int
+    pid: int
+    process_name: str
+
+
+class IOCEntry(TypedDict):
+    """Represents an Indicator of Compromise extracted from sandbox analysis."""
+
+    ioc_type: str
+    value: str
+    source: str
+    context: str
+    timestamp: str
+
+
+class TimelineEvent(TypedDict):
+    """Represents a unified timeline event from sandbox execution."""
+
+    timestamp: str
+    category: str
+    summary: str
+    details: dict[str, str]
+
+
+class BehaviorMatch(TypedDict):
+    """Represents a behavioral signature match from sandbox analysis."""
+
+    signature_name: str
+    category: str
+    severity: str
+    description: str
+    evidence: list[str]
+    mitre_attack_id: str
+
+
 @dataclass
 class SandboxConfig:
     """Configuration for sandbox execution.
@@ -211,6 +328,13 @@ class ExecutionReport:
         registry_changes: Registry changes detected.
         network_activity: Network activity detected.
         process_activity: Process activity detected.
+        api_calls: API calls captured during execution.
+        service_changes: Windows service changes detected.
+        kernel_objects: Kernel object activity detected.
+        dll_loads: DLL load events detected.
+        injection_events: Process injection events detected.
+        resource_samples: Resource usage samples collected.
+        clipboard_events: Clipboard activity detected.
     """
 
     result: ExecutionResult
@@ -222,6 +346,13 @@ class ExecutionReport:
     registry_changes: list[RegistryChange] = field(default_factory=list)
     network_activity: list[NetworkActivity] = field(default_factory=list)
     process_activity: list[ProcessActivity] = field(default_factory=list)
+    api_calls: list[ApiCall] = field(default_factory=list)
+    service_changes: list[ServiceChange] = field(default_factory=list)
+    kernel_objects: list[KernelObjectActivity] = field(default_factory=list)
+    dll_loads: list[DllLoadEvent] = field(default_factory=list)
+    injection_events: list[InjectionEvent] = field(default_factory=list)
+    resource_samples: list[ResourceSample] = field(default_factory=list)
+    clipboard_events: list[ClipboardEvent] = field(default_factory=list)
 
 
 class SandboxBase:
@@ -464,3 +595,112 @@ class SandboxBase:
             snapshot_name=name,
         )
         raise SandboxError(_ERR_SNAPSHOTS_NOT_SUPPORTED)
+
+    async def start_pcap_capture(self) -> str:
+        """Start packet capture on the sandbox network.
+
+        Raises:
+            SandboxError: If capture cannot be started.
+        """
+        _logger.debug("base_sandbox_start_pcap_called", class_name=type(self).__name__)
+        raise SandboxError(_ERR_PCAP_NOT_IMPL)
+
+    async def stop_pcap_capture(
+        self,
+        capture_id: str,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Stop packet capture and retrieve the PCAP file.
+
+        Args:
+            capture_id: Capture identifier from start_pcap_capture.
+            output_path: Optional path to save the PCAP file.
+
+        Raises:
+            SandboxError: If capture cannot be stopped.
+        """
+        _logger.debug("base_sandbox_stop_pcap_called", class_name=type(self).__name__)
+        del capture_id, output_path
+        raise SandboxError(_ERR_PCAP_NOT_IMPL)
+
+    async def capture_screenshot(
+        self,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Capture a screenshot of the sandbox display.
+
+        Args:
+            output_path: Optional path to save the screenshot.
+
+        Raises:
+            SandboxError: If screenshot cannot be captured.
+        """
+        _logger.debug("base_sandbox_capture_screenshot_called", class_name=type(self).__name__)
+        del output_path
+        raise SandboxError(_ERR_SCREENSHOT_NOT_IMPL)
+
+    async def apply_anti_evasion(
+        self,
+        profile: str = "default",
+    ) -> dict[str, Any]:
+        """Apply anti-evasion techniques to make the sandbox less detectable.
+
+        Args:
+            profile: Anti-evasion profile name.
+
+        Raises:
+            SandboxError: If anti-evasion cannot be applied.
+        """
+        _logger.debug("base_sandbox_apply_anti_evasion_called", class_name=type(self).__name__)
+        del profile
+        raise SandboxError(_ERR_ANTI_EVASION_NOT_IMPL)
+
+    async def dump_memory(
+        self,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Dump guest memory to a file.
+
+        Args:
+            output_path: Optional path to save the memory dump.
+
+        Raises:
+            SandboxError: If memory dump fails.
+        """
+        _logger.debug("base_sandbox_dump_memory_called", class_name=type(self).__name__)
+        del output_path
+        raise SandboxError(_ERR_MEMORY_DUMP_NOT_IMPL)
+
+    async def extract_dropped_files(
+        self,
+        output_path: Path | None = None,
+    ) -> Path:
+        """Extract files created by the binary during execution.
+
+        Args:
+            output_path: Optional path to save the ZIP archive.
+
+        Raises:
+            SandboxError: If extraction fails.
+        """
+        _logger.debug("base_sandbox_extract_dropped_files_called", class_name=type(self).__name__)
+        del output_path
+        raise SandboxError(_ERR_EXTRACT_FILES_NOT_IMPL)
+
+    async def yara_scan(
+        self,
+        rules_path: str | None = None,
+        scan_target: str = "files",
+    ) -> list[dict[str, Any]]:
+        """Run YARA rules against sandbox artifacts.
+
+        Args:
+            rules_path: Path to YARA rules file. Uses built-in rules if None.
+            scan_target: What to scan - 'files' for dropped files, 'memory' for memory dump.
+
+        Raises:
+            SandboxError: If scan fails.
+        """
+        _logger.debug("base_sandbox_yara_scan_called", class_name=type(self).__name__)
+        del rules_path, scan_target
+        raise SandboxError(_ERR_YARA_SCAN_NOT_IMPL)

@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast, override
+import shutil
+from pathlib import Path
+from typing import Any, Literal, cast, override
 
 import r2pipe
 
@@ -27,24 +30,33 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import (
     BinaryInfo,
+    BlockInfo,
+    ClassInfo,
+    CommentInfo,
     CrossReference,
     ExportInfo,
+    FlagInfo,
     FunctionInfo,
+    GadgetInfo,
+    HeaderInfo,
     ImportInfo,
+    LibraryInfo,
     ParameterInfo,
+    RelocationInfo,
+    ResourceInfo,
     SectionInfo,
+    SegmentInfo,
     StringInfo,
+    SymbolInfo,
     ToolDefinition,
     ToolError,
     ToolFunction,
     ToolName,
     ToolParameter,
     VariableInfo,
+    VtableInfo,
 )
 
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 __all__ = ["CutterBridge"]
 
@@ -168,6 +180,544 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
     return cast("list[Any]", val) if isinstance(val, list) else []
 
 
+def _tf(
+    name: str,
+    description: str,
+    parameters: list[ToolParameter],
+    returns: str,
+) -> ToolFunction:
+    """Create a ToolFunction with the cutter prefix.
+
+    Args:
+        name: Method name (without 'cutter.' prefix).
+        description: Function description.
+        parameters: List of ToolParameter objects.
+        returns: Return value description.
+
+    Returns:
+        ToolFunction: Complete tool function definition.
+    """
+    return ToolFunction(
+        name=f"cutter.{name}",
+        description=description,
+        parameters=parameters,
+        returns=returns,
+    )
+
+
+def _tp(
+    name: str,
+    tp_type: str,
+    description: str,
+    *,
+    required: bool = True,
+    enum: list[str] | None = None,
+    default: str | float | bool | None = None,
+) -> ToolParameter:
+    """Create a ToolParameter with common defaults.
+
+    Args:
+        name: Parameter name.
+        tp_type: JSON Schema type.
+        description: Parameter description.
+        required: Whether the parameter is required.
+        enum: Allowed values list.
+        default: Default value.
+
+    Returns:
+        ToolParameter: Parameter definition.
+    """
+    return ToolParameter(
+        name=name,
+        type=tp_type,
+        description=description,
+        required=required,
+        enum=enum,
+        default=default,
+    )
+
+
+def _build_tool_functions() -> list[ToolFunction]:
+    """Build the complete list of tool functions for the CutterBridge.
+
+    Returns:
+        list[ToolFunction]: All tool function definitions.
+    """
+    return [
+        _tf(
+            "load_binary",
+            "Load a binary file into Cutter/Rizin",
+            [
+                _tp("path", "string", "Path to the binary file"),
+            ],
+            "BinaryInfo object with file details",
+        ),
+        _tf(
+            "analyze",
+            "Run full analysis on the loaded binary",
+            [
+                _tp(
+                    "level",
+                    "string",
+                    "Analysis level: quick, normal, deep",
+                    required=False,
+                    default="normal",
+                    enum=["quick", "normal", "deep"],
+                ),
+            ],
+            "Analysis completion status",
+        ),
+        _tf(
+            "get_functions",
+            "Get list of all functions",
+            [
+                _tp("filter_pattern", "string", "Optional regex to filter function names", required=False),
+            ],
+            "List of FunctionInfo objects",
+        ),
+        _tf(
+            "decompile",
+            "Decompile a function to pseudocode",
+            [
+                _tp("address", "integer", "Function address to decompile"),
+            ],
+            "Decompiled C-like pseudocode",
+        ),
+        _tf(
+            "disassemble",
+            "Disassemble instructions at an address",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("count", "integer", "Number of instructions", required=False, default=20),
+            ],
+            "Disassembly listing",
+        ),
+        _tf(
+            "get_xrefs_to",
+            "Get cross-references to an address",
+            [
+                _tp("address", "integer", "Target address"),
+            ],
+            "List of cross-references",
+        ),
+        _tf(
+            "get_xrefs_from",
+            "Get cross-references from an address",
+            [
+                _tp("address", "integer", "Source address"),
+            ],
+            "List of cross-references",
+        ),
+        _tf(
+            "search_strings",
+            "Search for strings in the binary",
+            [
+                _tp("pattern", "string", "String or regex pattern"),
+            ],
+            "List of matching strings",
+        ),
+        _tf(
+            "search_bytes",
+            "Search for byte pattern",
+            [
+                _tp("pattern", "string", "Hex pattern (e.g., '48 8B 05 00')"),
+            ],
+            "List of addresses",
+        ),
+        _tf("get_imports", "Get imported functions", [], "List of imports"),
+        _tf("get_exports", "Get exported functions", [], "List of exports"),
+        _tf("get_sections", "Get binary sections", [], "List of sections"),
+        _tf(
+            "rename_function",
+            "Rename a function",
+            [
+                _tp("address", "integer", "Function address"),
+                _tp("new_name", "string", "New function name"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "add_comment",
+            "Add a comment at an address",
+            [
+                _tp("address", "integer", "Address for comment"),
+                _tp("comment", "string", "Comment text"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_bytes",
+            "Write bytes at an address",
+            [
+                _tp("address", "integer", "Address to write at"),
+                _tp("hex_data", "string", "Hex bytes to write"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "execute_command",
+            "Execute raw Rizin command",
+            [
+                _tp("command", "string", "Rizin command to execute"),
+            ],
+            "Command output",
+        ),
+        _tf(
+            "get_function",
+            "Get function at a specific address",
+            [
+                _tp("address", "integer", "Function address"),
+            ],
+            "FunctionInfo or None if not found",
+        ),
+        _tf(
+            "search_bytes_wildcard",
+            "Search for byte pattern with wildcards",
+            [
+                _tp("hex_pattern", "string", "Hex pattern like '48 8B ?? ??'"),
+            ],
+            "List of addresses where pattern found",
+        ),
+        _tf(
+            "assemble_at",
+            "Assemble instruction at address",
+            [
+                _tp("address", "integer", "Target address"),
+                _tp("instruction", "string", "Assembly instruction to assemble"),
+            ],
+            "Assembled bytes",
+        ),
+        _tf(
+            "seek",
+            "Seek to a specific address in the binary",
+            [
+                _tp("address", "integer", "Target address"),
+            ],
+            "Output of seek command",
+        ),
+        _tf(
+            "get_function_address",
+            "Get address of a function by name",
+            [
+                _tp("name", "string", "Function name to look up"),
+            ],
+            "Address of function or None if not found",
+        ),
+        _tf(
+            "get_function_graph",
+            "Get function control flow graph data",
+            [
+                _tp("address", "integer", "Function address to graph"),
+            ],
+            "List of basic block dictionaries",
+        ),
+        _tf("get_all_strings", "Get all strings from the binary including non-data sections", [], "List of StringInfo objects"),
+        _tf("get_symbols", "Get all symbols from the binary", [], "List of SymbolInfo objects"),
+        _tf("get_libraries", "Get linked libraries from the binary", [], "List of LibraryInfo objects"),
+        _tf("get_headers", "Get binary header field information", [], "List of HeaderInfo objects"),
+        _tf("get_debug_info", "Get debug information from the binary", [], "Debug information dictionary"),
+        _tf("get_classes", "Get class information from the binary", [], "List of ClassInfo objects"),
+        _tf("get_relocations", "Get relocation table entries", [], "List of RelocationInfo objects"),
+        _tf("get_resources", "Get embedded resources from the binary", [], "List of ResourceInfo objects"),
+        _tf(
+            "search_rop_gadgets",
+            "Search for ROP gadgets in the binary",
+            [
+                _tp("pattern", "string", "Optional pattern to filter gadgets", required=False),
+            ],
+            "List of GadgetInfo objects",
+        ),
+        _tf("get_callgraph", "Get the function call graph", [], "List of callgraph edge dictionaries"),
+        _tf("get_vtables", "Get virtual function tables", [], "List of VtableInfo objects"),
+        _tf("get_syscalls", "Get syscall information", [], "List of syscall dictionaries"),
+        _tf(
+            "read_bytes",
+            "Read raw bytes from the binary",
+            [
+                _tp("address", "integer", "Address to read from"),
+                _tp("count", "integer", "Number of bytes to read"),
+            ],
+            "Raw bytes from the binary",
+        ),
+        _tf(
+            "save_binary",
+            "Save the binary with all cached patches applied",
+            [
+                _tp("path", "string", "Output file path (None for original)", required=False),
+            ],
+            "Success status",
+        ),
+        _tf("get_comments", "Get all comments/annotations", [], "List of CommentInfo objects"),
+        _tf("get_flags", "Get all flags/labels from the binary", [], "List of FlagInfo objects"),
+        _tf(
+            "add_flag",
+            "Add a named flag at an address",
+            [
+                _tp("name", "string", "Flag name"),
+                _tp("size", "integer", "Size covered by the flag"),
+                _tp("address", "integer", "Address for the flag"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "resolve_flag",
+            "Resolve a flag name from an address",
+            [
+                _tp("address", "integer", "Address to resolve"),
+            ],
+            "Flag name or None",
+        ),
+        _tf("get_types", "Get all defined types from analysis", [], "List of type definition dictionaries"),
+        _tf("get_structs", "Get all struct definitions", [], "List of struct dictionaries"),
+        _tf("get_unions", "Get all union definitions", [], "List of union dictionaries"),
+        _tf("get_enums", "Get all enum definitions", [], "List of enum dictionaries"),
+        _tf("get_typedefs", "Get all typedef definitions", [], "List of typedef dictionaries"),
+        _tf("get_function_types", "Get all function type signatures", [], "List of function type dictionaries"),
+        _tf(
+            "import_c_header",
+            "Import C header type definitions",
+            [
+                _tp("header_text", "string", "C header source text to parse"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "esil_eval",
+            "Evaluate an ESIL expression",
+            [
+                _tp("expression", "string", "ESIL expression to evaluate"),
+            ],
+            "Evaluation result",
+        ),
+        _tf(
+            "esil_step",
+            "Step the ESIL emulator forward",
+            [
+                _tp("count", "integer", "Number of steps to take", required=False, default=1),
+            ],
+            "Step output",
+        ),
+        _tf(
+            "esil_emulate_function",
+            "Emulate a function using ESIL",
+            [
+                _tp("address", "integer", "Function address to emulate"),
+            ],
+            "Emulation output",
+        ),
+        _tf("esil_init_memory", "Initialize ESIL emulation memory stack", [], "Success status"),
+        _tf(
+            "esil_set_pc",
+            "Set the ESIL program counter",
+            [
+                _tp("address", "integer", "Address to set the PC to"),
+            ],
+            "Success status",
+        ),
+        _tf("get_zignatures", "Get all zignatures (function signatures)", [], "List of zignature dictionaries"),
+        _tf(
+            "generate_zignatures",
+            "Generate zignatures from analyzed functions",
+            [
+                _tp("address", "integer", "Specific function address (optional)", required=False),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "add_zignature",
+            "Add a zignature definition",
+            [
+                _tp("name", "string", "Zignature name"),
+                _tp("zigdata", "string", "Zignature data string"),
+            ],
+            "Success status",
+        ),
+        _tf("search_zignatures", "Search for matching zignatures", [], "List of match dictionaries"),
+        _tf(
+            "save_project",
+            "Save the current analysis as a Rizin project",
+            [
+                _tp("name", "string", "Project name"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "open_project",
+            "Open an existing Rizin project",
+            [
+                _tp("name", "string", "Project name"),
+            ],
+            "Success status",
+        ),
+        _tf("list_projects", "List available Rizin projects", [], "List of project names"),
+        _tf(
+            "get_config",
+            "Get a Rizin configuration value",
+            [
+                _tp("key", "string", "Configuration key name"),
+            ],
+            "Configuration value",
+        ),
+        _tf(
+            "set_config",
+            "Set a Rizin configuration value",
+            [
+                _tp("key", "string", "Configuration key name"),
+                _tp("value", "string", "Value to set"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_xor",
+            "XOR bytes at an address with a key",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes to XOR"),
+                _tp("key", "integer", "XOR key value"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_add",
+            "Add a value to bytes at an address",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes"),
+                _tp("value", "integer", "Value to add"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_sub",
+            "Subtract a value from bytes at an address",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes"),
+                _tp("value", "integer", "Value to subtract"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_from_file",
+            "Write file contents to an address",
+            [
+                _tp("file_path", "string", "Path to file to read from"),
+                _tp("address", "integer", "Destination address"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_to_file",
+            "Write bytes from an address to a file",
+            [
+                _tp("file_path", "string", "Output file path"),
+                _tp("size", "integer", "Number of bytes to write"),
+                _tp("address", "integer", "Source address"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_value",
+            "Write a numeric value at an address",
+            [
+                _tp("address", "integer", "Destination address"),
+                _tp("value", "integer", "Value to write"),
+                _tp("size", "integer", "Value size in bytes (1, 2, 4, or 8)", required=False, default=4),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "write_string",
+            "Write a string at an address",
+            [
+                _tp("address", "integer", "Destination address"),
+                _tp("text", "string", "String text to write"),
+            ],
+            "Success status",
+        ),
+        _tf(
+            "search_string_live",
+            "Search for a string in binary content",
+            [
+                _tp("text", "string", "String text to search for"),
+            ],
+            "List of addresses",
+        ),
+        _tf(
+            "search_assembly_pattern",
+            "Search for an assembly instruction pattern",
+            [
+                _tp("pattern", "string", "Assembly pattern to search for"),
+            ],
+            "List of addresses",
+        ),
+        _tf("search_crypto_constants", "Search for known cryptographic constants", [], "List of crypto constant matches"),
+        _tf("search_magic", "Search for magic signatures in the binary", [], "List of magic matches"),
+        _tf(
+            "search_value",
+            "Search for a numeric value in the binary",
+            [
+                _tp("value", "integer", "Value to search for"),
+                _tp("size", "integer", "Value size in bytes (1, 2, 4, or 8)", required=False, default=4),
+            ],
+            "List of addresses",
+        ),
+        _tf(
+            "compare_bytes",
+            "Compare bytes at an address with given hex data",
+            [
+                _tp("hex_data", "string", "Hex string to compare against"),
+                _tp("address", "integer", "Address to compare at"),
+            ],
+            "Comparison output",
+        ),
+        _tf(
+            "compare_disassembly",
+            "Compare disassembly at an address with another file",
+            [
+                _tp("file_path", "string", "Path to file to compare against"),
+                _tp("address", "integer", "Address to compare at"),
+            ],
+            "Comparison output",
+        ),
+        _tf("get_segments", "Get binary segment information", [], "List of SegmentInfo objects"),
+        _tf(
+            "hexdump",
+            "Get hex dump of bytes at an address",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes to dump", required=False, default=256),
+            ],
+            "Formatted hex dump text",
+        ),
+        _tf(
+            "hexdump_words",
+            "Get word-sized hex dump at an address",
+            [
+                _tp("address", "integer", "Start address"),
+                _tp("length", "integer", "Number of bytes to dump", required=False, default=256),
+            ],
+            "Formatted word hex dump text",
+        ),
+        _tf(
+            "disassemble_function",
+            "Disassemble a complete function",
+            [
+                _tp("address", "integer", "Function address"),
+            ],
+            "Full function disassembly text",
+        ),
+        _tf(
+            "get_basic_blocks",
+            "Get basic blocks for a function",
+            [
+                _tp("address", "integer", "Function address"),
+            ],
+            "List of BlockInfo objects",
+        ),
+    ]
+
+
 class CutterBridge(StaticAnalysisBridge):
     """Bridge for Cutter/Rizin reverse engineering framework.
 
@@ -176,15 +726,16 @@ class CutterBridge(StaticAnalysisBridge):
 
     def __init__(self) -> None:
         super().__init__()
-        self._r2: r2pipe.open | None = None
+        self._r2: Any = None
+        self._tool_path: Path | None = None
         self._binary_path: Path | None = None
         self._analyzed: bool = False
         self._r2_pid: int | None = None
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
-            supports_dynamic_analysis=True,
+            supports_dynamic_analysis=False,
             supports_decompilation=True,
-            supports_debugging=True,
+            supports_debugging=False,
             supports_patching=True,
             supports_scripting=True,
             supported_architectures=["x86", "x86_64", "arm", "arm64", "mips", "ppc"],
@@ -275,312 +826,7 @@ class CutterBridge(StaticAnalysisBridge):
         return ToolDefinition(
             tool_name=ToolName.CUTTER,
             description="Cutter/Rizin reverse engineering - disassembly, analysis, patching",
-            functions=[
-                ToolFunction(
-                    name="cutter.load_binary",
-                    description="Load a binary file into Cutter/Rizin",
-                    parameters=[
-                        ToolParameter(
-                            name="path",
-                            type="string",
-                            description="Path to the binary file",
-                            required=True,
-                        ),
-                    ],
-                    returns="BinaryInfo object with file details",
-                ),
-                ToolFunction(
-                    name="cutter.analyze",
-                    description="Run full analysis on the loaded binary",
-                    parameters=[
-                        ToolParameter(
-                            name="level",
-                            type="string",
-                            description="Analysis level: quick, normal, deep",
-                            required=False,
-                            default="normal",
-                            enum=["quick", "normal", "deep"],
-                        ),
-                    ],
-                    returns="Analysis completion status",
-                ),
-                ToolFunction(
-                    name="cutter.get_functions",
-                    description="Get list of all functions",
-                    parameters=[
-                        ToolParameter(
-                            name="filter_pattern",
-                            type="string",
-                            description="Optional regex to filter function names",
-                            required=False,
-                        ),
-                    ],
-                    returns="List of FunctionInfo objects",
-                ),
-                ToolFunction(
-                    name="cutter.decompile",
-                    description="Decompile a function to pseudocode",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Function address to decompile",
-                            required=True,
-                        ),
-                    ],
-                    returns="Decompiled C-like pseudocode",
-                ),
-                ToolFunction(
-                    name="cutter.disassemble",
-                    description="Disassemble instructions at an address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Start address",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="count",
-                            type="integer",
-                            description="Number of instructions",
-                            required=False,
-                            default=20,
-                        ),
-                    ],
-                    returns="Disassembly listing",
-                ),
-                ToolFunction(
-                    name="cutter.get_xrefs_to",
-                    description="Get cross-references to an address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Target address",
-                            required=True,
-                        ),
-                    ],
-                    returns="List of cross-references",
-                ),
-                ToolFunction(
-                    name="cutter.get_xrefs_from",
-                    description="Get cross-references from an address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Source address",
-                            required=True,
-                        ),
-                    ],
-                    returns="List of cross-references",
-                ),
-                ToolFunction(
-                    name="cutter.search_strings",
-                    description="Search for strings in the binary",
-                    parameters=[
-                        ToolParameter(
-                            name="pattern",
-                            type="string",
-                            description="String or regex pattern",
-                            required=True,
-                        ),
-                    ],
-                    returns="List of matching strings",
-                ),
-                ToolFunction(
-                    name="cutter.search_bytes",
-                    description="Search for byte pattern",
-                    parameters=[
-                        ToolParameter(
-                            name="hex_pattern",
-                            type="string",
-                            description="Hex pattern (e.g., '48 8B ?? ??')",
-                            required=True,
-                        ),
-                    ],
-                    returns="List of addresses",
-                ),
-                ToolFunction(
-                    name="cutter.get_imports",
-                    description="Get imported functions",
-                    parameters=[],
-                    returns="List of imports",
-                ),
-                ToolFunction(
-                    name="cutter.get_exports",
-                    description="Get exported functions",
-                    parameters=[],
-                    returns="List of exports",
-                ),
-                ToolFunction(
-                    name="cutter.get_sections",
-                    description="Get binary sections",
-                    parameters=[],
-                    returns="List of sections",
-                ),
-                ToolFunction(
-                    name="cutter.rename_function",
-                    description="Rename a function",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Function address",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="new_name",
-                            type="string",
-                            description="New function name",
-                            required=True,
-                        ),
-                    ],
-                    returns="Success status",
-                ),
-                ToolFunction(
-                    name="cutter.add_comment",
-                    description="Add a comment at an address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Address for comment",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="comment",
-                            type="string",
-                            description="Comment text",
-                            required=True,
-                        ),
-                    ],
-                    returns="Success status",
-                ),
-                ToolFunction(
-                    name="cutter.write_bytes",
-                    description="Write bytes at an address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Address to write at",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="hex_data",
-                            type="string",
-                            description="Hex bytes to write",
-                            required=True,
-                        ),
-                    ],
-                    returns="Success status",
-                ),
-                ToolFunction(
-                    name="cutter.assemble",
-                    description="Assemble instruction at an address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Target address",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="instruction",
-                            type="string",
-                            description="Assembly instruction",
-                            required=True,
-                        ),
-                    ],
-                    returns="Assembled bytes",
-                ),
-                ToolFunction(
-                    name="cutter.execute",
-                    description="Execute raw Rizin command",
-                    parameters=[
-                        ToolParameter(
-                            name="command",
-                            type="string",
-                            description="Rizin command to execute",
-                            required=True,
-                        ),
-                    ],
-                    returns="Command output",
-                ),
-                ToolFunction(
-                    name="cutter.get_function",
-                    description="Get function at a specific address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Function address",
-                            required=True,
-                        ),
-                    ],
-                    returns="FunctionInfo or None if not found",
-                ),
-                ToolFunction(
-                    name="cutter.search_bytes_wildcard",
-                    description="Search for byte pattern with wildcards",
-                    parameters=[
-                        ToolParameter(
-                            name="hex_pattern",
-                            type="string",
-                            description="Hex pattern like '48 8B ?? ??'",
-                            required=True,
-                        ),
-                    ],
-                    returns="List of addresses where pattern found",
-                ),
-                ToolFunction(
-                    name="cutter.assemble_at",
-                    description="Assemble instruction at address",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Target address",
-                            required=True,
-                        ),
-                        ToolParameter(
-                            name="instruction",
-                            type="string",
-                            description="Assembly instruction to assemble",
-                            required=True,
-                        ),
-                    ],
-                    returns="Assembled bytes",
-                ),
-                ToolFunction(
-                    name="cutter.seek",
-                    description="Seek to a specific address in the binary",
-                    parameters=[
-                        ToolParameter(
-                            name="address",
-                            type="integer",
-                            description="Target address",
-                            required=True,
-                        ),
-                    ],
-                    returns="Output of seek command",
-                ),
-                ToolFunction(
-                    name="cutter.get_function_address",
-                    description="Get address of a function by name",
-                    parameters=[
-                        ToolParameter(
-                            name="name",
-                            type="string",
-                            description="Function name to look up",
-                            required=True,
-                        ),
-                    ],
-                    returns="Address of function or None if not found",
-                ),
-            ],
+            functions=_build_tool_functions(),
         )
 
     async def initialize(self, tool_path: Path | None = None) -> None:
@@ -588,8 +834,21 @@ class CutterBridge(StaticAnalysisBridge):
 
         Args:
             tool_path: Optional path to Cutter/Rizin installation.
+
+        Raises:
+            ToolError: If Rizin/radare2 is not available.
         """
-        del tool_path
+        if tool_path is not None:
+            self._tool_path = tool_path
+            is_file = await asyncio.to_thread(tool_path.is_file)
+            tool_dir = str(tool_path.parent) if is_file else str(tool_path)
+            current_path = os.environ.get("PATH", "")
+            if tool_dir not in current_path:
+                os.environ["PATH"] = tool_dir + os.pathsep + current_path
+
+        if not await self.is_available():
+            raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
+
         self.state = BridgeState(
             connected=True,
             tool_running=True,
@@ -627,7 +886,13 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             bool: True if Cutter/Rizin can be used.
         """
-        r2: r2pipe.open | None = None
+        has_in_path = shutil.which("rizin") is not None or shutil.which("radare2") is not None
+        has_stored = self._tool_path is not None and self._tool_path.exists()
+        if not (has_in_path or has_stored):
+            _logger.debug("cutter_not_in_path")
+            return False
+
+        r2: Any = None
         try:
             r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")
@@ -647,7 +912,12 @@ class CutterBridge(StaticAnalysisBridge):
         """Close existing Rizin session and unregister process."""
         if self._r2 is not None:
             _logger.debug("r2_session_closing")
-            await asyncio.to_thread(self._r2.quit)
+            try:
+                await asyncio.to_thread(self._r2.quit)
+            except (OSError, RuntimeError, ValueError) as e:
+                _logger.warning("r2_session_close_failed", error=str(e))
+            finally:
+                self._r2 = None
             if self._r2_pid is not None:
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._r2_pid)
@@ -711,14 +981,12 @@ class CutterBridge(StaticAnalysisBridge):
         file_type = _get_str(bin_info, "class", "unknown")
         arch = _get_str(bin_info, "arch", "unknown")
         bits = _get_int(bin_info, "bits", 32)
-        baddr = _get_int(bin_info, "baddr", 0)
-        entry_offset = _get_int(bin_info, "entry", 0)
-        entry = baddr + entry_offset
+        entry = _get_int(bin_info, "entry", 0)
 
         _logger.debug("binary_metadata_extracted", file_type=file_type, arch=arch)
         return file_type, arch, bits, entry
 
-    async def load_binary(self, path: Path) -> BinaryInfo:
+    async def load_binary(self, path: Path | str) -> BinaryInfo:
         """Load a binary file into Cutter/Rizin.
 
         Args:
@@ -730,6 +998,8 @@ class CutterBridge(StaticAnalysisBridge):
         Raises:
             ToolError: If load fails.
         """
+        if isinstance(path, str):
+            path = Path(path)
         if not await asyncio.to_thread(path.exists):
             raise ToolError(_ERR_FILE_NOT_FOUND)
 
@@ -1132,11 +1402,11 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("string_search_completed", pattern=pattern, result_count=len(result))
         return result
 
-    async def search_bytes(self, pattern: bytes) -> list[int]:
+    async def search_bytes(self, pattern: bytes | str) -> list[int]:
         """Search for byte pattern.
 
         Args:
-            pattern: Byte sequence to find.
+            pattern: Byte sequence or hex string (e.g. '48 8B 05').
 
         Returns:
             list[int]: List of addresses.
@@ -1149,11 +1419,11 @@ class CutterBridge(StaticAnalysisBridge):
         if not self._analyzed:
             raise ToolError(_ERR_NOT_ANALYZED)
 
-        hex_pattern = pattern.hex()
-        results = await self._cmd_json(f"/xj {hex_pattern}")
+        clean_hex = pattern.hex() if isinstance(pattern, bytes) else pattern.replace(" ", "")
+        results = await self._cmd_json(f"/xj {clean_hex}")
 
         addrs = [_get_int(r, "offset") for r in results]
-        _logger.debug("byte_search_completed", pattern_length=len(pattern), result_count=len(addrs))
+        _logger.debug("byte_search_completed", result_count=len(addrs))
         return addrs
 
     async def search_bytes_wildcard(self, hex_pattern: str) -> list[int]:
@@ -1241,7 +1511,7 @@ class CutterBridge(StaticAnalysisBridge):
         result: list[ExportInfo] = [
             ExportInfo(
                 name=_get_str(e, "name"),
-                ordinal=idx,
+                ordinal=_get_int(e, "ordinal", idx),
                 address=_get_int(e, "vaddr"),
             )
             for idx, e in enumerate(exports)
@@ -1311,7 +1581,7 @@ class CutterBridge(StaticAnalysisBridge):
         Args:
             address: Address for comment.
             comment: Comment text.
-            comment_type: Type of comment.
+            comment_type: Type of comment (EOL, function, unique).
 
         Returns:
             bool: True if comment was added.
@@ -1319,23 +1589,30 @@ class CutterBridge(StaticAnalysisBridge):
         Raises:
             ToolError: If operation fails.
         """
-        del comment_type
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
             raise ToolError(_ERR_NOT_ANALYZED)
 
+        r2_cmd_map: dict[str, str] = {
+            "function": "CCf",
+            "unique": "CCu",
+        }
+        cmd_prefix = r2_cmd_map.get(comment_type.lower(), "CC")
         escaped = comment.replace('"', '\\"')
-        await self._r2_cmd(f'CC "{escaped}" @ {address}')
-        _logger.info("comment_added", address=hex(address))
+        await self._r2_cmd(f'{cmd_prefix} "{escaped}" @ {address}')
+        _logger.info("comment_added", address=hex(address), comment_type=comment_type)
         return True
 
-    async def write_bytes(self, address: int, data: bytes) -> None:
+    async def write_bytes(self, address: int, hex_data: str) -> bool:
         """Write bytes at an address.
 
         Args:
             address: Address to write at.
-            data: Bytes to write.
+            hex_data: Hex string of bytes to write (e.g. '90909090').
+
+        Returns:
+            bool: True on success.
 
         Raises:
             ToolError: If write fails.
@@ -1343,9 +1620,10 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        hex_data = data.hex()
-        await self._r2_cmd(f"wx {hex_data} @ {address}")
-        _logger.debug("bytes_written", length=len(data), address=hex(address))
+        clean_hex = hex_data.replace(" ", "")
+        await self._r2_cmd(f"wx {clean_hex} @ {address}")
+        _logger.debug("bytes_written", length=len(clean_hex) // 2, address=hex(address))
+        return True
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
@@ -1360,20 +1638,19 @@ class CutterBridge(StaticAnalysisBridge):
         Raises:
             ToolError: If assembly fails.
         """
-        del address
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
             raise ToolError(_ERR_NOT_ANALYZED)
 
-        result = await self._r2_cmd(
-            f'rasm2 -a x86 -b 64 "{instruction}"',
-        )
+        await self._r2_cmd(f"wa {instruction} @ {address}")
 
-        if not result or "Cannot" in result:
+        result = await self._r2_cmd(f"pa {instruction} @ {address}")
+
+        if not result or not result.strip() or "Cannot" in result:
             raise ToolError(_ERR_ASSEMBLE_FAILED)
 
-        _logger.info("instruction_assembled", instruction=instruction)
+        _logger.info("instruction_assembled", instruction=instruction, address=hex(address))
         return bytes.fromhex(result.strip())
 
     async def execute_command(self, command: str) -> str:
@@ -1465,3 +1742,1204 @@ class CutterBridge(StaticAnalysisBridge):
         """
         funcs = await self.get_functions(filter_pattern=name)
         return next((f.address for f in funcs if f.name == name), None)
+
+    async def get_all_strings(self) -> list[StringInfo]:
+        """Get all strings from the binary including non-data sections.
+
+        Returns:
+            list[StringInfo]: List of all string information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        strings = await self._cmd_json("izzj")
+        result: list[StringInfo] = []
+        for s in strings:
+            raw_encoding = _get_str(s, "type", "ascii")
+            encoding: StringEncoding
+            if raw_encoding == "utf-16be":
+                encoding = "utf-16be"
+            elif raw_encoding == "utf-8":
+                encoding = "utf-8"
+            elif raw_encoding in {"wide", "utf-16le"}:
+                encoding = "utf-16le"
+            else:
+                encoding = "ascii"
+            result.append(
+                StringInfo(
+                    address=_get_int(s, "vaddr"),
+                    value=_get_str(s, "string"),
+                    encoding=encoding,
+                    section=_get_str(s, "section"),
+                ),
+            )
+        _logger.debug("all_strings_queried", result_count=len(result))
+        return result
+
+    async def get_symbols(self) -> list[SymbolInfo]:
+        """Get all symbols from the binary.
+
+        Returns:
+            list[SymbolInfo]: List of symbol information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        symbols = await self._cmd_json("isj")
+        result: list[SymbolInfo] = [
+            SymbolInfo(
+                name=_get_str(s, "name"),
+                address=_get_int(s, "vaddr"),
+                module_name=_get_optional_str(s, "libname") or "",
+                file_name=None,
+                line_number=None,
+            )
+            for s in symbols
+        ]
+        _logger.debug("symbols_queried", result_count=len(result))
+        return result
+
+    async def get_libraries(self) -> list[LibraryInfo]:
+        """Get linked libraries from the binary.
+
+        Returns:
+            list[LibraryInfo]: List of library information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        raw = await self._r2_cmd("ilj")
+        result: list[LibraryInfo] = []
+        if raw.strip():
+            try:
+                parsed_raw = json.loads(raw)
+            except json.JSONDecodeError:
+                return result
+            if isinstance(parsed_raw, list):
+                lib_list = cast("list[Any]", parsed_raw)
+                for lib_entry in lib_list:
+                    if isinstance(lib_entry, str):
+                        result.append(LibraryInfo(name=lib_entry))
+                    elif isinstance(lib_entry, dict):
+                        lib_dict = cast("dict[str, Any]", lib_entry)
+                        result.append(LibraryInfo(name=_get_str(lib_dict, "name")))
+        _logger.debug("libraries_queried", result_count=len(result))
+        return result
+
+    async def get_headers(self) -> list[HeaderInfo]:
+        """Get binary header field information.
+
+        Returns:
+            list[HeaderInfo]: List of header field information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        headers = await self._cmd_json("ihj")
+        result: list[HeaderInfo] = [
+            HeaderInfo(
+                name=_get_str(h, "name"),
+                value=str(h.get("value", "")),
+                address=_get_int(h, "paddr"),
+            )
+            for h in headers
+        ]
+        _logger.debug("headers_queried", result_count=len(result))
+        return result
+
+    async def get_debug_info(self) -> dict[str, Any]:
+        """Get debug information from the binary.
+
+        Returns:
+            dict[str, Any]: Debug information dictionary.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("iDj")
+        _logger.debug("debug_info_queried")
+        return result[0] if result else {}
+
+    async def get_classes(self) -> list[ClassInfo]:
+        """Get class information from the binary.
+
+        Returns:
+            list[ClassInfo]: List of class information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        classes = await self._cmd_json("icj")
+        result: list[ClassInfo] = [
+            ClassInfo(
+                name=_get_str(c, "classname", _get_str(c, "name")),
+                address=_get_int(c, "addr"),
+                methods=_get_list(c, "methods"),
+                fields=_get_list(c, "fields"),
+            )
+            for c in classes
+        ]
+        _logger.debug("classes_queried", result_count=len(result))
+        return result
+
+    async def get_relocations(self) -> list[RelocationInfo]:
+        """Get relocation table entries from the binary.
+
+        Returns:
+            list[RelocationInfo]: List of relocation information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        relocs = await self._cmd_json("iRj")
+        result: list[RelocationInfo] = [
+            RelocationInfo(
+                name=_get_str(r, "name"),
+                address=_get_int(r, "paddr"),
+                type=_get_str(r, "type"),
+                vaddr=_get_int(r, "vaddr"),
+            )
+            for r in relocs
+        ]
+        _logger.debug("relocations_queried", result_count=len(result))
+        return result
+
+    async def get_resources(self) -> list[ResourceInfo]:
+        """Get embedded resources from the binary.
+
+        Returns:
+            list[ResourceInfo]: List of resource information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        try:
+            resources = await self._cmd_json("irj")
+        except ToolError:
+            return []
+        result: list[ResourceInfo] = [
+            ResourceInfo(
+                name=_get_str(r, "name"),
+                address=_get_int(r, "paddr"),
+                size=_get_int(r, "size"),
+                type=_get_str(r, "type"),
+                language=_get_str(r, "language"),
+            )
+            for r in resources
+        ]
+        _logger.debug("resources_queried", result_count=len(result))
+        return result
+
+    async def search_rop_gadgets(self, pattern: str = "") -> list[GadgetInfo]:
+        """Search for ROP gadgets in the binary.
+
+        Args:
+            pattern: Optional pattern to filter gadgets.
+
+        Returns:
+            list[GadgetInfo]: List of ROP gadget information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        cmd = f"/Rj {pattern}" if pattern else "/Rj"
+        gadgets = await self._cmd_json(cmd)
+        result: list[GadgetInfo] = [
+            GadgetInfo(
+                address=_get_int(g, "addr", _get_int(g, "offset")),
+                instructions=_get_str(g, "opcodes", _get_str(g, "opcode")),
+                size=_get_int(g, "size"),
+            )
+            for g in gadgets
+        ]
+        _logger.debug("rop_gadgets_searched", pattern=pattern, result_count=len(result))
+        return result
+
+    async def get_callgraph(self) -> list[dict[str, Any]]:
+        """Get the function call graph.
+
+        Returns:
+            list[dict[str, Any]]: List of callgraph edge dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("agcj")
+        _logger.debug("callgraph_queried", edge_count=len(result))
+        return result
+
+    async def get_vtables(self) -> list[VtableInfo]:
+        """Get virtual function tables from the binary.
+
+        Returns:
+            list[VtableInfo]: List of vtable information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        vtables = await self._cmd_json("avj")
+        result: list[VtableInfo] = [
+            VtableInfo(
+                address=_get_int(v, "offset"),
+                methods=_get_list(v, "methods"),
+                name=_get_str(v, "classname", _get_str(v, "name")),
+            )
+            for v in vtables
+        ]
+        _logger.debug("vtables_queried", result_count=len(result))
+        return result
+
+    async def get_syscalls(self) -> list[dict[str, Any]]:
+        """Get syscall information from the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of syscall dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("asj")
+        _logger.debug("syscalls_queried", result_count=len(result))
+        return result
+
+    async def read_bytes(self, address: int, count: int) -> bytes:
+        """Read raw bytes from the binary at an address.
+
+        Args:
+            address: Address to read from.
+            count: Number of bytes to read.
+
+        Returns:
+            bytes: Raw bytes read from the binary.
+
+        Raises:
+            ToolError: If no binary is loaded or read fails.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"p8 {count} @ {address}")
+        hex_str = result.strip()
+        if not hex_str:
+            return b""
+        _logger.debug("bytes_read", address=hex(address), count=count)
+        return bytes.fromhex(hex_str)
+
+    async def save_binary(self, path: str | None = None) -> bool:
+        """Save the binary with all cached patches applied.
+
+        Args:
+            path: Output file path. If None, overwrites the original binary.
+
+        Returns:
+            bool: True if save succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded or save fails.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        target = path if path is not None else str(self._binary_path)
+        await self._r2_cmd(f"wtf {target}")
+        _logger.info("binary_saved", path=target)
+        return True
+
+    async def get_comments(self) -> list[CommentInfo]:
+        """Get all comments/annotations in the binary.
+
+        Returns:
+            list[CommentInfo]: List of comment information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        comments = await self._cmd_json("CCj")
+        result: list[CommentInfo] = [
+            CommentInfo(
+                address=_get_int(c, "offset"),
+                text=_get_str(c, "name", _get_str(c, "comment")),
+                comment_type=_get_str(c, "type", "inline"),
+            )
+            for c in comments
+        ]
+        _logger.debug("comments_queried", result_count=len(result))
+        return result
+
+    async def get_flags(self) -> list[FlagInfo]:
+        """Get all flags/labels from the binary.
+
+        Returns:
+            list[FlagInfo]: List of flag information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        flags = await self._cmd_json("fj")
+        result: list[FlagInfo] = [
+            FlagInfo(
+                name=_get_str(f, "name"),
+                address=_get_int(f, "offset"),
+                size=_get_int(f, "size"),
+            )
+            for f in flags
+        ]
+        _logger.debug("flags_queried", result_count=len(result))
+        return result
+
+    async def add_flag(self, name: str, size: int, address: int) -> bool:
+        """Add a named flag at an address.
+
+        Args:
+            name: Flag name.
+            size: Size covered by the flag.
+            address: Address for the flag.
+
+        Returns:
+            bool: True if flag was added.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"f {name} {size} @ {address}")
+        _logger.info("flag_added", flag_name=name, address=hex(address))
+        return True
+
+    async def resolve_flag(self, address: int) -> str | None:
+        """Resolve a flag name from an address.
+
+        Args:
+            address: Address to resolve.
+
+        Returns:
+            str | None: Flag name or None if no flag at address.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"fd {address}")
+        text = result.strip()
+        if not text or ("+" not in text and text.startswith("0x")):
+            return None
+        _logger.debug("flag_resolved", address=hex(address), flag=text)
+        return text
+
+    async def get_types(self) -> list[dict[str, Any]]:
+        """Get all defined types from the binary analysis.
+
+        Returns:
+            list[dict[str, Any]]: List of type definition dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("tj")
+        _logger.debug("types_queried", result_count=len(result))
+        return result
+
+    async def get_structs(self) -> list[dict[str, Any]]:
+        """Get all struct definitions from the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of struct definition dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("tsj")
+        _logger.debug("structs_queried", result_count=len(result))
+        return result
+
+    async def get_unions(self) -> list[dict[str, Any]]:
+        """Get all union definitions from the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of union definition dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("tuj")
+        _logger.debug("unions_queried", result_count=len(result))
+        return result
+
+    async def get_enums(self) -> list[dict[str, Any]]:
+        """Get all enum definitions from the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of enum definition dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("tej")
+        _logger.debug("enums_queried", result_count=len(result))
+        return result
+
+    async def get_typedefs(self) -> list[dict[str, Any]]:
+        """Get all typedef definitions from the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of typedef definition dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("ttj")
+        _logger.debug("typedefs_queried", result_count=len(result))
+        return result
+
+    async def get_function_types(self) -> list[dict[str, Any]]:
+        """Get all function type signatures from the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of function type dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("tfsj")
+        _logger.debug("function_types_queried", result_count=len(result))
+        return result
+
+    async def import_c_header(self, header_text: str) -> bool:
+        """Import C header type definitions into the analysis.
+
+        Args:
+            header_text: C header source text to parse.
+
+        Returns:
+            bool: True if import succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded or import fails.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        escaped = header_text.replace('"', '\\"')
+        await self._r2_cmd(f'"to -" <<< "{escaped}"')
+        _logger.info("c_header_imported", length=len(header_text))
+        return True
+
+    async def esil_eval(self, expression: str) -> str:
+        """Evaluate an ESIL expression.
+
+        Args:
+            expression: ESIL expression to evaluate.
+
+        Returns:
+            str: Evaluation result.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"ae {expression}")
+        _logger.debug("esil_eval_executed", expression=expression)
+        return result
+
+    async def esil_step(self, count: int = 1) -> str:
+        """Step the ESIL emulator forward.
+
+        Args:
+            count: Number of steps to take.
+
+        Returns:
+            str: Step output.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = ""
+        for _ in range(count):
+            result = await self._r2_cmd("aes")
+        _logger.debug("esil_stepped", count=count)
+        return result
+
+    async def esil_emulate_function(self, address: int) -> str:
+        """Emulate a function using ESIL.
+
+        Args:
+            address: Function address to emulate.
+
+        Returns:
+            str: Emulation output.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"aef @ {address}")
+        _logger.debug("esil_function_emulated", address=hex(address))
+        return result
+
+    async def esil_init_memory(self) -> bool:
+        """Initialize ESIL emulation memory stack.
+
+        Returns:
+            bool: True if initialization succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd("aeim")
+        _logger.debug("esil_memory_initialized")
+        return True
+
+    async def esil_set_pc(self, address: int) -> bool:
+        """Set the ESIL program counter.
+
+        Args:
+            address: Address to set the PC to.
+
+        Returns:
+            bool: True if PC was set.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"aepc {address}")
+        _logger.debug("esil_pc_set", address=hex(address))
+        return True
+
+    async def get_zignatures(self) -> list[dict[str, Any]]:
+        """Get all zignatures (function signatures).
+
+        Returns:
+            list[dict[str, Any]]: List of zignature dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("zj")
+        _logger.debug("zignatures_queried", result_count=len(result))
+        return result
+
+    async def generate_zignatures(self, address: int | None = None) -> bool:
+        """Generate zignatures from analyzed functions.
+
+        Args:
+            address: Optional specific function address. If None, generates for all.
+
+        Returns:
+            bool: True if generation succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        cmd = f"zg @ {address}" if address is not None else "zg"
+        await self._r2_cmd(cmd)
+        _logger.info("zignatures_generated", address=hex(address) if address else "all")
+        return True
+
+    async def add_zignature(self, name: str, zigdata: str) -> bool:
+        """Add a zignature definition.
+
+        Args:
+            name: Zignature name.
+            zigdata: Zignature data string.
+
+        Returns:
+            bool: True if zignature was added.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"za {name} {zigdata}")
+        _logger.info("zignature_added", zig_name=name)
+        return True
+
+    async def search_zignatures(self) -> list[dict[str, Any]]:
+        """Search for matching zignatures in the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of zignature match dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("z/j")
+        _logger.debug("zignatures_searched", result_count=len(result))
+        return result
+
+    async def save_project(self, name: str) -> bool:
+        """Save the current analysis as a Rizin project.
+
+        Args:
+            name: Project name.
+
+        Returns:
+            bool: True if project was saved.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"Ps {name}")
+        _logger.info("project_saved", project_name=name)
+        return True
+
+    async def open_project(self, name: str) -> bool:
+        """Open an existing Rizin project.
+
+        Args:
+            name: Project name.
+
+        Returns:
+            bool: True if project was opened.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"Po {name}")
+        _logger.info("project_opened", project_name=name)
+        return True
+
+    async def list_projects(self) -> list[str]:
+        """List available Rizin projects.
+
+        Returns:
+            list[str]: List of project names.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd("Pl")
+        projects = [line.strip() for line in result.splitlines() if line.strip()]
+        _logger.debug("projects_listed", count=len(projects))
+        return projects
+
+    async def get_config(self, key: str) -> str:
+        """Get a Rizin configuration value.
+
+        Args:
+            key: Configuration key name.
+
+        Returns:
+            str: Configuration value.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"e {key}")
+        _logger.debug("config_read", key=key)
+        return result.strip()
+
+    async def set_config(self, key: str, value: str) -> bool:
+        """Set a Rizin configuration value.
+
+        Args:
+            key: Configuration key name.
+            value: Value to set.
+
+        Returns:
+            bool: True if configuration was set.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"e {key}={value}")
+        _logger.debug("config_set", key=key, value=value)
+        return True
+
+    async def write_xor(self, address: int, length: int, key: int) -> bool:
+        """XOR bytes at an address with a key.
+
+        Args:
+            address: Start address.
+            length: Number of bytes to XOR.
+            key: XOR key value.
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"b {length} @ {address}")
+        await self._r2_cmd(f"wox {key} @ {address}")
+        _logger.debug("xor_written", address=hex(address), length=length, key=key)
+        return True
+
+    async def write_add(self, address: int, length: int, value: int) -> bool:
+        """Add a value to bytes at an address.
+
+        Args:
+            address: Start address.
+            length: Number of bytes.
+            value: Value to add.
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"b {length} @ {address}")
+        await self._r2_cmd(f"woa {value} @ {address}")
+        _logger.debug("add_written", address=hex(address), length=length)
+        return True
+
+    async def write_sub(self, address: int, length: int, value: int) -> bool:
+        """Subtract a value from bytes at an address.
+
+        Args:
+            address: Start address.
+            length: Number of bytes.
+            value: Value to subtract.
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"b {length} @ {address}")
+        await self._r2_cmd(f"wos {value} @ {address}")
+        _logger.debug("sub_written", address=hex(address), length=length)
+        return True
+
+    async def write_from_file(self, file_path: str, address: int) -> bool:
+        """Write file contents to an address.
+
+        Args:
+            file_path: Path to file to read from.
+            address: Destination address.
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"wf {file_path} @ {address}")
+        _logger.debug("file_written", file_path=file_path, address=hex(address))
+        return True
+
+    async def write_to_file(self, file_path: str, size: int, address: int) -> bool:
+        """Write bytes from an address to a file.
+
+        Args:
+            file_path: Output file path.
+            size: Number of bytes to write.
+            address: Source address.
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"wtf {file_path} {size} @ {address}")
+        _logger.debug("written_to_file", file_path=file_path, size=size, address=hex(address))
+        return True
+
+    async def write_value(self, address: int, value: int, size: int = 4) -> bool:
+        """Write a numeric value at an address.
+
+        Args:
+            address: Destination address.
+            value: Value to write.
+            size: Value size in bytes (1, 2, 4, or 8).
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        await self._r2_cmd(f"wv{size} {value} @ {address}")
+        _logger.debug("value_written", address=hex(address), value=value, size=size)
+        return True
+
+    async def write_string(self, address: int, text: str) -> bool:
+        """Write a string at an address.
+
+        Args:
+            address: Destination address.
+            text: String text to write.
+
+        Returns:
+            bool: True if write succeeded.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        escaped = text.replace('"', '\\"')
+        await self._r2_cmd(f'w "{escaped}" @ {address}')
+        _logger.debug("string_written", address=hex(address), length=len(text))
+        return True
+
+    async def search_string_live(self, text: str) -> list[int]:
+        """Search for a string in binary content.
+
+        Args:
+            text: String text to search for.
+
+        Returns:
+            list[int]: List of addresses where the string was found.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        results = await self._cmd_json(f"/j {text}")
+        addrs = [_get_int(r, "offset") for r in results]
+        _logger.debug("string_search_live", text=text, result_count=len(addrs))
+        return addrs
+
+    async def search_assembly_pattern(self, pattern: str) -> list[int]:
+        """Search for an assembly instruction pattern.
+
+        Args:
+            pattern: Assembly pattern to search for.
+
+        Returns:
+            list[int]: List of addresses matching the pattern.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        results = await self._cmd_json(f"/aj {pattern}")
+        addrs = [_get_int(r, "offset") for r in results]
+        _logger.debug("assembly_pattern_searched", pattern=pattern, result_count=len(addrs))
+        return addrs
+
+    async def search_crypto_constants(self) -> list[dict[str, Any]]:
+        """Search for known cryptographic constants in the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of crypto constant match dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("/cj")
+        _logger.debug("crypto_constants_searched", result_count=len(result))
+        return result
+
+    async def search_magic(self) -> list[dict[str, Any]]:
+        """Search for magic signatures in the binary.
+
+        Returns:
+            list[dict[str, Any]]: List of magic match dictionaries.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._cmd_json("/mj")
+        _logger.debug("magic_searched", result_count=len(result))
+        return result
+
+    async def search_value(self, value: int, size: int = 4) -> list[int]:
+        """Search for a numeric value in the binary.
+
+        Args:
+            value: Value to search for.
+            size: Value size in bytes (1, 2, 4, or 8).
+
+        Returns:
+            list[int]: List of addresses where the value was found.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        results = await self._cmd_json(f"/vj{size} {value}")
+        addrs = [_get_int(r, "offset") for r in results]
+        _logger.debug("value_searched", value=value, size=size, result_count=len(addrs))
+        return addrs
+
+    async def compare_bytes(self, hex_data: str, address: int) -> str:
+        """Compare bytes at an address with given hex data.
+
+        Args:
+            hex_data: Hex string to compare against.
+            address: Address to compare at.
+
+        Returns:
+            str: Comparison output text.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"c {hex_data} @ {address}")
+        _logger.debug("bytes_compared", address=hex(address))
+        return result
+
+    async def compare_disassembly(self, file_path: str, address: int) -> str:
+        """Compare disassembly at an address with another file.
+
+        Args:
+            file_path: Path to file to compare against.
+            address: Address to compare at.
+
+        Returns:
+            str: Comparison output text.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"cd {file_path} @ {address}")
+        _logger.debug("disassembly_compared", file_path=file_path, address=hex(address))
+        return result
+
+    async def get_segments(self) -> list[SegmentInfo]:
+        """Get binary segment information.
+
+        Returns:
+            list[SegmentInfo]: List of segment information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        segments = await self._cmd_json("iSSj")
+        result: list[SegmentInfo] = [
+            SegmentInfo(
+                name=_get_str(s, "name"),
+                address=_get_int(s, "vaddr"),
+                size=_get_int(s, "vsize", _get_int(s, "size")),
+                permissions=_get_str(s, "perm"),
+                type=_get_str(s, "type"),
+            )
+            for s in segments
+        ]
+        _logger.debug("segments_queried", result_count=len(result))
+        return result
+
+    async def hexdump(self, address: int, length: int = 256) -> str:
+        """Get hex dump of bytes at an address.
+
+        Args:
+            address: Start address.
+            length: Number of bytes to dump.
+
+        Returns:
+            str: Formatted hex dump text.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"px {length} @ {address}")
+        _logger.debug("hexdump_queried", address=hex(address), length=length)
+        return result
+
+    async def hexdump_words(self, address: int, length: int = 256) -> str:
+        """Get word-sized hex dump at an address.
+
+        Args:
+            address: Start address.
+            length: Number of bytes to dump.
+
+        Returns:
+            str: Formatted word hex dump text.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"pxw {length} @ {address}")
+        _logger.debug("hexdump_words_queried", address=hex(address), length=length)
+        return result
+
+    async def disassemble_function(self, address: int) -> str:
+        """Disassemble a complete function.
+
+        Args:
+            address: Function address.
+
+        Returns:
+            str: Full function disassembly text.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(f"pdf @ {address}")
+        _logger.debug("function_disassembled", address=hex(address))
+        return result
+
+    async def get_basic_blocks(self, address: int) -> list[BlockInfo]:
+        """Get basic blocks for a function.
+
+        Args:
+            address: Function address.
+
+        Returns:
+            list[BlockInfo]: List of basic block information.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            raise ToolError(_ERR_NO_BINARY)
+
+        blocks = await self._cmd_json(f"afbj @ {address}")
+        result: list[BlockInfo] = [
+            BlockInfo(
+                address=_get_int(b, "addr"),
+                size=_get_int(b, "size"),
+                jump=_get_optional_int(b, "jump"),
+                fail=_get_optional_int(b, "fail"),
+                instructions=_get_list(b, "ops"),
+            )
+            for b in blocks
+        ]
+        _logger.debug("basic_blocks_queried", address=hex(address), result_count=len(result))
+        return result

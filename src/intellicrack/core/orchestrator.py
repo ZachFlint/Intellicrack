@@ -11,6 +11,8 @@ engineering workflows.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import pathlib
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -49,7 +51,15 @@ if TYPE_CHECKING:
     from intellicrack.core.script_gen import ScriptManager
     from intellicrack.core.session import Session, SessionManager
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import BinaryInfo, BridgeAnalysisSummary, ToolCall, ToolDefinition
+    from intellicrack.core.types import (
+        BinaryInfo,
+        BridgeAnalysisSummary,
+        ExportInfo,
+        ImportInfo,
+        SectionInfo,
+        ToolCall,
+        ToolDefinition,
+    )
     from intellicrack.providers.base import LLMProvider
     from intellicrack.providers.registry import ProviderRegistry
 
@@ -339,7 +349,10 @@ class Orchestrator:
         return session
 
     async def _load_binary(self, path: Path) -> BinaryInfo:
-        """Load a binary file for analysis.
+        """Load a binary file for analysis using lief.
+
+        Parses PE/ELF/Mach-O headers to populate a BinaryInfo with
+        sections, imports, exports, architecture, and hashes.
 
         Args:
             path: Path to the binary.
@@ -347,9 +360,8 @@ class Orchestrator:
         Returns:
             BinaryInfo: Binary information.
         """
-        _logger.debug("binary_load_started", path=str(path))
-        binary_bridge = self._tools.get_binary_bridge()
-        info = await binary_bridge.load_file(path)
+        _logger.debug("binary_load_started", path=str(path), state=self._state)
+        info = await asyncio.to_thread(_parse_binary_with_lief, path)
         _logger.debug(
             "binary_load_completed",
             path=str(path),
@@ -620,6 +632,40 @@ class Orchestrator:
             "",
             "### Escape Hatch",
             "- `x64dbg.run_command` - Execute any x64dbg command directly",
+            "",
+            "## Cutter/Rizin Tools",
+            "",
+            "### Core Analysis",
+            "- `cutter.load_binary` - Load a binary file into Rizin for analysis",
+            "- `cutter.analyze` - Run analysis (quick, normal, deep) on loaded binary",
+            "- `cutter.get_functions` - List all analyzed functions, optional regex filter",
+            "- `cutter.get_function` - Get detailed function info at a specific address",
+            "- `cutter.get_function_address` - Look up function address by name",
+            "",
+            "### Code Inspection",
+            "- `cutter.decompile` - Decompile function at address to pseudocode",
+            "- `cutter.disassemble` - Disassemble N instructions at an address",
+            "- `cutter.get_xrefs_to` / `cutter.get_xrefs_from` - Cross-references",
+            "- `cutter.seek` - Seek to a specific address in the binary",
+            "",
+            "### Search",
+            "- `cutter.search_strings` - Search strings by regex pattern",
+            "- `cutter.search_bytes` - Search for hex byte pattern (e.g. '48 8B 05')",
+            "- `cutter.search_bytes_wildcard` - Search with wildcards (e.g. '48 8B ?? ??')",
+            "",
+            "### Data Tables",
+            "- `cutter.get_imports` - Get imported functions",
+            "- `cutter.get_exports` - Get exported functions",
+            "- `cutter.get_sections` - Get binary sections",
+            "",
+            "### Annotation & Patching",
+            "- `cutter.rename_function` - Rename a function at address",
+            "- `cutter.add_comment` - Add comment at address (EOL, function, unique)",
+            "- `cutter.write_bytes` - Write hex bytes at an address",
+            "- `cutter.assemble_at` - Assemble instruction and write at address",
+            "",
+            "### Escape Hatch",
+            "- `cutter.execute_command` - Execute any raw Rizin command directly",
             "",
             "## Sandbox Usage for Testing Patches",
             "",
@@ -1712,3 +1758,222 @@ class Orchestrator:
         self._state = "idle"
         structlog.contextvars.clear_contextvars()
         _logger.info("orchestrator_shutdown_completed", state=self._state)
+
+
+_ARCH_KEYWORDS: dict[str, str] = {
+    "AMD64": "x86_64",
+    "x86_64": "x86_64",
+    "X86_64": "x86_64",
+    "I386": "x86",
+    "i386": "x86",
+    "ARM64": "aarch64",
+    "AARCH64": "aarch64",
+    "ARM": "arm",
+}
+
+
+def _resolve_arch(raw: str) -> str:
+    """Map a lief architecture string to a canonical name.
+
+    Args:
+        raw: String representation of the architecture enum.
+
+    Returns:
+        str: Canonical architecture name.
+    """
+    for keyword, canonical in _ARCH_KEYWORDS.items():
+        if keyword in raw:
+            return canonical
+    return raw or "unknown"
+
+
+def _extract_sections(binary: object) -> list[SectionInfo]:
+    """Extract section info from a parsed lief binary.
+
+    Args:
+        binary: A lief.Binary (PE, ELF, or Mach-O).
+
+    Returns:
+        list[SectionInfo]: Extracted section metadata.
+    """
+    import lief
+
+    from intellicrack.core.types import SectionInfo as _SectionInfo
+
+    result: list[_SectionInfo] = []
+    for sec in getattr(binary, "sections", []):
+        entropy: float = float(sec.entropy) if hasattr(sec, "entropy") else 0.0
+        characteristics = 0
+        if isinstance(binary, lief.PE.Binary) and isinstance(sec, lief.PE.Section):
+            characteristics = int(sec.characteristics)
+        result.append(
+            _SectionInfo(
+                name=str(sec.name),
+                virtual_address=int(sec.virtual_address),
+                virtual_size=int(sec.size),
+                raw_size=len(sec.content) if hasattr(sec, "content") else int(sec.size),
+                characteristics=characteristics,
+                entropy=entropy,
+            ),
+        )
+    return result
+
+
+def _extract_imports(binary: object) -> list[ImportInfo]:
+    """Extract import info from a parsed lief binary.
+
+    Args:
+        binary: A lief.Binary (PE, ELF, or Mach-O).
+
+    Returns:
+        list[ImportInfo]: Extracted import metadata.
+    """
+    import lief
+
+    from intellicrack.core.types import ImportInfo as _ImportInfo
+
+    result: list[_ImportInfo] = []
+    if isinstance(binary, lief.PE.Binary):
+        for imp in binary.imports:
+            dll_name = str(imp.name)
+            for entry in imp.entries:
+                entry_name = str(entry.name) if entry.name else ""
+                result.append(
+                    _ImportInfo(
+                        dll=dll_name,
+                        function=entry_name or f"ord_{entry.data}",
+                        ordinal=int(entry.data) if not entry_name else None,
+                        address=int(entry.iat_value),
+                    ),
+                )
+    elif isinstance(binary, lief.ELF.Binary):
+        for rel in binary.pltgot_relocations:
+            sym_name = str(getattr(rel.symbol, "name", "")) if getattr(rel, "has_symbol", True) else ""
+            if sym_name:
+                result.append(
+                    _ImportInfo(dll="", function=sym_name, ordinal=None, address=int(rel.address)),
+                )
+    return result
+
+
+def _extract_exports(binary: object) -> list[ExportInfo]:
+    """Extract export info from a parsed lief binary.
+
+    Args:
+        binary: A lief.Binary (PE, ELF, or Mach-O).
+
+    Returns:
+        list[ExportInfo]: Extracted export metadata.
+    """
+    import lief
+
+    from intellicrack.core.types import ExportInfo as _ExportInfo
+
+    result: list[_ExportInfo] = []
+    if isinstance(binary, lief.PE.Binary) and binary.has_exports:
+        for exp in binary.get_export().entries:
+            exp_name = str(exp.name) if exp.name else ""
+            result.append(
+                _ExportInfo(
+                    name=exp_name or f"ord_{exp.ordinal}",
+                    ordinal=int(exp.ordinal),
+                    address=int(exp.address),
+                ),
+            )
+    elif isinstance(binary, lief.ELF.Binary):
+        result.extend(_ExportInfo(name=str(sym.name), ordinal=0, address=int(sym.value)) for sym in binary.exported_symbols)
+    return result
+
+
+def _classify_binary(binary: object) -> tuple[str, str, bool, int]:
+    """Determine file type, architecture, bitness, and entry point.
+
+    Args:
+        binary: A parsed lief binary object.
+
+    Returns:
+        tuple[str, str, bool, int]: (file_type, architecture, is_64bit, entry_point).
+    """
+    import lief
+
+    if isinstance(binary, lief.PE.Binary):
+        machine_str = str(getattr(binary.header, "machine", ""))
+        opt = binary.optional_header
+        return ("pe", _resolve_arch(machine_str), "AMD64" in machine_str, int(opt.addressof_entrypoint) + int(opt.imagebase))
+
+    if isinstance(binary, lief.ELF.Binary):
+        hdr = binary.header
+        arch_str = str(getattr(hdr, "machine_type", ""))
+        class_str = str(getattr(hdr, "identity_class", ""))
+        return ("elf", _resolve_arch(arch_str), "64" in class_str, int(binary.entrypoint))
+
+    if isinstance(binary, lief.MachO.Binary):
+        cpu_str = str(getattr(binary.header, "cpu_type", ""))
+        return ("macho", _resolve_arch(cpu_str), "64" in cpu_str, int(binary.entrypoint))
+
+    return ("unknown", "unknown", False, 0)
+
+
+def _parse_binary_with_lief(path: Path) -> BinaryInfo:
+    """Parse a binary using lief and return a populated BinaryInfo.
+
+    Handles PE, ELF, and Mach-O formats. Falls back to minimal
+    metadata when lief cannot parse the file.
+
+    Args:
+        path: Filesystem path to the binary.
+
+    Returns:
+        BinaryInfo: Populated binary metadata.
+
+    Raises:
+        FileNotFoundError: If path does not exist.
+    """
+    import lief
+
+    from intellicrack.core.types import BinaryInfo as _BinaryInfo
+
+    resolved = pathlib.Path(path)
+    if not resolved.exists():
+        error_message = f"Binary not found: {path}"
+        raise FileNotFoundError(error_message)
+
+    raw = resolved.read_bytes()
+    hashes = (
+        hashlib.md5(raw, usedforsecurity=False).hexdigest(),
+        hashlib.sha256(raw).hexdigest(),
+    )
+    binary = lief.parse(str(resolved))
+
+    if binary is None:
+        return _BinaryInfo(
+            path=resolved,
+            name=resolved.name,
+            size=len(raw),
+            md5=hashes[0],
+            sha256=hashes[1],
+            file_type="unknown",
+            architecture="unknown",
+            is_64bit=False,
+            entry_point=0,
+            sections=[],
+            imports=[],
+            exports=[],
+        )
+
+    meta = _classify_binary(binary)
+
+    return _BinaryInfo(
+        path=resolved,
+        name=resolved.name,
+        size=len(raw),
+        md5=hashes[0],
+        sha256=hashes[1],
+        file_type=meta[0],
+        architecture=meta[1],
+        is_64bit=meta[2],
+        entry_point=meta[3],
+        sections=_extract_sections(binary),
+        imports=_extract_imports(binary),
+        exports=_extract_exports(binary),
+    )

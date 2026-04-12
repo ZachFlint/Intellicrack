@@ -272,6 +272,97 @@ fn build_crc_table(w: u32, poly: u64, mask: u64) -> [u64; 256] {
     table
 }
 
+/// Result of verifying a PE file checksum.
+#[derive(Debug, Clone)]
+pub struct PeChecksumResult {
+    /// Stored checksum value from the PE header.
+    pub stored: u32,
+    /// Calculated checksum value.
+    pub calculated: u32,
+    /// Byte offset of the checksum field in the file.
+    pub offset: usize,
+    /// Whether the stored and calculated values match.
+    pub valid: bool,
+}
+
+/// Compute the PE file checksum using the standard Windows algorithm.
+///
+/// Sums all 16-bit words with carry folding, skipping the CheckSum field,
+/// then adds the file length.
+pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
+    let mut checksum: u32 = 0;
+    let skip_start = checksum_offset;
+    let skip_end = checksum_offset + 4;
+
+    let mut i = 0;
+    while i + 1 < data.len() {
+        if i >= skip_start && i < skip_end {
+            i += 2;
+            continue;
+        }
+        let word = (data[i] as u32) | ((data[i + 1] as u32) << 8);
+        checksum += word;
+        checksum = (checksum & 0xFFFF) + (checksum >> 16);
+        i += 2;
+    }
+
+    if i < data.len() && !(i >= skip_start && i < skip_end) {
+        checksum += data[i] as u32;
+        checksum = (checksum & 0xFFFF) + (checksum >> 16);
+    }
+
+    checksum = (checksum & 0xFFFF) + (checksum >> 16);
+    checksum + data.len() as u32
+}
+
+/// Verify the PE checksum of a binary file.
+///
+/// Locates the CheckSum field in the PE Optional Header and compares
+/// the stored value against the computed value.
+pub fn verify_pe_checksum(data: &[u8]) -> Result<PeChecksumResult, HashError> {
+    if data.len() < 0x40 {
+        return Err(HashError::UnsupportedAlgorithm(
+            "file too short for PE header".to_string(),
+        ));
+    }
+    if &data[0..2] != b"MZ" {
+        return Err(HashError::UnsupportedAlgorithm(
+            "not a PE file (missing MZ signature)".to_string(),
+        ));
+    }
+
+    let e_lfanew = u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
+    let checksum_offset = e_lfanew + 0x58;
+
+    if checksum_offset + 4 > data.len() {
+        return Err(HashError::UnsupportedAlgorithm(
+            "PE header checksum offset beyond file bounds".to_string(),
+        ));
+    }
+
+    if &data[e_lfanew..e_lfanew + 4] != b"PE\x00\x00" {
+        return Err(HashError::UnsupportedAlgorithm(
+            "invalid PE signature".to_string(),
+        ));
+    }
+
+    let stored = u32::from_le_bytes([
+        data[checksum_offset],
+        data[checksum_offset + 1],
+        data[checksum_offset + 2],
+        data[checksum_offset + 3],
+    ]);
+
+    let calculated = compute_pe_checksum(data, checksum_offset);
+
+    Ok(PeChecksumResult {
+        stored,
+        calculated,
+        offset: checksum_offset,
+        valid: stored == calculated,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

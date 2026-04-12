@@ -38,7 +38,7 @@ try {
     } | ForEach-Object {
         "$($_.ScriptPath):$($_.Line):$($_.Column): [$($_.Severity)] $($_.Message) ($($_.RuleName))"
     } | Out-File -FilePath $tmpFile -Encoding utf8
-    Invoke-Expression "$Pixi python scripts/process_lint_json.py psscriptanalyzer --text $tmpFile"
+    Invoke-Expression "$Pixi python scripts/lint_report.py psscriptanalyzer --text $tmpFile"
 } finally {
     Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
 }

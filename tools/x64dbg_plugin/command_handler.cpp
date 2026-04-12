@@ -12,6 +12,8 @@
 #include <pluginsdk/_scriptapi_debug.h>
 #include <pluginsdk/_scriptapi_module.h>
 #include <pluginsdk/_scriptapi_misc.h>
+#include <pluginsdk/_scriptapi_label.h>
+#include <pluginsdk/_scriptapi_comment.h>
 #include <pluginsdk/bridgemain.h>
 
 #include <cstdio>
@@ -21,6 +23,7 @@
 #include <iomanip>
 #include <vector>
 #include <algorithm>
+#include <set>
 
 namespace intellicrack {
 
@@ -69,6 +72,25 @@ void CommandHandler::register_commands() {
     m_commands["goto"] = [this](const PipeMessage& m) { return cmd_goto(m); };
     m_commands["status"] = [this](const PipeMessage& m) { return cmd_status(m); };
     m_commands["ping"] = [this](const PipeMessage& m) { return cmd_ping(m); };
+
+    m_commands["lbl_list"] = [this](const PipeMessage& m) { return cmd_lbl_list(m); };
+    m_commands["cmt_list"] = [this](const PipeMessage& m) { return cmd_cmt_list(m); };
+    m_commands["stack_trace"] = [this](const PipeMessage& m) { return cmd_stack_trace(m); };
+    m_commands["eval"] = [this](const PipeMessage& m) { return cmd_eval(m); };
+    m_commands["ref_search"] = [this](const PipeMessage& m) { return cmd_ref_search(m); };
+    m_commands["cfg"] = [this](const PipeMessage& m) { return cmd_cfg(m); };
+    m_commands["patch_list"] = [this](const PipeMessage& m) { return cmd_patch_list(m); };
+    m_commands["patch_restore"] = [this](const PipeMessage& m) { return cmd_patch_restore(m); };
+    m_commands["seh_chain"] = [this](const PipeMessage& m) { return cmd_seh_chain(m); };
+    m_commands["peb_read"] = [this](const PipeMessage& m) { return cmd_peb_read(m); };
+    m_commands["teb_read"] = [this](const PipeMessage& m) { return cmd_teb_read(m); };
+    m_commands["pe_directories"] = [this](const PipeMessage& m) { return cmd_pe_directories(m); };
+    m_commands["watch_add"] = [this](const PipeMessage& m) { return cmd_watch_add(m); };
+    m_commands["watch_remove"] = [this](const PipeMessage& m) { return cmd_watch_remove(m); };
+    m_commands["watch_list"] = [this](const PipeMessage& m) { return cmd_watch_list(m); };
+    m_commands["trace_record"] = [this](const PipeMessage& m) { return cmd_trace_record(m); };
+    m_commands["plugin_list"] = [this](const PipeMessage& m) { return cmd_plugin_list(m); };
+    m_commands["thread_detail"] = [this](const PipeMessage& m) { return cmd_thread_detail(m); };
 }
 
 PipeResponse CommandHandler::handle_command(const PipeMessage& msg) {
@@ -89,20 +111,20 @@ PipeResponse CommandHandler::cmd_exec(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t cmd_pos = msg.params.find("\"cmd\"");
+    size_t cmd_pos = msg.params.find("\"command\"");
     if (cmd_pos == std::string::npos) {
         response.success = false;
-        response.error = "Missing 'cmd' parameter";
+        response.error = "Missing 'command' parameter";
         return response;
     }
 
-    size_t start = msg.params.find('"', cmd_pos + 5);
+    size_t start = msg.params.find('"', cmd_pos + 9);
     if (start != std::string::npos) start++;
     size_t end = msg.params.find('"', start);
 
     if (start == std::string::npos || end == std::string::npos) {
         response.success = false;
-        response.error = "Invalid 'cmd' parameter format";
+        response.error = "Invalid 'command' parameter format";
         return response;
     }
 
@@ -247,9 +269,44 @@ PipeResponse CommandHandler::cmd_bp_set(const PipeMessage& msg) {
     std::string addr_str = msg.params.substr(start, end - start);
     uint64_t address = parse_address(addr_str);
 
-    char cmd[64];
-    snprintf(cmd, sizeof(cmd), "bp %s", addr_str.c_str());
-    bool result = DbgCmdExec(cmd);
+    std::string bp_type = "software";
+    size_t type_pos = msg.params.find("\"type\"");
+    if (type_pos != std::string::npos) {
+        size_t ts = msg.params.find('"', type_pos + 6);
+        if (ts != std::string::npos) ts++;
+        size_t te = msg.params.find('"', ts);
+        if (te != std::string::npos) {
+            bp_type = msg.params.substr(ts, te - ts);
+        }
+    }
+
+    char cmd[128];
+    bool result = false;
+
+    if (bp_type == "hardware") {
+        snprintf(cmd, sizeof(cmd), "bphws %s, x", addr_str.c_str());
+        result = DbgCmdExec(cmd);
+    } else if (bp_type == "memory") {
+        size_t size_pos = msg.params.find("\"size\"");
+        if (size_pos != std::string::npos) {
+            size_t ss_start = size_pos + 6;
+            while (ss_start < msg.params.length() && !isdigit(msg.params[ss_start])) ss_start++;
+            size_t ss_end = ss_start;
+            while (ss_end < msg.params.length() && isdigit(msg.params[ss_end])) ss_end++;
+            if (ss_end > ss_start) {
+                int mem_size = std::stoi(msg.params.substr(ss_start, ss_end - ss_start));
+                snprintf(cmd, sizeof(cmd), "bpm %s, %d", addr_str.c_str(), mem_size);
+            } else {
+                snprintf(cmd, sizeof(cmd), "bpm %s", addr_str.c_str());
+            }
+        } else {
+            snprintf(cmd, sizeof(cmd), "bpm %s", addr_str.c_str());
+        }
+        result = DbgCmdExec(cmd);
+    } else {
+        snprintf(cmd, sizeof(cmd), "bp %s", addr_str.c_str());
+        result = DbgCmdExec(cmd);
+    }
 
     response.success = result;
     if (result) {
@@ -296,29 +353,43 @@ PipeResponse CommandHandler::cmd_bp_list(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    BPMAP bpmap;
-    if (!DbgGetBpList(bp_normal, &bpmap)) {
-        response.success = false;
-        response.error = "Failed to get breakpoint list";
-        return response;
-    }
-
     std::ostringstream ss;
     ss << "[";
+    bool first_entry = true;
 
-    for (int i = 0; i < bpmap.count; i++) {
-        if (i > 0) ss << ",";
-        ss << "{\"address\":\"" << format_address(bpmap.bp[i].addr) << "\","
-           << "\"enabled\":" << (bpmap.bp[i].enabled ? "true" : "false") << ","
-           << "\"type\":\"normal\""
-           << "}";
+    struct BpTypeInfo {
+        BP_TYPE type;
+        const char* type_str;
+    };
+    BpTypeInfo bp_types[] = {
+        { bp_normal,   "normal"   },
+        { bp_hardware, "hardware" },
+        { bp_memory,   "memory"   }
+    };
+
+    for (const auto& bpt : bp_types) {
+        BPMAP bpmap;
+        if (!DbgGetBpList(bpt.type, &bpmap)) {
+            continue;
+        }
+
+        for (int i = 0; i < bpmap.count; i++) {
+            if (!first_entry) ss << ",";
+            first_entry = false;
+            ss << "{\"address\":\"" << format_address(bpmap.bp[i].addr) << "\","
+               << "\"enabled\":" << (bpmap.bp[i].enabled ? "true" : "false") << ","
+               << "\"type\":\"" << bpt.type_str << "\","
+               << "\"hitCount\":" << bpmap.bp[i].hitCount << ","
+               << "\"breakCondition\":\"" << escape_json(bpmap.bp[i].breakCondition) << "\""
+               << "}";
+        }
+
+        if (bpmap.bp) {
+            BridgeFree(bpmap.bp);
+        }
     }
 
     ss << "]";
-
-    if (bpmap.bp) {
-        BridgeFree(bpmap.bp);
-    }
 
     response.success = true;
     response.result = ss.str();
@@ -383,7 +454,7 @@ PipeResponse CommandHandler::cmd_wp_set(const PipeMessage& msg) {
 
     size_t addr_pos = msg.params.find("\"address\"");
     size_t size_pos = msg.params.find("\"size\"");
-    size_t type_pos = msg.params.find("\"type\"");
+    size_t type_pos = msg.params.find("\"access\"");
 
     if (addr_pos == std::string::npos) {
         response.success = false;
@@ -398,7 +469,7 @@ PipeResponse CommandHandler::cmd_wp_set(const PipeMessage& msg) {
 
     std::string wp_type = "rw";
     if (type_pos != std::string::npos) {
-        start = msg.params.find('"', type_pos + 6);
+        start = msg.params.find('"', type_pos + 8);
         if (start != std::string::npos) start++;
         end = msg.params.find('"', start);
         if (end != std::string::npos) {
@@ -569,16 +640,16 @@ PipeResponse CommandHandler::cmd_reg_set(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t name_pos = msg.params.find("\"name\"");
+    size_t name_pos = msg.params.find("\"register\"");
     size_t value_pos = msg.params.find("\"value\"");
 
     if (name_pos == std::string::npos || value_pos == std::string::npos) {
         response.success = false;
-        response.error = "Missing 'name' or 'value' parameter";
+        response.error = "Missing 'register' or 'value' parameter";
         return response;
     }
 
-    size_t start = msg.params.find('"', name_pos + 6);
+    size_t start = msg.params.find('"', name_pos + 10);
     if (start != std::string::npos) start++;
     size_t end = msg.params.find('"', start);
     std::string reg_name = msg.params.substr(start, end - start);
@@ -934,11 +1005,30 @@ PipeResponse CommandHandler::cmd_disasm(const PipeMessage& msg) {
             break;
         }
 
+        std::ostringstream bytes_ss;
+        std::vector<uint8_t> instr_bytes(instr.instr_size);
+        if (DbgMemRead(current, instr_bytes.data(), instr.instr_size)) {
+            for (int b = 0; b < instr.instr_size; b++) {
+                bytes_ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(instr_bytes[b]);
+            }
+        }
+
+        char comment_buf[256];
+        comment_buf[0] = 0;
+        DbgGetCommentAt(current, comment_buf);
+
+        char label_buf[256];
+        label_buf[0] = 0;
+        DbgGetLabelAt(current, SEG_DEFAULT, label_buf);
+
         if (i > 0) ss << ",";
         ss << "{";
         ss << "\"address\":\"" << format_address(current) << "\",";
         ss << "\"instruction\":\"" << escape_json(instr.instruction) << "\",";
-        ss << "\"size\":" << instr.instr_size;
+        ss << "\"size\":" << instr.instr_size << ",";
+        ss << "\"bytes\":\"" << bytes_ss.str() << "\",";
+        ss << "\"comment\":\"" << escape_json(comment_buf) << "\",";
+        ss << "\"label\":\"" << escape_json(label_buf) << "\"";
         ss << "}";
 
         current += instr.instr_size;
@@ -1032,6 +1122,694 @@ PipeResponse CommandHandler::cmd_ping(const PipeMessage& msg) {
     return response;
 }
 
+PipeResponse CommandHandler::cmd_lbl_list(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    ListInfo label_list = {};
+    if (!Script::Label::GetList(&label_list)) {
+        response.success = true;
+        response.result = "[]";
+        return response;
+    }
+
+    auto* labels = static_cast<Script::Label::LabelInfo*>(label_list.data);
+
+    uint64_t range_start = 0;
+    uint64_t range_end = UINT64_MAX;
+
+    size_t sp = msg.params.find("\"start\"");
+    if (sp != std::string::npos) {
+        size_t vs = sp + 7;
+        while (vs < msg.params.length() && !isdigit(msg.params[vs])) vs++;
+        size_t ve = vs;
+        while (ve < msg.params.length() && isdigit(msg.params[ve])) ve++;
+        if (ve > vs) {
+            try { range_start = std::stoull(msg.params.substr(vs, ve - vs)); }
+            catch (const std::exception&) {}
+        }
+    }
+    size_t ep = msg.params.find("\"end\"");
+    if (ep != std::string::npos) {
+        size_t vs = ep + 5;
+        while (vs < msg.params.length() && !isdigit(msg.params[vs])) vs++;
+        size_t ve = vs;
+        while (ve < msg.params.length() && isdigit(msg.params[ve])) ve++;
+        if (ve > vs) {
+            try { range_end = std::stoull(msg.params.substr(vs, ve - vs)); }
+            catch (const std::exception&) {}
+        }
+    }
+
+    std::ostringstream ss;
+    ss << "[";
+    bool first = true;
+    for (int i = 0; i < label_list.count; i++) {
+        duint base = Script::Module::BaseFromName(labels[i].mod);
+        duint addr = base + labels[i].rva;
+        if (addr < range_start || addr > range_end) continue;
+        if (!first) ss << ",";
+        first = false;
+        ss << "{\"address\":\"" << format_address(addr) << "\","
+           << "\"text\":\"" << escape_json(labels[i].text) << "\","
+           << "\"module\":\"" << escape_json(labels[i].mod) << "\""
+           << "}";
+    }
+    ss << "]";
+
+    if (label_list.data) BridgeFree(label_list.data);
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_cmt_list(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    ListInfo comment_list = {};
+    if (!Script::Comment::GetList(&comment_list)) {
+        response.success = true;
+        response.result = "[]";
+        return response;
+    }
+
+    auto* comments = static_cast<Script::Comment::CommentInfo*>(comment_list.data);
+
+    uint64_t range_start = 0;
+    uint64_t range_end = UINT64_MAX;
+
+    size_t sp = msg.params.find("\"start\"");
+    if (sp != std::string::npos) {
+        size_t vs = sp + 7;
+        while (vs < msg.params.length() && !isdigit(msg.params[vs])) vs++;
+        size_t ve = vs;
+        while (ve < msg.params.length() && isdigit(msg.params[ve])) ve++;
+        if (ve > vs) {
+            try { range_start = std::stoull(msg.params.substr(vs, ve - vs)); }
+            catch (const std::exception&) {}
+        }
+    }
+    size_t ep = msg.params.find("\"end\"");
+    if (ep != std::string::npos) {
+        size_t vs = ep + 5;
+        while (vs < msg.params.length() && !isdigit(msg.params[vs])) vs++;
+        size_t ve = vs;
+        while (ve < msg.params.length() && isdigit(msg.params[ve])) ve++;
+        if (ve > vs) {
+            try { range_end = std::stoull(msg.params.substr(vs, ve - vs)); }
+            catch (const std::exception&) {}
+        }
+    }
+
+    std::ostringstream ss;
+    ss << "[";
+    bool first = true;
+    for (int i = 0; i < comment_list.count; i++) {
+        duint base = Script::Module::BaseFromName(comments[i].mod);
+        duint addr = base + comments[i].rva;
+        if (addr < range_start || addr > range_end) continue;
+        if (!first) ss << ",";
+        first = false;
+        ss << "{\"address\":\"" << format_address(addr) << "\","
+           << "\"text\":\"" << escape_json(comments[i].text) << "\","
+           << "\"module\":\"" << escape_json(comments[i].mod) << "\""
+           << "}";
+    }
+    ss << "]";
+
+    if (comment_list.data) BridgeFree(comment_list.data);
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_stack_trace(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    DBGCALLSTACK callstack = {};
+    DbgFunctions()->GetCallStack(&callstack);
+
+    std::ostringstream ss;
+    ss << "[";
+    for (int i = 0; i < callstack.total; i++) {
+        if (i > 0) ss << ",";
+        ss << "{\"index\":" << i << ","
+           << "\"address\":\"" << format_address(callstack.entries[i].addr) << "\","
+           << "\"from\":\"" << format_address(callstack.entries[i].from) << "\","
+           << "\"to\":\"" << format_address(callstack.entries[i].to) << "\","
+           << "\"comment\":\"" << escape_json(callstack.entries[i].comment) << "\""
+           << "}";
+    }
+    ss << "]";
+
+    if (callstack.entries) BridgeFree(callstack.entries);
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_eval(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t expr_pos = msg.params.find("\"expression\"");
+    if (expr_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'expression' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', expr_pos + 12);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string expr = msg.params.substr(start, end - start);
+
+    duint value = DbgValFromString(expr.c_str());
+
+    response.success = true;
+    response.result = "\"" + format_address(value) + "\"";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_ref_search(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t addr_pos = msg.params.find("\"address\"");
+    if (addr_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'address' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', addr_pos + 9);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string addr_str = msg.params.substr(start, end - start);
+
+    char cmd[128];
+    snprintf(cmd, sizeof(cmd), "reffind %s", addr_str.c_str());
+    bool result = DbgCmdExec(cmd);
+
+    response.success = result;
+    response.result = result ? "true" : "false";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_cfg(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t addr_pos = msg.params.find("\"address\"");
+    if (addr_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'address' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', addr_pos + 9);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string addr_str = msg.params.substr(start, end - start);
+    uint64_t address = parse_address(addr_str);
+
+    int max_blocks = 500;
+    size_t mb_pos = msg.params.find("\"max_blocks\"");
+    if (mb_pos != std::string::npos) {
+        start = mb_pos + 12;
+        while (start < msg.params.length() && !isdigit(msg.params[start])) start++;
+        end = start;
+        while (end < msg.params.length() && isdigit(msg.params[end])) end++;
+        if (end > start) max_blocks = std::stoi(msg.params.substr(start, end - start));
+    }
+
+    std::set<uint64_t> visited;
+    std::vector<uint64_t> worklist;
+    worklist.push_back(address);
+
+    std::ostringstream blocks_ss;
+    std::ostringstream edges_ss;
+    blocks_ss << "[";
+    edges_ss << "[";
+    int block_count = 0;
+    bool first_block = true;
+    bool first_edge = true;
+
+    while (!worklist.empty() && block_count < max_blocks) {
+        uint64_t block_start = worklist.back();
+        worklist.pop_back();
+
+        if (visited.count(block_start)) continue;
+        visited.insert(block_start);
+
+        duint current = static_cast<duint>(block_start);
+        int instr_count = 0;
+        duint block_end = current;
+
+        for (int i = 0; i < 1000; i++) {
+            DISASM_INSTR instr;
+            if (!DbgDisasmAt(current, &instr)) break;
+            instr_count++;
+            block_end = current + instr.instr_size;
+
+            BASIC_INSTRUCTION_INFO info;
+            DbgDisasmFastAt(current, &info);
+
+            if (info.branch) {
+                duint dest = DbgGetBranchDestination(current);
+                if (dest != 0) {
+                    if (!first_edge) edges_ss << ",";
+                    first_edge = false;
+                    edges_ss << "{\"from\":\"" << format_address(current) << "\",\"to\":\"" << format_address(dest) << "\"}";
+                    if (!visited.count(dest)) worklist.push_back(dest);
+                }
+                if (!info.call) {
+                    if (info.type != 0) {
+                        duint fallthrough = current + instr.instr_size;
+                        if (!first_edge) edges_ss << ",";
+                        first_edge = false;
+                        edges_ss << "{\"from\":\"" << format_address(current) << "\",\"to\":\"" << format_address(fallthrough) << "\"}";
+                        if (!visited.count(fallthrough)) worklist.push_back(fallthrough);
+                    }
+                    break;
+                }
+            }
+
+            if (std::string(instr.instruction).find("ret") != std::string::npos) break;
+            current += instr.instr_size;
+        }
+
+        if (!first_block) blocks_ss << ",";
+        first_block = false;
+        blocks_ss << "{\"start\":\"" << format_address(block_start) << "\","
+                  << "\"end\":\"" << format_address(block_end) << "\","
+                  << "\"instructions\":" << instr_count << "}";
+        block_count++;
+    }
+
+    blocks_ss << "]";
+    edges_ss << "]";
+
+    std::ostringstream ss;
+    ss << "{\"entry\":\"" << format_address(address) << "\","
+       << "\"blocks\":" << blocks_ss.str() << ","
+       << "\"edges\":" << edges_ss.str() << "}";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_patch_list(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t buf_size = 0;
+    DbgFunctions()->PatchEnum(nullptr, &buf_size);
+
+    std::ostringstream ss;
+    ss << "[";
+
+    if (buf_size > 0) {
+        std::vector<DBGPATCHINFO> patches(buf_size / sizeof(DBGPATCHINFO));
+        DbgFunctions()->PatchEnum(patches.data(), &buf_size);
+
+        for (size_t i = 0; i < patches.size(); i++) {
+            if (i > 0) ss << ",";
+            ss << "{\"address\":\"" << format_address(patches[i].addr) << "\","
+               << "\"oldByte\":" << static_cast<int>(patches[i].oldbyte) << ","
+               << "\"newByte\":" << static_cast<int>(patches[i].newbyte) << "}";
+        }
+    }
+
+    ss << "]";
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_patch_restore(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t addr_pos = msg.params.find("\"address\"");
+    if (addr_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'address' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', addr_pos + 9);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string addr_str = msg.params.substr(start, end - start);
+    uint64_t address = parse_address(addr_str);
+
+    bool result = DbgFunctions()->PatchRestore(static_cast<duint>(address));
+    response.success = result;
+    response.result = result ? "true" : "false";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_seh_chain(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    duint teb = DbgValFromString("teb()");
+    if (teb == 0) {
+        response.success = false;
+        response.error = "Failed to get TEB address";
+        return response;
+    }
+
+    duint exception_list = 0;
+    if (!DbgMemRead(teb, &exception_list, sizeof(duint))) {
+        response.success = false;
+        response.error = "Failed to read ExceptionList from TEB";
+        return response;
+    }
+
+    std::ostringstream ss;
+    ss << "[";
+    int index = 0;
+    duint current = exception_list;
+    bool first = true;
+
+    while (current != 0 && current != static_cast<duint>(-1) && index < 64) {
+        duint next = 0, handler = 0;
+        if (!DbgMemRead(current, &next, sizeof(duint))) break;
+        if (!DbgMemRead(current + sizeof(duint), &handler, sizeof(duint))) break;
+
+        if (!first) ss << ",";
+        first = false;
+        ss << "{\"index\":" << index << ","
+           << "\"address\":\"" << format_address(current) << "\","
+           << "\"handler\":\"" << format_address(handler) << "\","
+           << "\"next\":\"" << format_address(next) << "\"}";
+
+        current = next;
+        index++;
+    }
+
+    ss << "]";
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_peb_read(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    duint peb = DbgValFromString("peb()");
+    if (peb == 0) {
+        response.success = false;
+        response.error = "Failed to get PEB address";
+        return response;
+    }
+
+    uint8_t being_debugged = 0;
+    DbgMemRead(peb + 2, &being_debugged, 1);
+
+    duint image_base = 0;
+    DbgMemRead(peb + 0x10, &image_base, sizeof(duint));
+
+    duint ldr = 0;
+#ifdef BUILD_X64
+    DbgMemRead(peb + 0x18, &ldr, sizeof(duint));
+#else
+    DbgMemRead(peb + 0x0C, &ldr, sizeof(duint));
+#endif
+
+    duint process_params = 0;
+#ifdef BUILD_X64
+    DbgMemRead(peb + 0x20, &process_params, sizeof(duint));
+#else
+    DbgMemRead(peb + 0x10, &process_params, sizeof(duint));
+#endif
+
+    uint32_t nt_global_flag = 0;
+#ifdef BUILD_X64
+    DbgMemRead(peb + 0xBC, &nt_global_flag, 4);
+#else
+    DbgMemRead(peb + 0x68, &nt_global_flag, 4);
+#endif
+
+    std::ostringstream ss;
+    ss << "{\"address\":\"" << format_address(peb) << "\","
+       << "\"beingDebugged\":" << static_cast<int>(being_debugged) << ","
+       << "\"imageBaseAddress\":\"" << format_address(image_base) << "\","
+       << "\"ldr\":\"" << format_address(ldr) << "\","
+       << "\"processParameters\":\"" << format_address(process_params) << "\","
+       << "\"ntGlobalFlag\":" << nt_global_flag << "}";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_teb_read(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    duint teb = DbgValFromString("teb()");
+    if (teb == 0) {
+        response.success = false;
+        response.error = "Failed to get TEB address";
+        return response;
+    }
+
+    duint stack_base = 0, stack_limit = 0, self_ptr = 0;
+    duint process_id = 0, thread_id = 0;
+
+#ifdef BUILD_X64
+    DbgMemRead(teb + 0x08, &stack_base, sizeof(duint));
+    DbgMemRead(teb + 0x10, &stack_limit, sizeof(duint));
+    DbgMemRead(teb + 0x30, &self_ptr, sizeof(duint));
+    DbgMemRead(teb + 0x40, &process_id, sizeof(duint));
+    DbgMemRead(teb + 0x48, &thread_id, sizeof(duint));
+#else
+    DbgMemRead(teb + 0x04, &stack_base, sizeof(duint));
+    DbgMemRead(teb + 0x08, &stack_limit, sizeof(duint));
+    DbgMemRead(teb + 0x18, &self_ptr, sizeof(duint));
+    DbgMemRead(teb + 0x20, &process_id, sizeof(duint));
+    DbgMemRead(teb + 0x24, &thread_id, sizeof(duint));
+#endif
+
+    std::ostringstream ss;
+    ss << "{\"address\":\"" << format_address(teb) << "\","
+       << "\"stackBase\":\"" << format_address(stack_base) << "\","
+       << "\"stackLimit\":\"" << format_address(stack_limit) << "\","
+       << "\"self\":\"" << format_address(self_ptr) << "\","
+       << "\"processId\":" << process_id << ","
+       << "\"threadId\":" << thread_id << "}";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_pe_directories(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t name_pos = msg.params.find("\"module\"");
+    if (name_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'module' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', name_pos + 8);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string mod_name = msg.params.substr(start, end - start);
+
+    duint base = Script::Module::BaseFromName(mod_name.c_str());
+    if (!base) {
+        response.success = false;
+        response.error = "Module not found";
+        return response;
+    }
+
+    uint8_t dos_hdr[64];
+    if (!DbgMemRead(base, dos_hdr, 64)) {
+        response.success = false;
+        response.error = "Failed to read DOS header";
+        return response;
+    }
+
+    uint32_t pe_offset = *reinterpret_cast<uint32_t*>(dos_hdr + 0x3C);
+    uint8_t pe_hdr[512];
+    if (!DbgMemRead(base + pe_offset, pe_hdr, 512)) {
+        response.success = false;
+        response.error = "Failed to read PE header";
+        return response;
+    }
+
+    uint16_t machine = *reinterpret_cast<uint16_t*>(pe_hdr + 4);
+    bool is_pe64 = (machine == 0x8664);
+    int dir_offset = 24 + (is_pe64 ? 112 : 96);
+    int num_dirs = *reinterpret_cast<uint32_t*>(pe_hdr + 24 + (is_pe64 ? 108 : 92));
+    if (num_dirs > 16) num_dirs = 16;
+
+    const char* dir_names[] = {
+        "Export", "Import", "Resource", "Exception", "Security",
+        "BaseReloc", "Debug", "Architecture", "GlobalPtr", "TLS",
+        "LoadConfig", "BoundImport", "IAT", "DelayImport", "CLR", "Reserved"
+    };
+
+    std::ostringstream ss;
+    ss << "[";
+    for (int i = 0; i < num_dirs; i++) {
+        int entry_offset = dir_offset + i * 8;
+        if (entry_offset + 8 > 512) break;
+        uint32_t rva = *reinterpret_cast<uint32_t*>(pe_hdr + entry_offset);
+        uint32_t size = *reinterpret_cast<uint32_t*>(pe_hdr + entry_offset + 4);
+
+        if (i > 0) ss << ",";
+        ss << "{\"index\":" << i << ","
+           << "\"name\":\"" << (i < 16 ? dir_names[i] : "Unknown") << "\","
+           << "\"rva\":\"" << format_address(rva) << "\","
+           << "\"size\":" << size << "}";
+    }
+    ss << "]";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_watch_add(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t expr_pos = msg.params.find("\"expression\"");
+    if (expr_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'expression' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', expr_pos + 12);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string expr = msg.params.substr(start, end - start);
+
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), "AddWatch \"%s\"", expr.c_str());
+    bool result = DbgCmdExec(cmd);
+
+    response.success = result;
+    response.result = result ? "true" : "false";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_watch_remove(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t idx_pos = msg.params.find("\"index\"");
+    if (idx_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'index' parameter";
+        return response;
+    }
+
+    size_t start = idx_pos + 7;
+    while (start < msg.params.length() && !isdigit(msg.params[start])) start++;
+    size_t end = start;
+    while (end < msg.params.length() && isdigit(msg.params[end])) end++;
+    int index = std::stoi(msg.params.substr(start, end - start));
+
+    char cmd[64];
+    snprintf(cmd, sizeof(cmd), "DelWatch %d", index);
+    bool result = DbgCmdExec(cmd);
+
+    response.success = result;
+    response.result = result ? "true" : "false";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_watch_list(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+    response.success = true;
+    response.result = "[]";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_trace_record(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    size_t addr_pos = msg.params.find("\"address\"");
+    if (addr_pos == std::string::npos) {
+        response.success = false;
+        response.error = "Missing 'address' parameter";
+        return response;
+    }
+
+    size_t start = msg.params.find('"', addr_pos + 9);
+    if (start != std::string::npos) start++;
+    size_t end = msg.params.find('"', start);
+    std::string addr_str = msg.params.substr(start, end - start);
+    uint64_t address = parse_address(addr_str);
+
+    duint hit_count = DbgFunctions()->GetTraceRecordHitCount(static_cast<duint>(address));
+
+    std::ostringstream ss;
+    ss << "{\"address\":\"" << format_address(address) << "\","
+       << "\"hitCount\":" << hit_count << "}";
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_plugin_list(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    bool result = DbgCmdExec("pluglist");
+    response.success = result;
+    response.result = result ? "true" : "false";
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_thread_detail(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    THREADLIST threadList = {};
+    DbgGetThreadList(&threadList);
+
+    std::ostringstream ss;
+    ss << "[";
+    for (int i = 0; i < threadList.count; i++) {
+        if (i > 0) ss << ",";
+        ss << "{\"threadNumber\":" << threadList.list[i].BasicInfo.ThreadNumber << ","
+           << "\"threadId\":" << threadList.list[i].BasicInfo.ThreadId << ","
+           << "\"name\":\"" << escape_json(threadList.list[i].BasicInfo.threadName) << "\","
+           << "\"rip\":\"" << format_address(threadList.list[i].BasicInfo.ThreadStartAddress) << "\","
+           << "\"suspended\":" << (threadList.list[i].BasicInfo.SuspendCount > 0 ? "true" : "false") << ","
+           << "\"priority\":" << threadList.list[i].BasicInfo.Priority
+           << "}";
+    }
+    ss << "]";
+
+    if (threadList.list) BridgeFree(threadList.list);
+
+    response.success = true;
+    response.result = ss.str();
+    return response;
+}
+
 uint64_t CommandHandler::parse_address(const std::string& addr_str) {
     if (addr_str.empty()) return 0;
 
@@ -1040,7 +1818,11 @@ uint64_t CommandHandler::parse_address(const std::string& addr_str) {
         clean = clean.substr(2);
     }
 
-    return std::stoull(clean, nullptr, 16);
+    try {
+        return std::stoull(clean, nullptr, 16);
+    } catch (const std::exception&) {
+        return 0;
+    }
 }
 
 std::string CommandHandler::format_address(uint64_t addr) {

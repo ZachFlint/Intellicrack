@@ -9,6 +9,8 @@ Provides a script editor, console output, and hook manager for interacting with 
 
 from __future__ import annotations
 
+import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -34,6 +36,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import set_max_block_count
@@ -70,6 +73,17 @@ _HOOK_COL_MODULE = 1
 _HOOK_COL_FUNCTION = 2
 _HOOK_COL_STATUS = 3
 
+_MODULE_COLUMNS: Final[list[str]] = ["Name", "Base", "Size", "Path"]
+_EXPORT_COLUMNS: Final[list[str]] = ["Name", "Address", "Ordinal"]
+_IMPORT_COLUMNS: Final[list[str]] = ["Function", "DLL", "Address"]
+_CHILD_COLUMNS: Final[list[str]] = ["PID", "Parent PID", "Origin", "Path"]
+_CRASH_COLUMNS: Final[list[str]] = ["PID", "Process", "Summary", "Time"]
+_NATIVE_TYPES: Final[list[str]] = ["pointer", "int", "uint", "void", "float", "double", "int32", "uint32", "int64", "uint64"]
+_CALLING_CONVENTIONS: Final[list[str]] = ["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"]
+_PROTECTIONS: Final[list[str]] = ["---", "r--", "rw-", "r-x", "rwx"]
+_ASCII_PRINTABLE_MIN: Final[int] = 32
+_ASCII_PRINTABLE_MAX: Final[int] = 127
+
 
 class FridaPanel(AnalysisPanelBase):
     """Panel for Frida dynamic instrumentation and hooking.
@@ -88,9 +102,11 @@ class FridaPanel(AnalysisPanelBase):
 
     hook_added: pyqtSignal = pyqtSignal(str)
     script_executed: pyqtSignal = pyqtSignal()
+    _frida_message_received: pyqtSignal = pyqtSignal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._frida_message_received.connect(self._on_frida_message)
         self._bridge: FridaBridge | None = None
         self._attached_pid: int | None = None
         self._hook_ids: list[str] = []
@@ -124,13 +140,18 @@ class FridaPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
+        self._spawn_btn = self._add_tool_button(toolbar, "Spawn", self._on_spawn)
+        self._resume_btn = self._add_tool_button(toolbar, "Resume", self._on_resume, enabled=False)
+
+        toolbar.addSeparator()
+
         self.run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
         self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
         self._clear_btn = self._add_secondary_button(toolbar, "Clear Console", self._on_clear_console)
 
         toolbar.addSeparator()
 
-        self._status_label = self._add_toolbar_label(toolbar, "Not attached")
+        self.status_label = self._add_toolbar_label(toolbar, "Not attached")
 
     @override
     def _create_content(self) -> QWidget:
@@ -196,6 +217,8 @@ class FridaPanel(AnalysisPanelBase):
         self._script_type_combo = QComboBox()
         self._script_type_combo.addItems(["Hook Script", "Stalker", "Memory Scanner", "Custom"])
         editor_header.addWidget(self._script_type_combo)
+        self._oneshot_script_cb = QCheckBox("One-shot")
+        editor_header.addWidget(self._oneshot_script_cb)
         editor_header.addStretch()
         editor_layout.addLayout(editor_header)
 
@@ -203,6 +226,7 @@ class FridaPanel(AnalysisPanelBase):
         self._script_editor.setFont(FontManager.get_instance().get_code_font(10))
         self._script_editor.setPlainText(_DEFAULT_FRIDA_SCRIPT)
         self._script_editor.setTabStopDistance(QFontMetrics(self._script_editor.font()).horizontalAdvance(" ") * 4)
+        self._js_highlighter = get_highlighter_for_language("javascript", self._script_editor.document())
         editor_layout.addWidget(self._script_editor)
         return editor_container
 
@@ -251,6 +275,10 @@ class FridaPanel(AnalysisPanelBase):
         self._right_tabs.addTab(self._create_hooks_section(), "Hooks")
         self._right_tabs.addTab(self._create_threads_section(), "Threads")
         self._right_tabs.addTab(self._create_stalker_section(), "Stalker")
+        self._right_tabs.addTab(self._create_modules_section(), "Modules")
+        self._right_tabs.addTab(self._create_memory_section(), "Memory")
+        self._right_tabs.addTab(self._create_symbols_section(), "Symbols")
+        self._right_tabs.addTab(self._create_advanced_section(), "Advanced")
         return self._right_tabs
 
     def _create_hooks_section(self) -> QWidget:
@@ -279,6 +307,21 @@ class FridaPanel(AnalysisPanelBase):
         self._remove_hook_btn.setObjectName("tool_button")
         self._remove_hook_btn.clicked.connect(self._on_remove_hook)
         hooks_header.addWidget(self._remove_hook_btn)
+
+        self._intercept_ret_btn = QPushButton("Intercept Ret")
+        self._intercept_ret_btn.setObjectName("tool_button")
+        self._intercept_ret_btn.clicked.connect(self._on_intercept_return)
+        hooks_header.addWidget(self._intercept_ret_btn)
+
+        self._replace_fn_btn = QPushButton("Replace Fn")
+        self._replace_fn_btn.setObjectName("tool_button")
+        self._replace_fn_btn.clicked.connect(self._on_replace_function)
+        hooks_header.addWidget(self._replace_fn_btn)
+
+        self._refresh_hooks_btn = QPushButton("Refresh")
+        self._refresh_hooks_btn.setObjectName("tool_button")
+        self._refresh_hooks_btn.clicked.connect(self._on_refresh_hooks)
+        hooks_header.addWidget(self._refresh_hooks_btn)
 
         hooks_layout.addLayout(hooks_header)
 
@@ -361,6 +404,8 @@ class FridaPanel(AnalysisPanelBase):
         events_row.addWidget(self._stalker_exec_cb)
         self._stalker_block_cb = QCheckBox("block")
         events_row.addWidget(self._stalker_block_cb)
+        self._stalker_compile_cb = QCheckBox("compile")
+        events_row.addWidget(self._stalker_compile_cb)
         events_row.addStretch()
         layout.addLayout(events_row)
 
@@ -388,6 +433,16 @@ class FridaPanel(AnalysisPanelBase):
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
+        display_row = QHBoxLayout()
+        display_row.addWidget(QLabel("Display:"))
+        self._stalker_display_limit_spin = QSpinBox()
+        self._stalker_display_limit_spin.setRange(10, 10000)
+        self._stalker_display_limit_spin.setValue(50)
+        self._stalker_display_limit_spin.setSingleStep(50)
+        display_row.addWidget(self._stalker_display_limit_spin)
+        display_row.addStretch()
+        layout.addLayout(display_row)
+
         layout.addStretch()
         return container
 
@@ -398,7 +453,7 @@ class FridaPanel(AnalysisPanelBase):
             bridge: The FridaBridge to use.
         """
         self._bridge = bridge
-        bridge.set_message_handler(self._on_frida_message)
+        bridge.set_message_handler(self._frida_message_received.emit)
         _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> FridaBridge | None:
@@ -485,6 +540,8 @@ class FridaPanel(AnalysisPanelBase):
         Args:
             target: The process name attached to.
         """
+        if self._bridge is not None:
+            self._attached_pid = self._bridge.state.target_pid
         self._console.appendPlainText(f"[+] Attached to '{target}'")
         _logger.info("frida_attached_name", process_name=target)
         self._set_status("Attached")
@@ -554,6 +611,14 @@ class FridaPanel(AnalysisPanelBase):
 
         _logger.debug("frida_script_execution_started", script_size=len(source))
         self.run_btn.setEnabled(False)
+
+        if self._oneshot_script_cb.isChecked():
+            self._run_async(
+                self._bridge.execute_script(source),
+                on_success=lambda r: self._on_oneshot_script_success(len(source), r),
+                on_error=self._on_run_script_error,
+            )
+            return
 
         self._run_async(
             self._bridge.execute_persistent_script(source),
@@ -646,6 +711,7 @@ class FridaPanel(AnalysisPanelBase):
         self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(""))
         self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(target))
         self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Installing..."))
+        self._hook_ids.append("")
 
         self._add_hook_btn.setEnabled(False)
         self._run_async(
@@ -686,22 +752,26 @@ class FridaPanel(AnalysisPanelBase):
         if status_item is not None:
             status_item.setText("Active")
 
-        self._hook_ids.append(hook_id)
+        if row < len(self._hook_ids):
+            self._hook_ids[row] = hook_id
+        else:
+            self._hook_ids.append(hook_id)
         self._add_hook_btn.setEnabled(True)
         self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str}")
         self.hook_added.emit(addr_str)
         _logger.info("frida_hook_installed", target=target, hook_id=hook_id)
 
     def _on_hook_install_error(self, row: int, exc: object) -> None:
-        """Handle hook installation failure.
+        """Handle hook installation failure by removing the pending row.
 
         Args:
             row: Table row for the failed hook.
             exc: The exception that occurred.
         """
-        status_item = self._hooks_table.item(row, _HOOK_COL_STATUS)
-        if status_item is not None:
-            status_item.setText("Failed")
+        if row < self._hooks_table.rowCount():
+            self._hooks_table.removeRow(row)
+        if row < len(self._hook_ids):
+            self._hook_ids.pop(row)
         self._add_hook_btn.setEnabled(True)
         self._console.appendPlainText(f"[-] Hook installation failed: {exc}")
         _logger.warning("frida_hook_install_failed", error=str(exc))
@@ -817,19 +887,16 @@ class FridaPanel(AnalysisPanelBase):
         """Populate the process table from enumeration results.
 
         Args:
-            result: List of process dictionaries from the bridge.
+            result: List of FridaProcessEntry objects from the bridge.
         """
         self._process_table.setRowCount(0)
         if isinstance(result, list):
             proc_list = cast("list[object]", result)
             for proc in proc_list:
-                if not isinstance(proc, dict):
-                    continue
-                proc_dict = cast("dict[str, object]", proc)
                 row = self._process_table.rowCount()
                 self._process_table.insertRow(row)
-                pid_val = proc_dict.get("pid", 0)
-                name_val = proc_dict.get("name", "")
+                pid_val = getattr(proc, "pid", 0)
+                name_val = getattr(proc, "name", "")
                 self._process_table.setItem(row, 0, QTableWidgetItem(str(pid_val)))
                 self._process_table.setItem(row, 1, QTableWidgetItem(str(name_val)))
         self._refresh_procs_btn.setEnabled(True)
@@ -920,6 +987,8 @@ class FridaPanel(AnalysisPanelBase):
             events.append("exec")
         if self._stalker_block_cb.isChecked():
             events.append("block")
+        if self._stalker_compile_cb.isChecked():
+            events.append("compile")
         return ",".join(events) if events else "call"
 
     def _on_stalker_start(self) -> None:
@@ -998,7 +1067,7 @@ class FridaPanel(AnalysisPanelBase):
         duration = getattr(result, "duration_ms", 0.0)
         self._console.appendPlainText(f"[+] Stalker trace complete: {event_count} events in {duration:.1f}ms")
         events = getattr(result, "events", [])
-        display_limit = min(len(events), 50)
+        display_limit = min(len(events), self._stalker_display_limit_spin.value())
         for evt in events[:display_limit]:
             evt_type = getattr(evt, "event_type", "?")
             from_addr = getattr(evt, "from_address", 0)
@@ -1054,3 +1123,1132 @@ class FridaPanel(AnalysisPanelBase):
         if idx >= 0:
             self._device_combo.setCurrentIndex(idx)
         self._device_combo.blockSignals(b=False)
+
+    def _on_oneshot_script_success(self, script_size: int, result: object) -> None:
+        """Handle successful one-shot script execution.
+
+        Args:
+            script_size: Size of the executed script in characters.
+            result: Script result string.
+        """
+        self._console.appendPlainText(f"[+] Script result: {result}")
+        self.run_btn.setEnabled(True)
+        self.script_executed.emit()
+        _logger.info("frida_oneshot_script_executed", script_size=script_size)
+
+    def _on_spawn(self) -> None:
+        """Spawn a new process with Frida instrumentation."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        path_str, accepted = QInputDialog.getText(self, "Spawn Process", "Executable path:")
+        if not accepted or not path_str.strip():
+            return
+
+        args_str, args_accepted = QInputDialog.getText(self, "Arguments", "Command-line arguments (space-separated):")
+        spawn_args: list[str] | None = None
+        if args_accepted and args_str.strip():
+            spawn_args = args_str.strip().split()
+
+        self._spawn_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.spawn(Path(path_str.strip()), spawn_args),
+            on_success=lambda pid: self._on_spawn_success(int(pid) if isinstance(pid, (int, float)) else 0),
+            on_error=self._on_spawn_error,
+        )
+
+    def _on_spawn_success(self, pid: int) -> None:
+        """Handle successful process spawn.
+
+        Args:
+            pid: Spawned process ID.
+        """
+        self._attached_pid = pid
+        self._console.appendPlainText(f"[+] Spawned process PID {pid}")
+        self._set_status(f"Spawned (PID: {pid})")
+        self._spawn_btn.setEnabled(True)
+        self._resume_btn.setEnabled(True)
+        self._attach_btn.setEnabled(False)
+        self._detach_btn.setEnabled(True)
+        self.tool_started.emit()
+
+    def _on_spawn_error(self, exc: object) -> None:
+        """Handle spawn failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Spawn failed: {exc}")
+        _logger.warning("frida_spawn_failed", error=str(exc))
+        self._spawn_btn.setEnabled(True)
+
+    def _on_resume(self) -> None:
+        """Resume a spawned process."""
+        if self._bridge is None:
+            return
+
+        self._resume_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.resume(),
+            on_success=lambda _: self._on_resume_success(),
+            on_error=self._on_resume_error,
+        )
+
+    def _on_resume_success(self) -> None:
+        """Handle successful process resume."""
+        self._console.appendPlainText("[+] Process resumed")
+        self._set_status("Running")
+        self._resume_btn.setEnabled(False)
+
+    def _on_resume_error(self, exc: object) -> None:
+        """Handle resume failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Resume failed: {exc}")
+        self._resume_btn.setEnabled(True)
+
+    def _on_intercept_return(self) -> None:
+        """Set up a return value interception hook."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        target, accepted = QInputDialog.getText(self, "Intercept Return", "Target (address or module!func):")
+        if not accepted or not target.strip():
+            return
+
+        ret_val, val_accepted = QInputDialog.getInt(self, "Return Value", "Value to return:", value=1)
+        if not val_accepted:
+            return
+
+        self._run_async(
+            self._bridge.intercept_return(target.strip(), ret_val),
+            on_success=lambda _: self._console.appendPlainText(
+                f"[+] Intercept return installed for {target.strip()} -> {ret_val}",
+            ),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Intercept return failed: {e}"),
+        )
+
+    def _on_replace_function(self) -> None:
+        """Replace a function implementation with custom code."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            return
+
+        target, accepted = QInputDialog.getText(self, "Replace Function", "Target (address or module!func):")
+        if not accepted or not target.strip():
+            return
+
+        code, code_accepted = QInputDialog.getMultiLineText(
+            self,
+            "Replacement Code",
+            "JavaScript NativeCallback expression:",
+        )
+        if not code_accepted or not code.strip():
+            return
+
+        self._run_async(
+            self._bridge.replace_function(target.strip(), code.strip()),
+            on_success=lambda _: self._console.appendPlainText(f"[+] Function replaced: {target.strip()}"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Replace function failed: {e}"),
+        )
+
+    def _on_refresh_hooks(self) -> None:
+        """Refresh the hooks table from the bridge."""
+        if self._bridge is None:
+            return
+
+        self._refresh_hooks_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.get_hooks(),
+            on_success=self._populate_hooks_from_bridge,
+            on_error=self._on_refresh_hooks_error,
+        )
+
+    def _populate_hooks_from_bridge(self, result: object) -> None:
+        """Repopulate the hooks table from bridge data.
+
+        Args:
+            result: List of HookInfo from the bridge.
+        """
+        self._hooks_table.setRowCount(0)
+        self._hook_ids.clear()
+        if isinstance(result, list):
+            for hook in cast("list[object]", result):
+                hook_id = str(getattr(hook, "id", ""))
+                target = str(getattr(hook, "target", ""))
+                address = getattr(hook, "address", None)
+                addr_str = f"0x{address:X}" if isinstance(address, int) and address else "0x0"
+                active = getattr(hook, "active", True)
+
+                module_str = ""
+                func_str = target
+                if "!" in target:
+                    parts = target.split("!", 1)
+                    module_str = parts[0]
+                    func_str = parts[1]
+
+                row = self._hooks_table.rowCount()
+                self._hooks_table.insertRow(row)
+                self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem(addr_str))
+                self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(module_str))
+                self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(func_str))
+                self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Active" if active else "Inactive"))
+                self._hook_ids.append(hook_id)
+        self._refresh_hooks_btn.setEnabled(True)
+
+    def _on_refresh_hooks_error(self, exc: object) -> None:
+        """Handle hooks refresh failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Refresh hooks failed: {exc}")
+        self._refresh_hooks_btn.setEnabled(True)
+
+    def _create_modules_section(self) -> QWidget:
+        """Create the modules browser section.
+
+        Returns:
+            QWidget: Modules container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        header = QHBoxLayout()
+        title = QLabel("Modules")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        header.addWidget(title)
+        header.addStretch()
+        self._refresh_modules_btn = QPushButton("Refresh")
+        self._refresh_modules_btn.setObjectName("tool_button")
+        self._refresh_modules_btn.clicked.connect(self._on_refresh_modules)
+        header.addWidget(self._refresh_modules_btn)
+        layout.addLayout(header)
+
+        self._modules_table = QTableWidget(0, len(_MODULE_COLUMNS))
+        self._modules_table.setHorizontalHeaderLabels(_MODULE_COLUMNS)
+        self._modules_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._modules_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        mod_h = self._modules_table.horizontalHeader()
+        if mod_h is not None:
+            mod_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self._modules_table)
+
+        detail_row = QHBoxLayout()
+        detail_row.addWidget(QLabel("Module:"))
+        self._module_combo = QComboBox()
+        self._module_combo.setMinimumWidth(_DEVICE_COMBO_MIN_WIDTH)
+        detail_row.addWidget(self._module_combo)
+        self._exports_btn = QPushButton("Exports")
+        self._exports_btn.setObjectName("tool_button")
+        self._exports_btn.clicked.connect(self._on_show_exports)
+        detail_row.addWidget(self._exports_btn)
+        self._imports_btn = QPushButton("Imports")
+        self._imports_btn.setObjectName("tool_button")
+        self._imports_btn.clicked.connect(self._on_show_imports)
+        detail_row.addWidget(self._imports_btn)
+        detail_row.addStretch()
+        layout.addLayout(detail_row)
+
+        self._module_detail_tabs = QTabWidget()
+        self._exports_table = QTableWidget(0, len(_EXPORT_COLUMNS))
+        self._exports_table.setHorizontalHeaderLabels(_EXPORT_COLUMNS)
+        exp_h = self._exports_table.horizontalHeader()
+        if exp_h is not None:
+            exp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._module_detail_tabs.addTab(self._exports_table, "Exports")
+
+        self._imports_table = QTableWidget(0, len(_IMPORT_COLUMNS))
+        self._imports_table.setHorizontalHeaderLabels(_IMPORT_COLUMNS)
+        imp_h = self._imports_table.horizontalHeader()
+        if imp_h is not None:
+            imp_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._module_detail_tabs.addTab(self._imports_table, "Imports")
+        layout.addWidget(self._module_detail_tabs)
+
+        return container
+
+    def _on_refresh_modules(self) -> None:
+        """Refresh the modules table."""
+        if self._bridge is None:
+            return
+        self._refresh_modules_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.enumerate_modules(),
+            on_success=self._populate_modules_table,
+            on_error=self._on_modules_error,
+        )
+
+    def _populate_modules_table(self, result: object) -> None:
+        """Populate the modules table and combo from results.
+
+        Args:
+            result: List of ModuleInfo from the bridge.
+        """
+        self._modules_table.setRowCount(0)
+        self._module_combo.clear()
+        if isinstance(result, list):
+            for mod in cast("list[object]", result):
+                name = str(getattr(mod, "name", ""))
+                base = getattr(mod, "base_address", 0)
+                size = getattr(mod, "size", 0)
+                path = str(getattr(mod, "path", ""))
+                row = self._modules_table.rowCount()
+                self._modules_table.insertRow(row)
+                self._modules_table.setItem(row, 0, QTableWidgetItem(name))
+                self._modules_table.setItem(row, 1, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
+                self._modules_table.setItem(row, 2, QTableWidgetItem(str(size)))
+                self._modules_table.setItem(row, 3, QTableWidgetItem(path))
+                self._module_combo.addItem(name)
+        self._refresh_modules_btn.setEnabled(True)
+
+    def _on_modules_error(self, exc: object) -> None:
+        """Handle modules operation failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Modules operation failed: {exc}")
+        self._refresh_modules_btn.setEnabled(True)
+
+    def _on_show_exports(self) -> None:
+        """Show exports for the selected module."""
+        if self._bridge is None:
+            return
+        module_name = self._module_combo.currentText()
+        if not module_name:
+            return
+        self._run_async(
+            self._bridge.enumerate_exports(module_name),
+            on_success=self._populate_exports_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Exports failed: {e}"),
+        )
+
+    def _populate_exports_table(self, result: object) -> None:
+        """Populate the exports table from results.
+
+        Args:
+            result: List of ExportInfo from the bridge.
+        """
+        self._exports_table.setRowCount(0)
+        if isinstance(result, list):
+            for exp in cast("list[object]", result):
+                name = str(getattr(exp, "name", ""))
+                addr = getattr(exp, "address", 0)
+                ordinal = getattr(exp, "ordinal", 0)
+                row = self._exports_table.rowCount()
+                self._exports_table.insertRow(row)
+                self._exports_table.setItem(row, 0, QTableWidgetItem(name))
+                self._exports_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+                self._exports_table.setItem(row, 2, QTableWidgetItem(str(ordinal)))
+        self._module_detail_tabs.setCurrentIndex(0)
+
+    def _on_show_imports(self) -> None:
+        """Show imports for the selected module."""
+        if self._bridge is None:
+            return
+        module_name = self._module_combo.currentText()
+        if not module_name:
+            return
+        self._run_async(
+            self._bridge.enumerate_imports(module_name),
+            on_success=self._populate_imports_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Imports failed: {e}"),
+        )
+
+    def _populate_imports_table(self, result: object) -> None:
+        """Populate the imports table from results.
+
+        Args:
+            result: List of ImportInfo from the bridge.
+        """
+        self._imports_table.setRowCount(0)
+        if isinstance(result, list):
+            for imp in cast("list[object]", result):
+                func = str(getattr(imp, "function", ""))
+                dll = str(getattr(imp, "dll", ""))
+                addr = getattr(imp, "address", 0)
+                row = self._imports_table.rowCount()
+                self._imports_table.insertRow(row)
+                self._imports_table.setItem(row, 0, QTableWidgetItem(func))
+                self._imports_table.setItem(row, 1, QTableWidgetItem(dll))
+                self._imports_table.setItem(row, 2, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+        self._module_detail_tabs.setCurrentIndex(1)
+
+    def _create_memory_section(self) -> QWidget:
+        """Create the memory operations section.
+
+        Returns:
+            QWidget: Memory container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        mem_tabs = QTabWidget()
+
+        rw_widget = QWidget()
+        rw_layout = QVBoxLayout(rw_widget)
+        read_row = QHBoxLayout()
+        read_row.addWidget(QLabel("Address:"))
+        self._mem_read_addr = QLineEdit()
+        self._mem_read_addr.setPlaceholderText("0x401000")
+        read_row.addWidget(self._mem_read_addr)
+        read_row.addWidget(QLabel("Size:"))
+        self._mem_read_size = QSpinBox()
+        self._mem_read_size.setRange(1, 65536)
+        self._mem_read_size.setValue(256)
+        read_row.addWidget(self._mem_read_size)
+        self._mem_read_btn = QPushButton("Read")
+        self._mem_read_btn.setObjectName("tool_button")
+        self._mem_read_btn.clicked.connect(self._on_read_memory)
+        read_row.addWidget(self._mem_read_btn)
+        rw_layout.addLayout(read_row)
+
+        self._mem_hex_display = QPlainTextEdit()
+        self._mem_hex_display.setFont(FontManager.get_instance().get_code_font(9))
+        self._mem_hex_display.setReadOnly(ro=True)
+        rw_layout.addWidget(self._mem_hex_display)
+
+        write_row = QHBoxLayout()
+        write_row.addWidget(QLabel("Address:"))
+        self._mem_write_addr = QLineEdit()
+        self._mem_write_addr.setPlaceholderText("0x401000")
+        write_row.addWidget(self._mem_write_addr)
+        write_row.addWidget(QLabel("Data (hex):"))
+        self._mem_write_data = QLineEdit()
+        self._mem_write_data.setPlaceholderText("90 90 90")
+        write_row.addWidget(self._mem_write_data)
+        self._mem_write_btn = QPushButton("Write")
+        self._mem_write_btn.setObjectName("tool_button")
+        self._mem_write_btn.clicked.connect(self._on_write_memory)
+        write_row.addWidget(self._mem_write_btn)
+        rw_layout.addLayout(write_row)
+
+        alloc_row = QHBoxLayout()
+        alloc_row.addWidget(QLabel("Allocate:"))
+        self._mem_alloc_size = QSpinBox()
+        self._mem_alloc_size.setRange(1, 1048576)
+        self._mem_alloc_size.setValue(4096)
+        alloc_row.addWidget(self._mem_alloc_size)
+        self._mem_alloc_btn = QPushButton("Allocate")
+        self._mem_alloc_btn.setObjectName("tool_button")
+        self._mem_alloc_btn.clicked.connect(self._on_allocate_memory)
+        alloc_row.addWidget(self._mem_alloc_btn)
+        self._mem_alloc_result = QLabel("")
+        alloc_row.addWidget(self._mem_alloc_result)
+        alloc_row.addStretch()
+        rw_layout.addLayout(alloc_row)
+        mem_tabs.addTab(rw_widget, "Read/Write")
+
+        scan_widget = QWidget()
+        scan_layout = QVBoxLayout(scan_widget)
+        scan_row = QHBoxLayout()
+        scan_row.addWidget(QLabel("Pattern:"))
+        self._mem_scan_pattern = QLineEdit()
+        self._mem_scan_pattern.setPlaceholderText("48 8B ?? ??")
+        scan_row.addWidget(self._mem_scan_pattern)
+        self._mem_scan_btn = QPushButton("Scan")
+        self._mem_scan_btn.setObjectName("tool_button")
+        self._mem_scan_btn.clicked.connect(self._on_scan_memory)
+        scan_row.addWidget(self._mem_scan_btn)
+        scan_layout.addLayout(scan_row)
+        self._mem_scan_table = QTableWidget(0, 2)
+        self._mem_scan_table.setHorizontalHeaderLabels(["Address", "Match"])
+        scan_h = self._mem_scan_table.horizontalHeader()
+        if scan_h is not None:
+            scan_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        scan_layout.addWidget(self._mem_scan_table)
+        mem_tabs.addTab(scan_widget, "Scan")
+
+        regions_widget = QWidget()
+        regions_layout = QVBoxLayout(regions_widget)
+        regions_row = QHBoxLayout()
+        regions_row.addWidget(QLabel("Protection:"))
+        self._mem_prot_combo = QComboBox()
+        self._mem_prot_combo.addItems(_PROTECTIONS)
+        regions_row.addWidget(self._mem_prot_combo)
+        self._mem_regions_btn = QPushButton("List Regions")
+        self._mem_regions_btn.setObjectName("tool_button")
+        self._mem_regions_btn.clicked.connect(self._on_list_regions)
+        regions_row.addWidget(self._mem_regions_btn)
+        regions_row.addStretch()
+        regions_layout.addLayout(regions_row)
+        self._mem_regions_table = QTableWidget(0, 6)
+        self._mem_regions_table.setHorizontalHeaderLabels(["Base", "Size", "Protection", "State", "Type", "Module"])
+        reg_h = self._mem_regions_table.horizontalHeader()
+        if reg_h is not None:
+            reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        regions_layout.addWidget(self._mem_regions_table)
+        mem_tabs.addTab(regions_widget, "Regions")
+
+        protect_widget = QWidget()
+        protect_layout = QVBoxLayout(protect_widget)
+        prot_row = QHBoxLayout()
+        prot_row.addWidget(QLabel("Address:"))
+        self._mem_prot_addr = QLineEdit()
+        self._mem_prot_addr.setPlaceholderText("0x401000")
+        prot_row.addWidget(self._mem_prot_addr)
+        prot_row.addWidget(QLabel("Size:"))
+        self._mem_prot_size = QSpinBox()
+        self._mem_prot_size.setRange(1, 1048576)
+        self._mem_prot_size.setValue(4096)
+        prot_row.addWidget(self._mem_prot_size)
+        prot_row.addWidget(QLabel("Protection:"))
+        self._mem_prot_set_combo = QComboBox()
+        self._mem_prot_set_combo.addItems(["rwx", "r-x", "rw-", "r--"])
+        prot_row.addWidget(self._mem_prot_set_combo)
+        self._mem_prot_set_btn = QPushButton("Set")
+        self._mem_prot_set_btn.setObjectName("tool_button")
+        self._mem_prot_set_btn.clicked.connect(self._on_set_protection)
+        prot_row.addWidget(self._mem_prot_set_btn)
+        self._mem_prot_result = QLabel("")
+        prot_row.addWidget(self._mem_prot_result)
+        prot_row.addStretch()
+        protect_layout.addLayout(prot_row)
+        protect_layout.addStretch()
+        mem_tabs.addTab(protect_widget, "Protect")
+
+        layout.addWidget(mem_tabs)
+        return container
+
+    def _on_read_memory(self) -> None:
+        """Read memory from the target process."""
+        if self._bridge is None:
+            return
+        addr = self._parse_hex_address(self._mem_read_addr.text())
+        if addr is None:
+            self._console.appendPlainText("[-] Invalid address")
+            return
+        size = self._mem_read_size.value()
+        captured_addr = addr
+        self._run_async(
+            self._bridge.read_memory(addr, size),
+            on_success=lambda r: self._on_read_memory_success(captured_addr, r),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Read failed: {e}"),
+        )
+
+    def _on_read_memory_success(self, base_addr: int, result: object) -> None:
+        """Handle successful memory read and display hex dump.
+
+        Args:
+            base_addr: Base address for the hex dump display.
+            result: Raw bytes from the bridge.
+        """
+        if isinstance(result, (bytes, bytearray)):
+            self._mem_hex_display.setPlainText(self._format_hex_dump(bytes(result), base_addr))
+        else:
+            self._mem_hex_display.setPlainText(str(result))
+
+    def _on_write_memory(self) -> None:
+        """Write memory in the target process."""
+        if self._bridge is None:
+            return
+        addr = self._parse_hex_address(self._mem_write_addr.text())
+        if addr is None:
+            self._console.appendPlainText("[-] Invalid address")
+            return
+        hex_str = self._mem_write_data.text().strip()
+        if not hex_str:
+            return
+        try:
+            data = bytes.fromhex(hex_str.replace(" ", ""))
+        except ValueError:
+            self._console.appendPlainText("[-] Invalid hex data")
+            return
+        self._run_async(
+            self._bridge.write_memory(addr, data),
+            on_success=lambda _: self._console.appendPlainText(f"[+] Wrote {len(data)} bytes to 0x{addr:X}"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Write failed: {e}"),
+        )
+
+    def _on_allocate_memory(self) -> None:
+        """Allocate memory in the target process."""
+        if self._bridge is None:
+            return
+        size = self._mem_alloc_size.value()
+        self._run_async(
+            self._bridge.allocate_memory(size),
+            on_success=lambda r: self._mem_alloc_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Allocate failed: {e}"),
+        )
+
+    def _on_scan_memory(self) -> None:
+        """Scan process memory for a pattern."""
+        if self._bridge is None:
+            return
+        pattern_str = self._mem_scan_pattern.text().strip()
+        if not pattern_str:
+            return
+        try:
+            pattern_bytes = bytes.fromhex(pattern_str.replace("??", "00").replace(" ", ""))
+        except ValueError:
+            self._console.appendPlainText("[-] Invalid pattern")
+            return
+        self._mem_scan_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.scan_memory(pattern_bytes),
+            on_success=self._populate_scan_table,
+            on_error=self._on_scan_error,
+        )
+
+    def _populate_scan_table(self, result: object) -> None:
+        """Populate the scan results table.
+
+        Args:
+            result: List of MemorySearchResult from the bridge.
+        """
+        self._mem_scan_table.setRowCount(0)
+        if isinstance(result, list):
+            for match in cast("list[object]", result):
+                addr = getattr(match, "address", 0)
+                matched = str(getattr(match, "matched_bytes", ""))
+                row = self._mem_scan_table.rowCount()
+                self._mem_scan_table.insertRow(row)
+                self._mem_scan_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+                self._mem_scan_table.setItem(row, 1, QTableWidgetItem(matched))
+        self._mem_scan_btn.setEnabled(True)
+        self._console.appendPlainText(f"[+] Scan complete: {self._mem_scan_table.rowCount()} matches")
+
+    def _on_scan_error(self, exc: object) -> None:
+        """Handle scan failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Scan failed: {exc}")
+        self._mem_scan_btn.setEnabled(True)
+
+    def _on_list_regions(self) -> None:
+        """List memory regions of the process."""
+        if self._bridge is None:
+            return
+        protection = self._mem_prot_combo.currentText()
+        self._mem_regions_btn.setEnabled(False)
+        self._run_async(
+            self._bridge.get_memory_regions(protection),
+            on_success=self._populate_regions_table,
+            on_error=self._on_regions_error,
+        )
+
+    def _populate_regions_table(self, result: object) -> None:
+        """Populate the memory regions table.
+
+        Args:
+            result: List of MemoryRegion from the bridge.
+        """
+        self._mem_regions_table.setRowCount(0)
+        if isinstance(result, list):
+            for region in cast("list[object]", result):
+                base = getattr(region, "base_address", 0)
+                size = getattr(region, "size", 0)
+                prot = str(getattr(region, "protection", ""))
+                state = str(getattr(region, "state", ""))
+                rtype = str(getattr(region, "type", ""))
+                module = str(getattr(region, "module_name", "") or "")
+                row = self._mem_regions_table.rowCount()
+                self._mem_regions_table.insertRow(row)
+                self._mem_regions_table.setItem(row, 0, QTableWidgetItem(f"0x{base:X}" if isinstance(base, int) else str(base)))
+                self._mem_regions_table.setItem(row, 1, QTableWidgetItem(str(size)))
+                self._mem_regions_table.setItem(row, 2, QTableWidgetItem(prot))
+                self._mem_regions_table.setItem(row, 3, QTableWidgetItem(state))
+                self._mem_regions_table.setItem(row, 4, QTableWidgetItem(rtype))
+                self._mem_regions_table.setItem(row, 5, QTableWidgetItem(module))
+        self._mem_regions_btn.setEnabled(True)
+
+    def _on_regions_error(self, exc: object) -> None:
+        """Handle regions listing failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] List regions failed: {exc}")
+        self._mem_regions_btn.setEnabled(True)
+
+    def _on_set_protection(self) -> None:
+        """Set memory protection for a region."""
+        if self._bridge is None:
+            return
+        addr = self._parse_hex_address(self._mem_prot_addr.text())
+        if addr is None:
+            self._console.appendPlainText("[-] Invalid address")
+            return
+        size = self._mem_prot_size.value()
+        protection = self._mem_prot_set_combo.currentText()
+        self._run_async(
+            self._bridge.protect_memory(addr, size, protection),
+            on_success=lambda r: self._mem_prot_result.setText("OK" if r else "Failed"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Set protection failed: {e}"),
+        )
+
+    @staticmethod
+    def _format_hex_dump(data: bytes, base_address: int) -> str:
+        """Format raw bytes as a hex dump with addresses and ASCII.
+
+        Args:
+            data: Raw bytes to format.
+            base_address: Starting address for display.
+
+        Returns:
+            str: Formatted hex dump string.
+        """
+        lines: list[str] = []
+        for offset in range(0, len(data), 16):
+            chunk = data[offset : offset + 16]
+            hex_part = " ".join(f"{b:02X}" for b in chunk)
+            ascii_part = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in chunk)
+            lines.append(f"{base_address + offset:08X}  {hex_part:<48s}  {ascii_part}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _parse_hex_address(text: str) -> int | None:
+        """Parse a hex address string to an integer.
+
+        Args:
+            text: Address string (e.g., '0x401000' or '401000').
+
+        Returns:
+            int | None: Parsed address or None if invalid.
+        """
+        text = text.strip()
+        if not text:
+            return None
+        try:
+            return int(text, 16)
+        except ValueError:
+            return None
+
+    def _create_symbols_section(self) -> QWidget:
+        """Create the symbols resolution section.
+
+        Returns:
+            QWidget: Symbols container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        title = QLabel("Symbols")
+        title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(title)
+
+        base_row = QHBoxLayout()
+        base_row.addWidget(QLabel("Module:"))
+        self._sym_module_input = QLineEdit()
+        self._sym_module_input.setPlaceholderText("kernel32.dll")
+        base_row.addWidget(self._sym_module_input)
+        self._sym_find_base_btn = QPushButton("Find Base")
+        self._sym_find_base_btn.setObjectName("tool_button")
+        self._sym_find_base_btn.clicked.connect(self._on_find_base)
+        base_row.addWidget(self._sym_find_base_btn)
+        self._sym_base_result = QLabel("")
+        base_row.addWidget(self._sym_base_result)
+        layout.addLayout(base_row)
+
+        resolve_row = QHBoxLayout()
+        resolve_row.addWidget(QLabel("Address:"))
+        self._sym_addr_input = QLineEdit()
+        self._sym_addr_input.setPlaceholderText("0x401000")
+        resolve_row.addWidget(self._sym_addr_input)
+        self._sym_resolve_btn = QPushButton("Resolve")
+        self._sym_resolve_btn.setObjectName("tool_button")
+        self._sym_resolve_btn.clicked.connect(self._on_resolve_symbol)
+        resolve_row.addWidget(self._sym_resolve_btn)
+        layout.addLayout(resolve_row)
+
+        find_row = QHBoxLayout()
+        find_row.addWidget(QLabel("Function:"))
+        self._sym_func_input = QLineEdit()
+        self._sym_func_input.setPlaceholderText("CreateFileW")
+        find_row.addWidget(self._sym_func_input)
+        self._sym_find_btn = QPushButton("Find")
+        self._sym_find_btn.setObjectName("tool_button")
+        self._sym_find_btn.clicked.connect(self._on_find_functions)
+        find_row.addWidget(self._sym_find_btn)
+        layout.addLayout(find_row)
+
+        api_row = QHBoxLayout()
+        api_row.addWidget(QLabel("API:"))
+        self._sym_api_input = QLineEdit()
+        self._sym_api_input.setPlaceholderText("exports:*!CreateFile*")
+        api_row.addWidget(self._sym_api_input)
+        self._sym_api_btn = QPushButton("Resolve API")
+        self._sym_api_btn.setObjectName("tool_button")
+        self._sym_api_btn.clicked.connect(self._on_resolve_api)
+        api_row.addWidget(self._sym_api_btn)
+        layout.addLayout(api_row)
+
+        sym_tabs = QTabWidget()
+        self._sym_results_table = QTableWidget(0, 5)
+        self._sym_results_table.setHorizontalHeaderLabels(["Name", "Address", "Module", "File", "Line"])
+        sr_h = self._sym_results_table.horizontalHeader()
+        if sr_h is not None:
+            sr_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        sym_tabs.addTab(self._sym_results_table, "Symbols")
+
+        self._sym_api_table = QTableWidget(0, 2)
+        self._sym_api_table.setHorizontalHeaderLabels(["Name", "Address"])
+        sa_h = self._sym_api_table.horizontalHeader()
+        if sa_h is not None:
+            sa_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        sym_tabs.addTab(self._sym_api_table, "API Matches")
+        layout.addWidget(sym_tabs)
+
+        return container
+
+    def _on_find_base(self) -> None:
+        """Find the base address of a module."""
+        if self._bridge is None:
+            return
+        module_name = self._sym_module_input.text().strip()
+        if not module_name:
+            return
+        self._run_async(
+            self._bridge.find_base_address(module_name),
+            on_success=lambda r: self._sym_base_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Find base failed: {e}"),
+        )
+
+    def _on_resolve_symbol(self) -> None:
+        """Resolve a symbol from an address."""
+        if self._bridge is None:
+            return
+        addr = self._parse_hex_address(self._sym_addr_input.text())
+        if addr is None:
+            self._console.appendPlainText("[-] Invalid address")
+            return
+        self._run_async(
+            self._bridge.resolve_symbol(addr),
+            on_success=self._on_symbol_resolved,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Resolve failed: {e}"),
+        )
+
+    def _on_symbol_resolved(self, result: object) -> None:
+        """Handle successful symbol resolution.
+
+        Args:
+            result: SymbolInfo from the bridge.
+        """
+        name = str(getattr(result, "name", ""))
+        addr = getattr(result, "address", 0)
+        module = str(getattr(result, "module_name", "") or "")
+        self._console.appendPlainText(f"[+] Symbol: {name} at 0x{addr:X} ({module})" if isinstance(addr, int) else f"[+] Symbol: {name}")
+
+    def _on_find_functions(self) -> None:
+        """Find functions by name."""
+        if self._bridge is None:
+            return
+        name = self._sym_func_input.text().strip()
+        if not name:
+            return
+        self._run_async(
+            self._bridge.find_functions_named(name),
+            on_success=self._populate_sym_results_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Find functions failed: {e}"),
+        )
+
+    def _populate_sym_results_table(self, result: object) -> None:
+        """Populate the symbols results table.
+
+        Args:
+            result: List of SymbolInfo from the bridge.
+        """
+        self._sym_results_table.setRowCount(0)
+        if isinstance(result, list):
+            for sym in cast("list[object]", result):
+                name = str(getattr(sym, "name", ""))
+                addr = getattr(sym, "address", 0)
+                module = str(getattr(sym, "module_name", "") or "")
+                fname = str(getattr(sym, "file_name", "") or "")
+                line = getattr(sym, "line_number", None)
+                row = self._sym_results_table.rowCount()
+                self._sym_results_table.insertRow(row)
+                self._sym_results_table.setItem(row, 0, QTableWidgetItem(name))
+                self._sym_results_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+                self._sym_results_table.setItem(row, 2, QTableWidgetItem(module))
+                self._sym_results_table.setItem(row, 3, QTableWidgetItem(fname))
+                self._sym_results_table.setItem(row, 4, QTableWidgetItem(str(line) if line is not None else ""))
+
+    def _on_resolve_api(self) -> None:
+        """Resolve API functions by pattern."""
+        if self._bridge is None:
+            return
+        query = self._sym_api_input.text().strip()
+        if not query:
+            return
+        self._run_async(
+            self._bridge.resolve_api(query),
+            on_success=self._populate_api_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] API resolve failed: {e}"),
+        )
+
+    def _populate_api_table(self, result: object) -> None:
+        """Populate the API matches table.
+
+        Args:
+            result: List of ApiResolverMatch from the bridge.
+        """
+        self._sym_api_table.setRowCount(0)
+        if isinstance(result, list):
+            for match in cast("list[object]", result):
+                name = str(getattr(match, "name", ""))
+                addr = getattr(match, "address", 0)
+                row = self._sym_api_table.rowCount()
+                self._sym_api_table.insertRow(row)
+                self._sym_api_table.setItem(row, 0, QTableWidgetItem(name))
+                self._sym_api_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
+
+    def _create_advanced_section(self) -> QWidget:
+        """Create the advanced operations section.
+
+        Returns:
+            QWidget: Advanced container widget.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        call_title = QLabel("Function Calling")
+        call_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(call_title)
+
+        call_row1 = QHBoxLayout()
+        call_row1.addWidget(QLabel("Address:"))
+        self._adv_call_addr = QLineEdit()
+        self._adv_call_addr.setPlaceholderText("0x401000")
+        call_row1.addWidget(self._adv_call_addr)
+        call_row1.addWidget(QLabel("Args:"))
+        self._adv_call_args = QLineEdit()
+        self._adv_call_args.setPlaceholderText("0, 1, 2")
+        call_row1.addWidget(self._adv_call_args)
+        self._adv_call_btn = QPushButton("Call")
+        self._adv_call_btn.setObjectName("tool_button")
+        self._adv_call_btn.clicked.connect(self._on_call_function)
+        call_row1.addWidget(self._adv_call_btn)
+        self._adv_call_result = QLabel("")
+        call_row1.addWidget(self._adv_call_result)
+        layout.addLayout(call_row1)
+
+        call_row2 = QHBoxLayout()
+        call_row2.addWidget(QLabel("Return:"))
+        self._adv_ret_type = QComboBox()
+        self._adv_ret_type.addItems(_NATIVE_TYPES)
+        call_row2.addWidget(self._adv_ret_type)
+        call_row2.addWidget(QLabel("Arg types:"))
+        self._adv_arg_types = QLineEdit()
+        self._adv_arg_types.setPlaceholderText("pointer, int, int")
+        call_row2.addWidget(self._adv_arg_types)
+        call_row2.addWidget(QLabel("Convention:"))
+        self._adv_cc = QComboBox()
+        self._adv_cc.addItems(_CALLING_CONVENTIONS)
+        call_row2.addWidget(self._adv_cc)
+        call_row2.addStretch()
+        layout.addLayout(call_row2)
+
+        child_title = QLabel("Child Gating")
+        child_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(child_title)
+
+        child_btn_row = QHBoxLayout()
+        self._adv_enable_child_btn = QPushButton("Enable")
+        self._adv_enable_child_btn.setObjectName("tool_button")
+        self._adv_enable_child_btn.clicked.connect(self._on_enable_child_gating)
+        child_btn_row.addWidget(self._adv_enable_child_btn)
+        self._adv_disable_child_btn = QPushButton("Disable")
+        self._adv_disable_child_btn.setObjectName("tool_button")
+        self._adv_disable_child_btn.clicked.connect(self._on_disable_child_gating)
+        child_btn_row.addWidget(self._adv_disable_child_btn)
+        self._adv_refresh_children_btn = QPushButton("Refresh")
+        self._adv_refresh_children_btn.setObjectName("tool_button")
+        self._adv_refresh_children_btn.clicked.connect(self._on_refresh_children)
+        child_btn_row.addWidget(self._adv_refresh_children_btn)
+        self._adv_resume_child_btn = QPushButton("Resume Selected")
+        self._adv_resume_child_btn.setObjectName("tool_button")
+        self._adv_resume_child_btn.clicked.connect(self._on_resume_child)
+        child_btn_row.addWidget(self._adv_resume_child_btn)
+        child_btn_row.addStretch()
+        layout.addLayout(child_btn_row)
+
+        self._adv_children_table = QTableWidget(0, len(_CHILD_COLUMNS))
+        self._adv_children_table.setHorizontalHeaderLabels(_CHILD_COLUMNS)
+        self._adv_children_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        ch_h = self._adv_children_table.horizontalHeader()
+        if ch_h is not None:
+            ch_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self._adv_children_table)
+
+        crash_title = QLabel("Crash Reporting")
+        crash_title.setFont(FontManager.get_instance().get_ui_font_bold(9))
+        layout.addWidget(crash_title)
+
+        crash_btn_row = QHBoxLayout()
+        self._adv_enable_crash_btn = QPushButton("Enable")
+        self._adv_enable_crash_btn.setObjectName("tool_button")
+        self._adv_enable_crash_btn.clicked.connect(self._on_enable_crash_reporting)
+        crash_btn_row.addWidget(self._adv_enable_crash_btn)
+        self._adv_refresh_crashes_btn = QPushButton("Refresh")
+        self._adv_refresh_crashes_btn.setObjectName("tool_button")
+        self._adv_refresh_crashes_btn.clicked.connect(self._on_refresh_crashes)
+        crash_btn_row.addWidget(self._adv_refresh_crashes_btn)
+        crash_btn_row.addStretch()
+        layout.addLayout(crash_btn_row)
+
+        self._adv_crashes_table = QTableWidget(0, len(_CRASH_COLUMNS))
+        self._adv_crashes_table.setHorizontalHeaderLabels(_CRASH_COLUMNS)
+        cr_h = self._adv_crashes_table.horizontalHeader()
+        if cr_h is not None:
+            cr_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self._adv_crashes_table)
+
+        return container
+
+    def _on_call_function(self) -> None:
+        """Call a function in the target process."""
+        if self._bridge is None:
+            return
+        addr = self._parse_hex_address(self._adv_call_addr.text())
+        if addr is None:
+            self._console.appendPlainText("[-] Invalid address")
+            return
+
+        args_text = self._adv_call_args.text().strip()
+        args: list[int] | None = None
+        if args_text:
+            try:
+                args = [int(a.strip(), 0) for a in args_text.split(",")]
+            except ValueError:
+                self._console.appendPlainText("[-] Invalid arguments")
+                return
+
+        ret_type = self._adv_ret_type.currentText()
+        arg_types_text = self._adv_arg_types.text().strip()
+        arg_types: list[str] | None = None
+        if arg_types_text:
+            arg_types = [t.strip() for t in arg_types_text.split(",")]
+        cc = self._adv_cc.currentText()
+
+        self._run_async(
+            self._bridge.call_function(addr, args, return_type=ret_type, arg_types=arg_types, calling_convention=cc),
+            on_success=lambda r: self._adv_call_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Call failed: {e}"),
+        )
+
+    def _on_enable_child_gating(self) -> None:
+        """Enable child process gating."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.enable_child_gating(),
+            on_success=lambda _: self._console.appendPlainText("[+] Child gating enabled"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Enable child gating failed: {e}"),
+        )
+
+    def _on_disable_child_gating(self) -> None:
+        """Disable child process gating."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.disable_child_gating(),
+            on_success=lambda _: self._console.appendPlainText("[+] Child gating disabled"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Disable child gating failed: {e}"),
+        )
+
+    def _on_refresh_children(self) -> None:
+        """Refresh the pending children table."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.get_pending_children(),
+            on_success=self._populate_children_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Refresh children failed: {e}"),
+        )
+
+    def _populate_children_table(self, result: object) -> None:
+        """Populate the children table from results.
+
+        Args:
+            result: List of ChildProcessInfo from the bridge.
+        """
+        self._adv_children_table.setRowCount(0)
+        if isinstance(result, list):
+            for child in cast("list[object]", result):
+                pid = getattr(child, "pid", 0)
+                parent = getattr(child, "parent_pid", 0)
+                origin = str(getattr(child, "origin", ""))
+                path = str(getattr(child, "path", "") or "")
+                row = self._adv_children_table.rowCount()
+                self._adv_children_table.insertRow(row)
+                self._adv_children_table.setItem(row, 0, QTableWidgetItem(str(pid)))
+                self._adv_children_table.setItem(row, 1, QTableWidgetItem(str(parent)))
+                self._adv_children_table.setItem(row, 2, QTableWidgetItem(origin))
+                self._adv_children_table.setItem(row, 3, QTableWidgetItem(path))
+
+    def _on_resume_child(self) -> None:
+        """Resume the selected child process."""
+        if self._bridge is None:
+            return
+        row = self._adv_children_table.currentRow()
+        if row < 0:
+            return
+        pid_item = self._adv_children_table.item(row, 0)
+        if pid_item is None:
+            return
+        try:
+            pid = int(pid_item.text())
+        except ValueError:
+            return
+        self._run_async(
+            self._bridge.resume_child(pid),
+            on_success=lambda _: self._console.appendPlainText(f"[+] Child {pid} resumed"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Resume child failed: {e}"),
+        )
+
+    def _on_enable_crash_reporting(self) -> None:
+        """Enable crash event monitoring."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.enable_crash_reporting(),
+            on_success=lambda _: self._console.appendPlainText("[+] Crash reporting enabled"),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Enable crash reporting failed: {e}"),
+        )
+
+    def _on_refresh_crashes(self) -> None:
+        """Refresh the crashes table."""
+        if self._bridge is None:
+            return
+        self._run_async(
+            self._bridge.get_crashes(),
+            on_success=self._populate_crashes_table,
+            on_error=lambda e: self._console.appendPlainText(f"[-] Refresh crashes failed: {e}"),
+        )
+
+    def _populate_crashes_table(self, result: object) -> None:
+        """Populate the crashes table from results.
+
+        Args:
+            result: List of CrashInfo from the bridge.
+        """
+        self._adv_crashes_table.setRowCount(0)
+        if isinstance(result, list):
+            for crash in cast("list[object]", result):
+                pid = getattr(crash, "pid", 0)
+                proc_name = str(getattr(crash, "process_name", ""))
+                summary = str(getattr(crash, "summary", ""))
+                timestamp = getattr(crash, "timestamp", 0.0)
+                time_str = time.strftime("%H:%M:%S", time.localtime(float(timestamp) if isinstance(timestamp, (int, float)) else 0))
+                row = self._adv_crashes_table.rowCount()
+                self._adv_crashes_table.insertRow(row)
+                self._adv_crashes_table.setItem(row, 0, QTableWidgetItem(str(pid)))
+                self._adv_crashes_table.setItem(row, 1, QTableWidgetItem(proc_name))
+                self._adv_crashes_table.setItem(row, 2, QTableWidgetItem(summary))
+                self._adv_crashes_table.setItem(row, 3, QTableWidgetItem(time_str))

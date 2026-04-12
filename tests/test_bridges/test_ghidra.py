@@ -7,9 +7,9 @@
 
 Tests validate:
 - Bridge instantiation and capability reporting
-- Tool definition completeness for all 36 tool functions
+- Tool definition completeness for all 73 tool functions
 - String injection safety in generated Jython code (json.dumps usage)
-- Method existence and signatures for all 19 new methods
+- Method existence and signatures for all bridge methods
 - Error handling when Ghidra is not connected
 - ToolError raised by all methods when disconnected
 """
@@ -27,7 +27,7 @@ from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.core.types import ToolError, ToolName
 
 
-_EXPECTED_TOOL_COUNT: Final[int] = 36
+_EXPECTED_TOOL_COUNT: Final[int] = 73
 _TEST_ADDRESS: Final[int] = 0x401000
 _TEST_RADIUS: Final[int] = 0x100
 _MIN_DESCRIPTION_LEN: Final[int] = 5
@@ -122,7 +122,7 @@ def test_tool_definition_original_functions(bridge: GhidraBridge) -> None:
 
 
 def test_tool_definition_new_functions(bridge: GhidraBridge) -> None:
-    """Verify all Phase-5 and Phase-6 tool functions are defined.
+    """Verify all expanded tool functions are defined.
 
     Args:
         bridge: GhidraBridge fixture.
@@ -149,6 +149,43 @@ def test_tool_definition_new_functions(bridge: GhidraBridge) -> None:
         "ghidra.write_bytes",
         "ghidra.undo",
         "ghidra.redo",
+        "ghidra.read_bytes",
+        "ghidra.get_pcode",
+        "ghidra.get_basic_blocks",
+        "ghidra.get_slice",
+        "ghidra.get_callers",
+        "ghidra.get_register_value",
+        "ghidra.import_debug_info",
+        "ghidra.add_reference",
+        "ghidra.delete_reference",
+        "ghidra.get_relocations",
+        "ghidra.create_namespace",
+        "ghidra.get_namespaces",
+        "ghidra.create_equate",
+        "ghidra.get_equates",
+        "ghidra.search_symbols",
+        "ghidra.get_stack_frame",
+        "ghidra.get_function_body",
+        "ghidra.get_call_tree",
+        "ghidra.get_calling_conventions",
+        "ghidra.get_instruction_flow",
+        "ghidra.create_data_type",
+        "ghidra.create_data",
+        "ghidra.configure_analysis",
+        "ghidra.set_decompiler_options",
+        "ghidra.create_memory_block",
+        "ghidra.get_comments",
+        "ghidra.get_all_comments",
+        "ghidra.get_program_tree",
+        "ghidra.get_properties",
+        "ghidra.diff_programs",
+        "ghidra.set_color",
+        "ghidra.set_program_metadata",
+        "ghidra.execute_script_with_params",
+        "ghidra.manage_thunks",
+        "ghidra.manage_external_references",
+        "ghidra.add_external_function",
+        "ghidra.create_overlay_space",
     }
     assert new_functions.issubset(function_names), f"Missing: {new_functions - function_names}"
 
@@ -566,6 +603,412 @@ class TestQueryMethodsRaiseWhenDisconnected:
         """
         with pytest.raises(ToolError, match="not connected"):
             await disconnected.get_program_info()
+
+
+class TestNewMethodsRaiseWhenDisconnected:
+    """Verify all Phase 2-4 methods raise ToolError when disconnected."""
+
+    @pytest.fixture
+    def disconnected(self) -> GhidraBridge:
+        """Create a bridge with no connection.
+
+        Returns:
+            GhidraBridge: GhidraBridge instance not connected.
+        """
+        return GhidraBridge()
+
+    @pytest.mark.asyncio
+    async def test_read_bytes_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify read_bytes raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.read_bytes(_TEST_ADDRESS, 16)
+
+    @pytest.mark.asyncio
+    async def test_search_bytes_wildcard_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify search_bytes with hex_pattern string raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.search_bytes("48 8B ?? ?? ?? ??")
+
+    @pytest.mark.asyncio
+    async def test_get_pcode_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_pcode raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_pcode(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_basic_blocks_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_basic_blocks raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_basic_blocks(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_slice_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_slice raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_slice(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_callers_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_callers raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_callers(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_register_value_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_register_value raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_register_value(_TEST_ADDRESS, "EAX")
+
+    @pytest.mark.asyncio
+    async def test_import_debug_info_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify import_debug_info raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.import_debug_info("test.pdb")
+
+    @pytest.mark.asyncio
+    async def test_add_reference_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify add_reference raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.add_reference(_TEST_ADDRESS, _TEST_ADDRESS + 0x100)
+
+    @pytest.mark.asyncio
+    async def test_delete_reference_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify delete_reference raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.delete_reference(_TEST_ADDRESS, _TEST_ADDRESS + 0x100)
+
+    @pytest.mark.asyncio
+    async def test_get_relocations_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_relocations raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_relocations()
+
+    @pytest.mark.asyncio
+    async def test_create_namespace_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify create_namespace raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.create_namespace("TestNS")
+
+    @pytest.mark.asyncio
+    async def test_get_namespaces_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_namespaces raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_namespaces()
+
+    @pytest.mark.asyncio
+    async def test_create_equate_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify create_equate raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.create_equate(_TEST_ADDRESS, 42, "MY_CONST")
+
+    @pytest.mark.asyncio
+    async def test_get_equates_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_equates raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_equates()
+
+    @pytest.mark.asyncio
+    async def test_search_symbols_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify search_symbols raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.search_symbols("main")
+
+    @pytest.mark.asyncio
+    async def test_get_stack_frame_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_stack_frame raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_stack_frame(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_function_body_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_function_body raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_function_body(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_call_tree_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_call_tree raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_call_tree(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_calling_conventions_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_calling_conventions raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_calling_conventions()
+
+    @pytest.mark.asyncio
+    async def test_get_instruction_flow_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_instruction_flow raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_instruction_flow(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_create_data_type_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify create_data_type raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.create_data_type("/MyTypes", "MyEnum", "enum")
+
+    @pytest.mark.asyncio
+    async def test_create_data_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify create_data raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.create_data(_TEST_ADDRESS, "dword")
+
+    @pytest.mark.asyncio
+    async def test_configure_analysis_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify configure_analysis raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.configure_analysis("Decompiler", enabled=True)
+
+    @pytest.mark.asyncio
+    async def test_set_decompiler_options_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify set_decompiler_options raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.set_decompiler_options(simplification="normalize")
+
+    @pytest.mark.asyncio
+    async def test_create_memory_block_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify create_memory_block raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.create_memory_block("test_block", _TEST_ADDRESS, 4096)
+
+    @pytest.mark.asyncio
+    async def test_get_comments_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_comments raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_comments(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_get_all_comments_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_all_comments raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_all_comments()
+
+    @pytest.mark.asyncio
+    async def test_get_program_tree_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_program_tree raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_program_tree()
+
+    @pytest.mark.asyncio
+    async def test_get_properties_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_properties raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.get_properties(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_diff_programs_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify diff_programs raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.diff_programs("other.exe")
+
+    @pytest.mark.asyncio
+    async def test_set_color_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify set_color raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.set_color(_TEST_ADDRESS, 0xFF0000)
+
+    @pytest.mark.asyncio
+    async def test_set_program_metadata_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify set_program_metadata raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.set_program_metadata(name="test")
+
+    @pytest.mark.asyncio
+    async def test_manage_thunks_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify manage_thunks raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.manage_thunks(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_manage_external_references_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify manage_external_references raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.manage_external_references(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_add_external_function_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify add_external_function raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.add_external_function("kernel32.dll", "LoadLibraryA")
+
+    @pytest.mark.asyncio
+    async def test_create_overlay_space_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify create_overlay_space raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.create_overlay_space("test_overlay")
+
+
+def test_tool_definition_exact_count(bridge: GhidraBridge) -> None:
+    """Verify tool_definition has exactly the expected number of functions.
+
+    Args:
+        bridge: GhidraBridge fixture.
+    """
+    tool_def = bridge.tool_definition
+    assert len(tool_def.functions) == _EXPECTED_TOOL_COUNT, (
+        f"Expected {_EXPECTED_TOOL_COUNT}, got {len(tool_def.functions)}"
+    )
+
+
+def test_all_tool_names_unique(bridge: GhidraBridge) -> None:
+    """Verify all tool function names are unique.
+
+    Args:
+        bridge: GhidraBridge fixture.
+    """
+    tool_def = bridge.tool_definition
+    names = [f.name for f in tool_def.functions]
+    assert len(names) == len(set(names)), f"Duplicate names found: {[n for n in names if names.count(n) > 1]}"
 
 
 @pytest.mark.asyncio

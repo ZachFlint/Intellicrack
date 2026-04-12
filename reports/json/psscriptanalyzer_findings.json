@@ -1,8 +1,8 @@
 {
   "tool": "psscriptanalyzer",
-  "generated": "2026-04-05T20:21:28.053570+00:00",
-  "total_findings": 161,
-  "total_files": 29,
+  "generated": "2026-04-11T07:09:21.642174+00:00",
+  "total_findings": 173,
+  "total_files": 33,
   "files": [
     {
       "path": "D:\\Intellicrack\\tools\\AdobeInjector\\Source\\GenP.v3.7.1\\v3.7.1-Source\\build.ps1",
@@ -860,19 +860,19 @@
         },
         {
           "line": 40,
-          "column": 9,
+          "column": 21,
           "severity": "Warning",
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
-          "raw": "D:\\Intellicrack\\scripts\\run-lint-tool.ps1:40:9: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+          "raw": "D:\\Intellicrack\\scripts\\run-lint-tool.ps1:40:21: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
-          "line": 46,
+          "line": 47,
           "column": 5,
           "severity": "Warning",
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
-          "raw": "D:\\Intellicrack\\scripts\\run-lint-tool.ps1:46:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+          "raw": "D:\\Intellicrack\\scripts\\run-lint-tool.ps1:47:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
           "line": 15,
@@ -881,6 +881,52 @@
           "rule": "PSAvoidUsingWriteHost",
           "message": "File 'run-lint-tool.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
           "raw": "D:\\Intellicrack\\scripts\\run-lint-tool.ps1:15:1: [Warning] File 'run-lint-tool.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1",
+      "count": 5,
+      "findings": [
+        {
+          "line": 93,
+          "column": 5,
+          "severity": "Error",
+          "rule": "PSAvoidAssignmentToAutomaticVariable",
+          "message": "The Variable 'pid' cannot be assigned since it is a readonly automatic variable that is built into PowerShell, please use a different name.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:93:5: [Error] The Variable 'pid' cannot be assigned since it is a readonly automatic variable that is built into PowerShell, please use a different name. (PSAvoidAssignmentToAutomaticVariable)"
+        },
+        {
+          "line": 91,
+          "column": 11,
+          "severity": "Warning",
+          "rule": "PSAvoidAssignmentToAutomaticVariable",
+          "message": "The Variable 'sender' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:91:11: [Warning] The Variable 'sender' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name. (PSAvoidAssignmentToAutomaticVariable)"
+        },
+        {
+          "line": 91,
+          "column": 20,
+          "severity": "Warning",
+          "rule": "PSAvoidAssignmentToAutomaticVariable",
+          "message": "The Variable 'eventArgs' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:91:20: [Warning] The Variable 'eventArgs' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name. (PSAvoidAssignmentToAutomaticVariable)"
+        },
+        {
+          "line": 91,
+          "column": 11,
+          "severity": "Warning",
+          "rule": "PSReviewUnusedParameter",
+          "message": "The parameter 'sender' has been declared but not used.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:91:11: [Warning] The parameter 'sender' has been declared but not used. (PSReviewUnusedParameter)"
+        },
+        {
+          "line": 87,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSUseDeclaredVarsMoreThanAssignments",
+          "message": "The variable 'lastContent' is assigned but never used.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:87:1: [Warning] The variable 'lastContent' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
         }
       ]
     },
@@ -1011,14 +1057,6 @@
           "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:41:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
-          "line": 3,
-          "column": 13,
-          "severity": "Warning",
-          "rule": "PSReviewUnusedParameter",
-          "message": "The parameter 'Flags' has been declared but not used.",
-          "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:3:13: [Warning] The parameter 'Flags' has been declared but not used. (PSReviewUnusedParameter)"
-        },
-        {
           "line": 6,
           "column": 1,
           "severity": "Warning",
@@ -1033,6 +1071,14 @@
           "rule": "PSAvoidUsingWriteHost",
           "message": "File 'lint-psscriptanalyzer.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
           "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:16:5: [Warning] File 'lint-psscriptanalyzer.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 3,
+          "column": 13,
+          "severity": "Warning",
+          "rule": "PSReviewUnusedParameter",
+          "message": "The parameter 'Flags' has been declared but not used.",
+          "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:3:13: [Warning] The parameter 'Flags' has been declared but not used. (PSReviewUnusedParameter)"
         }
       ]
     },
@@ -1155,20 +1201,20 @@
           "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:15:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
-          "line": 37,
-          "column": 1,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:37:1: [Warning] File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
           "line": 15,
           "column": 5,
           "severity": "Warning",
           "rule": "PSUseDeclaredVarsMoreThanAssignments",
           "message": "The variable 'output' is assigned but never used.",
           "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:15:5: [Warning] The variable 'output' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
+        },
+        {
+          "line": 37,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:37:1: [Warning] File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },
@@ -1177,20 +1223,20 @@
       "count": 3,
       "findings": [
         {
-          "line": 13,
-          "column": 15,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingInvokeExpression",
-          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
-          "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:13:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
-        },
-        {
           "line": 33,
           "column": 1,
           "severity": "Warning",
           "rule": "PSAvoidUsingWriteHost",
           "message": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
           "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:33:1: [Warning] File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 13,
+          "column": 15,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingInvokeExpression",
+          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
+          "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:13:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
           "line": 13,
@@ -1293,6 +1339,36 @@
       ]
     },
     {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\injection_monitor.ps1",
+      "count": 3,
+      "findings": [
+        {
+          "line": 26,
+          "column": 3,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingEmptyCatchBlock",
+          "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\injection_monitor.ps1:26:3: [Warning] Empty catch block is used. Please use Write-Error or throw statements in catch blocks. (PSAvoidUsingEmptyCatchBlock)"
+        },
+        {
+          "line": 92,
+          "column": 11,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingEmptyCatchBlock",
+          "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\injection_monitor.ps1:92:11: [Warning] Empty catch block is used. Please use Write-Error or throw statements in catch blocks. (PSAvoidUsingEmptyCatchBlock)"
+        },
+        {
+          "line": 52,
+          "column": 17,
+          "severity": "Warning",
+          "rule": "PSUseDeclaredVarsMoreThanAssignments",
+          "message": "The variable 'parentPids' is assigned but never used.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\injection_monitor.ps1:52:17: [Warning] The variable 'parentPids' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
+        }
+      ]
+    },
+    {
       "path": "D:\\Intellicrack\\scripts\\clean.ps1",
       "count": 2,
       "findings": [
@@ -1342,19 +1418,19 @@
       "findings": [
         {
           "line": 14,
-          "column": 113,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'docs-pdf.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\docs-pdf.ps1:14:113: [Warning] File 'docs-pdf.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
-          "line": 14,
           "column": 5,
           "severity": "Warning",
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
           "raw": "D:\\Intellicrack\\scripts\\docs-pdf.ps1:14:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        },
+        {
+          "line": 14,
+          "column": 113,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'docs-pdf.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\docs-pdf.ps1:14:113: [Warning] File 'docs-pdf.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },
@@ -1421,6 +1497,50 @@
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
           "raw": "D:\\Intellicrack\\scripts\\test-verify-real.ps1:10:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\api_trace.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": 101,
+          "column": 15,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingEmptyCatchBlock",
+          "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\api_trace.ps1:101:15: [Warning] Empty catch block is used. Please use Write-Error or throw statements in catch blocks. (PSAvoidUsingEmptyCatchBlock)"
+        },
+        {
+          "line": 49,
+          "column": 18,
+          "severity": "Warning",
+          "rule": "PSAvoidAssignmentToAutomaticVariable",
+          "message": "The Variable 'event' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\api_trace.ps1:49:18: [Warning] The Variable 'event' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name. (PSAvoidAssignmentToAutomaticVariable)"
+        }
+      ]
+    },
+    {
+      "path": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\dll_monitor.ps1",
+      "count": 2,
+      "findings": [
+        {
+          "line": 48,
+          "column": 15,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingEmptyCatchBlock",
+          "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\dll_monitor.ps1:48:15: [Warning] Empty catch block is used. Please use Write-Error or throw statements in catch blocks. (PSAvoidUsingEmptyCatchBlock)"
+        },
+        {
+          "line": 69,
+          "column": 15,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingEmptyCatchBlock",
+          "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\dll_monitor.ps1:69:15: [Warning] Empty catch block is used. Please use Write-Error or throw statements in catch blocks. (PSAvoidUsingEmptyCatchBlock)"
         }
       ]
     },

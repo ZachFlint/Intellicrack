@@ -37,6 +37,7 @@ from intellicrack.ui.panels.hex_editor._base import (
     hexpat_mod,
     logger,
 )
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
@@ -96,9 +97,7 @@ class PatternEditorMixin:
 
         self._pattern_dsl_editor = QPlainTextEdit()
         self._pattern_dsl_editor.setPlainText("struct MY_HEADER {\n    le u16 magic [[validate(0x5A4D)]];\n    le u32 size;\n};\n")
-        font = self._pattern_dsl_editor.font()
-        font.setFamily("Consolas")
-        font.setPointSize(10)
+        font = FontManager.get_instance().get_code_font(10)
         self._pattern_dsl_editor.setFont(font)
         HexPatSyntaxHighlighter(self._pattern_dsl_editor.document())
         editor_tabs.addTab(self._pattern_dsl_editor, "DSL")

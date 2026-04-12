@@ -1,167 +1,116 @@
 tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1582,30,error,reportArgumentType,reportArgumentType,"Argument of type ""str"" cannot be assigned to parameter ""tab_name"" of type ""OutputType"" in function ""set_tab_content""
-  Type ""str"" is not assignable to type ""OutputType""
-    ""str"" is not assignable to type ""Literal['ghidra']""
-    ""str"" is not assignable to type ""Literal['frida']""
-    ""str"" is not assignable to type ""Literal['radare2']""
-    ""str"" is not assignable to type ""Literal['x64dbg']""
-    ""str"" is not assignable to type ""Literal['log']""
-    ""str"" is not assignable to type ""Literal['licensing']""
-    ""str"" is not assignable to type ""Literal['scripts']""
-  ...",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1584,13,error,reportCallIssue,reportCallIssue,"Argument missing for parameter ""content""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1585,27,error,reportArgumentType,reportArgumentType,"Argument of type ""str"" cannot be assigned to parameter ""tab_name"" of type ""OutputType"" in function ""activate_tab""
-  Type ""str"" is not assignable to type ""OutputType""
-    ""str"" is not assignable to type ""Literal['ghidra']""
-    ""str"" is not assignable to type ""Literal['frida']""
-    ""str"" is not assignable to type ""Literal['radare2']""
-    ""str"" is not assignable to type ""Literal['x64dbg']""
-    ""str"" is not assignable to type ""Literal['log']""
-    ""str"" is not assignable to type ""Literal['licensing']""
-    ""str"" is not assignable to type ""Literal['scripts']""
-  ...",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1593,24,error,reportArgumentType,reportArgumentType,"Argument of type ""str"" cannot be assigned to parameter ""tab_name"" of type ""OutputType"" in function ""clear_tab""
-  Type ""str"" is not assignable to type ""OutputType""
-    ""str"" is not assignable to type ""Literal['ghidra']""
-    ""str"" is not assignable to type ""Literal['frida']""
-    ""str"" is not assignable to type ""Literal['radare2']""
-    ""str"" is not assignable to type ""Literal['x64dbg']""
-    ""str"" is not assignable to type ""Literal['log']""
-    ""str"" is not assignable to type ""Literal['licensing']""
-    ""str"" is not assignable to type ""Literal['scripts']""
-  ...",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1604,39,error,reportArgumentType,reportArgumentType,"Argument of type ""str"" cannot be assigned to parameter ""tool_id"" of type ""OutputType"" in function ""get_embedded_tool""
-  Type ""str"" is not assignable to type ""OutputType""
-    ""str"" is not assignable to type ""Literal['ghidra']""
-    ""str"" is not assignable to type ""Literal['frida']""
-    ""str"" is not assignable to type ""Literal['radare2']""
-    ""str"" is not assignable to type ""Literal['x64dbg']""
-    ""str"" is not assignable to type ""Literal['log']""
-    ""str"" is not assignable to type ""Literal['licensing']""
-    ""str"" is not assignable to type ""Literal['scripts']""
-  ...",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1614,52,error,reportCallIssue,reportCallIssue,Expected 1 positional argument,,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1623,13,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""add_hook_entry"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1623,31,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""add_hook_entry"" for class ""FridaPanelProtocol""
-  Attribute ""add_hook_entry"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1632,20,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get_sandbox"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1632,20,error,reportUnknownVariableType,reportUnknownVariableType,Return type is unknown,,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1632,40,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""get_sandbox"" for class ""SandboxPanelProtocol""
-  Attribute ""get_sandbox"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1642,13,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""load_execution_report"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1642,33,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""load_execution_report"" for class ""SandboxPanelProtocol""
-  Attribute ""load_execution_report"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1654,17,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""selected_id"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1654,31,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get_selected_id"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1654,50,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""get_selected_id"" for class ""QWidget""
-  Attribute ""get_selected_id"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1656,17,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""current_script"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1656,34,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get_current_script"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1656,53,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""get_current_script"" for class ""QWidget""
-  Attribute ""get_current_script"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1657,16,error,reportUnknownVariableType,reportUnknownVariableType,"Return type, ""tuple[Unknown | str | None, Unknown | str | None]"", is partially unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1665,16,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get_highlighter"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1665,16,error,reportUnknownVariableType,reportUnknownVariableType,Return type is unknown,,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1665,21,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""get_highlighter"" for class ""ToolOutputPanel*""
-  Attribute ""get_highlighter"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1676,13,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""set_x64dbg_bridge"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1676,31,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""set_x64dbg_bridge"" for class ""QWidget""
-  Attribute ""set_x64dbg_bridge"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1678,13,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""set_frida_bridge"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1678,31,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""set_frida_bridge"" for class ""QWidget""
-  Attribute ""set_frida_bridge"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1696,13,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""set_backend"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\tools.py,1696,32,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""set_backend"" for class ""QWidget""
-  Attribute ""set_backend"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,421,13,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""snapshots"" is partially unknown
-  Type of ""snapshots"" is ""Unknown | None""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,421,36,error,reportAssignmentType,reportAssignmentType,"Type ""Unknown | None"" is not assignable to declared type ""list[str]""
-  Type ""Unknown | None"" is not assignable to type ""list[str]""
-    ""None"" is not assignable to ""list[str]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,421,57,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""list_snapshots"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,421,57,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
-  Argument corresponds to parameter ""coro"" in function ""run_bridge_coroutine""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,421,71,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""list_snapshots"" for class ""SandboxBase""
-  Attribute ""list_snapshots"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,448,34,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""delete_snapshot"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,448,34,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
-  Argument corresponds to parameter ""coro"" in function ""run_bridge_coroutine""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,448,48,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""delete_snapshot"" for class ""SandboxBase""
-  Attribute ""delete_snapshot"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,449,13,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""idx"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,449,19,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""indexOfTopLevelItem"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,449,40,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""indexOfTopLevelItem"" for class ""QTreeWidget""
-  Attribute ""indexOfTopLevelItem"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,451,17,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""takeTopLevelItem"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,451,38,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""takeTopLevelItem"" for class ""QTreeWidget""
-  Attribute ""takeTopLevelItem"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py,492,28,error,reportOptionalIterable,reportOptionalIterable,"Object of type ""None"" cannot be used as iterable value",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1121,33,error,reportPrivateUsage,reportPrivateUsage,"""_api_key_input"" is protected and used outside of the class in which it is declared",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1251,37,error,reportPrivateUsage,reportPrivateUsage,"""_api_key_input"" is protected and used outside of the class in which it is declared",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1260,37,error,reportPrivateUsage,reportPrivateUsage,"""_api_key_input"" is protected and used outside of the class in which it is declared",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1799,39,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""status"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1799,49,error,reportGeneralTypeIssues,reportGeneralTypeIssues,"""object"" is not iterable
-  ""__aiter__"" method not defined",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1800,77,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
-  Argument corresponds to parameter ""extra"" in function ""debug""
-  Argument type is ""dict[str, Unknown]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1874,25,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""device_info"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1874,58,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get_device_info"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1874,70,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""get_device_info"" for class ""LLMProviderBase""
-  Attribute ""get_device_info"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1875,25,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""device_type"" is partially unknown
-  Type of ""device_type"" is ""object | Unknown""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1875,39,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get"" is partially unknown
-  Type of ""get"" is ""Unknown | Overload[(key: str, default: None = None, /) -> (object | None), (key: str, default: object, /) -> object, (key: str, default: _T@get, /) -> (object | _T@get)]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\provider_config.py,1876,78,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
-  Argument corresponds to parameter ""extra"" in function ""info""
-  Argument type is ""dict[str, object | Unknown]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,843,54,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""result"" is partially unknown
-  Type of ""result"" is ""dict[Unknown, Unknown] | object""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,854,43,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""result"" is partially unknown
-  Type of ""result"" is ""dict[Unknown, Unknown]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,854,43,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get"" is partially unknown
-  Type of ""get"" is ""Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,854,43,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,144,9,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_goto_input"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,144,28,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_add_toolbar_line_edit"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,144,33,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""_add_toolbar_line_edit"" for class ""CutterPanel*""
+  Attribute ""_add_toolbar_line_edit"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,146,9,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_find_func_input"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,146,33,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_add_toolbar_line_edit"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,146,38,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""_add_toolbar_line_edit"" for class ""CutterPanel*""
+  Attribute ""_add_toolbar_line_edit"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1061,9,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""addr_text"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1061,21,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_goto_input"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1061,21,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""text"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1061,21,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""strip"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1066,27,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""x"" in function ""__new__""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1066,45,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""startswith"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1066,81,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""x"" in function ""__new__""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1098,9,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""name"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1098,16,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_find_func_input"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1098,16,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""text"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1098,16,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""strip"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1103,47,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""name"" in function ""get_function_address""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1104,63,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""name"" in function ""_on_find_func_result""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1119,9,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""_goto_input"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1119,9,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""setText"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1128,39,error,reportArgumentType,reportArgumentType,"Argument of type ""object"" cannot be assigned to parameter ""p"" of type ""QPoint"" in function ""itemAt""
+  ""object"" is not assignable to ""QPoint""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1162,19,error,reportCallIssue,reportCallIssue,"No overloads for ""mapToGlobal"" match the provided arguments",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1162,19,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""p"" in function ""exec""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1162,46,error,reportOptionalMemberAccess,reportOptionalMemberAccess,"""mapToGlobal"" is not a known attribute of ""None""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py,1162,58,error,reportArgumentType,reportArgumentType,"Argument of type ""object"" cannot be assigned to parameter ""a0"" of type ""QPointF"" in function ""mapToGlobal""
+  ""object"" is not assignable to ""QPointF""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,100,5,error,reportConstantRedefinition,reportConstantRedefinition,"""_HAS_CFG_VIEW"" is constant (because it is uppercase) and cannot be redefined",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,102,5,error,reportConstantRedefinition,reportConstantRedefinition,"""_HAS_CFG_VIEW"" is constant (because it is uppercase) and cannot be redefined",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,107,5,error,reportConstantRedefinition,reportConstantRedefinition,"""_HAS_HIGHLIGHTER"" is constant (because it is uppercase) and cannot be redefined",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,109,5,error,reportConstantRedefinition,reportConstantRedefinition,"""_HAS_HIGHLIGHTER"" is constant (because it is uppercase) and cannot be redefined",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,244,39,error,reportPossiblyUnboundVariable,reportPossiblyUnboundVariable,"""CFGGraphView"" is possibly unbound",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,827,13,error,reportPossiblyUnboundVariable,reportPossiblyUnboundVariable,"""PythonSyntaxHighlighter"" is possibly unbound",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1547,60,error,reportUnnecessaryIsInstance,reportUnnecessaryIsInstance,"Unnecessary isinstance call; ""dict[str, object]"" is always an instance of ""dict[Unknown, Unknown]""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1734,57,error,reportPossiblyUnboundVariable,reportPossiblyUnboundVariable,"""CFGGraphView"" is possibly unbound",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1736,13,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""load_graph"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1736,28,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""load_graph"" for class ""QWidget""
+  Attribute ""load_graph"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1745,66,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""s"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1749,66,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""d"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1865,49,error,reportArgumentType,reportArgumentType,"Argument of type ""dict[str, QAction | None]"" cannot be assigned to parameter ""actions"" of type ""dict[str, object]"" in function ""_dispatch_func_menu_action""
+  ""dict[str, QAction | None]"" is not assignable to ""dict[str, object]""
+    Type parameter ""_VT@dict"" is invariant, but ""QAction | None"" is not the same as ""object""
+    Consider switching from ""dict"" to ""Mapping"" which is covariant in the value type",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1944,35,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
   Argument corresponds to parameter ""object"" in function ""__new__""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,854,95,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""result"" is partially unknown
-  Type of ""result"" is ""dict[Unknown, Unknown] | object""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,856,63,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""result"" is partially unknown
-  Type of ""result"" is ""dict[Unknown, Unknown] | object""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,858,59,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""result"" is partially unknown
-  Type of ""result"" is ""dict[Unknown, Unknown] | object""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,1887,45,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""unload_model"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,1887,45,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
-  Argument corresponds to parameter ""future"" in function ""run_until_complete""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\app.py,1887,54,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""unload_model"" for class ""LLMProviderBase""
-  Attribute ""unload_model"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py,513,34,error,reportArgumentType,reportArgumentType,"Argument of type ""int | None"" cannot be assigned to parameter ""element"" of type ""int"" in function ""add""
-  Type ""int | None"" is not assignable to type ""int""
-    ""None"" is not assignable to ""int""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py,527,38,error,reportUndefinedVariable,reportUndefinedVariable,"""_PROC_COL_COUNT"" is not defined",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py,527,38,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
-  Argument corresponds to parameter ""stop"" in function ""__new__""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py,530,48,error,reportUndefinedVariable,reportUndefinedVariable,"""QColor"" is not defined",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\process_panel.py,530,48,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
-  Argument corresponds to parameter ""brush"" in function ""setBackground""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\core\orchestrator.py,667,21,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""gen_details"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\core\orchestrator.py,667,41,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get_generation"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\core\orchestrator.py,667,50,error,reportAttributeAccessIssue,reportAttributeAccessIssue,"Cannot access attribute ""get_generation"" for class ""LLMProvider""
-  Attribute ""get_generation"" is unknown",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\core\orchestrator.py,670,31,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
-  Argument corresponds to parameter ""extra"" in function ""info""
-  Argument type is ""dict[str, Any | Unknown]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py,522,88,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
-  Argument corresponds to parameter ""obj"" in function ""len""
-  Argument type is ""dict[Unknown, Unknown]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py,527,92,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
-  Argument corresponds to parameter ""obj"" in function ""len""
-  Argument type is ""dict[Unknown, Unknown]""",,,,,,,,,,,,
-basedpyright,d:\Intellicrack\src\intellicrack\providers\local_transformers.py,434,19,error,reportArgumentType,reportArgumentType,"Argument of type ""str"" cannot be assigned to parameter ""dtype"" of type ""DtypeOption"" in function ""__init__""
-  Type ""str"" is not assignable to type ""DtypeOption""
-    ""str"" is not assignable to type ""Literal['auto']""
-    ""str"" is not assignable to type ""Literal['float32']""
-    ""str"" is not assignable to type ""Literal['float16']""
-    ""str"" is not assignable to type ""Literal['bfloat16']""
-    ""str"" is not assignable to type ""Literal['int8']""
-    ""str"" is not assignable to type ""Literal['int4']""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,1944,42,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""c"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,2435,53,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""b"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py,2640,17,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""child"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,288,27,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,317,34,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,334,32,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,350,34,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,365,33,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,395,38,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,415,34,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,429,33,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,443,40,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py,457,33,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_signatures.py,105,39,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get"" is partially unknown
+  Type of ""get"" is ""Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_signatures.py,105,39,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""object"" in function ""__new__""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_signatures.py,106,39,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""get"" is partially unknown
+  Type of ""get"" is ""Overload[(key: Unknown, default: None = None, /) -> (Unknown | None), (key: Unknown, default: Unknown, /) -> Unknown, (key: Unknown, default: _T@get, /) -> (Unknown | _T@get)]""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_signatures.py,106,39,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is unknown
+  Argument corresponds to parameter ""object"" in function ""__new__""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\bridges\hex_editor.py,37,10,warning,reportMissingModuleSource,reportMissingModuleSource,"Import ""fpdf"" could not be resolved from source",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\bridges\hex_editor.py,6031,10,warning,reportMissingModuleSource,reportMissingModuleSource,"Import ""fpdf"" could not be resolved from source",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\sandbox\qemu.py,2437,18,warning,reportMissingModuleSource,reportMissingModuleSource,"Import ""PIL"" could not be resolved from source",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\sandbox\qemu.py,2437,29,warning,reportMissingModuleSource,reportMissingModuleSource,"Import ""PIL.Image"" could not be resolved from source",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py,1477,46,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""s"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py,1518,46,error,reportUnknownVariableType,reportUnknownVariableType,"Type of ""e"" is unknown",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\bridges\ghidra.py,1951,30,error,reportArgumentType,reportArgumentType,"Argument of type ""str"" cannot be assigned to parameter ""encoding"" of type ""Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']"" in function ""__init__""
+  Type ""str"" is not assignable to type ""Literal['ascii', 'utf-8', 'utf-16le', 'utf-16be']""
+    ""str"" is not assignable to type ""Literal['ascii']""
+    ""str"" is not assignable to type ""Literal['utf-8']""
+    ""str"" is not assignable to type ""Literal['utf-16le']""
+    ""str"" is not assignable to type ""Literal['utf-16be']""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\core\orchestrator.py,1946,14,error,reportUnknownMemberType,reportUnknownMemberType,"Type of ""parse"" is partially unknown
+  Type of ""parse"" is ""(obj: str | IOBase | PathLike[Unknown] | bytes | list[int]) -> (lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None)""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py,286,30,error,reportUnknownArgumentType,reportUnknownArgumentType,"Argument type is partially unknown
+  Argument corresponds to parameter ""o"" in function ""__new__""
+  Argument type is ""list[Unknown] | bytearray""",,,,,,,,,,,,
+basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_scripting.py,590,34,error,reportArgumentType,reportArgumentType,"Argument of type ""QTextDocument | None"" cannot be assigned to parameter ""parent"" of type ""QTextDocument"" in function ""__init__""
+  Type ""QTextDocument | None"" is not assignable to type ""QTextDocument""
+    ""None"" is not assignable to ""QTextDocument""",,,,,,,,,,,,

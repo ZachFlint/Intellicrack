@@ -32,7 +32,7 @@ try {
     $jsonFiles | ForEach-Object {
         & node_modules/.bin/jsonlint -q -c $Flags $_ 2>&1
     } | Out-File -FilePath $tmpFile -Encoding utf8
-    Invoke-Expression "$Pixi python scripts/process_lint_json.py jsonlint --text $tmpFile"
+    Invoke-Expression "$Pixi python scripts/lint_report.py jsonlint --text $tmpFile"
 } finally {
     Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
 }

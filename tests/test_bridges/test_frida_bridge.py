@@ -29,6 +29,7 @@ from intellicrack.core.types import (
     ChildProcessInfo,
     CrashInfo,
     FridaDeviceInfo,
+    FridaProcessEntry,
     HookInfo,
     ImportInfo,
     StalkerEvent,
@@ -428,14 +429,12 @@ def unattached_bridge() -> Generator[FridaBridge]:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_enumerate_processes(unattached_bridge: FridaBridge) -> None:
     """Verify enumerate_processes returns real running processes."""
-    raw = _run_async(unattached_bridge.enumerate_processes())
-    result = cast("list[dict[str, object]]", raw)
+    result: list[FridaProcessEntry] = _run_async(unattached_bridge.enumerate_processes())
     assert len(result) > 0
     first = result[0]
-    assert "pid" in first
-    assert "name" in first
-    assert isinstance(first["pid"], int)
-    assert int(str(first["pid"])) > 0
+    assert isinstance(first.pid, int)
+    assert first.pid > 0
+    assert isinstance(first.name, str)
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -685,6 +684,6 @@ def test_enumerate_processes_contains_notepad(
     notepad_process: subprocess.Popen[bytes],
 ) -> None:
     """Verify our spawned notepad shows up in the process list."""
-    result: list[dict[str, object]] = _run_async(frida_bridge.enumerate_processes())
-    pids = {p["pid"] for p in result}
+    result: list[FridaProcessEntry] = _run_async(frida_bridge.enumerate_processes())
+    pids = {p.pid for p in result}
     assert notepad_process.pid in pids
