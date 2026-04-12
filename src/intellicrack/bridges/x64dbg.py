@@ -356,7 +356,14 @@ class X64DbgBridge(DebuggerBridge):
     """Bridge for x64dbg Windows debugger.
 
     Provides debugging capabilities including breakpoints, stepping,
-    register/memory manipulation, and process control.
+    register/memory manipulation, and process control. Instances own
+    slots for the x64dbg installation path, the spawned debugger
+    subprocess, the named-pipe client used for IPC, the attached process
+    identifier, the IPC port (defaulting to ``DEFAULT_PORT``), the
+    tracked binary path and bitness, the breakpoint and watchpoint
+    registries with their identifier counters, the plugin-deployment
+    flag, the event-callback list used to fan out debugger
+    notifications, and the advertised ``BridgeCapabilities``.
 
     Attributes:
         DEFAULT_PORT: TCP port for the x64dbg remote command interface.
@@ -1169,7 +1176,10 @@ class X64DbgBridge(DebuggerBridge):
                     description="Evaluate an x64dbg expression",
                     parameters=[
                         ToolParameter(
-                            name="expression", type="string", description="Expression to evaluate (e.g. 'rax+rbx*4')", required=True
+                            name="expression",
+                            type="string",
+                            description="Expression to evaluate (e.g. 'rax+rbx*4')",
+                            required=True,
                         ),
                     ],
                     returns="Expression result value as integer",
@@ -1180,7 +1190,10 @@ class X64DbgBridge(DebuggerBridge):
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Function entry address", required=True),
                         ToolParameter(
-                            name="max_blocks", type="integer", description="Maximum number of basic blocks to analyze", required=False
+                            name="max_blocks",
+                            type="integer",
+                            description="Maximum number of basic blocks to analyze",
+                            required=False,
                         ),
                     ],
                     returns="Dict with entry, blocks list, and edges list",
@@ -1275,7 +1288,10 @@ class X64DbgBridge(DebuggerBridge):
                     description="Read the Thread Environment Block",
                     parameters=[
                         ToolParameter(
-                            name="tid", type="integer", description="Thread ID; uses current thread if not provided", required=False
+                            name="tid",
+                            type="integer",
+                            description="Thread ID; uses current thread if not provided",
+                            required=False,
                         ),
                     ],
                     returns="Dict with TEB fields including stackBase, stackLimit, processId, threadId",
@@ -1317,7 +1333,10 @@ class X64DbgBridge(DebuggerBridge):
                         ToolParameter(name="address", type="integer", description="Breakpoint address", required=True),
                         ToolParameter(name="log_text", type="string", description="Text to log when hit", required=True),
                         ToolParameter(
-                            name="non_stopping", type="boolean", description="If True, continue execution after logging", required=False
+                            name="non_stopping",
+                            type="boolean",
+                            description="If True, continue execution after logging",
+                            required=False,
                         ),
                     ],
                     returns="Dict with success status, address, and log_text",
@@ -1418,7 +1437,10 @@ class X64DbgBridge(DebuggerBridge):
                         ToolParameter(name="address", type="integer", description="Start address", required=True),
                         ToolParameter(name="size", type="integer", description="Total bytes to analyze", required=True),
                         ToolParameter(
-                            name="block_size", type="integer", description="Size of each entropy calculation block", required=False
+                            name="block_size",
+                            type="integer",
+                            description="Size of each entropy calculation block",
+                            required=False,
                         ),
                     ],
                     returns="List of dicts with address, entropy value, and block size",
@@ -2308,6 +2330,19 @@ class X64DbgBridge(DebuggerBridge):
             raise ToolError(msg)
 
         def parse_int(value: object) -> int:
+            """Coerce a register value from the pipe into an integer.
+
+            Accepts an ``int`` straight through, parses string values with
+            ``int(..., 0)`` so decimal and hex (``0x...``) forms are both
+            accepted, and returns ``0`` for any unparseable input after
+            emitting a debug log entry.
+
+            Args:
+                value: Raw register payload from the plugin response.
+
+            Returns:
+                int: Integer register value, or ``0`` when parsing fails.
+            """
             if isinstance(value, int):
                 return value
             if isinstance(value, str):
@@ -2319,6 +2354,22 @@ class X64DbgBridge(DebuggerBridge):
             return 0
 
         def get_reg(primary: str, alt: str | None = None) -> int:
+            """Read a register from the response, honouring legacy aliases.
+
+            Tries ``primary`` first and falls back to ``alt`` when the
+            primary key is absent. This lets the same lookup routine cope
+            with both 64-bit names (``rax``) and the 32-bit aliases used
+            by x64dbg running against x86 targets (``eax``).
+
+            Args:
+                primary: Preferred register key to look up.
+                alt: Optional legacy key to try when ``primary`` is
+                    missing from the response.
+
+            Returns:
+                int: Integer value of the register, or ``0`` when neither
+                key is present.
+            """
             if primary in result:
                 return parse_int(result[primary])
             return parse_int(result[alt]) if alt and alt in result else 0
@@ -2615,6 +2666,13 @@ class X64DbgBridge(DebuggerBridge):
             raise ToolError(msg, tool_name="x64dbg")
 
         class MemoryBasicInformation(ctypes.Structure):
+            """Windows ``MEMORY_BASIC_INFORMATION`` layout for ``VirtualQueryEx``.
+
+            Used as the output buffer when walking the target process
+            address space to enumerate committed, reserved, and free
+            memory regions together with their protection flags.
+            """
+
             _fields_ = [
                 ("BaseAddress", ctypes.c_void_p),
                 ("AllocationBase", ctypes.c_void_p),
@@ -2944,6 +3002,13 @@ class X64DbgBridge(DebuggerBridge):
         kernel32 = ctypes.windll.kernel32
 
         class ThreadEntry32(ctypes.Structure):
+            """Windows ``THREADENTRY32`` layout for thread snapshots.
+
+            Populated by ``Thread32First`` / ``Thread32Next`` when
+            enumerating threads that belong to the attached process via
+            a toolhelp snapshot.
+            """
+
             _fields_ = [
                 ("dwSize", wintypes.DWORD),
                 ("cntUsage", wintypes.DWORD),
@@ -3013,6 +3078,13 @@ class X64DbgBridge(DebuggerBridge):
         kernel32 = ctypes.windll.kernel32
 
         class ModuleEntry32W(ctypes.Structure):
+            """Windows ``MODULEENTRY32W`` layout for module snapshots.
+
+            Populated by ``Module32FirstW`` / ``Module32NextW`` when
+            enumerating DLL and executable modules loaded into the
+            attached process via a toolhelp snapshot.
+            """
+
             _fields_ = [
                 ("dwSize", wintypes.DWORD),
                 ("th32ModuleID", wintypes.DWORD),
@@ -3126,8 +3198,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[dict[str, Any]]: List of match dicts with 'address' and 'offset' keys.
         """
-        if alignment < 1:
-            alignment = 1
+        alignment = max(alignment, 1)
         _logger.debug("pattern_search_starting", pattern=pattern)
         tokens = pattern.replace("  ", " ").strip().split(" ")
         if len(tokens) == 1 and len(tokens[0]) > HEX_BYTE_LENGTH:
@@ -4608,6 +4679,14 @@ class X64DbgBridge(DebuggerBridge):
                     name_len = wintypes.DWORD(256)
 
                     class LUID(ctypes.Structure):
+                        """Windows ``LUID`` structure used for privilege lookup.
+
+                        A locally unique identifier is a 64-bit value that
+                        the OS assigns to privileges and other securable
+                        objects. Declared inline so it can be passed by
+                        reference into ``LookupPrivilegeNameW``.
+                        """
+
                         _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
 
                     luid = LUID(luid_low, luid_high)
@@ -4646,9 +4725,24 @@ class X64DbgBridge(DebuggerBridge):
             kernel32 = ctypes.windll.kernel32
 
             class LUID(ctypes.Structure):
+                """Windows ``LUID`` structure used for privilege adjustment.
+
+                Holds the locally unique identifier returned by
+                ``LookupPrivilegeValueW`` and passed into the
+                ``TOKEN_PRIVILEGES`` structure submitted to
+                ``AdjustTokenPrivileges``.
+                """
+
                 _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
 
             class TokenPrivileges(ctypes.Structure):
+                """Windows ``TOKEN_PRIVILEGES`` payload for one privilege.
+
+                Simplified single-entry variant of the standard Windows
+                structure, which is all ``AdjustTokenPrivileges`` needs
+                when toggling a single privilege at a time.
+                """
+
                 _fields_ = [
                     ("PrivilegeCount", wintypes.DWORD),
                     ("Luid", LUID),

@@ -85,8 +85,13 @@ class _CallbackEntry:
 class HexDocumentState:
     """Thread-safe shared state holder for a hex document.
 
-    Maintains the canonical document instance, cursor offset, selection range, and file path.  Registered callbacks are notified on state
-    changes, enabling the bridge and GUI to stay in sync without direct coupling.
+    Maintains the canonical document instance, cursor offset, selection
+    range, and file path. Registered callbacks are notified on state
+    changes, enabling the bridge and GUI to stay in sync without direct
+    coupling. Instances own the active document slot, the associated
+    file path, cursor offset, selection range, the callback registry, a
+    threading lock and re-entrancy guard used during notification, plus
+    default highlight rules and display mode used by the GUI.
     """
 
     def __init__(self) -> None:

@@ -78,7 +78,12 @@ class GhidraBridge(StaticAnalysisBridge):
     """Bridge for Ghidra reverse engineering suite.
 
     Provides advanced static analysis and decompilation capabilities
-    using the ghidra_bridge Python interface.
+    using the ghidra_bridge Python interface. Instances own slots for
+    the Ghidra installation path, the active ``ghidra_bridge`` RPC
+    object, the spawned headless process handle, the tracked binary and
+    project paths, the RPC port (defaulting to ``DEFAULT_PORT``), the
+    deployed bridge script path, and the advertised static-analysis
+    ``BridgeCapabilities``.
 
     Attributes:
         DEFAULT_PORT: TCP port for the ghidra_bridge RPC connection.
@@ -1129,6 +1134,14 @@ class GhidraBridge(StaticAnalysisBridge):
         _logger.info("ghidra_headless_starting", command=" ".join(cmd))
 
         def _start_process() -> Popen[bytes]:
+            """Launch the Ghidra headless analyzer subprocess.
+
+            Wraps the blocking ``Popen`` construction so it can be executed
+            on a worker thread via ``asyncio.to_thread``.
+
+            Returns:
+                Popen[bytes]: Handle for the spawned Ghidra headless process.
+            """
             return Popen(
                 cmd,
                 stdout=PIPE,

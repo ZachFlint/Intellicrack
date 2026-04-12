@@ -721,7 +721,12 @@ def _build_tool_functions() -> list[ToolFunction]:
 class CutterBridge(StaticAnalysisBridge):
     """Bridge for Cutter/Rizin reverse engineering framework.
 
-    Provides static analysis, disassembly, and debugging capabilities using the r2pipe interface.
+    Provides static analysis, disassembly, and debugging capabilities
+    using the r2pipe interface. Instances own the r2pipe connection,
+    the tracked binary and tool paths, the analysis-state flags, the
+    registered Rizin process identifier, and the declared
+    ``BridgeCapabilities`` that describe the static-analysis features
+    this bridge exposes to the orchestrator.
     """
 
     def __init__(self) -> None:

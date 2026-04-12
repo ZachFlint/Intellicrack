@@ -1059,7 +1059,13 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
 class FridaBridge(InstrumentationBridge):
     """Bridge for Frida dynamic instrumentation.
 
-    Provides function hooking, memory manipulation, and script execution capabilities using the Frida framework.
+    Provides function hooking, memory manipulation, and script execution
+    capabilities using the Frida framework. Instances own the device and
+    session slots, the script and hook registries, the message-handler
+    dispatch state, process identifier tracking for attach/spawn,
+    stalker and child-gating bookkeeping, crash and allocation caches,
+    cancellable references, and the declared dynamic-analysis
+    capabilities advertised to the orchestrator.
     """
 
     def __init__(self) -> None:
@@ -1826,6 +1832,16 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Collect hook-registration messages from the Frida script.
+
+            Appends each inbound message to the local buffer so the hook
+            address can be extracted, and also forwards the message to the
+            bridge-wide dispatcher so external subscribers receive it.
+
+            Args:
+                message: Message payload emitted by the hook script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -1935,6 +1951,12 @@ class FridaBridge(InstrumentationBridge):
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward persistent script messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the persistent script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
@@ -2076,6 +2098,12 @@ class FridaBridge(InstrumentationBridge):
         event = asyncio.Event()
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Capture the first response message and release the waiter.
+
+            Args:
+                message: Message payload emitted by the Frida script.
+                data: Optional binary payload attached to the message.
+            """
             if message["type"] == "send":
                 payload = message.get("payload", {})
                 if isinstance(payload, dict):
@@ -2291,6 +2319,16 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer allocation messages for address extraction.
+
+            Appends each message to the local buffer so the caller can scan
+            for the allocation address, and forwards it to the bridge-wide
+            dispatcher so external subscribers also receive it.
+
+            Args:
+                message: Message payload emitted by the allocation script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -2623,6 +2661,12 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer replacement messages for address extraction.
+
+            Args:
+                message: Message payload emitted by the replacement script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -2828,6 +2872,16 @@ class FridaBridge(InstrumentationBridge):
         captured_tid = effective_tid
 
         def on_stalker_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Parse Stalker batch payloads and forward messages downstream.
+
+            When a ``stalker_batch`` message arrives, the nested event list
+            is decoded and stored against the followed thread identifier.
+            All messages are also forwarded to the bridge-wide dispatcher.
+
+            Args:
+                message: Message payload emitted by the Stalker script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             if message["type"] == "send":
                 payload = message.get("payload", {})
@@ -2922,6 +2976,15 @@ class FridaBridge(InstrumentationBridge):
             return
 
         def on_child_added(child: object) -> None:
+            """Record a newly spawned child process reported by the device.
+
+            Extracts identifying attributes from the Frida ``Child`` object,
+            appends a ``ChildProcessInfo`` record to the gated-children
+            list, and publishes a ``child_added`` dispatch message.
+
+            Args:
+                child: Frida ``Child`` object describing the new process.
+            """
             child_pid = int(getattr(child, "pid", 0))
             child_parent_pid = int(getattr(child, "parent_pid", 0))
             info = ChildProcessInfo(
@@ -3017,6 +3080,15 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_NO_DEVICE)
 
         def on_process_crashed(crash: object) -> None:
+            """Capture a crash report emitted by the Frida device.
+
+            Builds a ``CrashInfo`` record from the attributes of the crash
+            object, appends it to the in-memory crash log, and publishes a
+            ``process_crashed`` dispatch message for downstream consumers.
+
+            Args:
+                crash: Frida ``Crash`` object describing the failure.
+            """
             crash_pid = int(getattr(crash, "pid", 0))
             info = CrashInfo(
                 pid=crash_pid,
@@ -3312,6 +3384,12 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer string-allocation messages for address extraction.
+
+            Args:
+                message: Message payload emitted by the allocation script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -3695,6 +3773,12 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_EXCEPTION_HANDLER_FAILED) from e
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward exception-handler messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the exception handler.
+                data: Optional binary payload attached to the message.
+            """
             del data
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
@@ -3864,6 +3948,12 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_PROBE_FAILED) from e
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward call-probe messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the call probe.
+                data: Optional binary payload attached to the message.
+            """
             del data
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
@@ -4225,6 +4315,12 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer script messages for post-load inspection.
+
+            Args:
+                message: Message payload emitted by the Frida script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -4450,6 +4546,12 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer script messages for post-load inspection.
+
+            Args:
+                message: Message payload emitted by the Frida script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -4544,6 +4646,12 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer script messages for post-load inspection.
+
+            Args:
+                message: Message payload emitted by the Frida script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -4833,6 +4941,12 @@ class FridaBridge(InstrumentationBridge):
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Forward socket-listener messages to the bridge dispatcher.
+
+            Args:
+                message: Message payload emitted by the listener script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
@@ -5083,6 +5197,12 @@ class FridaBridge(InstrumentationBridge):
         messages: list[ScriptMessage] = []
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer script messages for post-load inspection.
+
+            Args:
+                message: Message payload emitted by the Frida script.
+                data: Optional binary payload attached to the message.
+            """
             del data
             messages.append(message)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
@@ -5365,6 +5485,13 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_MONITOR_FAILED) from e
 
         def on_change(changed_path: str, other_path: str | None, event_type: str) -> None:
+            """Forward file-monitor change events to the bridge dispatcher.
+
+            Args:
+                changed_path: Path that triggered the change event.
+                other_path: Secondary path for rename events, if any.
+                event_type: The kind of filesystem change that occurred.
+            """
             self._dispatch_message({
                 "type": "send",
                 "payload": {
