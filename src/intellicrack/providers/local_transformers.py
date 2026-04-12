@@ -679,6 +679,20 @@ class LocalTransformersProvider(LLMProviderBase):
                 fwd_attn_mask: torch.Tensor | None,
                 fwd_past_kv: tuple[tuple[torch.Tensor, ...], ...] | None,
             ) -> CausalLMOutputWithPast:
+                """Run a single causal language model forward pass.
+
+                Args:
+                    fwd_model: Loaded causal language model to invoke.
+                    fwd_gen_ids: Token ids generated so far for the sequence.
+                    fwd_attn_mask: Optional attention mask aligned with the
+                        generated ids, or ``None`` to skip masking.
+                    fwd_past_kv: Cached key/value tensors from prior steps;
+                        when present, only the latest token id is evaluated.
+
+                Returns:
+                    CausalLMOutputWithPast: The model output including logits
+                    and the updated past key/value cache.
+                """
                 use_ids = fwd_gen_ids[:, -1:] if fwd_past_kv else fwd_gen_ids
                 return fwd_model(
                     input_ids=use_ids,
