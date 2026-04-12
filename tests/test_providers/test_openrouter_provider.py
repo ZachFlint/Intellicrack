@@ -52,6 +52,9 @@ class TestOpenRouterModelListing:
 
         This validates that the API call works and returns actual data.
         OpenRouter aggregates many providers so should have many models.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
         """
         models = await openrouter_provider.list_models()
 
@@ -63,7 +66,11 @@ class TestOpenRouterModelListing:
     async def test_list_models_returns_many_models(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test OpenRouter returns many models (it's an aggregator)."""
+        """Test OpenRouter returns many models (it's an aggregator).
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         assert len(models) >= _MIN_OPENROUTER_MODELS, f"Expected at least 10 models from OpenRouter, got {len(models)}"
@@ -73,7 +80,11 @@ class TestOpenRouterModelListing:
     async def test_list_models_returns_model_info_instances(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -84,7 +95,11 @@ class TestOpenRouterModelListing:
     async def test_model_info_has_valid_id(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -96,7 +111,11 @@ class TestOpenRouterModelListing:
     async def test_model_info_has_valid_name(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -108,7 +127,11 @@ class TestOpenRouterModelListing:
     async def test_model_info_has_correct_provider(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all models report OPENROUTER as provider."""
+        """Test all models report OPENROUTER as provider.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -119,7 +142,11 @@ class TestOpenRouterModelListing:
     async def test_model_info_has_positive_context_window(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -131,7 +158,11 @@ class TestOpenRouterModelListing:
     async def test_model_info_has_boolean_capabilities(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         for model in models[:_SAMPLE_MODEL_LIMIT]:
@@ -144,7 +175,11 @@ class TestOpenRouterModelListing:
     async def test_model_info_may_have_pricing(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test that some models have pricing information."""
+        """Test that some models have pricing information.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         models_with_pricing = [m for m in models if m.input_cost_per_1m_tokens is not None]
@@ -156,7 +191,11 @@ class TestOpenRouterModelListing:
     async def test_multiple_calls_return_consistent_results(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models1 = await openrouter_provider.list_models()
         models2 = await openrouter_provider.list_models()
 
@@ -175,7 +214,11 @@ class TestOpenRouterConnection:
     async def test_is_connected_after_connect(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         assert openrouter_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -183,7 +226,11 @@ class TestOpenRouterConnection:
     async def test_provider_name_is_openrouter(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test provider name property returns OPENROUTER."""
+        """Test provider name property returns OPENROUTER.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         assert openrouter_provider.name == ProviderName.OPENROUTER
 
     @pytest.mark.asyncio
@@ -230,7 +277,12 @@ class TestOpenRouterConnection:
         *,
         has_openrouter_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_openrouter_key: Whether an OpenRouter API key is configured.
+        """
         if not has_openrouter_key:
             pytest.skip("OPENROUTER_API_KEY not configured")
 

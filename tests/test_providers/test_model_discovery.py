@@ -40,7 +40,11 @@ class TestModelDiscoveryDisplay:
     async def test_display_openai_models(
         openai_provider: OpenAIProvider,
     ) -> None:
-        """Fetch and verify all available OpenAI models."""
+        """Fetch and verify all available OpenAI models.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         models = await openai_provider.list_models()
 
         _logger.info("OPENAI MODELS: %d total", len(models))
@@ -54,7 +58,11 @@ class TestModelDiscoveryDisplay:
     async def test_display_google_models(
         google_provider: GoogleProvider,
     ) -> None:
-        """Fetch and verify all available Google Gemini models."""
+        """Fetch and verify all available Google Gemini models.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
         models = await google_provider.list_models()
 
         _logger.info("GOOGLE GEMINI MODELS: %d total", len(models))
@@ -68,7 +76,11 @@ class TestModelDiscoveryDisplay:
     async def test_display_openrouter_models(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Fetch and verify all available OpenRouter models."""
+        """Fetch and verify all available OpenRouter models.
+
+        Args:
+            openrouter_provider: Connected OpenRouter provider fixture.
+        """
         models = await openrouter_provider.list_models()
 
         _logger.info("OPENROUTER MODELS: %d total", len(models))
@@ -91,7 +103,11 @@ class TestModelDiscoveryDisplay:
     async def test_display_anthropic_models(
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Fetch and verify all available Anthropic Claude models."""
+        """Fetch and verify all available Anthropic Claude models.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         models = await anthropic_provider.list_models()
 
         _logger.info("ANTHROPIC CLAUDE MODELS: %d total", len(models))
@@ -105,7 +121,11 @@ class TestModelDiscoveryDisplay:
     async def test_display_ollama_models(
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Fetch and verify all locally installed Ollama models."""
+        """Fetch and verify all locally installed Ollama models.
+
+        Args:
+            ollama_provider: Connected Ollama provider fixture.
+        """
         models = await ollama_provider.list_models()
 
         _logger.info("OLLAMA LOCAL MODELS: %d total", len(models))
@@ -128,7 +148,16 @@ class TestAllProvidersModelCount:
         has_anthropic_key: bool,
         has_ollama_available: bool,
     ) -> None:
-        """Verify models available from all configured providers."""
+        """Verify models available from all configured providers.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_openai_key: Whether an OpenAI API key is configured.
+            has_google_key: Whether a Google API key is configured.
+            has_openrouter_key: Whether an OpenRouter API key is configured.
+            has_anthropic_key: Whether an Anthropic API key is configured.
+            has_ollama_available: Whether a local Ollama server is running.
+        """
         results: dict[str, int | str] = {}
 
         if has_openai_key:

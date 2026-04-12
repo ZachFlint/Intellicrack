@@ -48,6 +48,9 @@ class TestGrokModelListing:
 
         This validates that the API call works and returns actual data.
         We don't hardcode model names - just verify we get models.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
         """
         models = await grok_provider.list_models()
 
@@ -59,7 +62,11 @@ class TestGrokModelListing:
     async def test_list_models_returns_model_info_instances(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances."""
+        """Test all returned items are ModelInfo instances.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models = await grok_provider.list_models()
 
         for model in models:
@@ -70,7 +77,11 @@ class TestGrokModelListing:
     async def test_model_info_has_valid_id(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test all models have non-empty string IDs."""
+        """Test all models have non-empty string IDs.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models = await grok_provider.list_models()
 
         for model in models:
@@ -82,7 +93,11 @@ class TestGrokModelListing:
     async def test_model_info_has_valid_name(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test all models have non-empty string names."""
+        """Test all models have non-empty string names.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models = await grok_provider.list_models()
 
         for model in models:
@@ -94,7 +109,11 @@ class TestGrokModelListing:
     async def test_model_info_has_correct_provider(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test all models report GROK as provider."""
+        """Test all models report GROK as provider.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models = await grok_provider.list_models()
 
         for model in models:
@@ -105,7 +124,11 @@ class TestGrokModelListing:
     async def test_model_info_has_positive_context_window(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test all models have positive context window size."""
+        """Test all models have positive context window size.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models = await grok_provider.list_models()
 
         for model in models:
@@ -117,7 +140,11 @@ class TestGrokModelListing:
     async def test_model_info_has_boolean_capabilities(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test all models have boolean capability flags."""
+        """Test all models have boolean capability flags.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models = await grok_provider.list_models()
 
         for model in models:
@@ -130,7 +157,11 @@ class TestGrokModelListing:
     async def test_multiple_calls_return_consistent_results(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls."""
+        """Test list_models returns consistent results across calls.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         models1 = await grok_provider.list_models()
         models2 = await grok_provider.list_models()
 
@@ -149,7 +180,11 @@ class TestGrokConnection:
     async def test_is_connected_after_connect(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test provider reports connected after successful connection."""
+        """Test provider reports connected after successful connection.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         assert grok_provider.is_connected is True
 
     @pytest.mark.asyncio
@@ -157,7 +192,11 @@ class TestGrokConnection:
     async def test_provider_name_is_grok(
         grok_provider: GrokProvider,
     ) -> None:
-        """Test provider name property returns GROK."""
+        """Test provider name property returns GROK.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         assert grok_provider.name == ProviderName.GROK
 
     @pytest.mark.asyncio
@@ -206,7 +245,12 @@ class TestGrokConnection:
         *,
         has_grok_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state."""
+        """Test disconnect properly clears connection state.
+
+        Args:
+            credential_loader: Credential loader fixture.
+            has_grok_key: Whether a Grok (X.AI) API key is configured.
+        """
         if not has_grok_key:
             pytest.skip("XAI_API_KEY not configured")
 
