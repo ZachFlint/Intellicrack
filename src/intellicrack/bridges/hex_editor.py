@@ -261,9 +261,15 @@ _HDB_MIN_FIELDS = 3
 class HexEditorBridge(ToolBridgeBase):
     """Bridge for the built-in hex editor powered by Rust.
 
-    Wraps the ``intellicrack_hexcore.HexDocument`` class to provide
-    hex editing, searching, hashing, data inspection, template
-    parsing, and binary diffing through the standard bridge interface.
+    Wraps the ``intellicrack_hexcore.HexDocument`` class to provide hex
+    editing, searching, hashing, data inspection, template parsing, and
+    binary diffing through the standard bridge interface. Instances own
+    the active document slot, cursor and selection state, the
+    runtime-availability flags for the hexcore, hexpat, interpreter, and
+    pipeline extensions, the hexpat interpreter and pattern-registry
+    caches, the optional shared state holder and tool-registry
+    references, highlighting and display configuration, the transform
+    node cache, and the advertised ``BridgeCapabilities``.
     """
 
     def __init__(self) -> None:
@@ -3181,6 +3187,19 @@ class HexEditorBridge(ToolBridgeBase):
         mask = (1 << width) - 1
 
         def reflect(val: int, bits: int) -> int:
+            """Reflect the low ``bits`` of ``val`` around its centre bit.
+
+            Implements the bitwise reflection used by CRC algorithms that
+            specify ``refin`` or ``refout`` to invert the bit order of
+            each byte or the final remainder.
+
+            Args:
+                val: Input value to be reflected.
+                bits: Number of low bits to consider during reflection.
+
+            Returns:
+                int: Value with its low ``bits`` bits reversed.
+            """
             reflected = 0
             for _ in range(bits):
                 reflected = (reflected << 1) | (val & 1)
@@ -5172,6 +5191,15 @@ class HexEditorBridge(ToolBridgeBase):
 
             @staticmethod
             def read(offset: int, length: int) -> list[int]:
+                """Read bytes from the document as a list of integers.
+
+                Args:
+                    offset: Absolute offset to start reading from.
+                    length: Number of bytes to read.
+
+                Returns:
+                    list[int]: Byte values read from the document.
+                """
                 raw: object = doc.read(offset, length)
                 if isinstance(raw, (bytes, bytearray)):
                     return list(raw)
@@ -5181,38 +5209,94 @@ class HexEditorBridge(ToolBridgeBase):
 
             @staticmethod
             def write(offset: int, data: bytes | list[int]) -> None:
+                """Overwrite bytes at ``offset`` with ``data``.
+
+                Args:
+                    offset: Absolute offset where the write starts.
+                    data: Replacement bytes, either as ``bytes`` or a list
+                        of byte-valued integers.
+                """
                 if isinstance(data, list):
                     data = bytes(data)
                 doc.write_bytes(offset, data)
 
             @staticmethod
             def insert(offset: int, data: bytes | list[int]) -> None:
+                """Insert ``data`` at ``offset`` without overwriting.
+
+                Args:
+                    offset: Absolute offset where the insertion occurs.
+                    data: Bytes to insert, either as ``bytes`` or a list
+                        of byte-valued integers.
+                """
                 if isinstance(data, list):
                     data = bytes(data)
                 doc.insert_bytes(offset, data)
 
             @staticmethod
             def delete(offset: int, length: int) -> None:
+                """Delete ``length`` bytes starting at ``offset``.
+
+                Args:
+                    offset: Absolute offset where deletion starts.
+                    length: Number of bytes to remove.
+                """
                 doc.delete_bytes(offset, length)
 
             @staticmethod
             def length() -> int:
+                """Return the current byte length of the document.
+
+                Returns:
+                    int: Number of bytes in the document.
+                """
                 result: int = doc.length()
                 return result
 
             @staticmethod
             def search_hex(pattern: str) -> list[tuple[int, int]]:
+                """Search the document for a hex pattern.
+
+                Args:
+                    pattern: Hex pattern expressed as a string (whitespace
+                        and wildcard tokens are passed straight through to
+                        the underlying hexcore search).
+
+                Returns:
+                    list[tuple[int, int]]: ``(offset, length)`` matches,
+                    capped at 1000.
+                """
                 results: list[tuple[int, int]] = doc.search_hex(pattern, 1000)
                 return results
 
             @staticmethod
             def search_text(text: str) -> list[tuple[int, int]]:
+                """Search the document for a UTF-8 text literal.
+
+                Args:
+                    text: Text to search for; matching is case-sensitive.
+
+                Returns:
+                    list[tuple[int, int]]: ``(offset, length)`` matches,
+                    capped at 1000.
+                """
                 case_sensitive = True
                 results: list[tuple[int, int]] = doc.search_text(text, "utf-8", case_sensitive, 1000)
                 return results
 
             @staticmethod
             def add_bookmark(offset: int, length: int = 1, label: str = "Bookmark", color: str = "#FFFF00") -> int:
+                """Add a bookmark spanning ``length`` bytes at ``offset``.
+
+                Args:
+                    offset: Absolute offset of the bookmark.
+                    length: Length in bytes that the bookmark covers.
+                    label: Human-readable bookmark label.
+                    color: Bookmark highlight colour as ``#RRGGBB``.
+
+                Returns:
+                    int: Identifier of the newly created bookmark.
+                """
                 idx: int = doc.add_bookmark(offset, length, label, color)
                 return idx
 
@@ -5220,6 +5304,17 @@ class HexEditorBridge(ToolBridgeBase):
         safe_builtins: dict[str, Any] = {k: v for k, v in vars(_builtins_mod).items() if k not in forbidden_builtins}
 
         def safe_print(*args: object, **kwargs: object) -> None:
+            """Capture script ``print`` output into the sandboxed buffer.
+
+            Replaces the built-in ``print`` inside the restricted script
+            environment so that anything the user script prints ends up in
+            ``stdout_capture`` rather than the host process stdout.
+
+            Args:
+                *args: Positional values that would normally be printed.
+                **kwargs: Recognised keyword arguments ``sep`` and ``end``
+                    mirroring the built-in ``print`` semantics.
+            """
             sep = str(kwargs.get("sep", " "))
             end_val = str(kwargs.get("end", "\n"))
             stdout_capture.write(sep.join(str(a) for a in args) + end_val)

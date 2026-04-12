@@ -190,6 +190,10 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
 class ToolInstaller:
     """Handles automatic tool detection and installation.
 
+    Records the target directory under which downloaded tools will be
+    laid out, creates it on disk if it is missing, and prepares a lazy
+    ``httpx.AsyncClient`` slot that is instantiated on first download.
+
     Args:
         tools_directory: Directory where tools should be installed.
     """
