@@ -284,8 +284,10 @@ class TemplatesMixin:
 
         if isinstance(magic_raw, bytes):
             magic = magic_raw
-        elif isinstance(magic_raw, (list, bytearray)):
+        elif isinstance(magic_raw, bytearray):
             magic = bytes(magic_raw)
+        elif isinstance(magic_raw, list):
+            magic = bytes(cast("list[int]", magic_raw))
         else:
             return
 
@@ -313,8 +315,10 @@ class TemplatesMixin:
             dos_raw: object = self.document.read(0, 64)
             if isinstance(dos_raw, bytes):
                 dos_data = dos_raw
-            elif isinstance(dos_raw, (list, bytearray)):
+            elif isinstance(dos_raw, bytearray):
                 dos_data = bytes(dos_raw)
+            elif isinstance(dos_raw, list):
+                dos_data = bytes(cast("list[int]", dos_raw))
             else:
                 return
         except (AttributeError, ValueError):
@@ -330,8 +334,10 @@ class TemplatesMixin:
             pe_sig_raw: object = self.document.read(e_lfanew, 4)
             if isinstance(pe_sig_raw, bytes):
                 pe_sig = pe_sig_raw
-            elif isinstance(pe_sig_raw, (list, bytearray)):
+            elif isinstance(pe_sig_raw, bytearray):
                 pe_sig = bytes(pe_sig_raw)
+            elif isinstance(pe_sig_raw, list):
+                pe_sig = bytes(cast("list[int]", pe_sig_raw))
             else:
                 return
         except (AttributeError, ValueError):
@@ -346,8 +352,10 @@ class TemplatesMixin:
             hdr_raw: object = self.document.read(e_lfanew + 20, 2)
             if isinstance(hdr_raw, bytes):
                 hdr_data = hdr_raw
-            elif isinstance(hdr_raw, (list, bytearray)):
+            elif isinstance(hdr_raw, bytearray):
                 hdr_data = bytes(hdr_raw)
+            elif isinstance(hdr_raw, list):
+                hdr_data = bytes(cast("list[int]", hdr_raw))
             else:
                 return
         except (AttributeError, ValueError):
@@ -361,8 +369,10 @@ class TemplatesMixin:
             num_sections_raw: object = self.document.read(e_lfanew + 6, 2)
             if isinstance(num_sections_raw, bytes):
                 ns_data = num_sections_raw
-            elif isinstance(num_sections_raw, (list, bytearray)):
+            elif isinstance(num_sections_raw, bytearray):
                 ns_data = bytes(num_sections_raw)
+            elif isinstance(num_sections_raw, list):
+                ns_data = bytes(cast("list[int]", num_sections_raw))
             else:
                 return
         except (AttributeError, ValueError):
@@ -391,8 +401,10 @@ class TemplatesMixin:
                 sec_raw: object = self.document.read(sec_off, 8)
                 if isinstance(sec_raw, bytes):
                     sec_name = sec_raw.rstrip(b"\x00").decode("ascii", errors="replace")
-                elif isinstance(sec_raw, (list, bytearray)):
+                elif isinstance(sec_raw, bytearray):
                     sec_name = bytes(sec_raw).rstrip(b"\x00").decode("ascii", errors="replace")
+                elif isinstance(sec_raw, list):
+                    sec_name = bytes(cast("list[int]", sec_raw)).rstrip(b"\x00").decode("ascii", errors="replace")
                 else:
                     sec_name = f"Section {i}"
             except (AttributeError, ValueError):
@@ -411,8 +423,10 @@ class TemplatesMixin:
             ident_raw: object = self.document.read(4, 1)
             if isinstance(ident_raw, bytes):
                 ei_class = ident_raw[0]
-            elif isinstance(ident_raw, (list, bytearray)):
+            elif isinstance(ident_raw, bytearray):
                 ei_class = bytes(ident_raw)[0]
+            elif isinstance(ident_raw, list):
+                ei_class = bytes(cast("list[int]", ident_raw))[0]
             else:
                 return
         except (AttributeError, ValueError):
@@ -425,8 +439,10 @@ class TemplatesMixin:
                 hdr_raw: object = self.document.read(32, 16)
                 if isinstance(hdr_raw, bytes):
                     hdr = hdr_raw
-                elif isinstance(hdr_raw, (list, bytearray)):
+                elif isinstance(hdr_raw, bytearray):
                     hdr = bytes(hdr_raw)
+                elif isinstance(hdr_raw, list):
+                    hdr = bytes(cast("list[int]", hdr_raw))
                 else:
                     return
             except (AttributeError, ValueError):
@@ -439,8 +455,10 @@ class TemplatesMixin:
                 count_raw: object = self.document.read(56, 4)
                 if isinstance(count_raw, bytes):
                     count_data = count_raw
-                elif isinstance(count_raw, (list, bytearray)):
+                elif isinstance(count_raw, bytearray):
                     count_data = bytes(count_raw)
+                elif isinstance(count_raw, list):
+                    count_data = bytes(cast("list[int]", count_raw))
                 else:
                     return
             except (AttributeError, ValueError):
@@ -453,8 +471,10 @@ class TemplatesMixin:
                 hdr_raw = self.document.read(28, 8)
                 if isinstance(hdr_raw, bytes):
                     hdr = hdr_raw
-                elif isinstance(hdr_raw, (list, bytearray)):
+                elif isinstance(hdr_raw, bytearray):
                     hdr = bytes(hdr_raw)
+                elif isinstance(hdr_raw, list):
+                    hdr = bytes(cast("list[int]", hdr_raw))
                 else:
                     return
             except (AttributeError, ValueError):

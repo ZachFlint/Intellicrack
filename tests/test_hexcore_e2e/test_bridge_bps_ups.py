@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, TypeVar
 
 import pytest
 
@@ -19,20 +19,23 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+_T = TypeVar("_T")
+
+
+def _run(coro: Coroutine[object, object, _T]) -> _T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        _T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -62,7 +65,7 @@ class TestBPSExport:
         mod_file.write_bytes(original)
         _run(bridge.open_file(str(mod_file)))
         _run(bridge.write_bytes(0, "DE AD BE EF"))
-        b64_result = cast(str, _run(bridge.export_patches_bps(str(orig_file))))
+        b64_result = _run(bridge.export_patches_bps(str(orig_file)))
         decoded = base64.b64decode(b64_result)
         assert decoded[:4] == b"BPS1"
 
@@ -110,16 +113,16 @@ class TestBPSRoundtrip:
 
         _run(bridge.open_file(str(mod_file)))
         _run(bridge.write_bytes(8, "CA FE BA BE"))
-        modified_hex = cast(str, _run(bridge.read_bytes(0, 64)))
+        modified_hex = _run(bridge.read_bytes(0, 64))
         modified_bytes = bytes.fromhex(modified_hex.replace(" ", ""))
-        b64_patch = cast(str, _run(bridge.export_patches_bps(str(orig_file))))
+        b64_patch = _run(bridge.export_patches_bps(str(orig_file)))
 
         _run(bridge.close_file())
         target_file = tmp_path / "bps_rt_target.bin"
         target_file.write_bytes(original)
         _run(bridge.open_file(str(target_file)))
         _run(bridge.import_patches_bps(b64_patch, str(orig_file)))
-        after_hex = cast(str, _run(bridge.read_bytes(0, 64)))
+        after_hex = _run(bridge.read_bytes(0, 64))
         after_bytes = bytes.fromhex(after_hex.replace(" ", ""))
         assert after_bytes == modified_bytes
 
@@ -136,7 +139,7 @@ class TestBPSRoundtrip:
         mod_file.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(mod_file)))
         _run(bridge.write_bytes(0, "FF"))
-        b64_patch = cast(str, _run(bridge.export_patches_bps(str(orig_a))))
+        b64_patch = _run(bridge.export_patches_bps(str(orig_a)))
 
         _run(bridge.close_file())
         orig_b = tmp_path / "bps_b.bin"
@@ -163,16 +166,16 @@ class TestBPSRoundtrip:
         _run(bridge.open_file(str(mod_file)))
         mod_hex = " ".join(f"{i & 0xFF:02X}" for i in range(256))
         _run(bridge.write_bytes(0, mod_hex))
-        modified_hex = cast(str, _run(bridge.read_bytes(0, 512)))
+        modified_hex = _run(bridge.read_bytes(0, 512))
         modified_bytes = bytes.fromhex(modified_hex.replace(" ", ""))
-        b64_patch = cast(str, _run(bridge.export_patches_bps(str(orig_file))))
+        b64_patch = _run(bridge.export_patches_bps(str(orig_file)))
 
         _run(bridge.close_file())
         target_file = tmp_path / "bps_large_target.bin"
         target_file.write_bytes(original)
         _run(bridge.open_file(str(target_file)))
         _run(bridge.import_patches_bps(b64_patch, str(orig_file)))
-        after_hex = cast(str, _run(bridge.read_bytes(0, 512)))
+        after_hex = _run(bridge.read_bytes(0, 512))
         after_bytes = bytes.fromhex(after_hex.replace(" ", ""))
         assert after_bytes == modified_bytes
 
@@ -194,7 +197,7 @@ class TestUPSExport:
         mod_file.write_bytes(original)
         _run(bridge.open_file(str(mod_file)))
         _run(bridge.write_bytes(0, "AA BB CC DD"))
-        b64_result = cast(str, _run(bridge.export_patches_ups(str(orig_file))))
+        b64_result = _run(bridge.export_patches_ups(str(orig_file)))
         decoded = base64.b64decode(b64_result)
         assert decoded[:4] == b"UPS1"
 
@@ -233,16 +236,16 @@ class TestUPSRoundtrip:
 
         _run(bridge.open_file(str(mod_file)))
         _run(bridge.write_bytes(8, "11 22 33 44"))
-        modified_hex = cast(str, _run(bridge.read_bytes(0, 64)))
+        modified_hex = _run(bridge.read_bytes(0, 64))
         modified_bytes = bytes.fromhex(modified_hex.replace(" ", ""))
-        b64_patch = cast(str, _run(bridge.export_patches_ups(str(orig_file))))
+        b64_patch = _run(bridge.export_patches_ups(str(orig_file)))
 
         _run(bridge.close_file())
         target_file = tmp_path / "ups_rt_target.bin"
         target_file.write_bytes(original)
         _run(bridge.open_file(str(target_file)))
         _run(bridge.import_patches_ups(b64_patch, str(orig_file)))
-        after_hex = cast(str, _run(bridge.read_bytes(0, 64)))
+        after_hex = _run(bridge.read_bytes(0, 64))
         after_bytes = bytes.fromhex(after_hex.replace(" ", ""))
         assert after_bytes == modified_bytes
 
@@ -259,7 +262,7 @@ class TestUPSRoundtrip:
         mod_file = tmp_path / "ups_ident_mod.bin"
         mod_file.write_bytes(original)
         _run(bridge.open_file(str(mod_file)))
-        b64_result = cast(str, _run(bridge.export_patches_ups(str(orig_file))))
+        b64_result = _run(bridge.export_patches_ups(str(orig_file)))
         decoded = base64.b64decode(b64_result)
         max_header_size = 32
         assert len(decoded) < max_header_size

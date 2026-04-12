@@ -16,7 +16,7 @@ import base64
 import binascii
 import json
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import pytest
 
@@ -26,19 +26,23 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from intellicrack.bridges.hex_editor import HexEditorBridge
+
+
 pytest.importorskip("intellicrack_hexcore")
 
 _pipeline_available: bool = find_spec("intellicrack.core.transform_pipeline") is not None
 
+_T = TypeVar("_T")
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+
+def _run(coro: Coroutine[object, object, _T]) -> _T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        _T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -51,7 +55,7 @@ def _run(coro: Coroutine[object, object, object]) -> object:
     return loop.run_until_complete(coro)
 
 
-def _open_with_payload(bridge: HexEditorBridge, path: str, data: bytes) -> None:
+def _open_with_payload(bridge: HexEditorBridge, path: Path, data: bytes) -> None:
     """Write data to a temporary file and open it in the bridge.
 
     Args:
@@ -70,7 +74,7 @@ def _require_transform(bridge: HexEditorBridge, name: str) -> None:
         bridge: An initialized HexEditorBridge.
         name: Transform name to check.
     """
-    transforms: list[dict[str, str]] = _run(bridge.list_transforms())
+    transforms = _run(bridge.list_transforms())
     names = [t["name"] for t in transforms]
     if name not in names:
         pytest.skip(f"transform '{name}' not available")
@@ -94,9 +98,8 @@ class TestApplyPipelineSingleStep:
         _open_with_payload(bridge, tmp_path / "p.bin", payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "AA"}}])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
-        assert isinstance(result, str)
         assert len(result) == 8
 
     def test_single_xor_step_known_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -114,7 +117,7 @@ class TestApplyPipelineSingleStep:
         _open_with_payload(bridge, tmp_path / "xorknown.bin", payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "FF"}}])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
         assert result == "00000000"
 
@@ -132,7 +135,7 @@ class TestApplyPipelineSingleStep:
         _open_with_payload(bridge, tmp_path / "empty.bin", payload)
 
         pipeline = json.dumps([])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
         assert result == binascii.hexlify(payload).decode("ascii")
 
@@ -158,7 +161,7 @@ class TestApplyPipelineMultiStep:
             {"name": "xor_single", "params": {"key": "3C"}},
             {"name": "xor_single", "params": {"key": "3C"}},
         ])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
         assert result == binascii.hexlify(payload).decode("ascii")
 
@@ -173,7 +176,7 @@ class TestApplyPipelineMultiStep:
             pytest.skip("transform_pipeline not available")
         _require_transform(bridge, "xor_single")
 
-        transforms: list[dict[str, str]] = _run(bridge.list_transforms())
+        transforms = _run(bridge.list_transforms())
         names = [t["name"] for t in transforms]
         if "bitwise_not" not in names:
             pytest.skip("bitwise_not transform not available")
@@ -190,8 +193,8 @@ class TestApplyPipelineMultiStep:
             {"name": "xor_single", "params": {"key": "AA"}},
         ])
 
-        result_ab: str = _run(bridge.apply_pipeline(pipeline_ab, 0, 4))
-        result_ba: str = _run(bridge.apply_pipeline(pipeline_ba, 0, 4))
+        result_ab = _run(bridge.apply_pipeline(pipeline_ab, 0, 4))
+        result_ba = _run(bridge.apply_pipeline(pipeline_ba, 0, 4))
 
         assert result_ab != result_ba
 
@@ -214,9 +217,8 @@ class TestApplyPipelineMultiStep:
             {"name": "xor_single", "params": {"key": "0F"}},
             {"name": "xor_single", "params": {"key": "F0"}},
         ])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
-        assert isinstance(result, str)
         assert len(result) == 8
 
     def test_pipeline_result_length_matches_input_length(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -235,7 +237,7 @@ class TestApplyPipelineMultiStep:
         _open_with_payload(bridge, tmp_path / "len_check.bin", payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "55"}}])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, byte_count))
+        result = _run(bridge.apply_pipeline(pipeline, 0, byte_count))
 
         assert len(result) == byte_count * 2
 
@@ -254,7 +256,7 @@ class TestApplyPipelineMultiStep:
         _open_with_payload(bridge, tmp_path / "subrange.bin", payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "FF"}}])
-        result: str = _run(bridge.apply_pipeline(pipeline, 8, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 8, 4))
 
         transformed = bytes.fromhex(result)
         assert all(b == 0x00 for b in transformed)
@@ -290,7 +292,6 @@ class TestApplyPipelineInvalidStep:
 
         if raised is None:
             assert result is not None
-            assert isinstance(result, str)
 
 
 class TestApplyTransformDeep:
@@ -308,7 +309,7 @@ class TestApplyTransformDeep:
         payload = b"\x41\x41\x41\x41"
         _open_with_payload(bridge, tmp_path / "xorkey.bin", payload)
 
-        result: str = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "41"})))
+        result = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "41"})))
 
         assert result == "00000000"
 
@@ -324,7 +325,7 @@ class TestApplyTransformDeep:
         payload = b"\x00" * 4 + b"\xff\xff\xff\xff" + b"\x00" * 4
         _open_with_payload(bridge, tmp_path / "subrange_transform.bin", payload)
 
-        result: str = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "FF"})))
+        result = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "FF"})))
 
         transformed = bytes.fromhex(result)
         assert all(b == 0x00 for b in transformed)
@@ -336,7 +337,7 @@ class TestApplyTransformDeep:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        transforms: list[dict[str, str]] = _run(bridge.list_transforms())
+        transforms = _run(bridge.list_transforms())
         names = [t["name"] for t in transforms]
         if "rot13" not in names:
             pytest.skip("rot13 transform not available")
@@ -345,7 +346,7 @@ class TestApplyTransformDeep:
         payload = text.encode("ascii") + b"\x00" * 8
         _open_with_payload(bridge, tmp_path / "rot13.bin", payload)
 
-        result: str = _run(bridge.apply_transform("rot13", 0, len(text), "{}"))
+        result = _run(bridge.apply_transform("rot13", 0, len(text), "{}"))
 
         transformed = bytes.fromhex(result).decode("ascii")
         assert transformed == "URYYB"
@@ -360,7 +361,7 @@ class TestApplyTransformDeep:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        transforms: list[dict[str, str]] = _run(bridge.list_transforms())
+        transforms = _run(bridge.list_transforms())
         names = [t["name"] for t in transforms]
         if "base64_encode" not in names:
             pytest.skip("base64_encode transform not available")
@@ -368,7 +369,7 @@ class TestApplyTransformDeep:
         payload = b"TestData" + b"\x00" * 8
         _open_with_payload(bridge, tmp_path / "b64.bin", payload)
 
-        result: str = _run(bridge.apply_transform("base64_encode", 0, 8, "{}"))
+        result = _run(bridge.apply_transform("base64_encode", 0, 8, "{}"))
 
         b64_bytes = bytes.fromhex(result)
         decoded = base64.b64decode(b64_bytes)
@@ -386,7 +387,7 @@ class TestApplyTransformDeep:
         payload = b"\x11\x22\x33\x44\x55\x66\x77\x88"
         _open_with_payload(bridge, tmp_path / "xor_id.bin", payload)
 
-        result: str = _run(bridge.apply_transform("xor_single", 0, 8, json.dumps({"key": "00"})))
+        result = _run(bridge.apply_transform("xor_single", 0, 8, json.dumps({"key": "00"})))
 
         assert result == binascii.hexlify(payload).decode("ascii")
 
@@ -402,8 +403,8 @@ class TestApplyTransformDeep:
         payload = b"\x00\x00\x00\x00" + b"\xff\xff\xff\xff"
         _open_with_payload(bridge, tmp_path / "twobranch.bin", payload)
 
-        result_first: str = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "AA"})))
-        result_second: str = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "AA"})))
+        result_first = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "AA"})))
+        result_second = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "AA"})))
 
         assert result_first != result_second
 
@@ -421,9 +422,9 @@ class TestApplyTransformDeep:
         payload = b"\xde\xad\xbe\xef"
         _open_with_payload(bridge, tmp_path / "compare.bin", payload)
 
-        direct: str = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "CA"})))
+        direct = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "CA"})))
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "CA"}}])
-        via_pipeline: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        via_pipeline = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
         assert direct == via_pipeline
 
@@ -435,7 +436,7 @@ class TestApplyTransformDeep:
         """
         _require_transform(loaded_bridge, "xor_single")
 
-        result: str = _run(loaded_bridge.apply_transform("xor_single", 0, 2, json.dumps({"key": "00"})))
+        result = _run(loaded_bridge.apply_transform("xor_single", 0, 2, json.dumps({"key": "00"})))
 
         assert result == "4d5a"
 
@@ -463,7 +464,7 @@ class TestApplyTransformDeep:
             {"name": "xor_single", "params": {"key": f"{k2:02X}"}},
             {"name": "xor_single", "params": {"key": f"{k3:02X}"}},
         ])
-        result: str = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
         transformed = bytes.fromhex(result)
         assert all(b == expected_byte for b in transformed)

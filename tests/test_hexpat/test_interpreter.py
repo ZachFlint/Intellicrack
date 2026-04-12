@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import struct
+from typing import cast
 
 import pytest
 
@@ -364,7 +365,7 @@ class TestAtOffset:
             };
             S s @ 0;
         """
-        results = interp.execute_bytes(source, data)
+        results = interp.execute_bytes(source, bytes(data))
         kids = results[0]["children"]
         assert kids[1]["offset"] == 8
         assert kids[1]["display_value"] == "0xBEEF"
@@ -428,8 +429,9 @@ class TestOutputFormat:
             interp: Fresh interpreter fixture.
         """
         results = interp.execute_bytes("u16 v @ 0;", bytes([0xAB, 0xCD]))
-        raw = results[0]["raw_bytes"]
-        assert isinstance(raw, list)
+        raw_value: object = results[0]["raw_bytes"]
+        assert isinstance(raw_value, list)
+        raw = cast("list[object]", raw_value)
         assert all(isinstance(b, int) for b in raw)
         assert raw == [0xAB, 0xCD]
 
@@ -441,8 +443,10 @@ class TestOutputFormat:
         """
         data = struct.pack("<HH", 1, 2)
         results = interp.execute_bytes("struct S{u16 a;u16 b;}; S s @ 0;", data)
-        assert isinstance(results[0]["children"], list)
-        assert len(results[0]["children"]) == 2
+        children_value: object = results[0]["children"]
+        assert isinstance(children_value, list)
+        children = cast("list[object]", children_value)
+        assert len(children) == 2
 
 
 class TestRealBinaryFormats:

@@ -15,13 +15,34 @@ Tests validate:
 
 from __future__ import annotations
 
+import sqlite3
 import tempfile
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.types import ProviderName
+
+
+def _store_connection(store: SessionStore) -> AbstractContextManager[sqlite3.Connection]:
+    """Return the SessionStore's connection context manager via ``getattr``.
+
+    Args:
+        store: The SessionStore whose connection manager should be returned.
+
+    Returns:
+        AbstractContextManager[sqlite3.Connection]: Context manager yielding a
+        configured sqlite3 connection with ``sqlite3.Row`` row factory.
+    """
+    connection_method = cast(
+        Callable[[], AbstractContextManager[sqlite3.Connection]],
+        getattr(store, "_connection"),
+    )
+    return connection_method()
 
 
 DEFAULT_SAVE_INTERVAL = 300
@@ -60,9 +81,10 @@ class TestSessionStoreInitialization:
         db_path = tmp_path / "sessions.db"
         store = SessionStore(db_path)
 
-        with store.connection() as conn:
-            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-            table_names = {row["name"] for row in tables}
+        with _store_connection(store) as conn:
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            rows = cast(list[sqlite3.Row], cursor.fetchall())
+            table_names = {str(row["name"]) for row in rows}
 
         assert "sessions" in table_names
         assert "session_tags" in table_names

@@ -282,8 +282,10 @@ class DataInspectorMixin:
             raw = self.document.read(cursor_offset, length)
             if isinstance(raw, bytes):
                 data = raw
-            elif isinstance(raw, (list, bytearray)):
+            elif isinstance(raw, bytearray):
                 data = bytes(raw)
+            elif isinstance(raw, list):
+                data = bytes(cast("list[int]", raw))
             else:
                 return
             decoded = data.decode(encoding, errors="replace")
