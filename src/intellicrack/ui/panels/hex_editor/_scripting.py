@@ -592,7 +592,9 @@ class ScriptingMixin:
         self._script_editor.setTabStopDistance(
             self._script_editor.fontMetrics().horizontalAdvance(" ") * 4,
         )
-        _PythonSyntaxHighlighter(self._script_editor.document())
+        editor_doc = self._script_editor.document()
+        if editor_doc is not None:
+            _PythonSyntaxHighlighter(editor_doc)
         layout.addWidget(self._script_editor)
 
         btn_row = QHBoxLayout()

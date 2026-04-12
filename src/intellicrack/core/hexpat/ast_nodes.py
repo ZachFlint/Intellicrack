@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TypeAlias
 
 
 @dataclass(frozen=True)
@@ -856,7 +855,7 @@ class UsingDecl:
     column: int
 
 
-ExprNode: TypeAlias = (
+type ExprNode = (
     NumberLiteral
     | FloatLiteral
     | StringLiteral
@@ -879,9 +878,9 @@ ExprNode: TypeAlias = (
     | AssignExpr
 )
 
-TypeNode: TypeAlias = PrimitiveType | NamedType | PointerType | ArrayType | PaddingType | AutoType
+type TypeNode = PrimitiveType | NamedType | PointerType | ArrayType | PaddingType | AutoType
 
-StmtNode: TypeAlias = (
+type StmtNode = (
     FieldDecl
     | ConditionalField
     | VarDecl
@@ -896,4 +895,4 @@ StmtNode: TypeAlias = (
     | PlacementStmt
 )
 
-DeclNode: TypeAlias = StructDecl | UnionDecl | EnumDecl | BitfieldDecl | FunctionDecl | NamespaceDecl | UsingDecl
+type DeclNode = StructDecl | UnionDecl | EnumDecl | BitfieldDecl | FunctionDecl | NamespaceDecl | UsingDecl

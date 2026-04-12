@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -55,7 +55,7 @@ class TestGetStrings:
             string_test_data: Path to a file with embedded ASCII and UTF-16 strings.
         """
         _run(bridge.open_file(str(string_test_data)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings(min_length=4, encoding="ascii")))
+        results: list[dict[str, Any]] = _run(bridge.get_strings(min_length=4, encoding="ascii"))
         contents = [r["content"] for r in results]
         assert any("Hello World" in c for c in contents)
 
@@ -67,7 +67,7 @@ class TestGetStrings:
             string_test_data: Path to a file with embedded strings.
         """
         _run(bridge.open_file(str(string_test_data)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings(min_length=4, encoding="utf16")))
+        results: list[dict[str, Any]] = _run(bridge.get_strings(min_length=4, encoding="utf16"))
         contents = [r["content"] for r in results]
         assert any("Test String" in c for c in contents)
 
@@ -79,7 +79,7 @@ class TestGetStrings:
             string_test_data: Path to a file with embedded strings.
         """
         _run(bridge.open_file(str(string_test_data)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings(min_length=4, encoding="ascii+utf16")))
+        results: list[dict[str, Any]] = _run(bridge.get_strings(min_length=4, encoding="ascii+utf16"))
         contents = [r["content"] for r in results]
         assert any("Hello World" in c for c in contents)
         assert any("Test String" in c for c in contents)
@@ -92,7 +92,7 @@ class TestGetStrings:
             string_test_data: Path to a file with embedded strings.
         """
         _run(bridge.open_file(str(string_test_data)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings(min_length=10, encoding="ascii")))
+        results: list[dict[str, Any]] = _run(bridge.get_strings(min_length=10, encoding="ascii"))
         for r in results:
             assert len(r["content"]) >= 10
 
@@ -104,7 +104,7 @@ class TestGetStrings:
             string_test_data: Path to a file with embedded strings.
         """
         _run(bridge.open_file(str(string_test_data)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings(min_length=4, max_results=1)))
+        results: list[dict[str, Any]] = _run(bridge.get_strings(min_length=4, max_results=1))
         assert len(results) <= 1
 
     def test_string_dict_structure(self, bridge: HexEditorBridge, string_test_data: Path) -> None:
@@ -115,7 +115,7 @@ class TestGetStrings:
             string_test_data: Path to a file with embedded strings.
         """
         _run(bridge.open_file(str(string_test_data)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings(min_length=4)))
+        results: list[dict[str, Any]] = _run(bridge.get_strings(min_length=4))
         assert results
         for r in results:
             assert "offset" in r
@@ -133,7 +133,7 @@ class TestGetStrings:
         f = tmp_path / "empty.bin"
         f.write_bytes(b"")
         _run(bridge.open_file(str(f)))
-        results = cast("list[dict[str, Any]]", _run(bridge.get_strings()))
+        results: list[dict[str, Any]] = _run(bridge.get_strings())
         assert results == []
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:

@@ -5,14 +5,30 @@
 
 """Tests for process cleanup and leak detection."""
 
+from __future__ import annotations
+
 import asyncio
 import subprocess
 import sys
+from collections.abc import Callable
+from typing import cast
 
 import psutil
 import pytest
 
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+
+
+def _sync_cleanup(pm: ProcessManager) -> Callable[[], None]:
+    """Return the synchronous cleanup callable of a ProcessManager.
+
+    Args:
+        pm: The ProcessManager instance to clean up.
+
+    Returns:
+        Callable[[], None]: Bound ``_sync_cleanup`` method reference.
+    """
+    return cast(Callable[[], None], getattr(pm, "_sync_cleanup"))
 
 
 @pytest.mark.asyncio
@@ -107,7 +123,7 @@ time.sleep(60)
 
     # 5. Call sync cleanup (simulating atexit)
     # We run it in a thread because it's blocking
-    await asyncio.to_thread(pm.sync_cleanup)
+    await asyncio.to_thread(_sync_cleanup(pm))
 
     # 6. Verify
     await asyncio.sleep(0.5)

@@ -26,7 +26,7 @@ from intellicrack.providers.registry import ProviderRegistry
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from intellicrack.core.types import ToolDefinition
+    from intellicrack.core.types import ThinkingConfig, ToolChoice, ToolDefinition
 
 
 class ConcreteTestProvider(LLMProviderBase):
@@ -81,6 +81,10 @@ class ConcreteTestProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        *,
+        enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Return empty response.
 
@@ -90,6 +94,9 @@ class ConcreteTestProvider(LLMProviderBase):
             tools: Available tools.
             temperature: Sampling temperature.
             max_tokens: Max response tokens.
+            tool_choice: Tool-selection directive.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable provider-side prompt caching.
 
         Returns:
             tuple[Message, list[ToolCall] | None]: Tuple of empty message and None.
@@ -104,6 +111,10 @@ class ConcreteTestProvider(LLMProviderBase):
         tools: list[ToolDefinition] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        *,
+        enable_cache: bool = False,
     ) -> AsyncIterator[str]:
         """Yield empty stream.
 
@@ -113,6 +124,9 @@ class ConcreteTestProvider(LLMProviderBase):
             tools: Available tools.
             temperature: Sampling temperature.
             max_tokens: Max response tokens.
+            tool_choice: Tool-selection directive.
+            thinking: Extended thinking configuration.
+            enable_cache: Whether to enable provider-side prompt caching.
 
         Yields:
             str: Empty string.

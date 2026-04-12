@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sun, Apr 12, 2026 01:28:22 AM
+Generated: Sun, Apr 12, 2026 07:15:42 PM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -48,6 +48,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   ├── misc.xml
 │   ├── modules.xml
 │   ├── vcs.xml
+│   ├── webResources.xml
 │   └── workspace.xml
 ├── .intellicrack/
 │   ├── scripts/
@@ -2658,6 +2659,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── bandit_findings.json
 │   │   ├── basedpyright_findings.json
 │   │   ├── blinter_findings.json
+│   │   ├── bp_fresh.json
 │   │   ├── cargo-deny_findings.json
 │   │   ├── clippy_findings.json
 │   │   ├── codespell_findings.json
@@ -2893,7 +2895,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── xenon_findings.xml
 │   │   └── yamllint_findings.xml
 │   ├── .tool_durations.json
-│   └── lint_dashboard.html
+│   ├── lint_dashboard.html
+│   └── scratch_analyze.py
 ├── Screenshots/
 │   ├── desktop.ini
 │   └── Screenshots.lnk
@@ -3230,7 +3233,6 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   │   ├── vnc_widget.py
 │   │   │   │   └── x64dbg_panel.py
 │   │   │   ├── resources/
-│   │   │   │   ├── icons/
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── font_manager.py
 │   │   │   │   ├── icon_manager.py
@@ -10654,7 +10656,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── examples/
 │       │   │   │   ├── incremental/
 │       │   │   │   │   └── intellicrack_hexcore-37uad4mtonp3y/
-│       │   │   │   │       ├── s-hhi18fr30x-0hahb5m-5jbzdlhgeau2sinpaa9mmang4/
+│       │   │   │   │       ├── s-hhj3aoxrho-1tigzw9-5jbzdlhgeau2sinpaa9mmang4/
 │       │   │   │   │       │   ├── 02kc94qgfif9r9mzczgti5kgz.o
 │       │   │   │   │       │   ├── 030l1sdr49jfczfkof1cuj0g5.o
 │       │   │   │   │       │   ├── 03b54xpq1p2ll7cog2t03q7e5.o
@@ -10914,11 +10916,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │       │   ├── f2qn7nxyvbbq5h977kns34ziq.o
 │       │   │   │   │       │   ├── query-cache.bin
 │       │   │   │   │       │   └── work-products.bin
-│       │   │   │   │       └── s-hhi18fr30x-0hahb5m.lock
+│       │   │   │   │       └── s-hhj3aoxrho-1tigzw9.lock
 │       │   │   │   └── .cargo-lock
 │       │   │   ├── .rustc_info.json
-│       │   │   ├── intellicrack-hexcore-24224-3680224037595484272_2.profraw
-│       │   │   ├── intellicrack-hexcore-28800-3680224037595484272_2.profraw
+│       │   │   ├── intellicrack-hexcore-19616-3680224037595484272_14.profraw
+│       │   │   ├── intellicrack-hexcore-24080-3680224037595484272_12.profraw
 │       │   │   └── intellicrack-hexcore-profraw-list
 │       │   ├── maturin/
 │       │   │   └── intellicrack_hexcore.dll
@@ -28178,6 +28180,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .yamllint
 ├── .yarnrc.yml
 ├── AGENTS.md
+├── CHANGELOG.md
 ├── CLAUDE.md
 ├── cliff.toml
 ├── CODE_OF_CONDUCT.md
