@@ -396,9 +396,7 @@ lint.select = [
   "W",     # pycodestyle warnings
 ]
 lint.ignore = [
-  "D107",    # missing-docstring-in-__init__ (conflicts with pydoclint DOC301)
-  "D203",    # incorrect-blank-line-before-class
-  "D213",    # multi-line-summary-second-line
+  "D107",    # missing-docstring-in-__init__ (Google style documents at class level; pydoclint DOC301 disabled via allow-init-docstring=true)
   "E501",    # line-too-long
   "PLR0911", # too-many-return-statements
   "PLR0912", # too-many-branches
@@ -417,7 +415,6 @@ lint.per-file-ignores."src/intellicrack/bridges/hex_editor.py" = [ "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/cutter.py" = [ "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/process.py" = [ "N801", "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/x64dbg.py" = [ "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/ast_nodes.py" = [ "UP040" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
   "C901",
   "PLR0914",
@@ -427,14 +424,12 @@ lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
 lint.per-file-ignores."src/intellicrack/core/hexpat/interpreter.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/lexer.py" = [ "C901" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = [ "C901", "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/pattern_registry.py" = [ "TC003" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = [ "PLR0914", "TC003" ]
+lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = [ "PLR0914" ]
 lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = [ "PLR2004", "TRY003" ]
 lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/core/tools.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/main.py" = [ "PLC0415" ]
 lint.per-file-ignores."src/intellicrack/ui/app.py" = [ "PLC0415" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/async_bridge.py" = [ "UP047" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = [ "PLR0914" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = [ "PLR0914" ]
 lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = [ "PLR0914" ]
@@ -756,11 +751,12 @@ enableTypeIgnoreComments = true
 strictListInference = true
 strictDictionaryInference = true
 strictSetInference = true
-reportMissingImports = "warning"
-reportMissingTypeStubs = false
-reportMissingModuleSource = "warning"
+reportMissingImports = "error"
+reportMissingTypeStubs = "error"
+reportMissingModuleSource = "error"
 reportUndefinedVariable = "error"
 reportGeneralTypeIssues = "error"
+stubPath = "typings"
 extraPaths = [ "src" ]
 
 [tool.vulture]

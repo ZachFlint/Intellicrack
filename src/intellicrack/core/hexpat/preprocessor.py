@@ -10,11 +10,15 @@ Handles #include, #define, #ifdef/#ifndef/#endif, and #pragma directives.
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.errors import HexPatPreprocessorError
 from intellicrack.core.logging import get_logger
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 _logger = get_logger("core.hexpat.preprocessor")

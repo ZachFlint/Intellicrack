@@ -36,11 +36,12 @@
   "strictListInference": true,
   "strictDictionaryInference": true,
   "strictSetInference": true,
-  "reportMissingImports": "warning",
-  "reportMissingTypeStubs": false,
-  "reportMissingModuleSource": "warning",
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "error",
+  "reportMissingModuleSource": "error",
   "reportUndefinedVariable": "error",
   "reportGeneralTypeIssues": "error",
+  "stubPath": "typings",
   "extraPaths": [
     "src"
   ]
