@@ -49987,6 +49987,11 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a8b2403b\reports\json\blinter_findings.json</data>
       <data key="d3">blinter_findings.json</data>
     </node>
+    <node id="reports/json/bp_fresh.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\reports\json\bp_fresh.json</data>
+      <data key="d3">bp_fresh.json</data>
+    </node>
     <node id="reports/json/cargo-deny_findings.json">
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a8b2403b\reports\json\cargo-deny_findings.json</data>

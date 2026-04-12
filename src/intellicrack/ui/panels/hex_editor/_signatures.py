@@ -102,8 +102,9 @@ class SignatureScanWorker(QThread):
                     hex_pattern = pattern_info
                     scan_offset = "ep"
                 elif isinstance(pattern_info, dict):
-                    hex_pattern = str(pattern_info.get("pattern", ""))
-                    scan_offset = str(pattern_info.get("offset", "ep"))
+                    typed_pattern_info = cast("dict[str, object]", pattern_info)
+                    hex_pattern = str(typed_pattern_info.get("pattern", ""))
+                    scan_offset = str(typed_pattern_info.get("offset", "ep"))
                 else:
                     continue
 
