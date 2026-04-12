@@ -112,7 +112,7 @@ def _tool(
         ToolDefinition: Configured ToolDefinition instance.
     """
     return ToolDefinition(
-        tool_name=ToolName.BINARY,
+        tool_name=ToolName.GHIDRA,
         description=_TOOL_DESC,
         functions=functions or [_func()],
     )
@@ -326,14 +326,14 @@ def test_validate_definition_valid() -> None:
 
 def test_validate_definition_empty_description() -> None:
     """Verify empty description produces warning."""
-    t = ToolDefinition(tool_name=ToolName.BINARY, description="", functions=[_func()])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="", functions=[_func()])
     errors = validate_tool_definition(t)
     assert any("description" in e.message.lower() for e in errors)
 
 
 def test_validate_definition_no_functions() -> None:
     """Verify zero functions produces error."""
-    t = ToolDefinition(tool_name=ToolName.BINARY, description="desc", functions=[])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="desc", functions=[])
     errors = validate_tool_definition(t)
     assert any("at least one" in e.message.lower() for e in errors)
 
@@ -428,26 +428,34 @@ def test_get_schema_for_provider_all(provider: ProviderName) -> None:
         provider: The LLM provider to test.
     """
     result = get_schema_for_provider(_tool(), provider)
-    assert isinstance(result, list)
     assert len(result) == 1
 
 
 def test_get_schema_for_provider_google_uppercase() -> None:
     """Verify Google provider uses OBJECT type."""
-    result = get_schema_for_provider(_tool(), ProviderName.GOOGLE)
-    assert result[0]["parameters"]["type"] == "OBJECT"
+    tool = _tool()
+    typed_result = to_google_schema(tool)
+    assert typed_result[0]["parameters"]["type"] == "OBJECT"
+    result = get_schema_for_provider(tool, ProviderName.GOOGLE)
+    assert result == [dict(s) for s in typed_result]
 
 
 def test_get_schema_for_provider_anthropic_input_schema() -> None:
     """Verify Anthropic provider uses input_schema key."""
-    result = get_schema_for_provider(_tool(), ProviderName.ANTHROPIC)
-    assert "input_schema" in result[0]
+    tool = _tool()
+    typed_result = to_anthropic_schema(tool)
+    assert typed_result[0]["input_schema"]["type"] == "object"
+    result = get_schema_for_provider(tool, ProviderName.ANTHROPIC)
+    assert result == [dict(s) for s in typed_result]
 
 
 def test_get_schema_for_provider_openai_function_type() -> None:
     """Verify OpenAI provider uses function type."""
-    result = get_schema_for_provider(_tool(), ProviderName.OPENAI)
-    assert result[0]["type"] == "function"
+    tool = _tool()
+    typed_result = to_openai_schema(tool)
+    assert typed_result[0]["type"] == "function"
+    result = get_schema_for_provider(tool, ProviderName.OPENAI)
+    assert result == [dict(s) for s in typed_result]
 
 
 def test_get_all_schemas_empty() -> None:
@@ -473,7 +481,7 @@ def test_validate_and_convert_valid() -> None:
 
 def test_validate_and_convert_invalid() -> None:
     """Verify invalid tool returns empty schemas."""
-    t = ToolDefinition(tool_name=ToolName.BINARY, description="d", functions=[])
+    t = ToolDefinition(tool_name=ToolName.GHIDRA, description="d", functions=[])
     schemas, errors = validate_and_convert(t, ProviderName.OPENAI)
     assert schemas == []
     assert len(errors) > 0
@@ -482,7 +490,7 @@ def test_validate_and_convert_invalid() -> None:
 def test_validate_and_convert_warnings_still_convert() -> None:
     """Verify warnings-only tool still converts successfully."""
     t = ToolDefinition(
-        tool_name=ToolName.BINARY,
+        tool_name=ToolName.GHIDRA,
         description="",
         functions=[_func()],
     )

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
@@ -188,7 +188,7 @@ class TestBridgeShutdown:
         _run(bridge.open_file(str(pe_binary)))
         _run(bridge.goto_offset(128))
         _run(bridge.shutdown())
-        assert bridge.cursor_offset == 0
+        assert _run(bridge.get_cursor_position()) == 0
 
     def test_operations_after_shutdown_raise_or_return_gracefully(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Verify that read_bytes after shutdown raises RuntimeError.

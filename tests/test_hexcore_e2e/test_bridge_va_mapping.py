@@ -6,7 +6,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+import importlib
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,20 +19,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -50,8 +51,9 @@ def _has_native_va_mapping() -> bool:
     Returns:
         bool: True if native VA mapping is available.
     """
-    doc = hexcore_mod.HexDocument()
-    return hasattr(doc, "add_va_mapping")
+    module = importlib.import_module("intellicrack_hexcore")
+    hex_doc_cls: object = getattr(module, "HexDocument", None)
+    return hex_doc_cls is not None and hasattr(hex_doc_cls, "add_va_mapping")
 
 
 class TestManualVAMappings:
@@ -69,7 +71,7 @@ class TestManualVAMappings:
         f.write_bytes(b"\x00" * 1024)
         _run(bridge.open_file(str(f)))
         _run(bridge.set_va_base(0, 0x400000, 0x200))
-        mappings = cast("list[dict[str, int]]", _run(bridge.list_va_mappings()))
+        mappings = _run(bridge.list_va_mappings())
         assert len(mappings) >= 1
         found = any(m["file_offset"] == 0 and m["virtual_address"] == 0x400000 for m in mappings)
         assert found
@@ -84,7 +86,7 @@ class TestManualVAMappings:
         f = tmp_path / "va_ret.bin"
         f.write_bytes(b"\x00" * 1024)
         _run(bridge.open_file(str(f)))
-        result = cast(bool, _run(bridge.set_va_base(0, 0x400000, 0x200)))
+        result = _run(bridge.set_va_base(0, 0x400000, 0x200))
         assert result is True
 
     @pytest.mark.skipif(not _has_native_va_mapping(), reason="native VA mapping not available")
@@ -100,9 +102,9 @@ class TestManualVAMappings:
         _run(bridge.open_file(str(f)))
         _run(bridge.set_va_base(0, 0x400000, 0x200))
         _run(bridge.set_va_base(0x200, 0x401000, 0x100))
-        before = cast("list[dict[str, int]]", _run(bridge.list_va_mappings()))
+        before = _run(bridge.list_va_mappings())
         _run(bridge.remove_va_mapping(0))
-        after = cast("list[dict[str, int]]", _run(bridge.list_va_mappings()))
+        after = _run(bridge.list_va_mappings())
         assert len(after) == len(before) - 1
 
 
@@ -121,7 +123,7 @@ class TestVAConversion:
         f.write_bytes(b"\x00" * 8192)
         _run(bridge.open_file(str(f)))
         _run(bridge.set_va_base(0x1000, 0x401000, 0x200))
-        result = cast("int | None", _run(bridge.file_offset_to_va(0x1000)))
+        result = _run(bridge.file_offset_to_va(0x1000))
         assert result == 0x401000
 
     @pytest.mark.skipif(not _has_native_va_mapping(), reason="native VA mapping not available")
@@ -136,7 +138,7 @@ class TestVAConversion:
         f.write_bytes(b"\x00" * 8192)
         _run(bridge.open_file(str(f)))
         _run(bridge.set_va_base(0x1000, 0x401000, 0x200))
-        result = cast("int | None", _run(bridge.va_to_file_offset(0x401000)))
+        result = _run(bridge.va_to_file_offset(0x401000))
         assert result == 0x1000
 
     def test_unmapped_offset_returns_none(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -165,7 +167,7 @@ class TestAutoDetectVAMappings:
             pe_binary_full: Path to a PE binary with full Optional Header.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        mappings = cast("list[dict[str, int]]", _run(bridge.auto_detect_va_mappings()))
+        mappings = _run(bridge.auto_detect_va_mappings())
         assert len(mappings) >= 2
         vas = [m["virtual_address"] for m in mappings]
         assert any(va >= 0x400000 for va in vas)
@@ -178,7 +180,7 @@ class TestAutoDetectVAMappings:
             elf_binary_with_loads: Path to an ELF binary with PT_LOAD segments.
         """
         _run(bridge.open_file(str(elf_binary_with_loads)))
-        mappings = cast("list[dict[str, int]]", _run(bridge.auto_detect_va_mappings()))
+        mappings = _run(bridge.auto_detect_va_mappings())
         assert len(mappings) == 2
         offsets = {m["file_offset"] for m in mappings}
         assert 0x1000 in offsets
@@ -194,7 +196,7 @@ class TestAutoDetectVAMappings:
         f = tmp_path / "random.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        mappings = cast("list[dict[str, int]]", _run(bridge.auto_detect_va_mappings()))
+        mappings = _run(bridge.auto_detect_va_mappings())
         assert mappings == []
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:
