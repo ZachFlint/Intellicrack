@@ -7,8 +7,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, TypedDict, cast
 
 import pytest
 
@@ -25,6 +26,41 @@ from intellicrack.core.config import (
     get_project_root,
 )
 from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
+
+
+class _GeneralSection(TypedDict):
+    """Subset of the ``general`` section emitted by ``Config._to_dict``."""
+
+    default_provider: str
+    confirmation_level: str
+    tools_directory: str
+    logs_directory: str
+    data_directory: str
+
+
+class _ConfigSerialised(TypedDict):
+    """Subset of the full configuration dictionary tests inspect by key."""
+
+    general: _GeneralSection
+    providers: dict[str, dict[str, bool | int | str]]
+    tools: dict[str, dict[str, bool | int | str]]
+    sandbox: dict[str, bool | int]
+    ui: dict[str, bool | int | str]
+    session: dict[str, bool | int]
+    log: dict[str, bool | int | str]
+
+
+def _config_to_dict(config: Config) -> _ConfigSerialised:
+    """Return the config's serialised dictionary via ``getattr``.
+
+    Args:
+        config: The Config instance to serialise.
+
+    Returns:
+        _ConfigSerialised: Typed view of the configuration dictionary.
+    """
+    serialise = cast(Callable[[], _ConfigSerialised], getattr(config, "_to_dict"))
+    return serialise()
 
 
 _DEFAULT_TIMEOUT: Final[int] = 120
@@ -163,15 +199,14 @@ def test_config_is_tool_enabled() -> None:
 def test_config_to_dict_round_trip() -> None:
     """Verify _to_dict produces serializable dict with expected keys."""
     config = Config.default()
-    d = config.to_dict()
-    assert "general" in d
-    assert "providers" in d
-    assert "tools" in d
-    assert "sandbox" in d
-    assert "ui" in d
-    assert "session" in d
-    assert "log" in d
+    d = _config_to_dict(config)
     assert d["general"]["default_provider"] == "anthropic"
+    _ = d["providers"]
+    _ = d["tools"]
+    _ = d["sandbox"]
+    _ = d["ui"]
+    _ = d["session"]
+    _ = d["log"]
 
 
 def test_config_from_dict_empty() -> None:

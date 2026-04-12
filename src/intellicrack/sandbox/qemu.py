@@ -15,9 +15,11 @@ import json
 import secrets
 import shutil
 import socket
+import struct
 import tempfile
 import time
 import zipfile
+import zlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -115,6 +117,115 @@ _ERR_YARA_SCAN_FAILED = "YARA scan failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _YARA_MATCH_MIN_FIELDS = 3
 
+_ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
+_ERR_PPM_UNSUPPORTED_MAXVAL = "unsupported PPM maxval; only 8-bit (255) is supported"
+_ERR_PPM_TRUNCATED = "PPM pixel data is truncated"
+_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+_PPM_EXPECTED_MAXVAL = 255
+_PPM_WHITESPACE: frozenset[int] = frozenset(b" \t\r\n")
+
+
+def _read_ppm_token(data: bytes, pos: int) -> tuple[str, int]:
+    """Read the next whitespace-delimited token from PPM header.
+
+    Skips ASCII whitespace and `#`-prefixed comment lines per the
+    Netpbm PPM specification, then returns the next token.
+
+    Args:
+        data: Raw PPM file bytes.
+        pos: Current read position into ``data``.
+
+    Returns:
+        tuple[str, int]: Parsed token and updated position pointing at the
+        byte immediately after the token.
+    """
+    while pos < len(data):
+        byte = data[pos]
+        if byte in _PPM_WHITESPACE:
+            pos += 1
+            continue
+        if byte == ord("#"):
+            newline = data.find(b"\n", pos)
+            pos = len(data) if newline == -1 else newline + 1
+            continue
+        break
+    start = pos
+    while pos < len(data) and data[pos] not in _PPM_WHITESPACE:
+        pos += 1
+    return data[start:pos].decode("ascii"), pos
+
+
+def _encode_png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
+    """Encode a single PNG chunk with length and CRC32 framing.
+
+    Args:
+        chunk_type: 4-byte PNG chunk type identifier.
+        payload: Chunk data (may be empty).
+
+    Returns:
+        bytes: Full PNG chunk including length header and trailing CRC.
+    """
+    length = struct.pack(">I", len(payload))
+    crc = struct.pack(">I", zlib.crc32(chunk_type + payload) & 0xFFFFFFFF)
+    return length + chunk_type + payload + crc
+
+
+def _parse_ppm_p6(data: bytes) -> tuple[int, int, bytes]:
+    """Parse a Netpbm P6 PPM payload into ``(width, height, rgb_pixels)``.
+
+    Args:
+        data: Raw bytes of the PPM file.
+
+    Returns:
+        Tuple ``(width, height, pixels)`` where ``pixels`` is raw RGB bytes.
+
+    Raises:
+        ValueError: If the PPM magic is not ``P6``, the maxval is not 255, or
+            the pixel payload is truncated.
+    """
+    magic, pos = _read_ppm_token(data, 0)
+    if magic != "P6":
+        raise ValueError(_ERR_PPM_INVALID_MAGIC)
+    width_str, pos = _read_ppm_token(data, pos)
+    height_str, pos = _read_ppm_token(data, pos)
+    maxval_str, pos = _read_ppm_token(data, pos)
+    if int(maxval_str) != _PPM_EXPECTED_MAXVAL:
+        raise ValueError(_ERR_PPM_UNSUPPORTED_MAXVAL)
+    if pos < len(data) and data[pos] in _PPM_WHITESPACE:
+        pos += 1
+    width = int(width_str)
+    height = int(height_str)
+    expected_bytes = width * height * 3
+    pixels = data[pos : pos + expected_bytes]
+    if len(pixels) < expected_bytes:
+        raise ValueError(_ERR_PPM_TRUNCATED)
+    return width, height, pixels
+
+
+def _ppm_p6_to_png(ppm_path: Path, png_path: Path) -> None:
+    """Convert a Netpbm P6 PPM image to PNG using only the stdlib.
+
+    Reads an 8-bit RGB PPM (binary P6) produced by QEMU's ``screendump``
+    and writes a compressed true-color PNG. PPM parsing errors bubble up
+    from :func:`_parse_ppm_p6` as ``ValueError``.
+
+    Args:
+        ppm_path: Path to the source PPM image.
+        png_path: Destination path for the PNG output.
+    """
+    width, height, pixels = _parse_ppm_p6(ppm_path.read_bytes())
+    stride = width * 3
+    raw_scanlines = b"".join(
+        b"\x00" + pixels[row * stride : (row + 1) * stride] for row in range(height)
+    )
+    png_bytes = (
+        _PNG_SIGNATURE
+        + _encode_png_chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + _encode_png_chunk(b"IDAT", zlib.compress(raw_scanlines, level=9))
+        + _encode_png_chunk(b"IEND", b"")
+    )
+    png_path.write_bytes(png_bytes)
+
 
 class GuestOS(Enum):
     """Guest operating system type."""
@@ -204,6 +315,12 @@ class QMPClient:
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4444) -> None:
+        """Initialize the QMP client.
+
+        Args:
+            host: Host address where the QMP server is listening.
+            port: TCP port for the QMP server.
+        """
         self._host = host
         self._port = port
         self._reader: asyncio.StreamReader | None = None
@@ -417,6 +534,12 @@ class GuestAgentClient:
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4445) -> None:
+        """Initialize the guest agent client.
+
+        Args:
+            host: Host address where the guest agent is reachable.
+            port: TCP port for the guest agent server.
+        """
         self._host = host
         self._port = port
         self._reader: asyncio.StreamReader | None = None
@@ -624,6 +747,12 @@ class QEMUSandbox(SandboxBase):
         config: SandboxConfig | None = None,
         qemu_config: QEMUConfig | None = None,
     ) -> None:
+        """Initialize the QEMU sandbox.
+
+        Args:
+            config: General sandbox configuration shared across backends.
+            qemu_config: QEMU-specific configuration such as memory and disk image.
+        """
         super().__init__(config)
         self._qemu_config = qemu_config or QEMUConfig()
         self.process: asyncio.subprocess.Process | None = None
@@ -2433,23 +2562,13 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         await asyncio.sleep(0.5)
 
         final_path: Path = ppm_path
+        png_path = ppm_path.with_suffix(".png")
         try:
-            from PIL import Image  # noqa: PLC0415
-
-            png_path = ppm_path.with_suffix(".png")
-
-            def _convert_to_png() -> None:
-                img = Image.open(str(ppm_path))
-                try:
-                    img.save(str(png_path), format="PNG")
-                finally:
-                    img.close()
-
-            await asyncio.to_thread(_convert_to_png)
+            await asyncio.to_thread(_ppm_p6_to_png, ppm_path, png_path)
             await asyncio.to_thread(ppm_path.unlink, missing_ok=True)
             final_path = png_path
-        except ImportError:
-            _logger.debug("pil_not_available_keeping_ppm")
+        except (OSError, ValueError) as exc:
+            _logger.debug("ppm_to_png_conversion_failed", error=str(exc))
 
         if output_path is not None:
             await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
