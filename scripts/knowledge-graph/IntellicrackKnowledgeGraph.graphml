@@ -25726,14 +25726,29 @@ Args:
       <data key="d1">python</data>
       <data key="d3">discover_one</data>
       <data key="d5">['provider_name']</data>
-      <data key="d4" />
+      <data key="d4">Discover models for a single provider with caching.
+
+Args:
+    provider_name: The provider whose models should be listed.
+
+Returns:
+    tuple[ProviderName, list[ModelInfo], DiscoveryEvent]: The
+    provider name, the discovered models, and a discovery event
+    capturing timing and success metadata.</data>
     </node>
     <node id="src.intellicrack.providers.discovery.cost_key">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">cost_key</data>
       <data key="d5">['m']</data>
-      <data key="d4" />
+      <data key="d4">Return the per-million-token output cost for sorting.
+
+Args:
+    m: Model whose cost should be used as the sort key.
+
+Returns:
+    float: The output cost, or ``inf`` when unknown so
+    models without pricing sort last.</data>
     </node>
     <node id="src.intellicrack.providers.google">
       <data key="d0">module</data>
@@ -25955,14 +25970,22 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_generate</data>
       <data key="d5">[]</data>
-      <data key="d4" />
+      <data key="d4">Invoke the synchronous Gemini generate_content endpoint.
+
+Returns:
+    GenerateContentResponse: The raw Gemini API response for
+    the prepared model, contents, and configuration.</data>
     </node>
     <node id="src.intellicrack.providers.google._start_stream">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_start_stream</data>
       <data key="d5">[]</data>
-      <data key="d4" />
+      <data key="d4">Open a synchronous Gemini streaming generation request.
+
+Returns:
+    Iterable[GenerateContentResponse]: Iterable yielding
+    response chunks from the Gemini streaming API.</data>
     </node>
     <node id="src.intellicrack.providers.grok">
       <data key="d0">module</data>
@@ -26783,7 +26806,19 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_forward_pass</data>
       <data key="d5">['fwd_model', 'fwd_gen_ids', 'fwd_attn_mask', 'fwd_past_kv']</data>
-      <data key="d4" />
+      <data key="d4">Run a single causal language model forward pass.
+
+Args:
+    fwd_model: Loaded causal language model to invoke.
+    fwd_gen_ids: Token ids generated so far for the sequence.
+    fwd_attn_mask: Optional attention mask aligned with the
+        generated ids, or ``None`` to skip masking.
+    fwd_past_kv: Cached key/value tensors from prior steps;
+        when present, only the latest token id is evaluated.
+
+Returns:
+    CausalLMOutputWithPast: The model output including logits
+    and the updated pa...</data>
     </node>
     <node id="src.intellicrack.providers.model_loader">
       <data key="d0">module</data>
@@ -27372,7 +27407,15 @@ Raises:
       <data key="d1">python</data>
       <data key="d3">_query_single</data>
       <data key="d5">['name']</data>
-      <data key="d4" />
+      <data key="d4">Fetch ``num_ctx`` and tool-support flags for a single model.
+
+Args:
+    name: Ollama model name to query via ``/api/show``.
+
+Returns:
+    tuple[str, int, bool]: The model name, its detected context
+    window (defaulting to 4096 on failure), and whether its
+    template declares a ``.Tools`` directive.</data>
     </node>
     <node id="src.intellicrack.providers.openai">
       <data key="d0">module</data>
@@ -45247,7 +45290,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._disassembly._create_disassembly_tab">
       <data key="d0">function</data>
@@ -45443,7 +45489,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_on_data_changed</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Handle document data-change signals by refreshing derived views.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._patches._update_patches">
       <data key="d0">function</data>
@@ -45494,21 +45540,27 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_populate_template_tree</data>
       <data key="d5">['self', 'fields']</data>
-      <data key="d4" />
+      <data key="d4">Populate the template preview tree from decoded structure fields.
+
+Args:
+    fields: Interpreted template field entries with metadata.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._highlight_template_fields">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_highlight_template_fields</data>
       <data key="d5">['self', 'fields']</data>
-      <data key="d4" />
+      <data key="d4">Apply region highlights in the hex view for template fields.
+
+Args:
+    fields: Interpreted template field entries with offsets and sizes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._populate_template_combo">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_populate_template_combo</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Populate the template selector combo with available structures.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._build_pattern_editor">
       <data key="d0">function</data>
@@ -45634,14 +45686,12 @@ Args:
       <data key="d4">Dialog for browsing and opening process memory regions.
 
 Provides a PID input, region listing, and region selection for
-loading process memory into the hex editor.
+loading process memory into the hex editor. After the dialog is
+accepted, ``region_selected`` holds the chosen ``(pid, base, size)``
+tuple or ``None`` when no region was picked.
 
 Args:
-    parent: Parent widget.
-
-Attributes:
-    region_selected: Set when the user selects a region to open.
-        Contains (pid, base_address, size) or None.</data>
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._process_memory.ProcessMemoryMixin">
       <data key="d0">class</data>
@@ -46425,14 +46475,20 @@ Args:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sections._select_template">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_select_template</data>
       <data key="d5">['self', 'template_name']</data>
-      <data key="d4" />
+      <data key="d4">Select a structure template by name for the current file type.
+
+Args:
+    template_name: Identifier of the template to activate.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sections._populate_sections">
       <data key="d0">function</data>
@@ -47099,7 +47155,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_on_data_changed</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Handle document data-change signals by refreshing derived views.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._transforms._create_transforms_tab">
       <data key="d0">function</data>
@@ -47636,7 +47692,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._yara._create_yara_tab">
       <data key="d0">function</data>
