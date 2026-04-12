@@ -10,7 +10,7 @@ import ctypes
 import ctypes.wintypes
 import sys
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import Any, ClassVar, Final, cast
 
 from PyQt6.QtWidgets import (
     QDialog,
@@ -51,7 +51,7 @@ if sys.platform == "win32":
     class MemoryBasicInformation(ctypes.Structure):
         """Windows MEMORY_BASIC_INFORMATION structure for VirtualQueryEx."""
 
-        _fields_ = [
+        _fields_: ClassVar[list[tuple[str, type]]] = [
             ("BaseAddress", ctypes.c_void_p),
             ("AllocationBase", ctypes.c_void_p),
             ("AllocationProtect", ctypes.wintypes.DWORD),
@@ -66,14 +66,12 @@ class ProcessMemoryDialog(QDialog):
     """Dialog for browsing and opening process memory regions.
 
     Provides a PID input, region listing, and region selection for
-    loading process memory into the hex editor.
+    loading process memory into the hex editor. After the dialog is
+    accepted, ``region_selected`` holds the chosen ``(pid, base, size)``
+    tuple or ``None`` when no region was picked.
 
     Args:
         parent: Parent widget.
-
-    Attributes:
-        region_selected: Set when the user selects a region to open.
-            Contains (pid, base_address, size) or None.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
