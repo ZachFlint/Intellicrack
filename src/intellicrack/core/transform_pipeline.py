@@ -40,14 +40,23 @@ class ExpressionError(ValueError):
 
 
 class UnsupportedConstantTypeError(TypeError):
-    """Raised when an AST constant has an unsupported type."""
+    """Raised when an AST constant has an unsupported type.
+
+    Args:
+        type_name: Name of the AST constant type that is unsupported.
+    """
 
     def __init__(self, type_name: str) -> None:
         super().__init__(f"Unsupported constant type: {type_name}")
 
 
 class TransformParamError(ValueError):
-    """Raised when a transform node receives invalid parameters."""
+    """Raised when a transform node receives invalid parameters.
+
+    Args:
+        node_name: Name of the transform node that produced the error.
+        detail: Description of the invalid parameter or reason.
+    """
 
     def __init__(self, node_name: str, detail: str) -> None:
         super().__init__(f"{node_name}: {detail}")
