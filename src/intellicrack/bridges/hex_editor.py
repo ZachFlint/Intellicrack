@@ -26,7 +26,7 @@ import uuid
 import zlib
 from itertools import cycle, islice
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from intellicrack.bridges.base import BridgeCapabilities, ToolBridgeBase
 from intellicrack.core.logging import get_logger
@@ -34,8 +34,6 @@ from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, Too
 
 
 if TYPE_CHECKING:
-    from fpdf import FPDF
-
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.disassembler import HexDisassembler
     from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
@@ -43,6 +41,110 @@ if TYPE_CHECKING:
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.core.transform_pipeline import TransformPipeline
     from intellicrack.core.yara_scanner import YaraScanner
+
+
+class _FPDFProtocol(Protocol):
+    """Structural interface for the fpdf2 ``FPDF`` class.
+
+    Declares only the methods used by the hex editor PDF export. This
+    avoids a direct ``fpdf`` import so the bridge does not require the
+    optional fpdf2 dependency at type-check time.
+    """
+
+    def __init__(self, **kwargs: str) -> None:
+        """Construct a new FPDF document.
+
+        Args:
+            **kwargs: Constructor keyword arguments (``orientation``,
+                ``unit``, ``format``) forwarded to the underlying
+                ``fpdf.FPDF`` constructor.
+        """
+        _ = (self, kwargs)
+
+    def set_auto_page_break(self, *, auto: bool, margin: float = 0) -> None:
+        """Enable or disable automatic page breaks.
+
+        Args:
+            auto: Whether to automatically page-break.
+            margin: Bottom margin at which to break in user units.
+        """
+        _ = (self, auto, margin)
+
+    def add_page(self) -> None:
+        """Add a new page to the document."""
+        _ = self
+
+    def set_font(self, family: str, style: str = "", size: float = 0) -> None:
+        """Set the current font family, style, and size.
+
+        Args:
+            family: Font family name.
+            style: Font style (e.g. ``""``, ``"B"``).
+            size: Font size in points.
+        """
+        _ = (self, family, style, size)
+
+    def cell(
+        self,
+        w: float,
+        h: float = 0,
+        txt: str = "",
+        border: int | str = 0,
+        ln: int = 0,
+        align: str = "",
+        *,
+        fill: bool = False,
+        link: str = "",
+        new_x: str = "RIGHT",
+        new_y: str = "TOP",
+    ) -> None:
+        """Write a rectangular cell with optional text and border.
+
+        Args:
+            w: Cell width in user units.
+            h: Cell height in user units.
+            txt: Cell text content.
+            border: Border specification.
+            ln: Line break flag.
+            align: Horizontal alignment.
+            fill: Whether to fill the cell background.
+            link: Optional link target.
+            new_x: Cursor X advance directive.
+            new_y: Cursor Y advance directive.
+        """
+        _ = (self, w, h, txt, border, ln, align, fill, link, new_x, new_y)
+
+    def ln(self, h: float = 0) -> None:
+        """Advance to the next line.
+
+        Args:
+            h: Line height in user units.
+        """
+        _ = (self, h)
+
+    def set_fill_color(self, r: int, g: int = 0, b: int = 0) -> None:
+        """Set the fill color used for cells with ``fill=True``.
+
+        Args:
+            r: Red component (0-255).
+            g: Green component (0-255).
+            b: Blue component (0-255).
+        """
+        _ = (self, r, g, b)
+
+    def output(self, name: str = "", dest: str = "") -> bytes | bytearray | str | None:
+        """Write the document to the given destination.
+
+        Args:
+            name: Output filename or path.
+            dest: Destination mode.
+
+        Returns:
+            bytes | bytearray | str | None: Output bytes or path,
+                depending on the destination mode.
+        """
+        _ = (self, name, dest)
+        return None
 
 
 _logger = get_logger("bridges.hex_editor")
@@ -6028,9 +6130,11 @@ def _generate_pdf(
     Returns:
         str: The written file path.
     """
-    from fpdf import FPDF  # noqa: PLC0415
+    import importlib  # noqa: PLC0415
 
-    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    fpdf_mod = importlib.import_module("fpdf")
+    fpdf_cls = cast("type[_FPDFProtocol]", fpdf_mod.FPDF)
+    pdf: _FPDFProtocol = fpdf_cls(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=10)
 
     pdf.add_page()
@@ -6063,7 +6167,7 @@ def _generate_pdf(
 
 
 def _pdf_render_bookmarks(
-    pdf: FPDF,
+    pdf: _FPDFProtocol,
     bookmarks: list[dict[str, object]],
 ) -> None:
     """Render bookmark legend section into a PDF.
@@ -6094,7 +6198,7 @@ def _pdf_render_bookmarks(
 
 
 def _pdf_render_hex_rows(
-    pdf: FPDF,
+    pdf: _FPDFProtocol,
     data: bytes,
     start_offset: int,
     bytes_per_row: int,

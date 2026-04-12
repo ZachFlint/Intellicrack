@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from typing import TYPE_CHECKING, TypeVar, override
+from typing import TYPE_CHECKING, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -131,10 +131,7 @@ class BridgeCallWorker(QThread):
             self.call_error.emit(exc)
 
 
-_T = TypeVar("_T")
-
-
-def run_bridge_coroutine(coro: Coroutine[object, object, _T]) -> _T | None:
+def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
     """Run an async bridge coroutine from a synchronous Qt context.
 
     Uses a persistent background event loop thread to execute
@@ -150,7 +147,7 @@ def run_bridge_coroutine(coro: Coroutine[object, object, _T]) -> _T | None:
         coro: Coroutine to execute.
 
     Returns:
-        _T | None: Coroutine result when executed synchronously, or None
+        T | None: Coroutine result when executed synchronously, or None
             when the coroutine was scheduled on a running loop.
     """
     try:
