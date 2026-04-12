@@ -53,25 +53,45 @@ class TestPanelConstruction:
     """Verify ProcessPanel construction and initial widget structure."""
 
     def test_panel_creates(self, panel: ProcessPanel) -> None:
-        """Verify panel is a QWidget instance."""
+        """Verify panel is a QWidget instance.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         assert isinstance(panel, QWidget)
 
     def test_panel_has_five_tabs(self, panel: ProcessPanel) -> None:
-        """Verify panel has exactly 5 tabs."""
+        """Verify panel has exactly 5 tabs.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         assert panel._tab_widget.count() == 5
 
     def test_panel_tab_names(self, panel: ProcessPanel) -> None:
-        """Verify tab names are Processes, Memory, Threads, Modules, System."""
+        """Verify tab names are Processes, Memory, Threads, Modules, System.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         expected = ["Processes", "Memory", "Threads", "Modules", "System"]
         actual = [panel._tab_widget.tabText(i) for i in range(panel._tab_widget.count())]
         assert actual == expected
 
     def test_panel_has_status_bar(self, panel: ProcessPanel) -> None:
-        """Verify panel has a status bar."""
+        """Verify panel has a status bar.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         assert panel._status_bar is not None
 
     def test_panel_initial_state_disconnected(self, panel: ProcessPanel) -> None:
-        """Verify panel starts in disconnected state."""
+        """Verify panel starts in disconnected state.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         assert panel._state.value == "disconnected"
 
 
@@ -81,49 +101,84 @@ class TestBridgeWiring:
     def test_set_bridge_propagates_to_process_tab(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify bridge propagates to the process tab."""
+        """Verify bridge propagates to the process tab.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel._process_tab.get_bridge() is bridge
 
     def test_set_bridge_propagates_to_memory_tab(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify bridge propagates to the memory tab."""
+        """Verify bridge propagates to the memory tab.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel._memory_tab.get_bridge() is bridge
 
     def test_set_bridge_propagates_to_threads_tab(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify bridge propagates to the threads tab."""
+        """Verify bridge propagates to the threads tab.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel._threads_tab.get_bridge() is bridge
 
     def test_set_bridge_propagates_to_modules_tab(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify bridge propagates to the modules tab."""
+        """Verify bridge propagates to the modules tab.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel._modules_tab.get_bridge() is bridge
 
     def test_set_bridge_propagates_to_system_tab(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify bridge propagates to the system tab."""
+        """Verify bridge propagates to the system tab.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel._system_tab.get_bridge() is bridge
 
     def test_set_bridge_transitions_to_detached(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify set_bridge transitions state to detached."""
+        """Verify set_bridge transitions state to detached.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel._state.value == "detached"
 
     def test_get_bridge_returns_set_bridge(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify get_bridge returns the same bridge that was set."""
+        """Verify get_bridge returns the same bridge that was set.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert panel.get_bridge() is bridge
 
@@ -132,7 +187,11 @@ class TestStateMachine:
     """Verify state transitions enable/disable detail tabs correctly."""
 
     def test_disconnected_disables_detail_tabs(self, panel: ProcessPanel) -> None:
-        """Verify detail tabs are disabled in disconnected state."""
+        """Verify detail tabs are disabled in disconnected state.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         assert not panel._memory_tab.isEnabled()
         assert not panel._threads_tab.isEnabled()
         assert not panel._modules_tab.isEnabled()
@@ -141,7 +200,12 @@ class TestStateMachine:
     def test_detached_disables_detail_tabs(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify detail tabs remain disabled after set_bridge (detached)."""
+        """Verify detail tabs remain disabled after set_bridge (detached).
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         assert not panel._memory_tab.isEnabled()
         assert not panel._threads_tab.isEnabled()
@@ -151,7 +215,12 @@ class TestStateMachine:
     def test_attached_enables_detail_tabs(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify all detail tabs become enabled after process attachment."""
+        """Verify all detail tabs become enabled after process attachment.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         panel._on_process_attached(1234)
         assert panel._memory_tab.isEnabled()
@@ -162,7 +231,12 @@ class TestStateMachine:
     def test_detach_disables_tabs_again(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify detaching disables tabs and resets state."""
+        """Verify detaching disables tabs and resets state.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         panel._on_process_attached(1234)
         panel._on_process_detached()
@@ -175,7 +249,12 @@ class TestStateMachine:
     def test_attach_updates_status_pid(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify attach updates the PID label."""
+        """Verify attach updates the PID label.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         panel._on_process_attached(1234)
         assert panel._status_pid.text() == "PID: 1234"
@@ -183,7 +262,12 @@ class TestStateMachine:
     def test_detach_clears_status_pid(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify detach clears the PID label."""
+        """Verify detach clears the PID label.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         panel.set_bridge(bridge)
         panel._on_process_attached(1234)
         panel._on_process_detached()
@@ -254,7 +338,11 @@ class TestSignalEmission:
     """Verify signal emissions from ProcessPanel."""
 
     def test_process_selected_signal(self, panel: ProcessPanel) -> None:
-        """Verify process_selected signal fires with correct PID."""
+        """Verify process_selected signal fires with correct PID.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+        """
         from tests.test_ui.conftest import SignalRecorder
 
         recorder = SignalRecorder()
@@ -265,7 +353,12 @@ class TestSignalEmission:
     def test_process_attached_signal(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify process_attached signal fires with correct PID."""
+        """Verify process_attached signal fires with correct PID.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         from tests.test_ui.conftest import SignalRecorder
 
         recorder = SignalRecorder()
@@ -277,7 +370,12 @@ class TestSignalEmission:
     def test_process_detached_signal(
         self, panel: ProcessPanel, bridge: ProcessBridge
     ) -> None:
-        """Verify process_detached signal fires once."""
+        """Verify process_detached signal fires once.
+
+        Args:
+            panel: ProcessPanel fixture instance.
+            bridge: Uninitialized ProcessBridge fixture instance.
+        """
         from tests.test_ui.conftest import SignalRecorder
 
         recorder = SignalRecorder()
