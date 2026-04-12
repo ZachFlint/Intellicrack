@@ -11,7 +11,7 @@
     <node id="src.intellicrack.main">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\main.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\main.py</data>
       <data key="d3">src.intellicrack.main</data>
       <data key="d4">Main application entry point for Intellicrack.
 
@@ -343,14 +343,14 @@ Returns:
     <node id="src.intellicrack._metadata">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\_metadata.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\_metadata.py</data>
       <data key="d3">src.intellicrack._metadata</data>
       <data key="d4">Package metadata for Intellicrack.</data>
     </node>
     <node id="src.intellicrack.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\__init__.py</data>
       <data key="d3">src.intellicrack.__init__</data>
       <data key="d4">Intellicrack: AI-powered reverse engineering orchestration platform.
 
@@ -387,7 +387,7 @@ Raises:
     <node id="src.intellicrack.__main__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\__main__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\__main__.py</data>
       <data key="d3">src.intellicrack.__main__</data>
       <data key="d4">Package entry point for running Intellicrack as a module.
 
@@ -412,7 +412,7 @@ main module, handling any import errors gracefully.</data>
     <node id="src.intellicrack.bridges.base">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\base.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\base.py</data>
       <data key="d3">src.intellicrack.bridges.base</data>
       <data key="d4">Base protocol for tool bridges.
 
@@ -1497,7 +1497,7 @@ Raises:
     <node id="src.intellicrack.bridges.cutter">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\cutter.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\cutter.py</data>
       <data key="d3">src.intellicrack.bridges.cutter</data>
       <data key="d4">Cutter/Rizin bridge for static and dynamic analysis.
 
@@ -3046,7 +3046,7 @@ Raises:
     <node id="src.intellicrack.bridges.frida_bridge">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\frida_bridge.py</data>
       <data key="d3">src.intellicrack.bridges.frida_bridge</data>
       <data key="d4">Frida instrumentation bridge for dynamic analysis.
 
@@ -4771,7 +4771,7 @@ Returns:
     <node id="src.intellicrack.bridges.ghidra">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\ghidra.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\ghidra.py</data>
       <data key="d3">src.intellicrack.bridges.ghidra</data>
       <data key="d4">Ghidra bridge for static analysis and decompilation.
 
@@ -6157,7 +6157,7 @@ Raises:
     <node id="src.intellicrack.bridges.hex_editor">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\hex_editor.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\hex_editor.py</data>
       <data key="d3">src.intellicrack.bridges.hex_editor</data>
       <data key="d4">Hex editor bridge wrapping the Rust-powered intellicrack_hexcore.
 
@@ -8486,7 +8486,7 @@ Raises:
     <node id="src.intellicrack.bridges.hex_state">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\hex_state.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\hex_state.py</data>
       <data key="d3">src.intellicrack.bridges.hex_state</data>
       <data key="d4">Shared hex document state manager for bridge-GUI synchronization.
 
@@ -8858,7 +8858,7 @@ Args:
     <node id="src.intellicrack.bridges.installer">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\installer.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\installer.py</data>
       <data key="d3">src.intellicrack.bridges.installer</data>
       <data key="d4">Tool installer and detector for Intellicrack.
 
@@ -9232,7 +9232,7 @@ Returns:
     <node id="src.intellicrack.bridges.named_pipe_client">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\named_pipe_client.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\named_pipe_client.py</data>
       <data key="d3">src.intellicrack.bridges.named_pipe_client</data>
       <data key="d4">Named pipe client for x64dbg IPC.</data>
     </node>
@@ -9410,7 +9410,7 @@ Raises:
     <node id="src.intellicrack.bridges.process">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\process.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\process.py</data>
       <data key="d3">src.intellicrack.bridges.process</data>
       <data key="d4">Process control bridge for Windows process manipulation.
 
@@ -10554,7 +10554,7 @@ Returns:
     <node id="src.intellicrack.bridges.sandbox_bridge">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\sandbox_bridge.py</data>
       <data key="d3">src.intellicrack.bridges.sandbox_bridge</data>
       <data key="d4">Sandbox bridge for isolated binary execution environments.
 
@@ -11109,7 +11109,7 @@ Returns:
     <node id="src.intellicrack.bridges.schemas">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\schemas.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\schemas.py</data>
       <data key="d3">src.intellicrack.bridges.schemas</data>
       <data key="d4">JSON Schema generation for LLM tool calling.
 
@@ -11439,7 +11439,7 @@ Returns:
     <node id="src.intellicrack.bridges.x64dbg">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\x64dbg.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\x64dbg.py</data>
       <data key="d3">src.intellicrack.bridges.x64dbg</data>
       <data key="d4">X64dbg bridge for Windows debugging.
 
@@ -13380,7 +13380,7 @@ Returns:
     <node id="src.intellicrack.bridges._win32_types">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\_win32_types.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\_win32_types.py</data>
       <data key="d3">src.intellicrack.bridges._win32_types</data>
       <data key="d4">Shared Win32 ctypes structures, constants, and DLL helpers.
 
@@ -13711,7 +13711,7 @@ Returns:
     <node id="src.intellicrack.bridges.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\bridges\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\bridges\__init__.py</data>
       <data key="d3">src.intellicrack.bridges.__init__</data>
       <data key="d4">Tool bridges for external reverse engineering tools.
 
@@ -13728,7 +13728,7 @@ binary/process manipulation.</data>
     <node id="src.intellicrack.core.analysis_aggregator">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\analysis_aggregator.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\analysis_aggregator.py</data>
       <data key="d3">src.intellicrack.core.analysis_aggregator</data>
       <data key="d4">Bridge analysis aggregator for Intellicrack.
 
@@ -13738,7 +13738,7 @@ by delegating all actual analysis to the bridge layer.</data>
     <node id="src.intellicrack.core.logging">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\logging.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\logging.py</data>
       <data key="d3">src.intellicrack.core.logging</data>
       <data key="d4">Structured logging infrastructure for Intellicrack.
 
@@ -13748,7 +13748,7 @@ for development. Includes automatic cleanup of old log files on startup.</data>
     <node id="src.intellicrack.core.types">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\types.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\types.py</data>
       <data key="d3">src.intellicrack.core.types</data>
       <data key="d4">Core type definitions for Intellicrack.
 
@@ -13796,7 +13796,7 @@ Returns:
     <node id="src.intellicrack.core.tools">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\tools.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\tools.py</data>
       <data key="d3">src.intellicrack.core.tools</data>
       <data key="d4">Tool registry for managing tool bridges.
 
@@ -13852,7 +13852,7 @@ Args:
     <node id="src.intellicrack.core.config">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\config.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\config.py</data>
       <data key="d3">src.intellicrack.core.config</data>
       <data key="d4">Configuration management for Intellicrack.
 
@@ -14232,7 +14232,7 @@ Returns:
     <node id="src.intellicrack.core.disassembler">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\disassembler.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\disassembler.py</data>
       <data key="d3">src.intellicrack.core.disassembler</data>
       <data key="d4">Multi-architecture disassembler module for the hex editor.
 
@@ -14397,7 +14397,7 @@ Raises:
     <node id="src.intellicrack.core.hexpat_compiler">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat_compiler.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat_compiler.py</data>
       <data key="d3">src.intellicrack.core.hexpat_compiler</data>
       <data key="d4">HexPat DSL compiler: lexer, parser, and JSON codegen.
 
@@ -15413,7 +15413,7 @@ Args:
     <node id="src.intellicrack.core.orchestrator">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\orchestrator.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\orchestrator.py</data>
       <data key="d3">src.intellicrack.core.orchestrator</data>
       <data key="d4">Main AI agent orchestrator for Intellicrack.
 
@@ -16280,7 +16280,7 @@ Raises:
     <node id="src.intellicrack.core.process_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\process_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\process_manager.py</data>
       <data key="d3">src.intellicrack.core.process_manager</data>
       <data key="d4">Centralized process management for Intellicrack.
 
@@ -16742,7 +16742,7 @@ Returns:
     <node id="src.intellicrack.core.script_gen">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\script_gen.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\script_gen.py</data>
       <data key="d3">src.intellicrack.core.script_gen</data>
       <data key="d4">Script infrastructure for Intellicrack.
 
@@ -16762,7 +16762,7 @@ This module only provides:
     <node id="src.intellicrack.core._subprocess">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\_subprocess.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\_subprocess.py</data>
       <data key="d3">src.intellicrack.core._subprocess</data>
       <data key="d4">Subprocess utilities wrapper.
 
@@ -17210,7 +17210,7 @@ Returns:
     <node id="src.intellicrack.core.session">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\session.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\session.py</data>
       <data key="d3">src.intellicrack.core.session</data>
       <data key="d4">Session management for Intellicrack.
 
@@ -17722,7 +17722,7 @@ Raises:
     <node id="src.intellicrack.core.template_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\template_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\template_manager.py</data>
       <data key="d3">src.intellicrack.core.template_manager</data>
       <data key="d4">Template file management for the hex editor pattern system.
 
@@ -18174,7 +18174,7 @@ Returns:
     <node id="src.intellicrack.core.transform_pipeline">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\transform_pipeline.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\transform_pipeline.py</data>
       <data key="d3">src.intellicrack.core.transform_pipeline</data>
       <data key="d4">Transform pipeline system for chaining binary data transformations.
 
@@ -19703,7 +19703,7 @@ Returns:
     <node id="src.intellicrack.core.yara_scanner">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\yara_scanner.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\yara_scanner.py</data>
       <data key="d3">src.intellicrack.core.yara_scanner</data>
       <data key="d4">YARA rule scanning module for Intellicrack.
 
@@ -19898,7 +19898,7 @@ Returns:
     <node id="src.intellicrack.core._xml_gen">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\_xml_gen.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\_xml_gen.py</data>
       <data key="d3">src.intellicrack.core._xml_gen</data>
       <data key="d4">XML generation utilities wrapper.
 
@@ -19909,7 +19909,7 @@ file.</data>
     <node id="src.intellicrack.core.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\__init__.py</data>
       <data key="d3">src.intellicrack.core.__init__</data>
       <data key="d4">Core module for Intellicrack.
 
@@ -19919,7 +19919,7 @@ operations.</data>
     <node id="src.intellicrack.core.hexpat.ast_nodes">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\ast_nodes.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\ast_nodes.py</data>
       <data key="d3">src.intellicrack.core.hexpat.ast_nodes</data>
       <data key="d4">AST node dataclasses for the HexPat .hexpat pattern language parser.</data>
     </node>
@@ -20516,7 +20516,7 @@ Attributes:
     <node id="src.intellicrack.core.hexpat.data_reader">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\data_reader.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\data_reader.py</data>
       <data key="d3">src.intellicrack.core.hexpat.data_reader</data>
       <data key="d4">Byte-access abstraction over HexDocument or raw bytes for the .hexpat interpreter.</data>
     </node>
@@ -20878,7 +20878,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat.errors">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\errors.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\errors.py</data>
       <data key="d3">src.intellicrack.core.hexpat.errors</data>
       <data key="d4">Error types for the HexPat pattern language interpreter pipeline.</data>
     </node>
@@ -20936,7 +20936,7 @@ Args:
     <node id="src.intellicrack.core.hexpat.evaluator">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\evaluator.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\evaluator.py</data>
       <data key="d3">src.intellicrack.core.hexpat.evaluator</data>
       <data key="d4">Core tree-walking evaluator for the HexPat .hexpat pattern language.</data>
     </node>
@@ -21975,7 +21975,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat.interpreter">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\interpreter.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\interpreter.py</data>
       <data key="d3">src.intellicrack.core.hexpat.interpreter</data>
       <data key="d4">Top-level orchestrator for the .hexpat pattern language interpreter.
 
@@ -22100,7 +22100,7 @@ Raises:
     <node id="src.intellicrack.core.hexpat.lexer">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\lexer.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\lexer.py</data>
       <data key="d3">src.intellicrack.core.hexpat.lexer</data>
       <data key="d4">Lexer for the HexPat pattern language.</data>
     </node>
@@ -22315,7 +22315,7 @@ Raises:
     <node id="src.intellicrack.core.hexpat.parser">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\parser.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\parser.py</data>
       <data key="d3">src.intellicrack.core.hexpat.parser</data>
       <data key="d4">Recursive-descent parser with Pratt-style operator precedence for the HexPat pattern language.</data>
     </node>
@@ -22764,7 +22764,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat.pattern_registry">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\pattern_registry.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\pattern_registry.py</data>
       <data key="d3">src.intellicrack.core.hexpat.pattern_registry</data>
       <data key="d4">Pattern registry for discovering, indexing, and matching .hexpat files.</data>
     </node>
@@ -22891,7 +22891,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat.preprocessor">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\preprocessor.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\preprocessor.py</data>
       <data key="d3">src.intellicrack.core.hexpat.preprocessor</data>
       <data key="d4">Preprocessor for HexPat .hexpat pattern files.
 
@@ -23027,7 +23027,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat.stdlib">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\stdlib.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\stdlib.py</data>
       <data key="d3">src.intellicrack.core.hexpat.stdlib</data>
       <data key="d4">Python implementations of builtin:: namespace functions.
 
@@ -23460,7 +23460,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat.tokens">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\tokens.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\tokens.py</data>
       <data key="d3">src.intellicrack.core.hexpat.tokens</data>
       <data key="d4">Token types and Token dataclass for the HexPat pattern language lexer.</data>
     </node>
@@ -23485,7 +23485,7 @@ Attributes:
     <node id="src.intellicrack.core.hexpat.type_system">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\type_system.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\type_system.py</data>
       <data key="d3">src.intellicrack.core.hexpat.type_system</data>
       <data key="d4">Runtime type registry for the HexPat pattern language evaluator.</data>
     </node>
@@ -23681,7 +23681,7 @@ Returns:
     <node id="src.intellicrack.core.hexpat._pragma">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\_pragma.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\_pragma.py</data>
       <data key="d3">src.intellicrack.core.hexpat._pragma</data>
       <data key="d4">Shared PragmaInfo dataclass for the HexPat interpreter pipeline.</data>
     </node>
@@ -23703,7 +23703,7 @@ Attributes:
     <node id="src.intellicrack.core.hexpat.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\core\hexpat\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\core\hexpat\__init__.py</data>
       <data key="d3">src.intellicrack.core.hexpat.__init__</data>
       <data key="d4">HexPat .hexpat pattern language interpreter package.
 
@@ -23714,7 +23714,7 @@ dicts for display in the hex editor template tree.</data>
     <node id="src.intellicrack.credentials.env_loader">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\credentials\env_loader.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\credentials\env_loader.py</data>
       <data key="d3">src.intellicrack.credentials.env_loader</data>
       <data key="d4">Credential management for Intellicrack.
 
@@ -23938,7 +23938,7 @@ Args:
     <node id="src.intellicrack.credentials.oauth">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\credentials\oauth.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\credentials\oauth.py</data>
       <data key="d3">src.intellicrack.credentials.oauth</data>
       <data key="d4">OAuth 2.0 flow handling for Intellicrack providers.
 
@@ -24444,7 +24444,7 @@ Returns:
     <node id="src.intellicrack.credentials.store">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\credentials\store.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\credentials\store.py</data>
       <data key="d3">src.intellicrack.credentials.store</data>
       <data key="d4">Secure credential storage using OS keyring.
 
@@ -24817,7 +24817,7 @@ Returns:
     <node id="src.intellicrack.credentials.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\credentials\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\credentials\__init__.py</data>
       <data key="d3">src.intellicrack.credentials.__init__</data>
       <data key="d4">Credential management for Intellicrack.
 
@@ -24830,7 +24830,7 @@ This module handles loading and validating API credentials from multiple sources
     <node id="src.intellicrack.providers.anthropic">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\anthropic.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\anthropic.py</data>
       <data key="d3">src.intellicrack.providers.anthropic</data>
       <data key="d4">Anthropic Claude API provider implementation.
 
@@ -25126,7 +25126,7 @@ Returns:
     <node id="src.intellicrack.providers.base">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\base.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\base.py</data>
       <data key="d3">src.intellicrack.providers.base</data>
       <data key="d4">Base protocol for LLM providers.
 
@@ -25584,7 +25584,7 @@ Returns:
     <node id="src.intellicrack.providers.discovery">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\discovery.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\discovery.py</data>
       <data key="d3">src.intellicrack.providers.discovery</data>
       <data key="d4">Dynamic model discovery and caching for LLM providers.
 
@@ -25897,19 +25897,34 @@ Args:
       <data key="d1">python</data>
       <data key="d3">discover_one</data>
       <data key="d5">['provider_name']</data>
-      <data key="d4" />
+      <data key="d4">Discover models for a single provider with caching.
+
+Args:
+    provider_name: The provider whose models should be listed.
+
+Returns:
+    tuple[ProviderName, list[ModelInfo], DiscoveryEvent]: The
+    provider name, the discovered models, and a discovery event
+    capturing timing and success metadata.</data>
     </node>
     <node id="src.intellicrack.providers.discovery.cost_key">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">cost_key</data>
       <data key="d5">['m']</data>
-      <data key="d4" />
+      <data key="d4">Return the per-million-token output cost for sorting.
+
+Args:
+    m: Model whose cost should be used as the sort key.
+
+Returns:
+    float: The output cost, or ``inf`` when unknown so
+    models without pricing sort last.</data>
     </node>
     <node id="src.intellicrack.providers.google">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\google.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\google.py</data>
       <data key="d3">src.intellicrack.providers.google</data>
       <data key="d4">Google Gemini API provider implementation.
 
@@ -26126,19 +26141,27 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_generate</data>
       <data key="d5">[]</data>
-      <data key="d4" />
+      <data key="d4">Invoke the synchronous Gemini generate_content endpoint.
+
+Returns:
+    GenerateContentResponse: The raw Gemini API response for
+    the prepared model, contents, and configuration.</data>
     </node>
     <node id="src.intellicrack.providers.google._start_stream">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_start_stream</data>
       <data key="d5">[]</data>
-      <data key="d4" />
+      <data key="d4">Open a synchronous Gemini streaming generation request.
+
+Returns:
+    Iterable[GenerateContentResponse]: Iterable yielding
+    response chunks from the Gemini streaming API.</data>
     </node>
     <node id="src.intellicrack.providers.grok">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\grok.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\grok.py</data>
       <data key="d3">src.intellicrack.providers.grok</data>
       <data key="d4">X.AI Grok API provider implementation.
 
@@ -26378,7 +26401,7 @@ Returns:
     <node id="src.intellicrack.providers.huggingface">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\huggingface.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\huggingface.py</data>
       <data key="d3">src.intellicrack.providers.huggingface</data>
       <data key="d4">HuggingFace Inference API provider implementation.
 
@@ -26574,7 +26597,7 @@ Returns:
     <node id="src.intellicrack.providers.local_transformers">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\local_transformers.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\local_transformers.py</data>
       <data key="d3">src.intellicrack.providers.local_transformers</data>
       <data key="d4">Local Transformers provider with Intel XPU acceleration.
 
@@ -26954,12 +26977,24 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_forward_pass</data>
       <data key="d5">['fwd_model', 'fwd_gen_ids', 'fwd_attn_mask', 'fwd_past_kv']</data>
-      <data key="d4" />
+      <data key="d4">Run a single causal language model forward pass.
+
+Args:
+    fwd_model: Loaded causal language model to invoke.
+    fwd_gen_ids: Token ids generated so far for the sequence.
+    fwd_attn_mask: Optional attention mask aligned with the
+        generated ids, or ``None`` to skip masking.
+    fwd_past_kv: Cached key/value tensors from prior steps;
+        when present, only the latest token id is evaluated.
+
+Returns:
+    CausalLMOutputWithPast: The model output including logits
+    and the updated pa...</data>
     </node>
     <node id="src.intellicrack.providers.model_loader">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\model_loader.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\model_loader.py</data>
       <data key="d3">src.intellicrack.providers.model_loader</data>
       <data key="d4">Model loading utilities with quantization and caching for local transformers.
 
@@ -27254,7 +27289,7 @@ Args:
     <node id="src.intellicrack.providers.ollama">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\ollama.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\ollama.py</data>
       <data key="d3">src.intellicrack.providers.ollama</data>
       <data key="d4">Ollama LLM provider implementation with dual local/cloud support.
 
@@ -27543,12 +27578,20 @@ Raises:
       <data key="d1">python</data>
       <data key="d3">_query_single</data>
       <data key="d5">['name']</data>
-      <data key="d4" />
+      <data key="d4">Fetch ``num_ctx`` and tool-support flags for a single model.
+
+Args:
+    name: Ollama model name to query via ``/api/show``.
+
+Returns:
+    tuple[str, int, bool]: The model name, its detected context
+    window (defaulting to 4096 on failure), and whether its
+    template declares a ``.Tools`` directive.</data>
     </node>
     <node id="src.intellicrack.providers.openai">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\openai.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\openai.py</data>
       <data key="d3">src.intellicrack.providers.openai</data>
       <data key="d4">OpenAI API provider implementation.
 
@@ -27779,7 +27822,7 @@ Returns:
     <node id="src.intellicrack.providers.openrouter">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\openrouter.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\openrouter.py</data>
       <data key="d3">src.intellicrack.providers.openrouter</data>
       <data key="d4">OpenRouter API provider implementation.
 
@@ -27959,7 +28002,7 @@ Raises:
     <node id="src.intellicrack.providers.registry">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\registry.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\registry.py</data>
       <data key="d3">src.intellicrack.providers.registry</data>
       <data key="d4">Provider registry for managing LLM providers.
 
@@ -28161,7 +28204,7 @@ Returns:
     <node id="src.intellicrack.providers.xpu_utils">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\xpu_utils.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\xpu_utils.py</data>
       <data key="d3">src.intellicrack.providers.xpu_utils</data>
       <data key="d4">Intel XPU detection and initialization utilities for Intel Arc B580.
 
@@ -28396,7 +28439,7 @@ Returns:
     <node id="src.intellicrack.providers.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\providers\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\providers\__init__.py</data>
       <data key="d3">src.intellicrack.providers.__init__</data>
       <data key="d4">LLM Provider implementations for Intellicrack.
 
@@ -28414,7 +28457,7 @@ OpenRouter, and local Transformers with Intel XPU acceleration.</data>
     <node id="src.intellicrack.sandbox.analysis">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\sandbox\analysis.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\sandbox\analysis.py</data>
       <data key="d3">src.intellicrack.sandbox.analysis</data>
       <data key="d4">Post-analysis capabilities for sandbox execution reports.
 
@@ -28839,7 +28882,7 @@ Returns:
     <node id="src.intellicrack.sandbox.base">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\sandbox\base.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\sandbox\base.py</data>
       <data key="d3">src.intellicrack.sandbox.base</data>
       <data key="d4">Base sandbox protocol and types.
 
@@ -29302,7 +29345,7 @@ Raises:
     <node id="src.intellicrack.sandbox.manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\sandbox\manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\sandbox\manager.py</data>
       <data key="d3">src.intellicrack.sandbox.manager</data>
       <data key="d4">Sandbox manager for coordinating sandbox instances.
 
@@ -29513,7 +29556,7 @@ Returns:
     <node id="src.intellicrack.sandbox.qemu">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\sandbox\qemu.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\sandbox\qemu.py</data>
       <data key="d3">src.intellicrack.sandbox.qemu</data>
       <data key="d4">QEMU sandbox implementation for isolated binary analysis.
 
@@ -30394,7 +30437,7 @@ Raises:
     <node id="src.intellicrack.sandbox.windows">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\sandbox\windows.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\sandbox\windows.py</data>
       <data key="d3">src.intellicrack.sandbox.windows</data>
       <data key="d4">Windows Sandbox implementation for isolated binary analysis.
 
@@ -30742,7 +30785,7 @@ Raises:
     <node id="src.intellicrack.sandbox.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\sandbox\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\sandbox\__init__.py</data>
       <data key="d3">src.intellicrack.sandbox.__init__</data>
       <data key="d4">Sandbox implementations for isolated binary execution.
 
@@ -30752,7 +30795,7 @@ This package provides sandbox environments for safe execution and behavioral ana
     <node id="src.intellicrack.ui.app">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\app.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\app.py</data>
       <data key="d3">src.intellicrack.ui.app</data>
       <data key="d4">Main application window for Intellicrack.
 
@@ -31818,7 +31861,7 @@ Args:
     <node id="src.intellicrack.ui.chat">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\chat.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\chat.py</data>
       <data key="d3">src.intellicrack.ui.chat</data>
       <data key="d4">Chat panel widget for the Intellicrack UI.
 
@@ -32073,7 +32116,7 @@ Args:
     <node id="src.intellicrack.ui.confirmation_dialog">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\confirmation_dialog.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\confirmation_dialog.py</data>
       <data key="d3">src.intellicrack.ui.confirmation_dialog</data>
       <data key="d4">Tool confirmation dialog for Intellicrack.
 
@@ -32145,7 +32188,7 @@ Returns:
     <node id="src.intellicrack.ui.highlighter">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\highlighter.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\highlighter.py</data>
       <data key="d3">src.intellicrack.ui.highlighter</data>
       <data key="d4">Syntax highlighting for code display.
 
@@ -32320,7 +32363,7 @@ Args:
     <node id="src.intellicrack.ui.panel_dock">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panel_dock.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panel_dock.py</data>
       <data key="d3">src.intellicrack.ui.panel_dock</data>
       <data key="d4">Detachable panel window for floating tool panels.
 
@@ -32408,7 +32451,7 @@ Args:
     <node id="src.intellicrack.ui.preferences">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\preferences.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\preferences.py</data>
       <data key="d3">src.intellicrack.ui.preferences</data>
       <data key="d4">Preferences dialog for Intellicrack.
 
@@ -32611,7 +32654,7 @@ Returns:
     <node id="src.intellicrack.ui.provider_config">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\provider_config.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\provider_config.py</data>
       <data key="d3">src.intellicrack.ui.provider_config</data>
       <data key="d4">Provider configuration dialog for Intellicrack.
 
@@ -33574,7 +33617,7 @@ Returns:
     <node id="src.intellicrack.ui.sandbox_config">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\sandbox_config.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\sandbox_config.py</data>
       <data key="d3">src.intellicrack.ui.sandbox_config</data>
       <data key="d4">Sandbox configuration dialog for Intellicrack.
 
@@ -33843,7 +33886,7 @@ Args:
     <node id="src.intellicrack.ui.session_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\session_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\session_manager.py</data>
       <data key="d3">src.intellicrack.ui.session_manager</data>
       <data key="d4">Session manager dialog for Intellicrack.
 
@@ -34136,7 +34179,7 @@ Returns:
     <node id="src.intellicrack.ui.tools">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\tools.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\tools.py</data>
       <data key="d3">src.intellicrack.ui.tools</data>
       <data key="d4">Tool output panel widget for the Intellicrack UI.
 
@@ -35354,7 +35397,7 @@ Returns:
     <node id="src.intellicrack.ui.tool_config">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\tool_config.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\tool_config.py</data>
       <data key="d3">src.intellicrack.ui.tool_config</data>
       <data key="d4">Tool configuration dialog for Intellicrack.
 
@@ -35752,7 +35795,7 @@ Args:
     <node id="src.intellicrack.ui.win32_embed">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\win32_embed.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\win32_embed.py</data>
       <data key="d3">src.intellicrack.ui.win32_embed</data>
       <data key="d4">Win32 window embedding utilities for Intellicrack.
 
@@ -35829,7 +35872,7 @@ Args:
     <node id="src.intellicrack.ui.xpu_status">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\xpu_status.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\xpu_status.py</data>
       <data key="d3">src.intellicrack.ui.xpu_status</data>
       <data key="d4">XPU status dialog for the Help menu.
 
@@ -35993,7 +36036,7 @@ Args:
     <node id="src.intellicrack.ui._screen_compat">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\_screen_compat.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\_screen_compat.py</data>
       <data key="d3">src.intellicrack.ui._screen_compat</data>
       <data key="d4">Screen geometry detection for PyQt6 SIP-generated bindings.
 
@@ -36051,7 +36094,7 @@ Args:
     <node id="src.intellicrack.ui.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\__init__.py</data>
       <data key="d3">src.intellicrack.ui.__init__</data>
       <data key="d4">User interface components for Intellicrack.
 
@@ -36061,7 +36104,7 @@ dialogs.</data>
     <node id="src.intellicrack.ui.dialogs.splash_screen">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\dialogs\splash_screen.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\dialogs\splash_screen.py</data>
       <data key="d3">src.intellicrack.ui.dialogs.splash_screen</data>
       <data key="d4">Splash screen for Intellicrack application startup.
 
@@ -36465,7 +36508,7 @@ Returns:
     <node id="src.intellicrack.ui.dialogs.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\dialogs\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\dialogs\__init__.py</data>
       <data key="d3">src.intellicrack.ui.dialogs.__init__</data>
       <data key="d4">Dialog components for Intellicrack UI.
 
@@ -36475,7 +36518,7 @@ This package provides dialog widgets including the splash screen and other modal
     <node id="src.intellicrack.ui.panels.analysis_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\analysis_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\analysis_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.analysis_panel</data>
       <data key="d4">Bridge analysis panel for displaying aggregated analysis results.
 
@@ -36685,7 +36728,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.async_bridge">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\async_bridge.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\async_bridge.py</data>
       <data key="d3">src.intellicrack.ui.panels.async_bridge</data>
       <data key="d4">Shared async-to-sync bridge runner for Qt UI panels.
 
@@ -36818,7 +36861,7 @@ Args:
     <node id="src.intellicrack.ui.panels.base_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\base_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\base_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.base_panel</data>
       <data key="d4">Shared base class for Intellicrack analysis panels.
 
@@ -37023,7 +37066,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.cutter_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\cutter_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.cutter_panel</data>
       <data key="d4">Cutter/Rizin analysis panel for Intellicrack.
 
@@ -37636,7 +37679,7 @@ Args:
     <node id="src.intellicrack.ui.panels.cutter_tabs">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\cutter_tabs.py</data>
       <data key="d3">src.intellicrack.ui.panels.cutter_tabs</data>
       <data key="d4">Tab widget classes for the Cutter/Rizin analysis panel.
 
@@ -37890,7 +37933,7 @@ Args:
     <node id="src.intellicrack.ui.panels.frida_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\frida_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.frida_panel</data>
       <data key="d4">Frida instrumentation panel for Intellicrack.
 
@@ -38847,7 +38890,7 @@ Args:
     <node id="src.intellicrack.ui.panels.ghidra_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\ghidra_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.ghidra_panel</data>
       <data key="d4">Ghidra analysis panel for Intellicrack.
 
@@ -40032,7 +40075,7 @@ Args:
     <node id="src.intellicrack.ui.panels.graph_view">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\graph_view.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\graph_view.py</data>
       <data key="d3">src.intellicrack.ui.panels.graph_view</data>
       <data key="d4">Control flow graph view for Cutter/Rizin function analysis.
 
@@ -40219,7 +40262,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor_panel</data>
       <data key="d4">Backward-compatible re-export of HexEditorPanel.
 
@@ -40229,7 +40272,7 @@ The implementation has moved to the hex_editor package.</data>
     <node id="src.intellicrack.ui.panels.hex_editor_widget">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor_widget.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor_widget</data>
       <data key="d4">Custom hex editor widget using QPainter rendering.
 
@@ -41120,7 +41163,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hxd_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hxd_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hxd_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.hxd_panel</data>
       <data key="d4">HxD hex editor panel for Intellicrack.
 
@@ -41265,7 +41308,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.qt_compat">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\qt_compat.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\qt_compat.py</data>
       <data key="d3">src.intellicrack.ui.panels.qt_compat</data>
       <data key="d4">Qt method compatibility layer for PyQt6 SIP-generated bindings.
 
@@ -41462,7 +41505,7 @@ Args:
     <node id="src.intellicrack.ui.panels.sandbox_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\sandbox_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.sandbox_panel</data>
       <data key="d4">Sandbox management panel for Intellicrack.
 
@@ -42358,7 +42401,7 @@ Args:
     <node id="src.intellicrack.ui.panels.script_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\script_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\script_manager.py</data>
       <data key="d3">src.intellicrack.ui.panels.script_manager</data>
       <data key="d4">Script manager panel for creating and managing analysis scripts.
 
@@ -42739,7 +42782,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.stack_viewer">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\stack_viewer.py</data>
       <data key="d3">src.intellicrack.ui.panels.stack_viewer</data>
       <data key="d4">Unified stack viewer panel for debugging.
 
@@ -43015,7 +43058,7 @@ Args:
     <node id="src.intellicrack.ui.panels.vnc_widget">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\vnc_widget.py</data>
       <data key="d3">src.intellicrack.ui.panels.vnc_widget</data>
       <data key="d4">VNC viewer widget for QEMU sandbox display.
 
@@ -43339,7 +43382,7 @@ Args:
     <node id="src.intellicrack.ui.panels.x64dbg_panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\x64dbg_panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.x64dbg_panel</data>
       <data key="d4">X64dbg debugger panel for Intellicrack.
 
@@ -44514,7 +44557,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\__init__.py</data>
       <data key="d3">src.intellicrack.ui.panels.__init__</data>
       <data key="d4">UI panels for Intellicrack analysis displays.
 
@@ -44531,7 +44574,7 @@ binary hex viewing, sandbox control, and native tool panels (Ghidra, x64dbg, Cut
     <node id="src.intellicrack.ui.panels.hex_editor.panel">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\panel.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor.panel</data>
       <data key="d4">Main HexEditorPanel class assembling all mixin functionality.</data>
     </node>
@@ -44935,7 +44978,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._base">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_base.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_base.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._base</data>
       <data key="d4">Shared constants, utility functions, and dynamic imports for the hex editor package.</data>
     </node>
@@ -45074,7 +45117,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.hex_editor._bookmarks">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_bookmarks.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_bookmarks.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._bookmarks</data>
       <data key="d4">Bookmarks mixin for the hex editor panel.</data>
     </node>
@@ -45108,7 +45151,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.hex_editor._calculator">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_calculator.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_calculator.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._calculator</data>
       <data key="d4">Base conversion calculator mixin for the hex editor panel.</data>
     </node>
@@ -45191,7 +45234,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._comparison">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_comparison.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_comparison.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._comparison</data>
       <data key="d4">File comparison mixin for the hex editor panel.</data>
     </node>
@@ -45311,7 +45354,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._data_inspector">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_data_inspector.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_data_inspector.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._data_inspector</data>
       <data key="d4">Data inspector mixin for the hex editor panel.</data>
     </node>
@@ -45403,7 +45446,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.hex_editor._disassembly">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_disassembly.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_disassembly.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._disassembly</data>
       <data key="d4">Disassembly mixin for the hex editor panel.</data>
     </node>
@@ -45461,7 +45504,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._hashing">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_hashing.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_hashing.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._hashing</data>
       <data key="d4">Hashing mixin for the hex editor panel.</data>
     </node>
@@ -45537,7 +45580,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.hex_editor._highlighting">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_highlighting.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_highlighting.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._highlighting</data>
       <data key="d4">Highlight rule management mixin for the hex editor panel.</data>
     </node>
@@ -45599,7 +45642,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._patches">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_patches.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_patches.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._patches</data>
       <data key="d4">Patches mixin for the hex editor panel.</data>
     </node>
@@ -45650,7 +45693,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_pattern_editor.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._pattern_editor</data>
       <data key="d4">Pattern editor mixin for the hex editor panel.</data>
     </node>
@@ -45794,7 +45837,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._process_memory">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_process_memory.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_process_memory.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._process_memory</data>
       <data key="d4">Process memory mixin for the hex editor panel.</data>
     </node>
@@ -45887,7 +45930,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._sandbox">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sandbox.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_sandbox.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._sandbox</data>
       <data key="d4">Sandbox operations mixin for the hex editor panel.</data>
     </node>
@@ -46028,7 +46071,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._scripting">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_scripting.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_scripting.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._scripting</data>
       <data key="d4">Python scripting mixin for the hex editor panel.</data>
     </node>
@@ -46364,7 +46407,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._search">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_search.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_search.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._search</data>
       <data key="d4">Search mixin and background workers for the hex editor panel.</data>
     </node>
@@ -46581,7 +46624,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._sections">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_sections.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_sections.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._sections</data>
       <data key="d4">Sections/imports/exports/strings mixin for the hex editor panel.</data>
     </node>
@@ -46661,7 +46704,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._signatures">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_signatures.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_signatures.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._signatures</data>
       <data key="d4">Non-YARA signature scanning mixin for the hex editor panel.</data>
     </node>
@@ -46833,7 +46876,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._statistics">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_statistics.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_statistics.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._statistics</data>
       <data key="d4">Statistics mixin for the hex editor panel.</data>
     </node>
@@ -47071,7 +47114,7 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor._templates">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_templates.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_templates.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._templates</data>
       <data key="d4">Templates mixin for the hex editor panel.</data>
     </node>
@@ -47226,7 +47269,7 @@ Delegates to the bookmarks mixin if available.</data>
     <node id="src.intellicrack.ui.panels.hex_editor._transforms">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_transforms.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_transforms.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._transforms</data>
       <data key="d4">Transforms mixin for the hex editor panel.</data>
     </node>
@@ -47540,7 +47583,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.hex_editor._widgets">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_widgets.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_widgets.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._widgets</data>
       <data key="d4">Standalone widget classes for the hex editor panel.</data>
     </node>
@@ -47782,7 +47825,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.hex_editor._yara">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_yara.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\_yara.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor._yara</data>
       <data key="d4">YARA scanning mixin for the hex editor panel.</data>
     </node>
@@ -47847,14 +47890,14 @@ Args:
     <node id="src.intellicrack.ui.panels.hex_editor.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\hex_editor\__init__.py</data>
       <data key="d3">src.intellicrack.ui.panels.hex_editor.__init__</data>
       <data key="d4">Hex editor panel package.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._base">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_base.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_base.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._base</data>
       <data key="d4">Main ProcessPanel widget composing all tab modules.
 
@@ -48022,7 +48065,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.process_panel._memory_tab">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_memory_tab.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_memory_tab.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._memory_tab</data>
       <data key="d4">Memory operations tab for the ProcessPanel.
 
@@ -48208,7 +48251,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.process_panel._modules_tab">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_modules_tab.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_modules_tab.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._modules_tab</data>
       <data key="d4">Module inspection tab for the ProcessPanel.
 
@@ -48383,7 +48426,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.process_panel._process_tab">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_process_tab.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_process_tab.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._process_tab</data>
       <data key="d4">Process listing and management tab for the ProcessPanel.
 
@@ -48677,7 +48720,7 @@ Args:
     <node id="src.intellicrack.ui.panels.process_panel._system_tab">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_system_tab.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_system_tab.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._system_tab</data>
       <data key="d4">System inspection tab for the ProcessPanel.
 
@@ -48965,7 +49008,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.process_panel._threads_tab">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_threads_tab.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_threads_tab.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._threads_tab</data>
       <data key="d4">Thread inspection tab for the ProcessPanel.
 
@@ -49170,7 +49213,7 @@ Returns:
     <node id="src.intellicrack.ui.panels.process_panel._workers">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\_workers.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\_workers.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel._workers</data>
       <data key="d4">Background workers for the process panel.
 
@@ -49208,7 +49251,7 @@ Attributes:
     <node id="src.intellicrack.ui.panels.process_panel.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\panels\process_panel\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\panels\process_panel\__init__.py</data>
       <data key="d3">src.intellicrack.ui.panels.process_panel.__init__</data>
       <data key="d4">Process management panel package for Intellicrack.
 
@@ -49218,7 +49261,7 @@ Provides a comprehensive process inspection and manipulation panel with bridge i
     <node id="src.intellicrack.ui.resources.font_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\resources\font_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\resources\font_manager.py</data>
       <data key="d3">src.intellicrack.ui.resources.font_manager</data>
       <data key="d4">Font management for Intellicrack UI.
 
@@ -49432,7 +49475,7 @@ Returns:
     <node id="src.intellicrack.ui.resources.icon_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\resources\icon_manager.py</data>
       <data key="d3">src.intellicrack.ui.resources.icon_manager</data>
       <data key="d4">Icon management for Intellicrack UI.
 
@@ -49632,7 +49675,7 @@ Returns:
     <node id="src.intellicrack.ui.resources.resource_helper">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\resources\resource_helper.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\resources\resource_helper.py</data>
       <data key="d3">src.intellicrack.ui.resources.resource_helper</data>
       <data key="d4">Resource path resolution for Intellicrack assets.
 
@@ -49755,7 +49798,7 @@ Returns:
     <node id="src.intellicrack.ui.resources.theme_manager">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\resources\theme_manager.py</data>
       <data key="d3">src.intellicrack.ui.resources.theme_manager</data>
       <data key="d4">Theme management for Intellicrack UI.
 
@@ -49902,2039 +49945,591 @@ Returns:
     <node id="src.intellicrack.ui.resources.__init__">
       <data key="d0">module</data>
       <data key="d1">python</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\ui\resources\__init__.py</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\ui\resources\__init__.py</data>
       <data key="d3">src.intellicrack.ui.resources.__init__</data>
       <data key="d4">Resource management modules for Intellicrack UI.
 
 This package provides asset loading, icon management, font handling, and theme management for the Intellicrack application.</data>
     </node>
-    <node id="tools/qemu/share/doc/searchindex.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\searchindex.js</data>
-      <data key="d3">searchindex.js</data>
-    </node>
-    <node id=": [11, 12, 14, 23, 35, 39, 56, 58, 59, 60, 63, 64, 65, 66, 71, 75, 76, 79, 88, 90, 98, 106, 107, 109, 111, 114, 133, 134, 137, 139, 199, 219, 230, 252, 265, 272, 273, 289, 298, 302], " />
-    <node id=": 32, " />
-    <node id=": [10, 220, 255], " />
-    <node id="tools/qemu/share/doc/_static/custom.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\custom.js</data>
-      <data key="d3">custom.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/doctools.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\doctools.js</data>
-      <data key="d3">doctools.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/documentation_options.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\documentation_options.js</data>
-      <data key="d3">documentation_options.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/jquery.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\jquery.js</data>
-      <data key="d3">jquery.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/language_data.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\language_data.js</data>
-      <data key="d3">language_data.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/searchtools.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\searchtools.js</data>
-      <data key="d3">searchtools.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/sphinx_highlight.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\sphinx_highlight.js</data>
-      <data key="d3">sphinx_highlight.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/_sphinx_javascript_frameworks_compat.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\_sphinx_javascript_frameworks_compat.js</data>
-      <data key="d3">_sphinx_javascript_frameworks_compat.js</data>
-    </node>
-    <node id="tools/qemu/share/doc/_static/js/theme.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\js\theme.js</data>
-      <data key="d3">theme.js</data>
-    </node>
-    <node id="jquery" />
-    <node id="tools/qemu/share/doc/_static/js/versions.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\doc\_static\js\versions.js</data>
-      <data key="d3">versions.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/il2cpp.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\il2cpp.r2.js</data>
-      <data key="d3">il2cpp.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/ipsw-kernel-symbolicate.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\ipsw-kernel-symbolicate.r2.js</data>
-      <data key="d3">ipsw-kernel-symbolicate.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/licenses.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\licenses.r2.js</data>
-      <data key="d3">licenses.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/parseplug.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\parseplug.r2.js</data>
-      <data key="d3">parseplug.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/symbols.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\symbols.r2.js</data>
-      <data key="d3">symbols.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/tags.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\tags.r2.js</data>
-      <data key="d3">tags.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/unzip.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\unzip.r2.js</data>
-      <data key="d3">unzip.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/scripts/vsmap.r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\scripts\vsmap.r2.js</data>
-      <data key="d3">vsmap.r2.js</data>
-    </node>
-    <node id="tools/radare2/share/www/bolt/r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\bolt\r2.js</data>
-      <data key="d3">r2.js</data>
-    </node>
-    <node id="tools/radare2/share/www/d3/d3.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\d3\d3.js</data>
-      <data key="d3">d3.js</data>
-    </node>
-    <node id="tools/radare2/share/www/d3/d3.layout.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\d3\d3.layout.js</data>
-      <data key="d3">d3.layout.js</data>
-    </node>
-    <node id="tools/radare2/share/www/d3/packages.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\d3\packages.js</data>
-      <data key="d3">packages.js</data>
-    </node>
-    <node id="tools/radare2/share/www/f/r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\f\r2.js</data>
-      <data key="d3">r2.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/disasmNavProvider.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\disasmNavProvider.js</data>
-      <data key="d3">disasmNavProvider.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/disasmProvider.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\disasmProvider.js</data>
-      <data key="d3">disasmProvider.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/hexchunkProvider.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\hexchunkProvider.js</data>
-      <data key="d3">hexchunkProvider.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/legacy.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\legacy.js</data>
-      <data key="d3">legacy.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/main.min.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\main.min.js</data>
-      <data key="d3">main.min.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/r2.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\r2.js</data>
-      <data key="d3">r2.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/tools.legacy.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\tools.legacy.js</data>
-      <data key="d3">tools.legacy.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/vendors/dialog-polyfill.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\vendors\dialog-polyfill.js</data>
-      <data key="d3">dialog-polyfill.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/vendors/FileSaver.min.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\vendors\FileSaver.min.js</data>
-      <data key="d3">FileSaver.min.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/vendors/jquery.dataTables.min.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\vendors\jquery.dataTables.min.js</data>
-      <data key="d3">jquery.dataTables.min.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/vendors/jquery.min.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\vendors\jquery.min.js</data>
-      <data key="d3">jquery.min.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/vendors/material.min.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\vendors\material.min.js</data>
-      <data key="d3">material.min.js</data>
-    </node>
-    <node id="tools/radare2/share/www/m/vendors/mdl-selectfield.min.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\m\vendors\mdl-selectfield.min.js</data>
-      <data key="d3">mdl-selectfield.min.js</data>
-    </node>
-    <node id="tools/radare2/share/www/old/script.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\old\script.js</data>
-      <data key="d3">script.js</data>
-    </node>
-    <node id="tools/radare2/share/www/t/app.js">
-      <data key="d0">javascript</data>
-      <data key="d1">javascript</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\www\t\app.js</data>
-      <data key="d3">app.js</data>
-    </node>
-    <node id=".aider.chat.history.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.aider.chat.history.md</data>
-      <data key="d3">.aider.chat.history.md</data>
-    </node>
-    <node id=".mcp.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.mcp.json</data>
-      <data key="d3">.mcp.json</data>
-    </node>
     <node id=".pre-commit-config.yaml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.pre-commit-config.yaml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.pre-commit-config.yaml</data>
       <data key="d3">.pre-commit-config.yaml</data>
     </node>
     <node id=".readthedocs.yaml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.readthedocs.yaml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.readthedocs.yaml</data>
       <data key="d3">.readthedocs.yaml</data>
     </node>
     <node id=".sourcery.yaml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.sourcery.yaml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.sourcery.yaml</data>
       <data key="d3">.sourcery.yaml</data>
     </node>
     <node id=".taplo.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.taplo.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.taplo.toml</data>
       <data key="d3">.taplo.toml</data>
     </node>
     <node id=".yarnrc.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.yarnrc.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.yarnrc.yml</data>
       <data key="d3">.yarnrc.yml</data>
     </node>
     <node id="AGENTS.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\AGENTS.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\AGENTS.md</data>
       <data key="d3">AGENTS.md</data>
+    </node>
+    <node id="CHANGELOG.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\CHANGELOG.md</data>
+      <data key="d3">CHANGELOG.md</data>
     </node>
     <node id="CLAUDE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\CLAUDE.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\CLAUDE.md</data>
       <data key="d3">CLAUDE.md</data>
     </node>
     <node id="cliff.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\cliff.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\cliff.toml</data>
       <data key="d3">cliff.toml</data>
     </node>
     <node id="CODE_OF_CONDUCT.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\CODE_OF_CONDUCT.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\CODE_OF_CONDUCT.md</data>
       <data key="d3">CODE_OF_CONDUCT.md</data>
     </node>
     <node id="config.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\config.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\config.toml</data>
       <data key="d3">config.toml</data>
     </node>
     <node id="CONTRIBUTING.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\CONTRIBUTING.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\CONTRIBUTING.md</data>
       <data key="d3">CONTRIBUTING.md</data>
     </node>
     <node id="coverage.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\coverage.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\coverage.json</data>
       <data key="d3">coverage.json</data>
     </node>
     <node id="GEMINI.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\GEMINI.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\GEMINI.md</data>
       <data key="d3">GEMINI.md</data>
-    </node>
-    <node id="gemini_cli_config.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\gemini_cli_config.json</data>
-      <data key="d3">gemini_cli_config.json</data>
-    </node>
-    <node id="package-lock.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\package-lock.json</data>
-      <data key="d3">package-lock.json</data>
     </node>
     <node id="package.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\package.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\package.json</data>
       <data key="d3">package.json</data>
     </node>
     <node id="prompts.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\prompts.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\prompts.md</data>
       <data key="d3">prompts.md</data>
     </node>
     <node id="pyproject.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\pyproject.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\pyproject.toml</data>
       <data key="d3">pyproject.toml</data>
     </node>
     <node id="pyrightconfig.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\pyrightconfig.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\pyrightconfig.json</data>
       <data key="d3">pyrightconfig.json</data>
     </node>
     <node id="qodana.yaml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\qodana.yaml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\qodana.yaml</data>
       <data key="d3">qodana.yaml</data>
     </node>
     <node id="QWEN.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\QWEN.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\QWEN.md</data>
       <data key="d3">QWEN.md</data>
     </node>
     <node id="README.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\README.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\README.md</data>
       <data key="d3">README.md</data>
     </node>
     <node id="SECURITY.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\SECURITY.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\SECURITY.md</data>
       <data key="d3">SECURITY.md</data>
     </node>
     <node id="tool_bridge_audit_2026-04-10.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tool_bridge_audit_2026-04-10.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tool_bridge_audit_2026-04-10.md</data>
       <data key="d3">tool_bridge_audit_2026-04-10.md</data>
     </node>
     <node id=".complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.complexipy_cache\c4ed0630d647fefad77d0754b11ca463.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.complexipy_cache\c4ed0630d647fefad77d0754b11ca463.json</data>
       <data key="d3">c4ed0630d647fefad77d0754b11ca463.json</data>
     </node>
     <node id=".fleet/settings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.fleet\settings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.fleet\settings.json</data>
       <data key="d3">settings.json</data>
     </node>
     <node id=".github/CLAUDE_TYPE_FIXER_QUICKSTART.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.github\CLAUDE_TYPE_FIXER_QUICKSTART.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\CLAUDE_TYPE_FIXER_QUICKSTART.md</data>
       <data key="d3">CLAUDE_TYPE_FIXER_QUICKSTART.md</data>
-    </node>
-    <node id=".github/copilot-instructions.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.github\copilot-instructions.md</data>
-      <data key="d3">copilot-instructions.md</data>
     </node>
     <node id=".github/dependabot.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\dependabot.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\dependabot.yml</data>
       <data key="d3">dependabot.yml</data>
     </node>
     <node id=".github/PULL_REQUEST_TEMPLATE.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.github\PULL_REQUEST_TEMPLATE.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\PULL_REQUEST_TEMPLATE.md</data>
       <data key="d3">PULL_REQUEST_TEMPLATE.md</data>
     </node>
     <node id=".github/commands/gemini-invoke.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\commands\gemini-invoke.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\commands\gemini-invoke.toml</data>
       <data key="d3">gemini-invoke.toml</data>
     </node>
     <node id=".github/commands/gemini-review.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\commands\gemini-review.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\commands\gemini-review.toml</data>
       <data key="d3">gemini-review.toml</data>
     </node>
     <node id=".github/commands/gemini-scheduled-triage.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\commands\gemini-scheduled-triage.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\commands\gemini-scheduled-triage.toml</data>
       <data key="d3">gemini-scheduled-triage.toml</data>
     </node>
     <node id=".github/commands/gemini-triage.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\commands\gemini-triage.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\commands\gemini-triage.toml</data>
       <data key="d3">gemini-triage.toml</data>
     </node>
     <node id=".github/ISSUE_TEMPLATE/bug_report.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.github\ISSUE_TEMPLATE\bug_report.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\ISSUE_TEMPLATE\bug_report.md</data>
       <data key="d3">bug_report.md</data>
     </node>
     <node id=".github/ISSUE_TEMPLATE/feature_request.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.github\ISSUE_TEMPLATE\feature_request.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\ISSUE_TEMPLATE\feature_request.md</data>
       <data key="d3">feature_request.md</data>
     </node>
     <node id=".github/workflows/ci.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\ci.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\ci.yml</data>
       <data key="d3">ci.yml</data>
     </node>
     <node id=".github/workflows/claude-code-review.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\claude-code-review.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\claude-code-review.yml</data>
       <data key="d3">claude-code-review.yml</data>
     </node>
     <node id=".github/workflows/claude.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\claude.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\claude.yml</data>
       <data key="d3">claude.yml</data>
     </node>
     <node id=".github/workflows/gemini-dispatch.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\gemini-dispatch.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\gemini-dispatch.yml</data>
       <data key="d3">gemini-dispatch.yml</data>
     </node>
     <node id=".github/workflows/gemini-invoke.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\gemini-invoke.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\gemini-invoke.yml</data>
       <data key="d3">gemini-invoke.yml</data>
     </node>
     <node id=".github/workflows/gemini-review.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\gemini-review.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\gemini-review.yml</data>
       <data key="d3">gemini-review.yml</data>
     </node>
     <node id=".github/workflows/gemini-scheduled-triage.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\gemini-scheduled-triage.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\gemini-scheduled-triage.yml</data>
       <data key="d3">gemini-scheduled-triage.yml</data>
     </node>
     <node id=".github/workflows/gemini-triage.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\gemini-triage.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\gemini-triage.yml</data>
       <data key="d3">gemini-triage.yml</data>
     </node>
     <node id=".github/workflows/qodana_code_quality.yml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.github\workflows\qodana_code_quality.yml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.github\workflows\qodana_code_quality.yml</data>
       <data key="d3">qodana_code_quality.yml</data>
     </node>
     <node id=".grok/settings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.grok\settings.json</data>
-      <data key="d3">settings.json</data>
-    </node>
-    <node id=".intellicrack/providers.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.intellicrack\providers.json</data>
-      <data key="d3">providers.json</data>
-    </node>
-    <node id=".serena/project.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.serena\project.yml</data>
-      <data key="d3">project.yml</data>
-    </node>
-    <node id=".serena/memories/bridges_logging_audit.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.serena\memories\bridges_logging_audit.md</data>
-      <data key="d3">bridges_logging_audit.md</data>
-    </node>
-    <node id=".serena/memories/code_style_conventions.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.serena\memories\code_style_conventions.md</data>
-      <data key="d3">code_style_conventions.md</data>
-    </node>
-    <node id=".serena/memories/project_overview.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.serena\memories\project_overview.md</data>
-      <data key="d3">project_overview.md</data>
-    </node>
-    <node id=".serena/memories/suggested_commands.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.serena\memories\suggested_commands.md</data>
-      <data key="d3">suggested_commands.md</data>
-    </node>
-    <node id=".serena/memories/task_completion_checklist.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\.serena\memories\task_completion_checklist.md</data>
-      <data key="d3">task_completion_checklist.md</data>
-    </node>
-    <node id=".skylos/cache/grep_results.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.skylos\cache\grep_results.json</data>
-      <data key="d3">grep_results.json</data>
-    </node>
-    <node id=".vscode/mcp.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.vscode\mcp.json</data>
-      <data key="d3">mcp.json</data>
-    </node>
-    <node id=".vscode/settings.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\.vscode\settings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\.grok\settings.json</data>
       <data key="d3">settings.json</data>
     </node>
     <node id="CLI Coding/config.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\CLI Coding\config.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\CLI Coding\config.toml</data>
       <data key="d3">config.toml</data>
     </node>
     <node id="CLI Coding/Launcher/Cargo.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\CLI Coding\Launcher\Cargo.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\CLI Coding\Launcher\Cargo.toml</data>
       <data key="d3">Cargo.toml</data>
     </node>
     <node id="data/model_discovery_cache.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\data\model_discovery_cache.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\data\model_discovery_cache.json</data>
       <data key="d3">model_discovery_cache.json</data>
-    </node>
-    <node id="reports/.tool_durations.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\.tool_durations.json</data>
-      <data key="d3">.tool_durations.json</data>
-    </node>
-    <node id="reports/ci-jobs/summary.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\ci-jobs\summary.json</data>
-      <data key="d3">summary.json</data>
-    </node>
-    <node id="reports/ci-jobs/ci/_artifacts/bandit-report/bandit-report.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\ci-jobs\ci\_artifacts\bandit-report\bandit-report.json</data>
-      <data key="d3">bandit-report.json</data>
     </node>
     <node id="reports/json/bandit_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\bandit_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\bandit_findings.json</data>
       <data key="d3">bandit_findings.json</data>
     </node>
     <node id="reports/json/basedpyright_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\basedpyright_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\basedpyright_findings.json</data>
       <data key="d3">basedpyright_findings.json</data>
     </node>
     <node id="reports/json/blinter_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\blinter_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\blinter_findings.json</data>
       <data key="d3">blinter_findings.json</data>
     </node>
     <node id="reports/json/cargo-deny_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\cargo-deny_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\cargo-deny_findings.json</data>
       <data key="d3">cargo-deny_findings.json</data>
     </node>
     <node id="reports/json/clippy_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\clippy_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\clippy_findings.json</data>
       <data key="d3">clippy_findings.json</data>
     </node>
     <node id="reports/json/codespell_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\codespell_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\codespell_findings.json</data>
       <data key="d3">codespell_findings.json</data>
     </node>
     <node id="reports/json/complexipy_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\complexipy_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\complexipy_findings.json</data>
       <data key="d3">complexipy_findings.json</data>
     </node>
     <node id="reports/json/darglint_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\darglint_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\darglint_findings.json</data>
       <data key="d3">darglint_findings.json</data>
     </node>
     <node id="reports/json/deadcode_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\deadcode_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\deadcode_findings.json</data>
       <data key="d3">deadcode_findings.json</data>
     </node>
     <node id="reports/json/dead_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\dead_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\dead_findings.json</data>
       <data key="d3">dead_findings.json</data>
     </node>
     <node id="reports/json/deptry_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\deptry_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\deptry_findings.json</data>
       <data key="d3">deptry_findings.json</data>
     </node>
     <node id="reports/json/file-encoding_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\file-encoding_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\file-encoding_findings.json</data>
       <data key="d3">file-encoding_findings.json</data>
     </node>
     <node id="reports/json/flake8_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\flake8_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\flake8_findings.json</data>
       <data key="d3">flake8_findings.json</data>
     </node>
     <node id="reports/json/interrogate_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\interrogate_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\interrogate_findings.json</data>
       <data key="d3">interrogate_findings.json</data>
     </node>
     <node id="reports/json/jsonlint_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\jsonlint_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\jsonlint_findings.json</data>
       <data key="d3">jsonlint_findings.json</data>
     </node>
     <node id="reports/json/liccheck_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\liccheck_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\liccheck_findings.json</data>
       <data key="d3">liccheck_findings.json</data>
     </node>
     <node id="reports/json/llvm-cov_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\llvm-cov_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\llvm-cov_findings.json</data>
       <data key="d3">llvm-cov_findings.json</data>
     </node>
     <node id="reports/json/machete_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\machete_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\machete_findings.json</data>
       <data key="d3">machete_findings.json</data>
     </node>
     <node id="reports/json/markdownlint_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\markdownlint_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\markdownlint_findings.json</data>
       <data key="d3">markdownlint_findings.json</data>
     </node>
     <node id="reports/json/mccabe_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\mccabe_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\mccabe_findings.json</data>
       <data key="d3">mccabe_findings.json</data>
     </node>
     <node id="reports/json/mixed-line-ending_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\mixed-line-ending_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\mixed-line-ending_findings.json</data>
       <data key="d3">mixed-line-ending_findings.json</data>
     </node>
     <node id="reports/json/mypy_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\mypy_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\mypy_findings.json</data>
       <data key="d3">mypy_findings.json</data>
     </node>
     <node id="reports/json/nextest_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\nextest_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\nextest_findings.json</data>
       <data key="d3">nextest_findings.json</data>
     </node>
     <node id="reports/json/precommit-hooks_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\precommit-hooks_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\precommit-hooks_findings.json</data>
       <data key="d3">precommit-hooks_findings.json</data>
     </node>
     <node id="reports/json/psscriptanalyzer_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\psscriptanalyzer_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\psscriptanalyzer_findings.json</data>
       <data key="d3">psscriptanalyzer_findings.json</data>
     </node>
     <node id="reports/json/pydoclint_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\pydoclint_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\pydoclint_findings.json</data>
       <data key="d3">pydoclint_findings.json</data>
     </node>
     <node id="reports/json/pydocstyle_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\pydocstyle_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\pydocstyle_findings.json</data>
       <data key="d3">pydocstyle_findings.json</data>
     </node>
     <node id="reports/json/pylint_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\pylint_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\pylint_findings.json</data>
       <data key="d3">pylint_findings.json</data>
     </node>
     <node id="reports/json/radon_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\radon_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\radon_findings.json</data>
       <data key="d3">radon_findings.json</data>
     </node>
     <node id="reports/json/ruff_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\ruff_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\ruff_findings.json</data>
       <data key="d3">ruff_findings.json</data>
     </node>
     <node id="reports/json/rust-code-analysis_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\rust-code-analysis_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\rust-code-analysis_findings.json</data>
       <data key="d3">rust-code-analysis_findings.json</data>
     </node>
     <node id="reports/json/rustfmt_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\rustfmt_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\rustfmt_findings.json</data>
       <data key="d3">rustfmt_findings.json</data>
     </node>
     <node id="reports/json/rust_clippy_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\rust_clippy_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\rust_clippy_findings.json</data>
       <data key="d3">rust_clippy_findings.json</data>
     </node>
     <node id="reports/json/semgrep_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\semgrep_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\semgrep_findings.json</data>
       <data key="d3">semgrep_findings.json</data>
     </node>
     <node id="reports/json/shellcheck_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\shellcheck_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\shellcheck_findings.json</data>
       <data key="d3">shellcheck_findings.json</data>
     </node>
     <node id="reports/json/skylos_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\skylos_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\skylos_findings.json</data>
       <data key="d3">skylos_findings.json</data>
     </node>
     <node id="reports/json/taplo_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\taplo_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\taplo_findings.json</data>
       <data key="d3">taplo_findings.json</data>
     </node>
     <node id="reports/json/typos_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\typos_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\typos_findings.json</data>
       <data key="d3">typos_findings.json</data>
     </node>
     <node id="reports/json/ty_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\ty_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\ty_findings.json</data>
       <data key="d3">ty_findings.json</data>
     </node>
     <node id="reports/json/uncalled_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\uncalled_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\uncalled_findings.json</data>
       <data key="d3">uncalled_findings.json</data>
     </node>
     <node id="reports/json/validate-pyproject_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\validate-pyproject_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\validate-pyproject_findings.json</data>
       <data key="d3">validate-pyproject_findings.json</data>
     </node>
     <node id="reports/json/vermin_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\vermin_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\vermin_findings.json</data>
       <data key="d3">vermin_findings.json</data>
     </node>
     <node id="reports/json/vulture_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\vulture_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\vulture_findings.json</data>
       <data key="d3">vulture_findings.json</data>
     </node>
     <node id="reports/json/wemake_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\wemake_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\wemake_findings.json</data>
       <data key="d3">wemake_findings.json</data>
     </node>
     <node id="reports/json/xenon_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\xenon_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\xenon_findings.json</data>
       <data key="d3">xenon_findings.json</data>
     </node>
     <node id="reports/json/yamllint_findings.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\reports\json\yamllint_findings.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\reports\json\yamllint_findings.json</data>
       <data key="d3">yamllint_findings.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/anthropic_claude3.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\anthropic_claude3.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\anthropic_claude3.json</data>
       <data key="d3">anthropic_claude3.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/frida_specialized.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\frida_specialized.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\frida_specialized.json</data>
       <data key="d3">frida_specialized.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/gptq_fast_inference.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\gptq_fast_inference.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\gptq_fast_inference.json</data>
       <data key="d3">gptq_fast_inference.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/local_gguf_high_performance.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\local_gguf_high_performance.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\local_gguf_high_performance.json</data>
       <data key="d3">local_gguf_high_performance.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/local_xpu_inference.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\local_xpu_inference.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\local_xpu_inference.json</data>
       <data key="d3">local_xpu_inference.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/ollama_codellama.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\ollama_codellama.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\ollama_codellama.json</data>
       <data key="d3">ollama_codellama.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/onnx_production.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\onnx_production.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\onnx_production.json</data>
       <data key="d3">onnx_production.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/openai_gpt4.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\openai_gpt4.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\openai_gpt4.json</data>
       <data key="d3">openai_gpt4.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/pytorch_research.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\pytorch_research.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\pytorch_research.json</data>
       <data key="d3">pytorch_research.json</data>
     </node>
     <node id="src/intellicrack/assets/configs/vulnerability_assessment.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\configs\vulnerability_assessment.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\configs\vulnerability_assessment.json</data>
       <data key="d3">vulnerability_assessment.json</data>
     </node>
     <node id="src/intellicrack/assets/fonts/font_config.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack\assets\fonts\font_config.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack\assets\fonts\font_config.json</data>
       <data key="d3">font_config.json</data>
     </node>
     <node id="src/intellicrack-hexcore/Cargo.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\Cargo.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack-hexcore\Cargo.toml</data>
       <data key="d3">Cargo.toml</data>
     </node>
     <node id="src/intellicrack-hexcore/clippy.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\clippy.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack-hexcore\clippy.toml</data>
       <data key="d3">clippy.toml</data>
     </node>
     <node id="src/intellicrack-hexcore/deny.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\deny.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack-hexcore\deny.toml</data>
       <data key="d3">deny.toml</data>
     </node>
     <node id="src/intellicrack-hexcore/pyproject.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\pyproject.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack-hexcore\pyproject.toml</data>
       <data key="d3">pyproject.toml</data>
     </node>
     <node id="src/intellicrack-hexcore/rustfmt.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\rustfmt.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack-hexcore\rustfmt.toml</data>
       <data key="d3">rustfmt.toml</data>
     </node>
     <node id="src/intellicrack-hexcore/_typos.toml">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\src\intellicrack-hexcore\_typos.toml</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\src\intellicrack-hexcore\_typos.toml</data>
       <data key="d3">_typos.toml</data>
     </node>
     <node id="tools/AdobeInjector/README.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\AdobeInjector\README.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tools\AdobeInjector\README.md</data>
       <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/bom.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\bom.json</data>
-      <data key="d3">bom.json</data>
-    </node>
-    <node id="tools/ghidra/GettingStarted.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\GettingStarted.md</data>
-      <data key="d3">GettingStarted.md</data>
-    </node>
-    <node id="tools/ghidra/docker/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docker\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/docs/ChangeHistory.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\ChangeHistory.md</data>
-      <data key="d3">ChangeHistory.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GettingStarted.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GettingStarted.md</data>
-      <data key="d3">GettingStarted.md</data>
-    </node>
-    <node id="tools/ghidra/docs/WhatsNew.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\WhatsNew.md</data>
-      <data key="d3">WhatsNew.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Basic_Queries.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Basic_Queries.md</data>
-      <data key="d3">BSimTutorial_Basic_Queries.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_BSim_Command_Line.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_BSim_Command_Line.md</data>
-      <data key="d3">BSimTutorial_BSim_Command_Line.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Creating_Database_From_GUI.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Creating_Database_From_GUI.md</data>
-      <data key="d3">BSimTutorial_Creating_Database_From_GUI.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Enabling.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Enabling.md</data>
-      <data key="d3">BSimTutorial_Enabling.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Evaluating_Matches.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Evaluating_Matches.md</data>
-      <data key="d3">BSimTutorial_Evaluating_Matches.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Exe_Results.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Exe_Results.md</data>
-      <data key="d3">BSimTutorial_Exe_Results.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Filters.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Filters.md</data>
-      <data key="d3">BSimTutorial_Filters.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Ghidra_Command_Line.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Ghidra_Command_Line.md</data>
-      <data key="d3">BSimTutorial_Ghidra_Command_Line.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Intro.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Intro.md</data>
-      <data key="d3">BSimTutorial_Intro.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Overview_Queries.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Overview_Queries.md</data>
-      <data key="d3">BSimTutorial_Overview_Queries.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/BSimTutorial_Scripting.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\BSimTutorial_Scripting.md</data>
-      <data key="d3">BSimTutorial_Scripting.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/BSim/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\BSim\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/A1-GettingStarted.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\A1-GettingStarted.md</data>
-      <data key="d3">A1-GettingStarted.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/A2-UITour.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\A2-UITour.md</data>
-      <data key="d3">A2-UITour.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/A3-Breakpoints.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\A3-Breakpoints.md</data>
-      <data key="d3">A3-Breakpoints.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/A4-MachineState.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\A4-MachineState.md</data>
-      <data key="d3">A4-MachineState.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/A5-Navigation.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\A5-Navigation.md</data>
-      <data key="d3">A5-Navigation.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/A6-MemoryMap.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\A6-MemoryMap.md</data>
-      <data key="d3">A6-MemoryMap.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/B1-RemoteTargets.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\B1-RemoteTargets.md</data>
-      <data key="d3">B1-RemoteTargets.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/B2-Emulation.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\B2-Emulation.md</data>
-      <data key="d3">B2-Emulation.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/B3-Scripting.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\B3-Scripting.md</data>
-      <data key="d3">B3-Scripting.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/B4-Modeling.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\B4-Modeling.md</data>
-      <data key="d3">B4-Modeling.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/B5-AddingDebuggers.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\B5-AddingDebuggers.md</data>
-      <data key="d3">B5-AddingDebuggers.md</data>
-    </node>
-    <node id="tools/ghidra/docs/GhidraClass/Debugger/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\docs\GhidraClass\Debugger\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Extensions/Eclipse/GhidraDev/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Extensions\Eclipse\GhidraDev\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Extensions/Eclipse/GhidraSleighEditor/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Extensions\Eclipse\GhidraSleighEditor\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Extensions/Ghidra/Skeleton/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Extensions\Ghidra\Skeleton\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Configurations/Public_Release/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Configurations\Public_Release\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/AnnotationValidator/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\AnnotationValidator\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-dbgeng/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-dbgeng/pypkg/pyproject.toml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\pypkg\pyproject.toml</data>
-      <data key="d3">pyproject.toml</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-dbgeng/pypkg/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-dbgeng\pypkg\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-drgn/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-drgn\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-drgn/pypkg/pyproject.toml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-drgn\pypkg\pyproject.toml</data>
-      <data key="d3">pyproject.toml</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-drgn/pypkg/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-drgn\pypkg\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-gdb\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/pypkg/pyproject.toml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-gdb\pypkg\pyproject.toml</data>
-      <data key="d3">pyproject.toml</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-gdb/pypkg/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-gdb\pypkg\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/pypkg/pyproject.toml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\pypkg\pyproject.toml</data>
-      <data key="d3">pyproject.toml</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-agent-lldb/pypkg/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-agent-lldb\pypkg\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-api/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-api\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-isf/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-isf\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-jpda/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-jpda\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/pypkg/pyproject.toml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\pypkg\pyproject.toml</data>
-      <data key="d3">pyproject.toml</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Debugger-rmi-trace/pypkg/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Debugger-rmi-trace\pypkg\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/Framework-TraceModeling/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\Framework-TraceModeling\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/ProposedUtils/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\ProposedUtils\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Debug/TaintAnalysis/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Debug\TaintAnalysis\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.15.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.15.0.json</data>
-      <data key="d3">go1.15.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.16.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.16.0.json</data>
-      <data key="d3">go1.16.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.17.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.17.0.json</data>
-      <data key="d3">go1.17.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.18.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.18.0.json</data>
-      <data key="d3">go1.18.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.19.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.19.0.json</data>
-      <data key="d3">go1.19.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.20.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.20.0.json</data>
-      <data key="d3">go1.20.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.21.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.21.0.json</data>
-      <data key="d3">go1.21.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.22.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.22.0.json</data>
-      <data key="d3">go1.22.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.23.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.23.0.json</data>
-      <data key="d3">go1.23.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Base/data/typeinfo/golang/go1.24.0.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Base\data\typeinfo\golang\go1.24.0.json</data>
-      <data key="d3">go1.24.0.json</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/BSim/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\BSim\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/BSimFeatureVisualizer/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\BSimFeatureVisualizer\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/BytePatterns/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\BytePatterns\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/ByteViewer/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\ByteViewer\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/CodeCompare/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\CodeCompare\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/DebugUtils/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\DebugUtils\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Decompiler/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Decompiler\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/DecompilerDependent/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\DecompilerDependent\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/FileFormats/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\FileFormats\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/FunctionGraph/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\FunctionGraph\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/FunctionGraphDecompilerExtension/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\FunctionGraphDecompilerExtension\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/FunctionID/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\FunctionID\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/GhidraGo/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\GhidraGo\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/GhidraServer/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\GhidraServer\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/GnuDemangler/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\GnuDemangler\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/GraphFunctionCalls/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\GraphFunctionCalls\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/GraphServices/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\GraphServices\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Jython/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Jython\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/MicrosoftCodeAnalyzer/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\MicrosoftCodeAnalyzer\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/MicrosoftDemangler/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\MicrosoftDemangler\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/MicrosoftDmang/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\MicrosoftDmang\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/PDB/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\PDB\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/ProgramDiff/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\ProgramDiff\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/ProgramGraph/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\ProgramGraph\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/PyGhidra/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\PyGhidra\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/PyGhidra/pypkg/pyproject.toml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\PyGhidra\pypkg\pyproject.toml</data>
-      <data key="d3">pyproject.toml</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/PyGhidra/pypkg/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\PyGhidra\pypkg\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Recognizers/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Recognizers\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/Sarif/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\Sarif\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/SourceCodeLookup/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\SourceCodeLookup\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/SwiftDemangler/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\SwiftDemangler\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/SystemEmulation/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\SystemEmulation\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/VersionTracking/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\VersionTracking\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/VersionTrackingBSim/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\VersionTrackingBSim\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Features/WildcardAssembler/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Features\WildcardAssembler\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/DB/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\DB\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Docking/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Docking\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Emulation/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Emulation\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/FileSystem/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\FileSystem\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Generic/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Generic\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Gui/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Gui\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Help/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Help\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Project/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Project\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Pty/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Pty\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/SoftwareModeling/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\SoftwareModeling\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Framework/Utility/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Framework\Utility\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/6502/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\6502\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/68000/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\68000\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/8048/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\8048\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/8051/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\8051\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/8085/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\8085\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/AARCH64/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\AARCH64\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/ARM/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\ARM\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/Atmel/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\Atmel\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/BPF/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\BPF\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/CP1600/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\CP1600\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/CR16/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\CR16\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/Dalvik/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\Dalvik\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/DATA/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\DATA\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/eBPF/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\eBPF\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/HCS08/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\HCS08\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/HCS12/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\HCS12\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/JVM/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\JVM\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/Loongarch/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\Loongarch\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/M16C/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\M16C\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/M8C/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\M8C\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/MC6800/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\MC6800\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/MCS96/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\MCS96\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/MIPS/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\MIPS\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/PA-RISC/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\PA-RISC\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/PIC/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\PIC\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/PowerPC/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\PowerPC\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/RISCV/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\RISCV\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/Sparc/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\Sparc\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/SuperH/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\SuperH\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/SuperH4/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\SuperH4\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/TI_MSP430/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\TI_MSP430\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/tricore/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\tricore\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/V850/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\V850\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/x86/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\x86\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/Xtensa/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\Xtensa\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/Ghidra/Processors/Z80/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\Ghidra\Processors\Z80\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/GPL/DemanglerGnu/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\GPL\DemanglerGnu\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/GPL/DMG/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\GPL\DMG\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="tools/ghidra/server/svrREADME.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\server\svrREADME.md</data>
-      <data key="d3">svrREADME.md</data>
-    </node>
-    <node id="tools/ghidra/support/analyzeHeadlessREADME.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\ghidra\support\analyzeHeadlessREADME.md</data>
-      <data key="d3">analyzeHeadlessREADME.md</data>
     </node>
     <node id="tools/pmd/sbom/pmd-7.8.0-cyclonedx.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\pmd\sbom\pmd-7.8.0-cyclonedx.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tools\pmd\sbom\pmd-7.8.0-cyclonedx.json</data>
       <data key="d3">pmd-7.8.0-cyclonedx.json</data>
     </node>
     <node id="tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\pmd-bin-7.8.0\sbom\pmd-7.8.0-cyclonedx.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tools\pmd-bin-7.8.0\sbom\pmd-7.8.0-cyclonedx.json</data>
       <data key="d3">pmd-7.8.0-cyclonedx.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/50-edk2-i386-secure.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\50-edk2-i386-secure.json</data>
-      <data key="d3">50-edk2-i386-secure.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/50-edk2-x86_64-secure.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\50-edk2-x86_64-secure.json</data>
-      <data key="d3">50-edk2-x86_64-secure.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/60-edk2-aarch64.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\60-edk2-aarch64.json</data>
-      <data key="d3">60-edk2-aarch64.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/60-edk2-arm.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\60-edk2-arm.json</data>
-      <data key="d3">60-edk2-arm.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/60-edk2-i386.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\60-edk2-i386.json</data>
-      <data key="d3">60-edk2-i386.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/60-edk2-loongarch64.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\60-edk2-loongarch64.json</data>
-      <data key="d3">60-edk2-loongarch64.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/60-edk2-riscv64.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\60-edk2-riscv64.json</data>
-      <data key="d3">60-edk2-riscv64.json</data>
-    </node>
-    <node id="tools/qemu/share/firmware/60-edk2-x86_64.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\qemu\share\firmware\60-edk2-x86_64.json</data>
-      <data key="d3">60-edk2-x86_64.json</data>
-    </node>
-    <node id="tools/radare2/share/panels/layout-x86.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\panels\layout-x86.json</data>
-      <data key="d3">layout-x86.json</data>
-    </node>
-    <node id="tools/radare2/share/panels/layout-x86_x64.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\radare2\share\panels\layout-x86_x64.json</data>
-      <data key="d3">layout-x86_x64.json</data>
     </node>
     <node id="tools/x64dbg/release/mnemdb.json">
       <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\tools\x64dbg\release\mnemdb.json</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tools\x64dbg\release\mnemdb.json</data>
       <data key="d3">mnemdb.json</data>
     </node>
     <node id="tools/x64dbg/release/release-notes.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\x64dbg\release\release-notes.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tools\x64dbg\release\release-notes.md</data>
       <data key="d3">release-notes.md</data>
     </node>
     <node id="tools/x64dbg_plugin/README.md">
       <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\tools\x64dbg_plugin\README.md</data>
+      <data key="d2">D:\Intellicrack\.claude\worktrees\agent-a1b07e2a\tools\x64dbg_plugin\README.md</data>
       <data key="d3">README.md</data>
-    </node>
-    <node id="vendor/community-patterns/CONTRIBUTING.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\CONTRIBUTING.md</data>
-      <data key="d3">CONTRIBUTING.md</data>
-    </node>
-    <node id="vendor/community-patterns/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="vendor/community-patterns/.github/FUNDING.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\.github\FUNDING.yml</data>
-      <data key="d3">FUNDING.yml</data>
-    </node>
-    <node id="vendor/community-patterns/.github/PULL_REQUEST_TEMPLATE/pattern_template.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\.github\PULL_REQUEST_TEMPLATE\pattern_template.md</data>
-      <data key="d3">pattern_template.md</data>
-    </node>
-    <node id="vendor/community-patterns/.github/workflows/dispatch.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\.github\workflows\dispatch.yml</data>
-      <data key="d3">dispatch.yml</data>
-    </node>
-    <node id="vendor/community-patterns/.github/workflows/tests.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\.github\workflows\tests.yml</data>
-      <data key="d3">tests.yml</data>
-    </node>
-    <node id="vendor/community-patterns/constants/crc16.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\constants\crc16.json</data>
-      <data key="d3">crc16.json</data>
-    </node>
-    <node id="vendor/community-patterns/constants/crc32.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\constants\crc32.json</data>
-      <data key="d3">crc32.json</data>
-    </node>
-    <node id="vendor/community-patterns/constants/_schema.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\constants\_schema.json</data>
-      <data key="d3">_schema.json</data>
-    </node>
-    <node id="vendor/community-patterns/disassemblers/8051.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\disassemblers\8051.json</data>
-      <data key="d3">8051.json</data>
-    </node>
-    <node id="vendor/community-patterns/disassemblers/jvm.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\disassemblers\jvm.json</data>
-      <data key="d3">jvm.json</data>
-    </node>
-    <node id="vendor/community-patterns/patterns/DFIR/DFIR_README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\patterns\DFIR\DFIR_README.md</data>
-      <data key="d3">DFIR_README.md</data>
-    </node>
-    <node id="vendor/community-patterns/plugins/extra-hashes.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\plugins\extra-hashes.json</data>
-      <data key="d3">extra-hashes.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/catppuccin-frappe.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\catppuccin-frappe.json</data>
-      <data key="d3">catppuccin-frappe.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/catppuccin-latte.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\catppuccin-latte.json</data>
-      <data key="d3">catppuccin-latte.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/catppuccin-macchiato.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\catppuccin-macchiato.json</data>
-      <data key="d3">catppuccin-macchiato.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/catppuccin-mocha.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\catppuccin-mocha.json</data>
-      <data key="d3">catppuccin-mocha.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/Nocturne.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\Nocturne.json</data>
-      <data key="d3">Nocturne.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/one_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\one_dark.json</data>
-      <data key="d3">one_dark.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/retina_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\retina_dark.json</data>
-      <data key="d3">retina_dark.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/solarized_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\solarized_dark.json</data>
-      <data key="d3">solarized_dark.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/theme_lion.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\theme_lion.json</data>
-      <data key="d3">theme_lion.json</data>
-    </node>
-    <node id="vendor/community-patterns/themes/vs_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\themes\vs_dark.json</data>
-      <data key="d3">vs_dark.json</data>
-    </node>
-    <node id="vendor/community-patterns/tips/imhex.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\tips\imhex.json</data>
-      <data key="d3">imhex.json</data>
-    </node>
-    <node id="vendor/community-patterns/tips/re.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\tips\re.json</data>
-      <data key="d3">re.json</data>
-    </node>
-    <node id="vendor/community-patterns/tips/_schema.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\community-patterns\tips\_schema.json</data>
-      <data key="d3">_schema.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/CONTRIBUTING.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\CONTRIBUTING.md</data>
-      <data key="d3">CONTRIBUTING.md</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/.github/FUNDING.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\.github\FUNDING.yml</data>
-      <data key="d3">FUNDING.yml</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/.github/PULL_REQUEST_TEMPLATE/pattern_template.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\.github\PULL_REQUEST_TEMPLATE\pattern_template.md</data>
-      <data key="d3">pattern_template.md</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/.github/workflows/dispatch.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\.github\workflows\dispatch.yml</data>
-      <data key="d3">dispatch.yml</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/.github/workflows/tests.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\.github\workflows\tests.yml</data>
-      <data key="d3">tests.yml</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/constants/crc16.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\constants\crc16.json</data>
-      <data key="d3">crc16.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/constants/crc32.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\constants\crc32.json</data>
-      <data key="d3">crc32.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/constants/_schema.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\constants\_schema.json</data>
-      <data key="d3">_schema.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/disassemblers/8051.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\disassemblers\8051.json</data>
-      <data key="d3">8051.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/disassemblers/jvm.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\disassemblers\jvm.json</data>
-      <data key="d3">jvm.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/patterns/DFIR/DFIR_README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\patterns\DFIR\DFIR_README.md</data>
-      <data key="d3">DFIR_README.md</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/plugins/extra-hashes.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\plugins\extra-hashes.json</data>
-      <data key="d3">extra-hashes.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/catppuccin-frappe.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\catppuccin-frappe.json</data>
-      <data key="d3">catppuccin-frappe.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/catppuccin-latte.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\catppuccin-latte.json</data>
-      <data key="d3">catppuccin-latte.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/catppuccin-macchiato.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\catppuccin-macchiato.json</data>
-      <data key="d3">catppuccin-macchiato.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/catppuccin-mocha.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\catppuccin-mocha.json</data>
-      <data key="d3">catppuccin-mocha.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/Nocturne.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\Nocturne.json</data>
-      <data key="d3">Nocturne.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/one_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\one_dark.json</data>
-      <data key="d3">one_dark.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/retina_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\retina_dark.json</data>
-      <data key="d3">retina_dark.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/solarized_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\solarized_dark.json</data>
-      <data key="d3">solarized_dark.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/theme_lion.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\theme_lion.json</data>
-      <data key="d3">theme_lion.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/themes/vs_dark.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\themes\vs_dark.json</data>
-      <data key="d3">vs_dark.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/tips/imhex.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\tips\imhex.json</data>
-      <data key="d3">imhex.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/tips/re.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\tips\re.json</data>
-      <data key="d3">re.json</data>
-    </node>
-    <node id="vendor/ImHex-Patterns/tips/_schema.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\ImHex-Patterns\tips\_schema.json</data>
-      <data key="d3">_schema.json</data>
-    </node>
-    <node id="vendor/PatternLanguage/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="vendor/PatternLanguage/.github/codecov.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\.github\codecov.yml</data>
-      <data key="d3">codecov.yml</data>
-    </node>
-    <node id="vendor/PatternLanguage/.github/FUNDING.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\.github\FUNDING.yml</data>
-      <data key="d3">FUNDING.yml</data>
-    </node>
-    <node id="vendor/PatternLanguage/.github/workflows/build.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\.github\workflows\build.yml</data>
-      <data key="d3">build.yml</data>
-    </node>
-    <node id="vendor/PatternLanguage/.github/workflows/tests.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\.github\workflows\tests.yml</data>
-      <data key="d3">tests.yml</data>
-    </node>
-    <node id="vendor/PatternLanguage/fuzz/README.md">
-      <data key="d0">documentation</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\fuzz\README.md</data>
-      <data key="d3">README.md</data>
-    </node>
-    <node id="vendor/PatternLanguage/tests/files/export/json.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\tests\files\export\json.json</data>
-      <data key="d3">json.json</data>
-    </node>
-    <node id="vendor/PatternLanguage/tests/files/export/yaml.yml">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\tests\files\export\yaml.yml</data>
-      <data key="d3">yaml.yml</data>
-    </node>
-    <node id="vendor/PatternLanguage/tests/integration/test.hexpat.json">
-      <data key="d0">config</data>
-      <data key="d2">D:\Intellicrack\vendor\PatternLanguage\tests\integration\test.hexpat.json</data>
-      <data key="d3">test.hexpat.json</data>
     </node>
     <edge source="src.intellicrack.main" target="__future__">
       <data key="d6">imports</data>
@@ -69772,21 +68367,6 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d6">imports</data>
     </edge>
     <edge source="src.intellicrack.ui.resources.__init__" target="intellicrack.ui.resources.theme_manager">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="tools/qemu/share/doc/searchindex.js" target=": [11, 12, 14, 23, 35, 39, 56, 58, 59, 60, 63, 64, 65, 66, 71, 75, 76, 79, 88, 90, 98, 106, 107, 109, 111, 114, 133, 134, 137, 139, 199, 219, 230, 252, 265, 272, 273, 289, 298, 302], ">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="tools/qemu/share/doc/searchindex.js" target=": 32, ">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="tools/qemu/share/doc/searchindex.js" target=": [10, 220, 255], ">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="tools/qemu/share/doc/_static/js/theme.js" target="jquery">
-      <data key="d6">imports</data>
-    </edge>
-    <edge source="tools/radare2/share/www/m/vendors/jquery.dataTables.min.js" target="jquery">
       <data key="d6">imports</data>
     </edge>
   </graph>

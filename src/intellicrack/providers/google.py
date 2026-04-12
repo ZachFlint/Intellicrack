@@ -279,6 +279,12 @@ class GoogleProvider(LLMProviderBase):
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
             def _generate() -> GenerateContentResponse:
+                """Invoke the synchronous Gemini generate_content endpoint.
+
+                Returns:
+                    GenerateContentResponse: The raw Gemini API response for
+                    the prepared model, contents, and configuration.
+                """
                 return client.models.generate_content(
                     model=model,
                     contents=typed_contents,
@@ -394,6 +400,12 @@ class GoogleProvider(LLMProviderBase):
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
             def _start_stream() -> Iterable[GenerateContentResponse]:
+                """Open a synchronous Gemini streaming generation request.
+
+                Returns:
+                    Iterable[GenerateContentResponse]: Iterable yielding
+                    response chunks from the Gemini streaming API.
+                """
                 return client.models.generate_content_stream(
                     model=model,
                     contents=typed_contents,
