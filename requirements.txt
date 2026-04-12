@@ -217,7 +217,7 @@ pyclean==3.6.0
 pycodestyle==2.14.0
 pycparser==3.0
 pydantic==2.12.5
-pydantic_core==2.41.5
+pydantic_core==2.45.0
 pydantic_settings==2.13.1
 pydoclint==0.8.3
 pydocstyle==6.3.0
