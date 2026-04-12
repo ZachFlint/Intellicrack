@@ -98,7 +98,11 @@ class TestPollAndEmbed:
 
     @staticmethod
     def test_callback_not_called_for_missing_pid(qapp: QApplication) -> None:
-        """Verify callback is not invoked when no window is found."""
+        """Verify callback is not invoked when no window is found.
+
+        Args:
+            qapp: Qt application fixture used to pump the polling timer.
+        """
         parent = QWidget()
         called: list[QWidget] = []
 
@@ -119,7 +123,11 @@ class TestPollAndEmbed:
 
     @staticmethod
     def test_max_retries_limits_attempts(qapp: QApplication) -> None:
-        """Verify polling stops after max_retries attempts."""
+        """Verify polling stops after max_retries attempts.
+
+        Args:
+            qapp: Qt application fixture used to pump the polling timer.
+        """
         parent = QWidget()
         results: list[QWidget] = []
 
