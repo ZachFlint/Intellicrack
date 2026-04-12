@@ -132,7 +132,8 @@ if TYPE_CHECKING:
             Returns:
                 int: Document size in bytes.
             """
-            ...
+            _ = self
+            return 0
 
         def read(self, offset: int, length: int) -> bytes | bytearray:
             """Read bytes from the document.
@@ -144,7 +145,8 @@ if TYPE_CHECKING:
             Returns:
                 bytes | bytearray: The bytes read.
             """
-            ...
+            _ = (self, offset, length)
+            return b""
 
         def write_bytes(self, offset: int, data: bytes) -> None:
             """Write bytes at the given offset.
@@ -153,7 +155,7 @@ if TYPE_CHECKING:
                 offset: Start byte offset.
                 data: Bytes to write.
             """
-            ...
+            _ = (self, offset, data)
 
         def insert_bytes(self, offset: int, data: bytes) -> None:
             """Insert bytes at the given offset.
@@ -162,7 +164,7 @@ if TYPE_CHECKING:
                 offset: Insertion byte offset.
                 data: Bytes to insert.
             """
-            ...
+            _ = (self, offset, data)
 
         def delete_bytes(self, offset: int, length: int) -> None:
             """Delete bytes at the given offset.
@@ -171,7 +173,7 @@ if TYPE_CHECKING:
                 offset: Start byte offset.
                 length: Number of bytes to delete.
             """
-            ...
+            _ = (self, offset, length)
 
         def search_hex(self, pattern: str, max_results: int) -> list[tuple[int, int]]:
             """Search for a hex pattern in the document.
@@ -183,7 +185,8 @@ if TYPE_CHECKING:
             Returns:
                 list[tuple[int, int]]: List of (offset, length) match tuples.
             """
-            ...
+            _ = (self, pattern, max_results)
+            return []
 
         def search_text(
             self,
@@ -204,7 +207,8 @@ if TYPE_CHECKING:
             Returns:
                 list[tuple[int, int]]: List of (offset, length) match tuples.
             """
-            ...
+            _ = (self, text, encoding, case_sensitive, max_results)
+            return []
 
         def add_bookmark(
             self,
@@ -224,7 +228,8 @@ if TYPE_CHECKING:
             Returns:
                 int: Index of the newly added bookmark.
             """
-            ...
+            _ = (self, offset, length, label, color)
+            return 0
 
 
 class _PythonSyntaxHighlighter(QSyntaxHighlighter):
@@ -587,7 +592,9 @@ class ScriptingMixin:
         self._script_editor.setTabStopDistance(
             self._script_editor.fontMetrics().horizontalAdvance(" ") * 4,
         )
-        _PythonSyntaxHighlighter(self._script_editor.document())
+        editor_doc = self._script_editor.document()
+        if editor_doc is not None:
+            _PythonSyntaxHighlighter(editor_doc)
         layout.addWidget(self._script_editor)
 
         btn_row = QHBoxLayout()

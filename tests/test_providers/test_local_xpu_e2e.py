@@ -14,7 +14,7 @@ provider connection lifecycle, dtype selection, and error recovery.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 import pytest_asyncio
@@ -31,6 +31,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.model_loader import (
+    LoadedModel,
     ModelCache,
     select_dtype_for_memory,
 )
@@ -45,7 +46,10 @@ from intellicrack.providers.xpu_utils import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterator
+
+    import torch
+    from transformers import PreTrainedTokenizerBase
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -74,7 +78,7 @@ def _make_test_tool() -> list[ToolDefinition]:
     """
     return [
         ToolDefinition(
-            tool_name=ToolName.BINARY,
+            tool_name=ToolName.GHIDRA,
             description="Binary analysis tools",
             functions=[
                 ToolFunction(
@@ -93,6 +97,270 @@ def _make_test_tool() -> list[ToolDefinition]:
             ],
         ),
     ]
+
+
+_ATTR_LOADED_MODEL = "_loaded_model"
+_ATTR_MODEL_CACHE = "_model_cache"
+_ATTR_CONVERT_MESSAGES = "_convert_messages_to_provider_format"
+_ATTR_FORMAT_PROMPT = "_format_prompt"
+_ATTR_PARSE_TOOL_CALLS = "_parse_tool_calls"
+_ATTR_EXTRACT_TEXT_BEFORE_TOOL_CALL = "_extract_text_before_tool_call"
+_ATTR_TOKENIZER_ENCODE = "encode"
+_ATTR_TOKENIZER_DECODE = "decode"
+
+
+def _get_loaded_model(provider: LocalTransformersProvider) -> LoadedModel | None:
+    """Retrieve the provider's protected ``_loaded_model`` attribute in a type-safe way.
+
+    Args:
+        provider: The provider instance whose loaded model to retrieve.
+
+    Returns:
+        LoadedModel | None: The currently loaded model, or None if no model is loaded.
+
+    Raises:
+        TypeError: If the attribute is neither None nor a LoadedModel instance.
+    """
+    raw: object = getattr(provider, _ATTR_LOADED_MODEL)
+    if raw is None:
+        return None
+    if not isinstance(raw, LoadedModel):
+        msg = f"Expected LoadedModel or None, got {type(raw).__name__}"
+        raise TypeError(msg)
+    return raw
+
+
+def _get_model_cache(provider: LocalTransformersProvider) -> ModelCache:
+    """Retrieve the provider's protected ``_model_cache`` attribute in a type-safe way.
+
+    Args:
+        provider: The provider instance whose model cache to retrieve.
+
+    Returns:
+        ModelCache: The ModelCache instance backing the provider.
+
+    Raises:
+        TypeError: If the attribute is not a ModelCache instance.
+    """
+    raw: object = getattr(provider, _ATTR_MODEL_CACHE)
+    if not isinstance(raw, ModelCache):
+        msg = f"Expected ModelCache, got {type(raw).__name__}"
+        raise TypeError(msg)
+    return raw
+
+
+def _convert_messages_via(
+    provider: LocalTransformersProvider,
+    messages: list[Message],
+) -> list[dict[str, object]]:
+    """Invoke the provider's protected ``_convert_messages_to_provider_format`` method.
+
+    Args:
+        provider: The provider instance exposing the conversion method.
+        messages: List of Message objects to convert.
+
+    Returns:
+        list[dict[str, object]]: The list of converted message dictionaries.
+
+    Raises:
+        TypeError: If the underlying method is missing, not callable, or
+            returns a value that is not a list of dicts.
+    """
+    method: object = getattr(provider, _ATTR_CONVERT_MESSAGES)
+    if not callable(method):
+        msg = f"{_ATTR_CONVERT_MESSAGES} is not callable"
+        raise TypeError(msg)
+    result: object = method(messages)
+    if not isinstance(result, list):
+        msg = f"Expected list result, got {type(result).__name__}"
+        raise TypeError(msg)
+    validated: list[dict[str, object]] = []
+    for item in cast("list[object]", result):
+        if not isinstance(item, dict):
+            msg = f"Expected dict items, got {type(item).__name__}"
+            raise TypeError(msg)
+        narrowed: dict[str, object] = {}
+        for key, value in cast("dict[object, object]", item).items():
+            if not isinstance(key, str):
+                msg = f"Expected str dict keys, got {type(key).__name__}"
+                raise TypeError(msg)
+            narrowed[key] = value
+        validated.append(narrowed)
+    return validated
+
+
+def _format_prompt_via(
+    provider: LocalTransformersProvider,
+    messages: list[dict[str, object]],
+    tools: list[ToolDefinition] | None = None,
+) -> str:
+    """Invoke the provider's protected ``_format_prompt`` method in a type-safe way.
+
+    Args:
+        provider: The provider instance exposing the formatting method.
+        messages: The list of pre-converted message dictionaries.
+        tools: Optional list of tool definitions to inject into the prompt.
+
+    Returns:
+        str: The formatted prompt string.
+
+    Raises:
+        TypeError: If the underlying method is missing, not callable, or
+            returns a value that is not a string.
+    """
+    method: object = getattr(provider, _ATTR_FORMAT_PROMPT)
+    if not callable(method):
+        msg = f"{_ATTR_FORMAT_PROMPT} is not callable"
+        raise TypeError(msg)
+    result: object = method(messages, tools)
+    if not isinstance(result, str):
+        msg = f"Expected str result, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def _parse_tool_calls_via(response: str) -> list[ToolCall] | None:
+    """Invoke the provider's protected ``_parse_tool_calls`` static method.
+
+    Args:
+        response: The raw model response to parse.
+
+    Returns:
+        list[ToolCall] | None: Parsed tool calls, or None if no tool call was present.
+
+    Raises:
+        TypeError: If the underlying method is missing, not callable, or
+            returns a value that is neither None nor a list of ToolCall objects.
+    """
+    method: object = getattr(LocalTransformersProvider, _ATTR_PARSE_TOOL_CALLS)
+    if not callable(method):
+        msg = f"{_ATTR_PARSE_TOOL_CALLS} is not callable"
+        raise TypeError(msg)
+    result: object = method(response)
+    if result is None:
+        return None
+    if not isinstance(result, list):
+        msg = f"Expected list or None, got {type(result).__name__}"
+        raise TypeError(msg)
+    validated: list[ToolCall] = []
+    for item in cast("list[object]", result):
+        if not isinstance(item, ToolCall):
+            msg = f"Expected ToolCall items, got {type(item).__name__}"
+            raise TypeError(msg)
+        validated.append(item)
+    return validated
+
+
+def _extract_text_before_tool_call_via(response: str) -> str:
+    """Invoke the provider's protected ``_extract_text_before_tool_call`` static method.
+
+    Args:
+        response: The raw model response to extract text from.
+
+    Returns:
+        str: The text appearing before any tool call JSON.
+
+    Raises:
+        TypeError: If the underlying method is missing, not callable, or
+            returns a value that is not a string.
+    """
+    method: object = getattr(LocalTransformersProvider, _ATTR_EXTRACT_TEXT_BEFORE_TOOL_CALL)
+    if not callable(method):
+        msg = f"{_ATTR_EXTRACT_TEXT_BEFORE_TOOL_CALL} is not callable"
+        raise TypeError(msg)
+    result: object = method(response)
+    if not isinstance(result, str):
+        msg = f"Expected str result, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def _iter_model_parameters(loaded: LoadedModel) -> Iterator[torch.nn.Parameter]:
+    """Iterate over the model's torch Parameters in a type-safe way.
+
+    HuggingFace ``PreTrainedModel`` stubs do not surface ``parameters``, so
+    this helper narrows the model object to ``torch.nn.Module`` via
+    ``isinstance`` and returns the typed iterator that ``torch.nn.Module``
+    declares.
+
+    Args:
+        loaded: The loaded model whose parameters should be iterated.
+
+    Yields:
+        Iterator[torch.nn.Parameter]: Iterator of torch Parameter tensors.
+
+    Raises:
+        TypeError: If the loaded model is not a torch.nn.Module instance.
+    """
+    import torch as _torch
+
+    model_obj: object = loaded.model
+    if not isinstance(model_obj, _torch.nn.Module):
+        msg = f"Expected torch.nn.Module, got {type(model_obj).__name__}"
+        raise TypeError(msg)
+    yield from model_obj.parameters()
+
+
+def _tokenizer_encode(tokenizer: PreTrainedTokenizerBase, text: str) -> list[int]:
+    """Encode ``text`` into token IDs using the tokenizer in a type-safe way.
+
+    Args:
+        tokenizer: The HuggingFace tokenizer to use.
+        text: Text to encode.
+
+    Returns:
+        list[int]: Encoded token IDs.
+
+    Raises:
+        TypeError: If the tokenizer lacks a callable ``encode`` attribute or
+            the returned value is not a list of integers.
+    """
+    encode_fn: object = getattr(tokenizer, _ATTR_TOKENIZER_ENCODE)
+    if not callable(encode_fn):
+        msg = "tokenizer.encode is not callable"
+        raise TypeError(msg)
+    result: object = encode_fn(text)
+    if not isinstance(result, list):
+        msg = f"Expected list of token ids, got {type(result).__name__}"
+        raise TypeError(msg)
+    validated: list[int] = []
+    for token in cast("list[object]", result):
+        if not isinstance(token, int):
+            msg = f"Expected int token ids, got {type(token).__name__}"
+            raise TypeError(msg)
+        validated.append(token)
+    return validated
+
+
+def _tokenizer_decode(
+    tokenizer: PreTrainedTokenizerBase,
+    token_ids: list[int],
+    *,
+    skip_special_tokens: bool = True,
+) -> str:
+    """Decode token IDs back to text using the tokenizer in a type-safe way.
+
+    Args:
+        tokenizer: The HuggingFace tokenizer to use.
+        token_ids: Token IDs to decode.
+        skip_special_tokens: Whether to skip special tokens during decoding.
+
+    Returns:
+        str: Decoded text.
+
+    Raises:
+        TypeError: If the tokenizer lacks a callable ``decode`` attribute or
+            the returned value is not a string.
+    """
+    decode_fn: object = getattr(tokenizer, _ATTR_TOKENIZER_DECODE)
+    if not callable(decode_fn):
+        msg = "tokenizer.decode is not callable"
+        raise TypeError(msg)
+    result: object = decode_fn(token_ids, skip_special_tokens=skip_special_tokens)
+    if not isinstance(result, str):
+        msg = f"Expected str, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
 
 
 @pytest.fixture(scope="session")
@@ -349,7 +617,7 @@ class TestModelLoadingOntoXPU:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
         assert loaded.model_id == tinyllama_model_id
         assert loaded.device.type == "xpu"
@@ -363,9 +631,9 @@ class TestModelLoadingOntoXPU:
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
-        for param in loaded.model.parameters():
+        for param in _iter_model_parameters(loaded):
             assert param.device.type == "xpu"
 
     async def test_dtype_is_float16_or_bf16(
@@ -377,7 +645,7 @@ class TestModelLoadingOntoXPU:
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
         assert loaded.dtype in {"float16", "bfloat16"}
 
@@ -390,11 +658,11 @@ class TestModelLoadingOntoXPU:
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
         text = "Hello world"
-        token_ids = loaded.tokenizer.encode(text)
-        decoded = loaded.tokenizer.decode(token_ids, skip_special_tokens=True)
+        token_ids = _tokenizer_encode(loaded.tokenizer, text)
+        decoded = _tokenizer_decode(loaded.tokenizer, token_ids, skip_special_tokens=True)
         assert "Hello" in decoded
         assert "world" in decoded
 
@@ -407,7 +675,7 @@ class TestModelLoadingOntoXPU:
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
         assert loaded.load_time_seconds > 0
 
@@ -819,9 +1087,9 @@ class TestCPUFallbackInference:
         Args:
             loaded_cpu_provider: CPU provider with model loaded.
         """
-        loaded = loaded_cpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_cpu_provider)
         assert loaded is not None
-        for param in loaded.model.parameters():
+        for param in _iter_model_parameters(loaded):
             assert param.device.type == "cpu"
 
 
@@ -846,9 +1114,9 @@ class TestModelCacheLifecycle:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
-        cache = loaded_xpu_provider._model_cache
+        cache = _get_model_cache(loaded_xpu_provider)
         result = cache.get(loaded.model_id, loaded.dtype, loaded.device.type)
         assert result is not None
         assert result.model_id == tinyllama_model_id
@@ -862,9 +1130,9 @@ class TestModelCacheLifecycle:
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
         """
-        loaded = loaded_xpu_provider._loaded_model
+        loaded = _get_loaded_model(loaded_xpu_provider)
         assert loaded is not None
-        cache = loaded_xpu_provider._model_cache
+        cache = _get_model_cache(loaded_xpu_provider)
         result1 = cache.get(loaded.model_id, loaded.dtype, loaded.device.type)
         result2 = cache.get(loaded.model_id, loaded.dtype, loaded.device.type)
         assert result1 is result2
@@ -950,10 +1218,8 @@ class TestPromptFormatting:
             loaded_xpu_provider: XPU provider with model loaded.
         """
         messages = _make_messages("Hello")
-        formatted = loaded_xpu_provider._convert_messages_to_provider_format(
-            messages,
-        )
-        prompt = loaded_xpu_provider._format_prompt(formatted)
+        formatted = _convert_messages_via(loaded_xpu_provider, messages)
+        prompt = _format_prompt_via(loaded_xpu_provider, formatted)
         assert len(prompt) > 0
         assert "Hello" in prompt
 
@@ -978,10 +1244,8 @@ class TestPromptFormatting:
                 timestamp=datetime.now(tz=UTC),
             ),
         ]
-        formatted = loaded_xpu_provider._convert_messages_to_provider_format(
-            messages,
-        )
-        prompt = loaded_xpu_provider._format_prompt(formatted)
+        formatted = _convert_messages_via(loaded_xpu_provider, messages)
+        prompt = _format_prompt_via(loaded_xpu_provider, formatted)
         assert "binary analysis assistant" in prompt
 
     async def test_tool_schema_injected_into_prompt(
@@ -995,10 +1259,8 @@ class TestPromptFormatting:
         """
         messages = _make_messages("Use a tool")
         tools = _make_test_tool()
-        formatted = loaded_xpu_provider._convert_messages_to_provider_format(
-            messages,
-        )
-        prompt = loaded_xpu_provider._format_prompt(formatted, tools)
+        formatted = _convert_messages_via(loaded_xpu_provider, messages)
+        prompt = _format_prompt_via(loaded_xpu_provider, formatted, tools)
         assert "binary.get_file_size" in prompt
 
 
@@ -1008,23 +1270,22 @@ class TestToolCallParsing:
     def test_parse_valid_tool_call_json(self) -> None:
         """Valid tool call JSON should parse into a ToolCall list."""
         response = '{"tool_call": {"name": "binary.get_file_size", "arguments": {"path": "test.exe"}}}'
-        result = LocalTransformersProvider._parse_tool_calls(response)
+        result = _parse_tool_calls_via(response)
         assert result is not None
         assert len(result) == 1
-        assert isinstance(result[0], ToolCall)
         assert result[0].function_name == "binary.get_file_size"
         assert result[0].arguments["path"] == "test.exe"
 
     def test_parse_no_tool_call(self) -> None:
         """Plain text without tool call JSON should return None."""
-        result = LocalTransformersProvider._parse_tool_calls(
+        result = _parse_tool_calls_via(
             "This is just plain text without any tool calls.",
         )
         assert result is None
 
     def test_parse_malformed_json_returns_none(self) -> None:
         """Truncated tool call JSON should return None."""
-        result = LocalTransformersProvider._parse_tool_calls(
+        result = _parse_tool_calls_via(
             '{"tool_call": {"name": "binary.get_file_size", "arguments": {"path":',
         )
         assert result is None
@@ -1032,7 +1293,7 @@ class TestToolCallParsing:
     def test_extract_text_before_tool_call(self) -> None:
         """Text preceding tool call JSON should be extracted correctly."""
         response = 'Here is the result. {"tool_call": {"name": "test", "arguments": {}}}'
-        text = LocalTransformersProvider._extract_text_before_tool_call(response)
+        text = _extract_text_before_tool_call_via(response)
         assert text == "Here is the result."
 
 
