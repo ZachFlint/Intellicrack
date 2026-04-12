@@ -396,7 +396,6 @@ lint.select = [
   "W",     # pycodestyle warnings
 ]
 lint.ignore = [
-  "D107",    # missing-docstring-in-__init__ (Google style documents at class level; pydoclint DOC301 disabled via allow-init-docstring=true)
   "E501",    # line-too-long
   "PLR0911", # too-many-return-statements
   "PLR0912", # too-many-branches
@@ -567,6 +566,7 @@ style = "google"
 arg-type-hints-in-docstring = false
 check-return-types = true
 check-yield-types = true
+allow-init-docstring = true
 
 [tool.deptry]
 known_first_party = [ "intellicrack" ]
@@ -935,8 +935,8 @@ ignore-semiprivate = false
 ignore-private = false
 ignore-property-decorators = false
 ignore-module = false
-ignore-nested-functions = true
-ignore-nested-classes = true
+ignore-nested-functions = false
+ignore-nested-classes = false
 fail-under = 0
 style = "google"
 verbose = 2
