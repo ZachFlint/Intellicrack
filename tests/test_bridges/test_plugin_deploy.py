@@ -69,7 +69,11 @@ class TestFindPluginSourceViaDeployment:
 
     @staticmethod
     def test_finds_binary_in_bin_directory(tmp_path: Path) -> None:
-        """Deploy succeeds when source is in bin/ directory."""
+        """Deploy succeeds when source is in bin/ directory.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE, "bin")
 
@@ -79,7 +83,11 @@ class TestFindPluginSourceViaDeployment:
 
     @staticmethod
     def test_finds_binary_in_build_plugins(tmp_path: Path) -> None:
-        """Deploy succeeds when source is in build/plugins/."""
+        """Deploy succeeds when source is in build/plugins/.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
@@ -94,7 +102,11 @@ class TestFindPluginSourceViaDeployment:
 
     @staticmethod
     def test_finds_binary_in_build_release(tmp_path: Path) -> None:
-        """Deploy succeeds when source is in build/Release/."""
+        """Deploy succeeds when source is in build/Release/.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
@@ -107,7 +119,11 @@ class TestFindPluginSourceViaDeployment:
 
     @staticmethod
     def test_finds_binary_in_arch_specific_build(tmp_path: Path) -> None:
-        """Deploy succeeds when source is in build_x64/plugins/."""
+        """Deploy succeeds when source is in build_x64/plugins/.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
@@ -120,7 +136,11 @@ class TestFindPluginSourceViaDeployment:
 
     @staticmethod
     def test_finds_binary_in_arch_specific_release(tmp_path: Path) -> None:
-        """Deploy succeeds when source is in build_x32/Release/."""
+        """Deploy succeeds when source is in build_x32/Release/.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(
             tmp_path,
@@ -133,7 +153,11 @@ class TestFindPluginSourceViaDeployment:
 
     @staticmethod
     def test_priority_bin_over_build(tmp_path: Path) -> None:
-        """Prefer bin/ over build/plugins/ when both exist."""
+        """Prefer bin/ over build/plugins/ when both exist.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\x01" * 64, "bin")
         _make_plugin_source(
@@ -154,20 +178,32 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_returns_false_when_plugin_dir_missing(tmp_path: Path) -> None:
-        """Return False when x64dbg_plugin directory does not exist."""
+        """Return False when x64dbg_plugin directory does not exist.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         assert deploy_x64dbg_plugin(x64dbg, tmp_path) is False
 
     @staticmethod
     def test_returns_false_when_no_binaries_exist(tmp_path: Path) -> None:
-        """Return False when plugin directory exists but has no binaries."""
+        """Return False when plugin directory exists but has no binaries.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         (tmp_path / "x64dbg_plugin").mkdir()
         assert deploy_x64dbg_plugin(x64dbg, tmp_path) is False
 
     @staticmethod
     def test_deploys_dp64_binary(tmp_path: Path) -> None:
-        """Deploy a .dp64 binary to x64 plugins directory."""
+        """Deploy a .dp64 binary to x64 plugins directory.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
@@ -180,7 +216,11 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_deploys_dp32_binary(tmp_path: Path) -> None:
-        """Deploy a .dp32 binary to x32 plugins directory."""
+        """Deploy a .dp32 binary to x32 plugins directory.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", DUMMY_PE_32)
 
@@ -193,7 +233,11 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_deploys_both_architectures(tmp_path: Path) -> None:
-        """Deploy both x64 and x32 plugins when both sources exist."""
+        """Deploy both x64 and x32 plugins when both sources exist.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", DUMMY_PE_32)
@@ -206,7 +250,11 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_skips_copy_when_target_is_newer(tmp_path: Path) -> None:
-        """Skip copy when the target file has a newer mtime than source."""
+        """Skip copy when the target file has a newer mtime than source.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 
@@ -222,7 +270,11 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_overwrites_when_source_is_newer(tmp_path: Path) -> None:
-        """Overwrite target when source has a newer mtime."""
+        """Overwrite target when source has a newer mtime.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
 
         target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
@@ -238,7 +290,11 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_creates_plugins_directory_if_missing(tmp_path: Path) -> None:
-        """Create the plugins directory when it does not yet exist."""
+        """Create the plugins directory when it does not yet exist.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
         x64dbg = tmp_path / "x64dbg"
         x64dbg.mkdir()
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
@@ -253,7 +309,12 @@ class TestDeployX64dbgPlugin:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Return False and log warning when copy raises OSError."""
+        """Return False and log warning when copy raises OSError.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+            monkeypatch: Pytest monkeypatch fixture used to stub ``shutil.copy2`` with a failing replacement.
+        """
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", DUMMY_PE)
 

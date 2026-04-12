@@ -305,7 +305,11 @@ class TestDetectC2Patterns:
         self,
         sample_network_activity: list[NetworkActivity],
     ) -> None:
-        """Full sample data should trigger multiple pattern types."""
+        """Full sample data should trigger multiple pattern types.
+
+        Args:
+            sample_network_activity: Network-activity fixture with beaconing, DGA, C2, exfil, and normal traffic.
+        """
         patterns = detect_c2_patterns(sample_network_activity)
         pattern_types = {p["pattern_type"] for p in patterns}
         assert len(pattern_types) >= 2
@@ -315,7 +319,11 @@ class TestExtractIOCs:
     """Verify IOC extraction logic."""
 
     def test_empty_report(self, empty_report: ExecutionReport) -> None:
-        """Empty report returns empty IOC list."""
+        """Empty report returns empty IOC list.
+
+        Args:
+            empty_report: ExecutionReport fixture with empty activity lists.
+        """
         iocs = extract_iocs(empty_report)
         assert iocs == []
 
@@ -470,7 +478,11 @@ class TestExtractIOCs:
         assert len(ips) >= 2
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report produces multiple IOC types."""
+        """Full sample report produces multiple IOC types.
+
+        Args:
+            sample_report: ExecutionReport fixture populated with all sample data.
+        """
         iocs = extract_iocs(sample_report)
         ioc_types = {i["ioc_type"] for i in iocs}
         assert len(ioc_types) >= 2
@@ -480,7 +492,11 @@ class TestGenerateTimeline:
     """Verify timeline generation from execution reports."""
 
     def test_empty_report(self, empty_report: ExecutionReport) -> None:
-        """Empty report returns empty timeline."""
+        """Empty report returns empty timeline.
+
+        Args:
+            empty_report: ExecutionReport fixture with empty activity lists.
+        """
         events = generate_timeline(empty_report)
         assert events == []
 
@@ -649,7 +665,11 @@ class TestGenerateTimeline:
         assert "(Default)" in events[0]["summary"]
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report produces events from multiple categories."""
+        """Full sample report produces events from multiple categories.
+
+        Args:
+            sample_report: ExecutionReport fixture populated with all sample data.
+        """
         events = generate_timeline(sample_report)
         categories = {e["category"] for e in events}
         assert len(categories) >= 5
@@ -659,7 +679,11 @@ class TestMatchBehaviors:
     """Verify behavioral signature matching."""
 
     def test_clean_report(self, empty_report: ExecutionReport) -> None:
-        """Clean report produces no matches."""
+        """Clean report produces no matches.
+
+        Args:
+            empty_report: ExecutionReport fixture with empty activity lists.
+        """
         matches = match_behaviors(empty_report)
         assert matches == []
 
@@ -742,7 +766,11 @@ class TestMatchBehaviors:
         assert len(sleep) >= 1
 
     def test_beaconing_c2(self, sample_network_activity: list[NetworkActivity]) -> None:
-        """Beaconing pattern in network data triggers C2 match."""
+        """Beaconing pattern in network data triggers C2 match.
+
+        Args:
+            sample_network_activity: Network-activity fixture with beaconing, DGA, C2, exfil, and normal traffic.
+        """
         report = make_sample_report(network_activity=sample_network_activity)
         matches = match_behaviors(report)
         c2 = [m for m in matches if m["category"] == "Command and Control"]
@@ -885,7 +913,11 @@ class TestMatchBehaviors:
         assert not any(m["signature_name"] == "No Match" for m in matches)
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report matches multiple MITRE categories."""
+        """Full sample report matches multiple MITRE categories.
+
+        Args:
+            sample_report: ExecutionReport fixture populated with all sample data.
+        """
         matches = match_behaviors(sample_report)
         categories = {m["category"] for m in matches}
         assert len(categories) >= 3
@@ -979,7 +1011,12 @@ class TestDiffReports:
         assert result["scalars"]["duration_seconds"]["b"] == 5.0
 
     def test_full_sample_diff(self, sample_report: ExecutionReport, empty_report: ExecutionReport) -> None:
-        """Diffing full vs empty report puts everything in unique_to_a."""
+        """Diffing full vs empty report puts everything in unique_to_a.
+
+        Args:
+            sample_report: ExecutionReport fixture populated with all sample data.
+            empty_report: ExecutionReport fixture with empty activity lists.
+        """
         result = diff_reports(sample_report, empty_report)
         assert len(result["file_changes"]["unique_to_a"]) > 0
         assert len(result["file_changes"]["unique_to_b"]) == 0

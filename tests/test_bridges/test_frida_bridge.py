@@ -430,7 +430,7 @@ def unattached_bridge() -> Generator[FridaBridge]:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_enumerate_processes(unattached_bridge: FridaBridge) -> None:
     """Verify enumerate_processes returns real running processes.
-    
+
     Args:
         unattached_bridge: Bridge fixture created without a process attached.
     """
@@ -444,11 +444,11 @@ def test_enumerate_processes(unattached_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_enumerate_devices(unattached_bridge: FridaBridge) -> None:
     """Verify enumerate_devices returns at least the local device.
-    
+
     Args:
         unattached_bridge: Bridge fixture created without a process attached.
     """
-    result: list[FridaDeviceInfo] = _run_async(unattached_bridge.enumerate_devices())
+    result = cast("list[FridaDeviceInfo]", _run_async(unattached_bridge.enumerate_devices()))
     assert len(result) >= 1
     local_found = False
     for dev in result:
@@ -462,22 +462,23 @@ def test_enumerate_devices(unattached_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_connect_device_local(unattached_bridge: FridaBridge) -> None:
     """Verify connecting to local device succeeds.
-    
+
     Args:
         unattached_bridge: Bridge fixture created without a process attached.
     """
-    result: FridaDeviceInfo = _run_async(unattached_bridge.connect_device("local"))
+    result = _run_async(unattached_bridge.connect_device("local"))
+    assert isinstance(result, FridaDeviceInfo)
     assert result.device_type == "local"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_enumerate_threads(frida_bridge: FridaBridge) -> None:
     """Verify enumerate_threads returns multiple real threads from notepad.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    result: list[ThreadInfo] = _run_async(frida_bridge.enumerate_threads())
+    result = cast("list[ThreadInfo]", _run_async(frida_bridge.enumerate_threads()))
     assert len(result) >= 2, f"notepad should have multiple threads, got {len(result)}"
     tids: set[int] = set()
     for thread in result:
@@ -490,11 +491,11 @@ def test_enumerate_threads(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_enumerate_imports_kernel32(frida_bridge: FridaBridge) -> None:
     """Verify enumerate_imports returns real imports from kernel32.dll.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    result: list[ImportInfo] = _run_async(frida_bridge.enumerate_imports("kernel32.dll"))
+    result = cast("list[ImportInfo]", _run_async(frida_bridge.enumerate_imports("kernel32.dll")))
     assert len(result) >= _KERNEL32_MIN_IMPORTS, f"kernel32 should have many imports, got {len(result)}"
     resolved_count = 0
     seen_functions: set[str] = set()
@@ -512,11 +513,12 @@ def test_enumerate_imports_kernel32(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_find_base_address_ntdll(frida_bridge: FridaBridge) -> None:
     """Verify find_base_address returns ntdll.dll base in high address range.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    result: int = _run_async(frida_bridge.find_base_address("ntdll.dll"))
+    result = _run_async(frida_bridge.find_base_address("ntdll.dll"))
+    assert isinstance(result, int)
     assert result >= _NTDLL_BASE_MIN, f"ntdll base 0x{result:X} should be in high system DLL range (>= 0x{_NTDLL_BASE_MIN:X})"
     assert result % 0x10000 == 0, f"base 0x{result:X} must be 64KB-aligned (PE section alignment)"
 
@@ -524,12 +526,13 @@ def test_find_base_address_ntdll(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_find_base_address_kernel32(frida_bridge: FridaBridge) -> None:
     """Verify find_base_address returns kernel32.dll base, distinct from ntdll.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    k32_base: int = _run_async(frida_bridge.find_base_address("kernel32.dll"))
-    ntdll_base: int = _run_async(frida_bridge.find_base_address("ntdll.dll"))
+    k32_base = _run_async(frida_bridge.find_base_address("kernel32.dll"))
+    ntdll_base = _run_async(frida_bridge.find_base_address("ntdll.dll"))
+    assert isinstance(k32_base, int)
     assert k32_base >= _NTDLL_BASE_MIN, f"kernel32 base 0x{k32_base:X} should be in high system DLL range"
     assert k32_base % 0x10000 == 0, f"base 0x{k32_base:X} must be 64KB-aligned"
     assert k32_base != ntdll_base, "kernel32 and ntdll must have different bases"
@@ -538,7 +541,7 @@ def test_find_base_address_kernel32(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_get_memory_regions(frida_bridge: FridaBridge) -> None:
     """Verify get_memory_regions returns real memory layout with executable regions.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -562,11 +565,11 @@ def test_get_memory_regions(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_resolve_api_createfile(frida_bridge: FridaBridge) -> None:
     """Verify resolve_api finds CreateFileW in kernel32.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    result: list[ApiResolverMatch] = _run_async(frida_bridge.resolve_api("exports:*!CreateFileW"))
+    result = cast("list[ApiResolverMatch]", _run_async(frida_bridge.resolve_api("exports:*!CreateFileW")))
     assert len(result) >= 1
     found = False
     for api_match in result:
@@ -579,11 +582,14 @@ def test_resolve_api_createfile(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_resolve_symbol(frida_bridge: FridaBridge) -> None:
     """Verify resolve_symbol resolves a known function address to its symbol.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    matches: list[ApiResolverMatch] = _run_async(frida_bridge.resolve_api("exports:ntdll.dll!NtCreateFile"))
+    matches = cast(
+        "list[ApiResolverMatch]",
+        _run_async(frida_bridge.resolve_api("exports:ntdll.dll!NtCreateFile")),
+    )
     assert len(matches) >= 1, "NtCreateFile must exist in ntdll"
     func_addr = matches[0].address
     result: SymbolInfo = _run_async(frida_bridge.resolve_symbol(func_addr))
@@ -596,11 +602,11 @@ def test_resolve_symbol(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_find_functions_named(frida_bridge: FridaBridge) -> None:
     """Verify find_functions_named locates NtCreateFile in ntdll.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
-    result: list[SymbolInfo] = _run_async(frida_bridge.find_functions_named("NtCreateFile"))
+    result = cast("list[SymbolInfo]", _run_async(frida_bridge.find_functions_named("NtCreateFile")))
     assert len(result) >= 1, "NtCreateFile must exist in ntdll on every Windows system"
     sym = result[0]
     assert sym.address >= _NTDLL_BASE_MIN, f"NtCreateFile address 0x{sym.address:X} should be in system DLL range"
@@ -610,7 +616,7 @@ def test_find_functions_named(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_allocate_memory(frida_bridge: FridaBridge) -> None:
     """Verify allocate_memory returns writable memory at a valid address.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -625,7 +631,7 @@ def test_allocate_memory(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_protect_memory(frida_bridge: FridaBridge) -> None:
     """Verify protect_memory succeeds on allocated memory.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -637,7 +643,7 @@ def test_protect_memory(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_read_write_memory_roundtrip(frida_bridge: FridaBridge) -> None:
     """Verify memory write then read returns the same bytes.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -653,7 +659,7 @@ def test_read_write_memory_roundtrip(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_hook_and_remove(frida_bridge: FridaBridge) -> None:
     """Verify hook_function creates a hook and remove_hook removes it.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -671,7 +677,7 @@ def test_stalker_follow_and_unfollow(
     worker_thread: int,
 ) -> None:
     """Verify stalker_follow collects real call events from a busy worker thread.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
         worker_thread: Thread id of a live worker that generates call events during the trace window.
@@ -699,7 +705,7 @@ def test_stalker_follow_and_unfollow(
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_child_gating_not_supported_on_windows(frida_bridge: FridaBridge) -> None:
     """Verify child gating raises ToolError on Windows (not supported by Frida).
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -710,7 +716,7 @@ def test_child_gating_not_supported_on_windows(frida_bridge: FridaBridge) -> Non
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_get_pending_children_empty(frida_bridge: FridaBridge) -> None:
     """Verify get_pending_children returns typed empty list when gating not active.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -721,7 +727,7 @@ def test_get_pending_children_empty(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_crash_reporting_lifecycle(frida_bridge: FridaBridge) -> None:
     """Verify enable_crash_reporting succeeds and get_crashes returns typed list.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
@@ -739,10 +745,10 @@ def test_enumerate_processes_contains_notepad(
     notepad_process: subprocess.Popen[bytes],
 ) -> None:
     """Verify our spawned notepad shows up in the process list.
-    
+
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
-        notepad_process: Handle to the notepad subprocess whose PID is expected to appear in the listing.
+        notepad_process: Handle to the spawned notepad subprocess whose PID must appear in the listing.
     """
     result: list[FridaProcessEntry] = _run_async(frida_bridge.enumerate_processes())
     pids = {p.pid for p in result}

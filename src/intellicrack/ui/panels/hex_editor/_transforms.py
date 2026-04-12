@@ -73,7 +73,8 @@ class TransformsMixin:
     _selection_start: int
     _selection_end: int
 
-    def _on_data_changed(self) -> None: ...
+    def _on_data_changed(self) -> None:
+        """Handle document data-change signals by refreshing derived views."""
 
     def _create_transforms_tab(self) -> QWidget:
         """Create the Transforms side panel tab widget.

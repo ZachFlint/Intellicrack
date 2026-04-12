@@ -46,7 +46,12 @@ class DisassemblyMixin:
     _disasm_follow_cursor: QCheckBox | None
     _disasm_table: QTableWidget | None
 
-    def goto_offset(self, offset: int) -> None: ...
+    def goto_offset(self, offset: int) -> None:
+        """Navigate the hex widget to the given byte offset.
+
+        Args:
+            offset: Absolute byte offset within the active document.
+        """
 
     def _create_disassembly_tab(self) -> QWidget:
         """Create the Disassembly side panel tab widget.
