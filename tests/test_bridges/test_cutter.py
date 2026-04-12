@@ -29,14 +29,15 @@ import asyncio
 import inspect
 import os
 from pathlib import Path
-from typing import Final
+from typing import Final, cast
 from unittest.mock import patch
 
 import pytest
+import r2pipe
 
 from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.core.types import ToolError, ToolName
-from intellicrack.ui.panels.cutter_panel import _perm_to_rwx
+from intellicrack.ui.panels.cutter_panel import perm_to_rwx
 
 
 _EXPECTED_TOOL_FUNC_COUNT: Final[int] = 80
@@ -47,8 +48,13 @@ _MIN_DESC_LEN: Final[int] = 5
 class _CommandRecorder:
     """r2pipe stand-in that records commands and returns configurable JSON.
 
-    Captures every command sent through `cmd()` so tests can verify
-    the exact Rizin commands the bridge constructs.
+    Captures every command sent through ``cmd()`` so tests can verify the
+    exact Rizin commands the bridge constructs.
+
+    Attributes:
+        commands: Running list of every command string passed to ``cmd()``.
+        responses: Mapping of command prefix to response string used by
+            ``cmd()`` to select a canned reply.
 
     Attributes:
         commands: Running list of every command string passed to ``cmd()``.
@@ -56,9 +62,9 @@ class _CommandRecorder:
             ``cmd()`` to select a canned reply.
 
     Args:
-        responses: Mapping of command prefix to response string.
-            If a command starts with a key, the corresponding value
-            is returned.  Falls back to empty string.
+        responses: Mapping of command prefix to response string.  If a
+            command starts with a key, the corresponding value is returned.
+            Falls back to empty string.
     """
 
     commands: list[str]
@@ -69,13 +75,14 @@ class _CommandRecorder:
         self.responses = responses or {}
 
     def cmd(self, command: str) -> str:
-        """Record command and return configured response.
+        """Record ``command`` and return the configured response.
 
         Args:
-            command: The r2 command.
+            command: The r2 command string issued by the bridge.
 
         Returns:
-            str: Configured response or empty string.
+            str: Configured response for the longest matching prefix, or
+            an empty string when no configured prefix matches.
         """
         self.commands.append(command)
         for prefix, response in self.responses.items():
@@ -84,17 +91,17 @@ class _CommandRecorder:
         return ""
 
     def quit(self) -> None:
-        """No-op quit for test cleanup."""
+        """No-op ``quit`` for test cleanup."""
 
 
 class _FailingQuitR2:
-    """r2pipe stand-in whose quit() raises RuntimeError."""
+    """r2pipe stand-in whose ``quit()`` raises ``RuntimeError``."""
 
     def cmd(self, _command: str) -> str:
-        """Return empty.
+        """Return an empty response regardless of the command.
 
         Args:
-            _command: Ignored.
+            _command: Ignored command string.
 
         Returns:
             str: Empty string.
@@ -102,13 +109,34 @@ class _FailingQuitR2:
         return ""
 
     def quit(self) -> None:
-        """Raise RuntimeError to simulate dead session.
+        """Raise ``RuntimeError`` to simulate a dead session.
 
         Raises:
             RuntimeError: Always.
         """
         msg = "broken pipe"
         raise RuntimeError(msg)
+
+
+def _as_r2pipe(double: _CommandRecorder | _FailingQuitR2) -> r2pipe.open:
+    """Cast a test double to the ``r2pipe.open`` type.
+
+    Runtime invariant: ``_CommandRecorder`` and ``_FailingQuitR2`` implement
+    the exact subset of the ``r2pipe.open`` interface that ``CutterBridge``
+    consumes -- ``cmd(str) -> str`` and ``quit() -> None``.  The bridge
+    never accesses any other r2pipe member in production, so these test
+    doubles are duck-type equivalents for assignment to ``bridge.r2``.
+    Centralising the cast here keeps the invariant documented in one
+    place rather than scattered across every call site.
+
+    Args:
+        double: Test double that duck-types the ``r2pipe.open`` interface.
+
+    Returns:
+        r2pipe.open: The same instance, typed as ``r2pipe.open`` for the
+        bridge's setter signature.
+    """
+    return cast(r2pipe.open, double)
 
 
 @pytest.fixture
@@ -160,10 +188,8 @@ def loaded_bridge(recorder: _CommandRecorder) -> CutterBridge:
     Returns:
         CutterBridge: Bridge ready for method calls.
     """
-    import asyncio
-
     b = CutterBridge()
-    b.r2 = recorder
+    b.r2 = _as_r2pipe(recorder)
     asyncio.get_event_loop().run_until_complete(b.analyze())
     recorder.commands.clear()
     return b
@@ -196,9 +222,9 @@ class TestBridgeInstantiation:
     def test_r2_property_settable(self) -> None:
         """Verify the public r2 property setter works."""
         bridge = CutterBridge()
-        rec = _CommandRecorder()
-        bridge.r2 = rec
-        assert bridge.r2 is rec
+        typed_rec = _as_r2pipe(_CommandRecorder())
+        bridge.r2 = typed_rec
+        assert bridge.r2 is typed_rec
 
 
 class TestCapabilities:
@@ -659,7 +685,7 @@ class TestAssembleAt:
         """
         recorder.responses["pa"] = "90"
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
         await b.assemble_at(0x401000, "nop")
@@ -680,7 +706,7 @@ class TestAssembleAt:
         """
         recorder.responses["pa"] = "90"
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
         await b.assemble_at(0x1000, "nop")
@@ -702,7 +728,7 @@ class TestAssembleAt:
         """
         recorder.responses["pa"] = "9090"
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
         result = await b.assemble_at(0x1000, "nop; nop")
@@ -720,7 +746,7 @@ class TestAssembleAt:
         """
         recorder.responses["pa"] = "Cannot assemble"
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
         with pytest.raises(ToolError, match="failed to assemble"):
@@ -833,7 +859,7 @@ class TestShutdownCleanup:
     async def test_nulls_r2_on_success(self) -> None:
         """Verify r2 is None after successful shutdown."""
         bridge = CutterBridge()
-        bridge.r2 = _CommandRecorder()
+        bridge.r2 = _as_r2pipe(_CommandRecorder())
         await bridge.shutdown()
         assert bridge.r2 is None
 
@@ -841,7 +867,7 @@ class TestShutdownCleanup:
     async def test_nulls_r2_on_quit_failure(self) -> None:
         """Verify r2 is None even when quit() raises during shutdown."""
         bridge = CutterBridge()
-        bridge.r2 = _FailingQuitR2()
+        bridge.r2 = _as_r2pipe(_FailingQuitR2())
         await bridge.shutdown()
         assert bridge.r2 is None
 
@@ -849,7 +875,7 @@ class TestShutdownCleanup:
     async def test_does_not_propagate_quit_error(self) -> None:
         """Verify quit() RuntimeError is caught by shutdown, not propagated."""
         bridge = CutterBridge()
-        bridge.r2 = _FailingQuitR2()
+        bridge.r2 = _as_r2pipe(_FailingQuitR2())
         await bridge.shutdown()
 
     @pytest.mark.asyncio
@@ -922,7 +948,7 @@ class TestMethodsRequireAnalysis:
             CutterBridge: Bridge with binary loaded but not analyzed.
         """
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         return b
 
     @pytest.mark.asyncio
@@ -996,7 +1022,7 @@ class TestGetExportsOrdinal:
             "iEj": '[{"name":"Export1","vaddr":4096,"ordinal":42}]',
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         await b.analyze()
         exports = await b.get_exports()
         assert len(exports) == 1
@@ -1009,7 +1035,7 @@ class TestGetExportsOrdinal:
             "iEj": '[{"name":"Export1","vaddr":4096}]',
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         await b.analyze()
         exports = await b.get_exports()
         assert len(exports) == 1
@@ -1017,39 +1043,39 @@ class TestGetExportsOrdinal:
 
 
 class TestPermToRwx:
-    """Verify _perm_to_rwx converts permission integers to rwx strings."""
+    """Verify perm_to_rwx converts permission integers to rwx strings."""
 
     def test_all_permissions(self) -> None:
         """Verify rwx for all-permissions (7)."""
-        assert _perm_to_rwx(7) == "rwx"
+        assert perm_to_rwx(7) == "rwx"
 
     def test_read_execute(self) -> None:
         """Verify r-x for read+execute (5)."""
-        assert _perm_to_rwx(5) == "r-x"
+        assert perm_to_rwx(5) == "r-x"
 
     def test_no_permissions(self) -> None:
         """Verify --- for no permissions (0)."""
-        assert _perm_to_rwx(0) == "---"
+        assert perm_to_rwx(0) == "---"
 
     def test_read_only(self) -> None:
         """Verify r-- for read-only (4)."""
-        assert _perm_to_rwx(4) == "r--"
+        assert perm_to_rwx(4) == "r--"
 
     def test_write_only(self) -> None:
         """Verify -w- for write-only (2)."""
-        assert _perm_to_rwx(2) == "-w-"
+        assert perm_to_rwx(2) == "-w-"
 
     def test_execute_only(self) -> None:
         """Verify --x for execute-only (1)."""
-        assert _perm_to_rwx(1) == "--x"
+        assert perm_to_rwx(1) == "--x"
 
     def test_read_write(self) -> None:
         """Verify rw- for read+write (6)."""
-        assert _perm_to_rwx(6) == "rw-"
+        assert perm_to_rwx(6) == "rw-"
 
     def test_write_execute(self) -> None:
         """Verify -wx for write+execute (3)."""
-        assert _perm_to_rwx(3) == "-wx"
+        assert perm_to_rwx(3) == "-wx"
 
 
 class TestExecuteCommand:
@@ -1079,11 +1105,28 @@ class TestExecuteCommand:
         """
         recorder.responses["?V"] = "5.9.4"
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
         result = await b.execute_command("?V")
         assert result == "5.9.4"
+
+
+class _MetadataProbeBridge(CutterBridge):
+    """Testing subclass exposing protected metadata extraction.
+
+    Subclasses may access protected members of their parent, so this
+    wrapper lets tests exercise ``_extract_binary_metadata`` without
+    accessing a protected method from outside the class hierarchy.
+    """
+
+    async def extract_metadata(self) -> tuple[str, str, int, int]:
+        """Expose the protected metadata extractor for tests.
+
+        Returns:
+            tuple[str, str, int, int]: Tuple of (file_type, arch, bits, entry_point).
+        """
+        return await self._extract_binary_metadata()
 
 
 class TestEntryPointBug:
@@ -1099,9 +1142,9 @@ class TestEntryPointBug:
             "iij": "[]",
             "iEj": "[]",
         })
-        b = CutterBridge()
-        b.r2 = rec
-        _, _, _, entry = await b._extract_binary_metadata()
+        b = _MetadataProbeBridge()
+        b.r2 = _as_r2pipe(rec)
+        _, _, _, entry = await b.extract_metadata()
         assert entry == 4198400
 
 
@@ -1119,7 +1162,7 @@ class TestSaveBinary:
             recorder: Command recorder fixture.
         """
         b = CutterBridge()
-        b.r2 = recorder
+        b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
         result = await b.save_binary("/tmp/output.exe")
@@ -1139,7 +1182,7 @@ class TestGetSymbols:
             "isj": '[{"name":"main","vaddr":4096,"libname":""}]',
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         symbols = await b.get_symbols()
         assert len(symbols) == 1
         assert symbols[0].name == "main"
@@ -1166,7 +1209,7 @@ class TestReadBytes:
             "p8": "48 8b 05",
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.read_bytes(0x1000, 3)
         assert isinstance(result, bytes)
 
@@ -1177,7 +1220,7 @@ class TestReadBytes:
             "p8": "90",
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         await b.read_bytes(0x1000, 1)
         p8_cmds = [c for c in rec.commands if c.startswith("p8")]
         assert len(p8_cmds) == 1
@@ -1195,7 +1238,7 @@ class TestGetFlags:
             "fj": '[{"name":"entry0","offset":4096,"size":1}]',
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         flags = await b.get_flags()
         assert len(flags) == 1
         assert flags[0].name == "entry0"
@@ -1211,7 +1254,7 @@ class TestAddFlag:
         """Verify add_flag sends the correct Rizin command."""
         rec = _CommandRecorder()
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.add_flag("test_flag", 4, 0x1000)
         assert result is True
         f_cmds = [c for c in rec.commands if c.startswith("f ")]
@@ -1230,7 +1273,7 @@ class TestGetComments:
             "CCj": '[{"offset":4096,"name":"test comment","type":"inline"}]',
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         comments = await b.get_comments()
         assert len(comments) == 1
         assert comments[0].address == 4096
@@ -1247,7 +1290,7 @@ class TestHexdump:
             "px": "- offset -   0 1  2 3\n0x00001000  9090 9090",
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.hexdump(0x1000, 128)
         assert isinstance(result, str)
         px_cmds = [c for c in rec.commands if c.startswith("px")]
@@ -1265,7 +1308,7 @@ class TestGetBasicBlocks:
             "afbj": '[{"addr":4096,"size":20,"jump":4116,"fail":null,"ops":[]}]',
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         blocks = await b.get_basic_blocks(0x1000)
         assert len(blocks) == 1
         assert blocks[0].address == 4096
@@ -1283,7 +1326,7 @@ class TestEsilOps:
             "ae": "0x42",
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.esil_eval("1,1,+")
         assert isinstance(result, str)
         ae_cmds = [c for c in rec.commands if c.startswith("ae ")]
@@ -1294,7 +1337,7 @@ class TestEsilOps:
         """Verify esil_init_memory sends aeim command."""
         rec = _CommandRecorder()
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.esil_init_memory()
         assert result is True
         assert "aeim" in rec.commands
@@ -1310,7 +1353,7 @@ class TestGetConfig:
             "e asm.arch": "x86",
         })
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.get_config("asm.arch")
         assert result == "x86"
 
@@ -1319,7 +1362,7 @@ class TestGetConfig:
         """Verify set_config sends e key=value command."""
         rec = _CommandRecorder()
         b = CutterBridge()
-        b.r2 = rec
+        b.r2 = _as_r2pipe(rec)
         result = await b.set_config("asm.arch", "arm")
         assert result is True
         e_cmds = [c for c in rec.commands if "asm.arch=arm" in c]

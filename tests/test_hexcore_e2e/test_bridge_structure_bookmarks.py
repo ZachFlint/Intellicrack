@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -24,7 +24,7 @@ hexcore_mod: Any = pytest.importorskip(
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
@@ -55,7 +55,7 @@ class TestPEStructureBookmarks:
             pe_binary_full: Path to a PE binary with full Optional Header.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        bookmarks = cast("list[dict[str, Any]]", _run(bridge.generate_structure_bookmarks()))
+        bookmarks = _run(bridge.generate_structure_bookmarks())
         labels = [b["label"] for b in bookmarks]
         assert any("DOS Header" in lbl for lbl in labels)
         assert any("PE Signature" in lbl for lbl in labels)
@@ -71,7 +71,7 @@ class TestPEStructureBookmarks:
             pe_binary_full: Path to a PE binary with full Optional Header.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        bookmarks = cast("list[dict[str, Any]]", _run(bridge.generate_structure_bookmarks()))
+        bookmarks = _run(bridge.generate_structure_bookmarks())
         assert bookmarks
         colors: set[str] = set()
         for bm in bookmarks:
@@ -92,7 +92,7 @@ class TestELFStructureBookmarks:
             elf_binary_with_loads: Path to an ELF binary with PT_LOAD segments.
         """
         _run(bridge.open_file(str(elf_binary_with_loads)))
-        bookmarks = cast("list[dict[str, Any]]", _run(bridge.generate_structure_bookmarks()))
+        bookmarks = _run(bridge.generate_structure_bookmarks())
         labels = [b["label"] for b in bookmarks]
         assert any("ELF Header" in lbl for lbl in labels)
         assert any("Program Header" in lbl for lbl in labels)
@@ -111,7 +111,7 @@ class TestStructureBookmarkEdgeCases:
         f = tmp_path / "random.bin"
         f.write_bytes(b"\x00" * 128)
         _run(bridge.open_file(str(f)))
-        bookmarks = cast("list[dict[str, Any]]", _run(bridge.generate_structure_bookmarks()))
+        bookmarks = _run(bridge.generate_structure_bookmarks())
         assert bookmarks == []
 
     def test_bookmarks_added_to_document(self, bridge: HexEditorBridge, pe_binary_full: Path) -> None:
@@ -122,9 +122,9 @@ class TestStructureBookmarkEdgeCases:
             pe_binary_full: Path to a PE binary with full Optional Header.
         """
         _run(bridge.open_file(str(pe_binary_full)))
-        generated = cast("list[dict[str, Any]]", _run(bridge.generate_structure_bookmarks()))
+        generated = _run(bridge.generate_structure_bookmarks())
         assert generated
-        doc_bookmarks = cast("list[Any]", _run(bridge.list_bookmarks()))
+        doc_bookmarks = _run(bridge.list_bookmarks())
         assert len(doc_bookmarks) >= len(generated)
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:

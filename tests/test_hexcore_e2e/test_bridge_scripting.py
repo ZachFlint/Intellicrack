@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,20 +18,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore_mod: Any = pytest.importorskip(
+pytest.importorskip(
     "intellicrack_hexcore",
     reason="intellicrack_hexcore native module not built",
 )
 
 
-def _run(coro: Coroutine[object, object, object]) -> object:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -57,7 +57,7 @@ class TestScriptOutput:
         f = tmp_path / "script.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script('print("hello")')))
+        result = _run(bridge.run_python_script('print("hello")'))
         assert result["output"] == "hello\n"
 
     def test_script_variables_returned(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -70,7 +70,7 @@ class TestScriptOutput:
         f = tmp_path / "script_vars.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script("x = 42")))
+        result = _run(bridge.run_python_script("x = 42"))
         assert "x" in result["variables"]
         assert "42" in result["variables"]["x"]
 
@@ -88,10 +88,7 @@ class TestScriptDocumentAccess:
         f = tmp_path / "script_read.bin"
         f.write_bytes(b"\xAA\xBB\xCC\xDD" + b"\x00" * 60)
         _run(bridge.open_file(str(f)))
-        result = cast(
-            "dict[str, Any]",
-            _run(bridge.run_python_script("data = doc.read(0, 4)\nprint(len(data))")),
-        )
+        result = _run(bridge.run_python_script("data = doc.read(0, 4)\nprint(len(data))"))
         assert "4" in result["output"]
 
     def test_script_doc_write(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -105,7 +102,7 @@ class TestScriptDocumentAccess:
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
         _run(bridge.run_python_script("doc.write(0, [0x90, 0x90])"))
-        result = cast(str, _run(bridge.read_bytes(0, 2)))
+        result = _run(bridge.read_bytes(0, 2))
         assert result.replace(" ", "").lower() == "9090"
 
     def test_script_doc_length(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -118,7 +115,7 @@ class TestScriptDocumentAccess:
         f = tmp_path / "script_len.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script("print(doc.length())")))
+        result = _run(bridge.run_python_script("print(doc.length())"))
         assert "64" in result["output"]
 
 
@@ -135,7 +132,7 @@ class TestScriptErrors:
         f = tmp_path / "script_syn.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script("def foo(")))
+        result = _run(bridge.run_python_script("def foo("))
         assert "SyntaxError" in result["error"]
 
     def test_script_runtime_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -148,7 +145,7 @@ class TestScriptErrors:
         f = tmp_path / "script_rt.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script("1/0")))
+        result = _run(bridge.run_python_script("1/0"))
         assert "ZeroDivisionError" in result["error"]
 
 
@@ -165,7 +162,7 @@ class TestScriptSandbox:
         f = tmp_path / "script_import.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script("import os")))
+        result = _run(bridge.run_python_script("import os"))
         assert result["error"]
 
     def test_script_eval_blocked(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -178,7 +175,7 @@ class TestScriptSandbox:
         f = tmp_path / "script_eval.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script('eval("1+1")')))
+        result = _run(bridge.run_python_script('eval("1+1")'))
         assert result["error"]
 
     def test_script_open_blocked(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -191,7 +188,7 @@ class TestScriptSandbox:
         f = tmp_path / "script_open.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = cast("dict[str, Any]", _run(bridge.run_python_script('open("test.txt")')))
+        result = _run(bridge.run_python_script('open("test.txt")'))
         assert result["error"]
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:

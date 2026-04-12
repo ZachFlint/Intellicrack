@@ -24,10 +24,10 @@ import os
 import sys
 from dataclasses import fields
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
+from intellicrack.bridges.base import WatchpointInfo
 from intellicrack.bridges.x64dbg import (
     X64DbgBridge,
     get_capstone,
@@ -38,10 +38,6 @@ from intellicrack.core.types import (
     ToolError,
     ToolName,
 )
-
-
-if TYPE_CHECKING:
-    from intellicrack.bridges.base import WatchpointInfo
 
 
 if sys.platform == "win32":
@@ -201,7 +197,7 @@ def test_watchpoint_storage(x64dbg_bridge: X64DbgBridge) -> None:
     }
     x64dbg_bridge.watchpoints[TEST_BP_ID_FIRST] = wp
     assert TEST_BP_ID_FIRST in x64dbg_bridge.watchpoints
-    assert x64dbg_bridge.watchpoints[TEST_BP_ID_FIRST]["address"] == TEST_ADDR_DATA_1
+    assert x64dbg_bridge.watchpoints[TEST_BP_ID_FIRST].address == TEST_ADDR_DATA_1
 
 
 def test_tool_definition_exists(x64dbg_bridge: X64DbgBridge) -> None:

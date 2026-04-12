@@ -51,7 +51,7 @@ def _make_test_tool() -> list[ToolDefinition]:
     """
     return [
         ToolDefinition(
-            tool_name=ToolName.BINARY,
+            tool_name=ToolName.GHIDRA,
             description="Binary analysis tools",
             functions=[
                 ToolFunction(
@@ -91,7 +91,11 @@ class TestToolChoiceRequired:
         self,
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Anthropic should return a tool call when tool_choice is REQUIRED."""
+        """Anthropic should return a tool call when tool_choice is REQUIRED.
+
+        Args:
+            anthropic_provider: Connected Anthropic provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("What is the size of notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)
@@ -111,7 +115,11 @@ class TestToolChoiceRequired:
         self,
         openai_provider: OpenAIProvider,
     ) -> None:
-        """OpenAI should not return tool calls when tool_choice is NONE."""
+        """OpenAI should not return tool calls when tool_choice is NONE.
+
+        Args:
+            openai_provider: Connected OpenAI provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("What is the size of notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.NONE)
@@ -129,7 +137,11 @@ class TestToolChoiceRequired:
         self,
         grok_provider: GrokProvider,
     ) -> None:
-        """Grok should return a tool call when tool_choice is REQUIRED."""
+        """Grok should return a tool call when tool_choice is REQUIRED.
+
+        Args:
+            grok_provider: Connected Grok provider fixture.
+        """
         tools = _make_test_tool()
         messages = _make_messages("What is the size of notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)

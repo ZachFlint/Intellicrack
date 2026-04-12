@@ -20,7 +20,7 @@ import socket
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from intellicrack.bridges.base import (
     BridgeCapabilities,
@@ -1943,12 +1943,19 @@ metadata
                 strings
             """)
 
+            normalized_encoding: Literal["ascii", "utf-8", "utf-16le", "utf-16be"] = (
+                "ascii" if encoding == "ascii"
+                else "utf-8" if encoding in {"utf-8", "utf8"}
+                else "utf-16le" if encoding in {"utf-16", "utf-16-le", "utf-16le"}
+                else "utf-16be" if encoding in {"utf-16-be", "utf-16be"}
+                else "ascii"
+            )
             result_list = cast("list[dict[str, Any]]", result) if result else []
             return [
                 StringInfo(
                     address=int(s.get("address", 0)),
                     value=str(s.get("value", "")),
-                    encoding=encoding,
+                    encoding=normalized_encoding,
                     section="",
                 )
                 for s in result_list
