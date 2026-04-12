@@ -9,6 +9,38 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Overhaul binary analysis architecture and expand tool bridges (`0a541ff`)
+This massive update represents a significant architectural pivot, transitioning from a process-centric model to a centralized, state-managed binary analysis framework. The core of the application has been refactored to prioritize advanced hex editing, deep static analysis, and comprehensive sandbox orchestration. By moving logic out of the legacy bridge layers and into a robust core orchestrator, the system now supports more complex, multi-tool workflows with improved thread safety and state synchronization.
+The Rust-based hex engine has been significantly enhanced to support large-file operations, patch formats, and granular memory manipulation, while the UI has been decomposed into modular mixins to manage the increased complexity of the new analysis panels. The tool bridges for Frida, Ghidra, Cutter, and x64dbg have been expanded from basic wrappers into full-featured instrumentation and analysis interfaces. This restructuring also introduces a sophisticated sandbox monitoring subsystem capable of behavioral analysis, network capture, and automated IOC extraction, providing a unified environment for both static and dynamic malware research.
+Core Architecture & Orchestration:
+* Refactored `src.intellicrack.core.orchestrator` to centralize logic previously held in bridges, adding `lief`-based binary parsing for section and import extraction.
+* Updated `ToolRegistry` in `src.intellicrack.core.tools` to use dynamic imports for bridge instantiation, reducing circular dependencies and removing the redundant `BinaryBridge`.
+* Implemented a thread-safe state management system in `src.intellicrack.bridges.hex_state` with new event types for VA mapping, alignment grids, and color modes.
+* Expanded the Rust backend in `src/intellicrack-hexcore` with new modules for BPS/UPS patch handling, string extraction, and PE checksum verification.
+Binary & Hex Editing Subsystem:
+* Introduced `HexEditorBridge` with comprehensive support for block operations (fill, copy, move, swap), bitwise arithmetic, and VA mapping management.
+* Added a modular UI for the hex editor in `src.intellicrack.ui.panels.hex_editor`, utilizing mixins for hashing, signatures, scripting, and process memory access.
+* Implemented a background `DiffWorker` in `_comparison.py` to enable non-blocking side-by-side binary comparisons.
+* Added `_data_inspector.py` to provide granular bit-level editing and multi-encoding text decoding directly within the hex view.
+Tool Bridge Enhancements:
+* Expanded `FridaBridge` to include cross-language runtime hooking (Java/ObjC), kernel memory access, and persistent script management via `CModule`.
+* Upgraded `GhidraBridge` with P-code IR analysis, control flow graph generation, and automated symbol/type management functions.
+* Refactored `CutterBridge` to support ROP gadget searching, ESIL emulation, and Zignature management while switching assembly backend to Rizin's `pa` command.
+* Enhanced `x64dbg` bridge and plugin with support for expression evaluation, resource enumeration, anti-debug detection, and database persistence.
+Process & System Analysis:
+* Created `src.intellicrack.bridges.process` and `_win32_types.py` to provide low-level Windows inspection, including token/privilege management and SEH chain traversal.
+* Implemented a new `ProcessPanel` UI with dedicated tabs for thread context manipulation, module section enumeration, and system-wide handle tracking.
+* Added `_elevate_debug_privilege` to automatically acquire `SeDebugPrivilege` during process bridge initialization.
+Sandbox & Behavioral Monitoring:
+* Developed a comprehensive sandbox analysis suite in `src.intellicrack.sandbox.analysis` for C2 pattern detection, beaconing analysis, and timeline generation.
+* Added PowerShell-based monitoring hooks for API tracing, clipboard activity, and injection detection within the QEMU/Windows sandbox environments.
+* Updated `SandboxBridge` to expose advanced capabilities like PCAP capture, memory dumping, and automated YARA scanning of guest memory.
+* Refactored `SandboxPanel` to display rich behavioral data including DLL loads, service modifications, and kernel object interactions.
+Development & Tooling:
+* Replaced `scripts/process_lint_json.py` with a more robust reporting mechanism and added `scripts/run-all-tools.py` for integrated CI/CD checks.
+* Updated the project knowledge graph (`IntellicrackKnowledgeGraph.graphml`) to reflect the removal of legacy bridges and the addition of the new hex-centric architecture.
+* Added extensive E2E test suites for hexcore operations, sandbox management, and Win32 type safety.
+
 - Auto-discover latest Gemini Flash model, fix blinter findings, update configs (`d76da60`)
 Reworked generate_commit_message.py to dynamically discover the latest
 accessible Gemini Flash model from Vertex AI instead of hardcoding a
@@ -40,38 +72,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Overhaul binary analysis architecture and expand tool bridges (``)
-This massive update represents a significant architectural pivot, transitioning from a process-centric model to a centralized, state-managed binary analysis framework. The core of the application has been refactored to prioritize advanced hex editing, deep static analysis, and comprehensive sandbox orchestration. By moving logic out of the legacy bridge layers and into a robust core orchestrator, the system now supports more complex, multi-tool workflows with improved thread safety and state synchronization.
-The Rust-based hex engine has been significantly enhanced to support large-file operations, patch formats, and granular memory manipulation, while the UI has been decomposed into modular mixins to manage the increased complexity of the new analysis panels. The tool bridges for Frida, Ghidra, Cutter, and x64dbg have been expanded from basic wrappers into full-featured instrumentation and analysis interfaces. This restructuring also introduces a sophisticated sandbox monitoring subsystem capable of behavioral analysis, network capture, and automated IOC extraction, providing a unified environment for both static and dynamic malware research.
-Core Architecture & Orchestration:
-* Refactored `src.intellicrack.core.orchestrator` to centralize logic previously held in bridges, adding `lief`-based binary parsing for section and import extraction.
-* Updated `ToolRegistry` in `src.intellicrack.core.tools` to use dynamic imports for bridge instantiation, reducing circular dependencies and removing the redundant `BinaryBridge`.
-* Implemented a thread-safe state management system in `src.intellicrack.bridges.hex_state` with new event types for VA mapping, alignment grids, and color modes.
-* Expanded the Rust backend in `src/intellicrack-hexcore` with new modules for BPS/UPS patch handling, string extraction, and PE checksum verification.
-Binary & Hex Editing Subsystem:
-* Introduced `HexEditorBridge` with comprehensive support for block operations (fill, copy, move, swap), bitwise arithmetic, and VA mapping management.
-* Added a modular UI for the hex editor in `src.intellicrack.ui.panels.hex_editor`, utilizing mixins for hashing, signatures, scripting, and process memory access.
-* Implemented a background `DiffWorker` in `_comparison.py` to enable non-blocking side-by-side binary comparisons.
-* Added `_data_inspector.py` to provide granular bit-level editing and multi-encoding text decoding directly within the hex view.
-Tool Bridge Enhancements:
-* Expanded `FridaBridge` to include cross-language runtime hooking (Java/ObjC), kernel memory access, and persistent script management via `CModule`.
-* Upgraded `GhidraBridge` with P-code IR analysis, control flow graph generation, and automated symbol/type management functions.
-* Refactored `CutterBridge` to support ROP gadget searching, ESIL emulation, and Zignature management while switching assembly backend to Rizin's `pa` command.
-* Enhanced `x64dbg` bridge and plugin with support for expression evaluation, resource enumeration, anti-debug detection, and database persistence.
-Process & System Analysis:
-* Created `src.intellicrack.bridges.process` and `_win32_types.py` to provide low-level Windows inspection, including token/privilege management and SEH chain traversal.
-* Implemented a new `ProcessPanel` UI with dedicated tabs for thread context manipulation, module section enumeration, and system-wide handle tracking.
-* Added `_elevate_debug_privilege` to automatically acquire `SeDebugPrivilege` during process bridge initialization.
-Sandbox & Behavioral Monitoring:
-* Developed a comprehensive sandbox analysis suite in `src.intellicrack.sandbox.analysis` for C2 pattern detection, beaconing analysis, and timeline generation.
-* Added PowerShell-based monitoring hooks for API tracing, clipboard activity, and injection detection within the QEMU/Windows sandbox environments.
-* Updated `SandboxBridge` to expose advanced capabilities like PCAP capture, memory dumping, and automated YARA scanning of guest memory.
-* Refactored `SandboxPanel` to display rich behavioral data including DLL loads, service modifications, and kernel object interactions.
-Development & Tooling:
-* Replaced `scripts/process_lint_json.py` with a more robust reporting mechanism and added `scripts/run-all-tools.py` for integrated CI/CD checks.
-* Updated the project knowledge graph (`IntellicrackKnowledgeGraph.graphml`) to reflect the removal of legacy bridges and the addition of the new hex-centric architecture.
-* Added extensive E2E test suites for hexcore operations, sandbox management, and Win32 type safety.
 
 
 ### Changed

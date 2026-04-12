@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import struct
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -296,7 +296,7 @@ class TestInspectAtEdge:
         Args:
             sample_doc_from_bytes: HexDocument loaded from bytes(range(256)).
         """
-        result: dict[str, str] = cast("dict[str, str]", sample_doc_from_bytes.inspect_at(128))
+        result: dict[str, str] = sample_doc_from_bytes.inspect_at(128)
         assert isinstance(result, dict)
         assert result
 

@@ -35,6 +35,7 @@ _EXPECTED_AVG: Final[float] = 150.0
 _STATS_KEYS: Final[int] = 6
 _DESTRUCTIVE_COUNT: Final[int] = 12
 _CUSTOM_MAX_ITER: Final[int] = 5
+_FLOAT_TOLERANCE: Final[float] = 1e-9
 
 
 def _make_orchestrator(tmp_path: Path) -> Orchestrator:
@@ -93,9 +94,9 @@ def test_stats_record_response_time() -> None:
     """Verify record_response_time updates rolling average."""
     stats = OrchestratorStats()
     stats.record_response_time(_RESPONSE_TIME_A)
-    assert stats.average_response_time_ms == pytest.approx(_RESPONSE_TIME_A)
+    assert abs(stats.average_response_time_ms - _RESPONSE_TIME_A) < _FLOAT_TOLERANCE
     stats.record_response_time(_RESPONSE_TIME_B)
-    assert stats.average_response_time_ms == pytest.approx(_EXPECTED_AVG)
+    assert abs(stats.average_response_time_ms - _EXPECTED_AVG) < _FLOAT_TOLERANCE
 
 
 def test_stats_to_dict() -> None:

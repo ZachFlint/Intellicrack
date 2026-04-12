@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, override
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -90,7 +90,7 @@ _SECTION_COLUMNS = ["Name", "VAddr", "VSize", "RawSize", "Entropy", "Flags"]
 _XREF_COLUMNS = ["Direction", "From/To", "Type", "Function"]
 
 
-def _perm_to_rwx(perm: int) -> str:
+def perm_to_rwx(perm: int) -> str:
     """Convert a Rizin section permission integer to an rwx string.
 
     Args:
@@ -141,9 +141,9 @@ class CutterPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._goto_input = self._add_toolbar_line_edit(toolbar, "Address...", 120)
+        self._goto_input = self._add_toolbar_input(toolbar, "Address...", max_width=120)
         self._goto_btn = self._add_tool_button(toolbar, "Go", self._on_goto_address)
-        self._find_func_input = self._add_toolbar_line_edit(toolbar, "Function name...", 140)
+        self._find_func_input = self._add_toolbar_input(toolbar, "Function name...", max_width=140)
         self._find_func_btn = self._add_tool_button(toolbar, "Find", self._on_find_function)
 
         toolbar.addSeparator()
@@ -833,7 +833,7 @@ class CutterPanel(AnalysisPanelBase):
             self._sections_table.setItem(
                 row,
                 5,
-                QTableWidgetItem(_perm_to_rwx(getattr(sec, "characteristics", 0))),
+                QTableWidgetItem(perm_to_rwx(getattr(sec, "characteristics", 0))),
             )
 
     def search_strings(self, pattern: str) -> None:
@@ -1119,13 +1119,13 @@ class CutterPanel(AnalysisPanelBase):
         self._goto_input.setText(f"0x{addr:X}")
         self._on_goto_complete(addr)
 
-    def _on_func_context_menu(self, position: object) -> None:
+    def _on_func_context_menu(self, pos: QPoint) -> None:
         """Show context menu for the function tree.
 
         Args:
-            position: Click position from the signal.
+            pos: Click position from the signal.
         """
-        item = self._func_tree.itemAt(position)
+        item = self._func_tree.itemAt(pos)
         if item is None:
             return
 
@@ -1159,7 +1159,7 @@ class CutterPanel(AnalysisPanelBase):
         read_action.triggered.connect(lambda: self._ctx_read_bytes(address))
         menu.addAction(read_action)
 
-        menu.exec(self._func_tree.viewport().mapToGlobal(position))
+        menu.exec(self._func_tree.mapToGlobal(pos))
 
     def _ctx_rename_function(self, address: int) -> None:
         """Rename a function via input dialog.

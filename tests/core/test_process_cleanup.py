@@ -214,6 +214,25 @@ class _NoneR2:
         """
 
 
+_R2_BACKING_FIELD: str = "_r2"
+
+
+def _install_r2(bridge: CutterBridge, r2_like: _BlockingR2 | _FastR2 | _NoneR2) -> None:
+    """Install a fake r2pipe implementation onto the bridge's backing field.
+
+    The ``CutterBridge.r2`` setter is strictly typed against ``r2pipe.open``,
+    which is not a public Protocol. Tests need to inject duck-typed fakes, so
+    we write to the backing attribute by name to avoid violating the public
+    typed setter contract while still exercising the bridge's runtime
+    behaviour via the ``r2.cmd`` dispatch path.
+
+    Args:
+        bridge: The CutterBridge instance under test.
+        r2_like: A test fake exposing an r2pipe-compatible ``cmd`` method.
+    """
+    setattr(bridge, _R2_BACKING_FIELD, r2_like)
+
+
 @pytest.mark.asyncio
 async def test_r2_cmd_timeout_raises_tool_error() -> None:
     """_r2_cmd raises ToolError when r2 command blocks past the timeout.
@@ -224,7 +243,7 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
     """
     bridge = CutterBridge()
     blocker = _BlockingR2()
-    bridge.r2 = blocker
+    _install_r2(bridge, blocker)
 
     original_timeout: float = cutter_module.R2_COMMAND_TIMEOUT
     cutter_module.R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
@@ -246,7 +265,7 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
 async def test_r2_cmd_returns_result_within_timeout() -> None:
     """_r2_cmd returns normally when the command completes before timeout."""
     bridge = CutterBridge()
-    bridge.r2 = _FastR2()
+    _install_r2(bridge, _FastR2())
 
     result = await bridge.r2_cmd("pd 10")
     assert result == "result:pd 10"
@@ -256,7 +275,7 @@ async def test_r2_cmd_returns_result_within_timeout() -> None:
 async def test_r2_cmd_converts_none_to_empty_string() -> None:
     """_r2_cmd converts None return from r2pipe to empty string."""
     bridge = CutterBridge()
-    bridge.r2 = _NoneR2()
+    _install_r2(bridge, _NoneR2())
 
     result = await bridge.r2_cmd("?")
     assert not result, "None r2 result should become empty string"
