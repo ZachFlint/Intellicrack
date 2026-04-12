@@ -513,6 +513,7 @@ Attributes:
 All bridge implementations must inherit from this class and override the methods defined here. This ensures a consistent interface for
 the orchestrator to interact with any reverse engineering tool.</data>
     </node>
+    <node id="abc.ABC" />
     <node id="src.intellicrack.bridges.base.StaticAnalysisBridge">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -626,10 +627,7 @@ Returns:
       <data key="d4">Get the tool's name.
 
 Returns:
-    ToolName: The tool's name enum value.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    ToolName: The tool's name enum value.</data>
     </node>
     <node id="src.intellicrack.bridges.base.state">
       <data key="d0">function</data>
@@ -659,10 +657,7 @@ Returns:
       <data key="d4">Get tool definition for LLM function calling.
 
 Returns:
-    ToolDefinition: Tool definition with available functions.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    ToolDefinition: Tool definition with available functions.</data>
     </node>
     <node id="src.intellicrack.bridges.base.initialize">
       <data key="d0">function</data>
@@ -673,10 +668,7 @@ Raises:
 
 Args:
     tool_path: Optional path to tool installation.
-              If None, will auto-detect or download.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+              If None, will auto-detect or download.</data>
     </node>
     <node id="src.intellicrack.bridges.base.shutdown">
       <data key="d0">function</data>
@@ -693,10 +685,7 @@ Raises:
       <data key="d4">Check if the tool is installed and available.
 
 Returns:
-    bool: True if the tool is ready.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if the tool is ready.</data>
     </node>
     <node id="src.intellicrack.bridges.base.load_binary">
       <data key="d0">function</data>
@@ -709,20 +698,14 @@ Args:
     path: Path to the binary file.
 
 Returns:
-    BinaryInfo: Information about the loaded binary.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    BinaryInfo: Information about the loaded binary.</data>
     </node>
     <node id="src.intellicrack.bridges.base.analyze">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">analyze</data>
       <data key="d5">['self']</data>
-      <data key="d4">Run full analysis on loaded binary.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+      <data key="d4">Run full analysis on loaded binary.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_functions">
       <data key="d0">function</data>
@@ -735,10 +718,7 @@ Args:
     filter_pattern: Optional regex pattern to filter function names.
 
 Returns:
-    list[FunctionInfo]: List of analyzed function information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[FunctionInfo]: List of analyzed function information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_function">
       <data key="d0">function</data>
@@ -751,10 +731,7 @@ Args:
     address: Function address.
 
 Returns:
-    FunctionInfo | None: Function info or None if not found.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    FunctionInfo | None: Function info or None if not found.</data>
     </node>
     <node id="src.intellicrack.bridges.base.decompile">
       <data key="d0">function</data>
@@ -767,10 +744,7 @@ Args:
     address: Function address.
 
 Returns:
-    str: Decompiled C pseudocode.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    str: Decompiled C pseudocode.</data>
     </node>
     <node id="src.intellicrack.bridges.base.disassemble">
       <data key="d0">function</data>
@@ -784,10 +758,7 @@ Args:
     count: Number of instructions.
 
 Returns:
-    list[DisassemblyLine]: List of disassembly lines.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[DisassemblyLine]: List of disassembly lines.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_xrefs_to">
       <data key="d0">function</data>
@@ -800,10 +771,7 @@ Args:
     address: Target address.
 
 Returns:
-    list[CrossReference]: List of cross-references to the address.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[CrossReference]: List of cross-references to the address.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_xrefs_from">
       <data key="d0">function</data>
@@ -816,10 +784,7 @@ Args:
     address: Source address.
 
 Returns:
-    list[CrossReference]: List of cross-references from the address.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[CrossReference]: List of cross-references from the address.</data>
     </node>
     <node id="src.intellicrack.bridges.base.search_strings">
       <data key="d0">function</data>
@@ -832,10 +797,7 @@ Args:
     pattern: Regex pattern to match.
 
 Returns:
-    list[StringInfo]: List of matching strings.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[StringInfo]: List of matching strings.</data>
     </node>
     <node id="src.intellicrack.bridges.base.search_bytes">
       <data key="d0">function</data>
@@ -848,10 +810,7 @@ Args:
     pattern: Byte sequence to find.
 
 Returns:
-    list[int]: List of match addresses.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[int]: List of match addresses.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_imports">
       <data key="d0">function</data>
@@ -861,10 +820,7 @@ Raises:
       <data key="d4">Get all imported functions.
 
 Returns:
-    list[ImportInfo]: List of import information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[ImportInfo]: List of import information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_exports">
       <data key="d0">function</data>
@@ -874,10 +830,7 @@ Raises:
       <data key="d4">Get all exported functions.
 
 Returns:
-    list[ExportInfo]: List of export information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[ExportInfo]: List of export information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.rename_function">
       <data key="d0">function</data>
@@ -891,10 +844,7 @@ Args:
     new_name: New function name.
 
 Returns:
-    bool: True if rename succeeded.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if rename succeeded.</data>
     </node>
     <node id="src.intellicrack.bridges.base.add_comment">
       <data key="d0">function</data>
@@ -909,10 +859,7 @@ Args:
     comment_type: Type of comment (EOL, PRE, POST, PLATE).
 
 Returns:
-    bool: True if comment was added.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if comment was added.</data>
     </node>
     <node id="src.intellicrack.bridges.base.attach">
       <data key="d0">function</data>
@@ -922,10 +869,7 @@ Raises:
       <data key="d4">Attach to a running process.
 
 Args:
-    pid: Process ID to attach to.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    pid: Process ID to attach to.</data>
     </node>
     <node id="src.intellicrack.bridges.base.spawn">
       <data key="d0">function</data>
@@ -939,20 +883,14 @@ Args:
     args: Command line arguments.
 
 Returns:
-    int: PID of spawned process.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: PID of spawned process.</data>
     </node>
     <node id="src.intellicrack.bridges.base.detach">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">detach</data>
       <data key="d5">['self']</data>
-      <data key="d4">Detach from current process.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+      <data key="d4">Detach from current process.</data>
     </node>
     <node id="src.intellicrack.bridges.base.read_memory">
       <data key="d0">function</data>
@@ -966,10 +904,7 @@ Args:
     size: Number of bytes to read.
 
 Returns:
-    bytes: Memory contents.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bytes: Memory contents.</data>
     </node>
     <node id="src.intellicrack.bridges.base.write_memory">
       <data key="d0">function</data>
@@ -983,10 +918,7 @@ Args:
     data: Bytes to write.
 
 Returns:
-    int: Number of bytes written.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: Number of bytes written.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_memory_regions">
       <data key="d0">function</data>
@@ -996,10 +928,7 @@ Raises:
       <data key="d4">Get process memory map.
 
 Returns:
-    list[MemoryRegion]: List of memory regions.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[MemoryRegion]: List of memory regions.</data>
     </node>
     <node id="src.intellicrack.bridges.base.scan_memory">
       <data key="d0">function</data>
@@ -1012,40 +941,28 @@ Args:
     pattern: Byte pattern to search for.
 
 Returns:
-    list[MemorySearchResult]: List of matches with context.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[MemorySearchResult]: List of matches with context.</data>
     </node>
     <node id="src.intellicrack.bridges.base.run">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">run</data>
       <data key="d5">['self']</data>
-      <data key="d4">Continue execution.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+      <data key="d4">Continue execution.</data>
     </node>
     <node id="src.intellicrack.bridges.base.pause">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">pause</data>
       <data key="d5">['self']</data>
-      <data key="d4">Pause execution.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+      <data key="d4">Pause execution.</data>
     </node>
     <node id="src.intellicrack.bridges.base.stop">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">stop</data>
       <data key="d5">['self']</data>
-      <data key="d4">Stop debugging (terminate process).
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+      <data key="d4">Stop debugging (terminate process).</data>
     </node>
     <node id="src.intellicrack.bridges.base.step_into">
       <data key="d0">function</data>
@@ -1055,10 +972,7 @@ Raises:
       <data key="d4">Single step into.
 
 Returns:
-    int: New instruction pointer.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: New instruction pointer.</data>
     </node>
     <node id="src.intellicrack.bridges.base.step_over">
       <data key="d0">function</data>
@@ -1068,10 +982,7 @@ Raises:
       <data key="d4">Single step over.
 
 Returns:
-    int: New instruction pointer.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: New instruction pointer.</data>
     </node>
     <node id="src.intellicrack.bridges.base.step_out">
       <data key="d0">function</data>
@@ -1081,10 +992,7 @@ Raises:
       <data key="d4">Step out of current function.
 
 Returns:
-    int: New instruction pointer.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: New instruction pointer.</data>
     </node>
     <node id="src.intellicrack.bridges.base.set_breakpoint">
       <data key="d0">function</data>
@@ -1099,10 +1007,7 @@ Args:
     condition: Optional condition expression.
 
 Returns:
-    int: Breakpoint ID.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: Breakpoint ID.</data>
     </node>
     <node id="src.intellicrack.bridges.base.remove_breakpoint">
       <data key="d0">function</data>
@@ -1115,10 +1020,7 @@ Args:
     address: Breakpoint address.
 
 Returns:
-    bool: True if removed successfully.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if removed successfully.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_breakpoints">
       <data key="d0">function</data>
@@ -1128,10 +1030,7 @@ Raises:
       <data key="d4">Get all breakpoints.
 
 Returns:
-    list[BreakpointInfo]: List of breakpoint information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[BreakpointInfo]: List of breakpoint information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_registers">
       <data key="d0">function</data>
@@ -1141,10 +1040,7 @@ Raises:
       <data key="d4">Get all register values.
 
 Returns:
-    RegisterState: Current register state.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    RegisterState: Current register state.</data>
     </node>
     <node id="src.intellicrack.bridges.base.set_register">
       <data key="d0">function</data>
@@ -1158,10 +1054,7 @@ Args:
     value: New value.
 
 Returns:
-    bool: True if set successfully.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if set successfully.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_stack_trace">
       <data key="d0">function</data>
@@ -1171,10 +1064,7 @@ Raises:
       <data key="d4">Get current stack trace.
 
 Returns:
-    list[StackFrame]: List of stack frames.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[StackFrame]: List of stack frames.</data>
     </node>
     <node id="src.intellicrack.bridges.base.disassemble_at">
       <data key="d0">function</data>
@@ -1188,10 +1078,7 @@ Args:
     count: Number of instructions.
 
 Returns:
-    list[DisassemblyLine]: List of disassembly lines.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[DisassemblyLine]: List of disassembly lines.</data>
     </node>
     <node id="src.intellicrack.bridges.base.assemble_at">
       <data key="d0">function</data>
@@ -1205,10 +1092,7 @@ Args:
     instruction: Assembly instruction.
 
 Returns:
-    bytes: Assembled bytes.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bytes: Assembled bytes.</data>
     </node>
     <node id="src.intellicrack.bridges.base.enumerate_modules">
       <data key="d0">function</data>
@@ -1218,10 +1102,7 @@ Raises:
       <data key="d4">List all loaded modules in the process.
 
 Returns:
-    list[ModuleInfo]: List of loaded module information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[ModuleInfo]: List of loaded module information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.enumerate_exports">
       <data key="d0">function</data>
@@ -1234,10 +1115,7 @@ Args:
     module_name: Name of the module.
 
 Returns:
-    list[ExportInfo]: List of export information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[ExportInfo]: List of export information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.hook_function">
       <data key="d0">function</data>
@@ -1252,10 +1130,7 @@ Args:
     on_leave: Script code to run on function exit.
 
 Returns:
-    HookInfo: Information about the installed hook.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    HookInfo: Information about the installed hook.</data>
     </node>
     <node id="src.intellicrack.bridges.base.remove_hook">
       <data key="d0">function</data>
@@ -1268,10 +1143,7 @@ Args:
     hook_id: ID of the hook to remove.
 
 Returns:
-    bool: True if hook was removed successfully.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if hook was removed successfully.</data>
     </node>
     <node id="src.intellicrack.bridges.base.get_hooks">
       <data key="d0">function</data>
@@ -1281,10 +1153,7 @@ Raises:
       <data key="d4">Get all active hooks.
 
 Returns:
-    list[HookInfo]: List of active hook information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[HookInfo]: List of active hook information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.execute_script">
       <data key="d0">function</data>
@@ -1297,10 +1166,7 @@ Args:
     script: Script code to execute.
 
 Returns:
-    str: Script execution result.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    str: Script execution result.</data>
     </node>
     <node id="src.intellicrack.bridges.base.intercept_return">
       <data key="d0">function</data>
@@ -1314,10 +1180,7 @@ Args:
     return_value: Value to return instead.
 
 Returns:
-    HookInfo: Information about the installed interception hook.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    HookInfo: Information about the installed interception hook.</data>
     </node>
     <node id="src.intellicrack.bridges.base.call_function">
       <data key="d0">function</data>
@@ -1331,10 +1194,7 @@ Args:
     args: Function arguments.
 
 Returns:
-    int: Function return value.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    int: Function return value.</data>
     </node>
     <node id="src.intellicrack.bridges.base.enumerate_imports">
       <data key="d0">function</data>
@@ -1347,10 +1207,7 @@ Args:
     module_name: Name of the module.
 
 Returns:
-    list[ImportInfo]: List of import information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[ImportInfo]: List of import information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.enumerate_threads">
       <data key="d0">function</data>
@@ -1360,10 +1217,7 @@ Raises:
       <data key="d4">List all threads in the attached process.
 
 Returns:
-    list[ThreadInfo]: List of thread information.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[ThreadInfo]: List of thread information.</data>
     </node>
     <node id="src.intellicrack.bridges.base.load_file">
       <data key="d0">function</data>
@@ -1376,10 +1230,7 @@ Args:
     path: Path to the binary.
 
 Returns:
-    BinaryInfo: Information about the loaded binary.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    BinaryInfo: Information about the loaded binary.</data>
     </node>
     <node id="src.intellicrack.bridges.base.read_bytes">
       <data key="d0">function</data>
@@ -1393,10 +1244,7 @@ Args:
     size: Number of bytes.
 
 Returns:
-    bytes: Bytes read from the file.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bytes: Bytes read from the file.</data>
     </node>
     <node id="src.intellicrack.bridges.base.write_bytes">
       <data key="d0">function</data>
@@ -1407,10 +1255,7 @@ Raises:
 
 Args:
     offset: File offset.
-    data: Bytes to write.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    data: Bytes to write.</data>
     </node>
     <node id="src.intellicrack.bridges.base.apply_patch">
       <data key="d0">function</data>
@@ -1423,10 +1268,7 @@ Args:
     patch: Patch information.
 
 Returns:
-    bool: True if the patch was applied successfully.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if the patch was applied successfully.</data>
     </node>
     <node id="src.intellicrack.bridges.base.revert_patch">
       <data key="d0">function</data>
@@ -1439,10 +1281,7 @@ Args:
     patch: Patch to revert.
 
 Returns:
-    bool: True if the patch was reverted successfully.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    bool: True if the patch was reverted successfully.</data>
     </node>
     <node id="src.intellicrack.bridges.base.save">
       <data key="d0">function</data>
@@ -1455,10 +1294,7 @@ Args:
     path: Optional new path. Uses original if None.
 
 Returns:
-    Path: Path where the file was saved.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    Path: Path where the file was saved.</data>
     </node>
     <node id="src.intellicrack.bridges.base.search_pattern">
       <data key="d0">function</data>
@@ -1473,10 +1309,7 @@ Args:
     max_results: Maximum results to return.
 
 Returns:
-    list[int]: List of file offsets where the pattern was found.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    list[int]: List of file offsets where the pattern was found.</data>
     </node>
     <node id="src.intellicrack.bridges.base.calculate_checksum">
       <data key="d0">function</data>
@@ -1489,10 +1322,7 @@ Args:
     algorithm: Hash algorithm (md5, sha256).
 
 Returns:
-    str: Hex digest of the file hash.
-
-Raises:
-    RuntimeError: If the subclass does not override this method.</data>
+    str: Hex digest of the file hash.</data>
     </node>
     <node id="src.intellicrack.bridges.cutter">
       <data key="d0">module</data>
@@ -15724,13 +15554,13 @@ Manages the conversation loop between the user, LLM, and tools.
 Coordinates tool execution and handles confirmations.
 
 Args:
-    provider_registry: Registry of LLM providers.
-    tool_registry: Registry of tool bridges.
-    session_manager: Session state manager.
-    config: Optional configuration override.
+    provider_registry: Registry of LLM providers used for routing chat requests.
+    tool_registry: Registry of tool bridges available for execution.
+    session_manager: Session state manager that persists conversation state.
+    config: Optional configuration override; defaults to ``OrchestratorConfig()``.
 
 Attributes:
-    DESTRUCTIVE_PATTERNS: Substrings identifying tool calls that modify state and require user confirmation.</data>
+    DESTRUCTIVE_PATTERN...</data>
     </node>
     <node id="src.intellicrack.core.orchestrator._resolve_arch">
       <data key="d0">function</data>
@@ -18446,14 +18276,21 @@ built from any combination of Rust-accelerated and pure-Python steps.</data>
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">UnsupportedConstantTypeError</data>
-      <data key="d4">Raised when an AST constant has an unsupported type.</data>
+      <data key="d4">Raised when an AST constant has an unsupported type.
+
+Args:
+    type_name: Name of the AST constant type that is unsupported.</data>
     </node>
     <node id="TypeError" />
     <node id="src.intellicrack.core.transform_pipeline.TransformParamError">
       <data key="d0">class</data>
       <data key="d1">python</data>
       <data key="d3">TransformParamError</data>
-      <data key="d4">Raised when a transform node receives invalid parameters.</data>
+      <data key="d4">Raised when a transform node receives invalid parameters.
+
+Args:
+    node_name: Name of the transform node that produced the error.
+    detail: Description of the invalid parameter or reason.</data>
     </node>
     <node id="src.intellicrack.core.transform_pipeline.HexcoreUnavailableError">
       <data key="d0">class</data>
@@ -25464,7 +25301,6 @@ Returns:
 All provider implementations must inherit from this class and implement the abstract methods defined here. This ensures a consistent
 interface for the orchestrator to interact with any LLM provider.</data>
     </node>
-    <node id="abc.ABC" />
     <node id="src.intellicrack.providers.base.ToolCallBufferManager">
       <data key="d0">class</data>
       <data key="d1">python</data>
@@ -26150,14 +25986,29 @@ Args:
       <data key="d1">python</data>
       <data key="d3">discover_one</data>
       <data key="d5">['provider_name']</data>
-      <data key="d4" />
+      <data key="d4">Discover models for a single provider with caching.
+
+Args:
+    provider_name: The provider whose models should be listed.
+
+Returns:
+    tuple[ProviderName, list[ModelInfo], DiscoveryEvent]: The
+    provider name, the discovered models, and a discovery event
+    capturing timing and success metadata.</data>
     </node>
     <node id="src.intellicrack.providers.discovery.cost_key">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">cost_key</data>
       <data key="d5">['m']</data>
-      <data key="d4" />
+      <data key="d4">Return the per-million-token output cost for sorting.
+
+Args:
+    m: Model whose cost should be used as the sort key.
+
+Returns:
+    float: The output cost, or ``inf`` when unknown so
+    models without pricing sort last.</data>
     </node>
     <node id="src.intellicrack.providers.google">
       <data key="d0">module</data>
@@ -26379,14 +26230,22 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_generate</data>
       <data key="d5">[]</data>
-      <data key="d4" />
+      <data key="d4">Invoke the synchronous Gemini generate_content endpoint.
+
+Returns:
+    GenerateContentResponse: The raw Gemini API response for
+    the prepared model, contents, and configuration.</data>
     </node>
     <node id="src.intellicrack.providers.google._start_stream">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_start_stream</data>
       <data key="d5">[]</data>
-      <data key="d4" />
+      <data key="d4">Open a synchronous Gemini streaming generation request.
+
+Returns:
+    Iterable[GenerateContentResponse]: Iterable yielding
+    response chunks from the Gemini streaming API.</data>
     </node>
     <node id="src.intellicrack.providers.grok">
       <data key="d0">module</data>
@@ -27207,7 +27066,19 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">_forward_pass</data>
       <data key="d5">['fwd_model', 'fwd_gen_ids', 'fwd_attn_mask', 'fwd_past_kv']</data>
-      <data key="d4" />
+      <data key="d4">Run a single causal language model forward pass.
+
+Args:
+    fwd_model: Loaded causal language model to invoke.
+    fwd_gen_ids: Token ids generated so far for the sequence.
+    fwd_attn_mask: Optional attention mask aligned with the
+        generated ids, or ``None`` to skip masking.
+    fwd_past_kv: Cached key/value tensors from prior steps;
+        when present, only the latest token id is evaluated.
+
+Returns:
+    CausalLMOutputWithPast: The model output including logits
+    and the updated pa...</data>
     </node>
     <node id="src.intellicrack.providers.model_loader">
       <data key="d0">module</data>
@@ -27796,7 +27667,15 @@ Raises:
       <data key="d1">python</data>
       <data key="d3">_query_single</data>
       <data key="d5">['name']</data>
-      <data key="d4" />
+      <data key="d4">Fetch ``num_ctx`` and tool-support flags for a single model.
+
+Args:
+    name: Ollama model name to query via ``/api/show``.
+
+Returns:
+    tuple[str, int, bool]: The model name, its detected context
+    window (defaulting to 4096 on failure), and whether its
+    template declares a ``.Tools`` directive.</data>
     </node>
     <node id="src.intellicrack.providers.openai">
       <data key="d0">module</data>
@@ -45671,7 +45550,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._disassembly._create_disassembly_tab">
       <data key="d0">function</data>
@@ -45867,7 +45749,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_on_data_changed</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Handle document data-change signals by refreshing derived views.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._patches._update_patches">
       <data key="d0">function</data>
@@ -45918,21 +45800,27 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_populate_template_tree</data>
       <data key="d5">['self', 'fields']</data>
-      <data key="d4" />
+      <data key="d4">Populate the template preview tree from decoded structure fields.
+
+Args:
+    fields: Interpreted template field entries with metadata.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._highlight_template_fields">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_highlight_template_fields</data>
       <data key="d5">['self', 'fields']</data>
-      <data key="d4" />
+      <data key="d4">Apply region highlights in the hex view for template fields.
+
+Args:
+    fields: Interpreted template field entries with offsets and sizes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._populate_template_combo">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_populate_template_combo</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Populate the template selector combo with available structures.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._build_pattern_editor">
       <data key="d0">function</data>
@@ -46058,14 +45946,12 @@ Args:
       <data key="d4">Dialog for browsing and opening process memory regions.
 
 Provides a PID input, region listing, and region selection for
-loading process memory into the hex editor.
+loading process memory into the hex editor. After the dialog is
+accepted, ``region_selected`` holds the chosen ``(pid, base, size)``
+tuple or ``None`` when no region was picked.
 
 Args:
-    parent: Parent widget.
-
-Attributes:
-    region_selected: Set when the user selects a region to open.
-        Contains (pid, base_address, size) or None.</data>
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._process_memory.ProcessMemoryMixin">
       <data key="d0">class</data>
@@ -46849,14 +46735,20 @@ Args:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sections._select_template">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_select_template</data>
       <data key="d5">['self', 'template_name']</data>
-      <data key="d4" />
+      <data key="d4">Select a structure template by name for the current file type.
+
+Args:
+    template_name: Identifier of the template to activate.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sections._populate_sections">
       <data key="d0">function</data>
@@ -47523,7 +47415,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_on_data_changed</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Handle document data-change signals by refreshing derived views.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._transforms._create_transforms_tab">
       <data key="d0">function</data>
@@ -48060,7 +47952,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._yara._create_yara_tab">
       <data key="d0">function</data>
@@ -48139,10 +48034,9 @@ Args:
     parent: Parent widget.
 
 Attributes:
-    tool_started: Signal emitted when the process panel starts.
-    tool_closed: Signal emitted when the process panel closes.
     process_selected: Signal emitted with PID when a process row is selected.
-    ...</data>
+    process_attached: Signal emitted with PID when a process is attached.
+    process_detached: Signal emitted when a process is de...</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._base.__init__">
       <data key="d0">function</data>
@@ -51213,6 +51107,9 @@ This package provides asset loading, icon management, font handling, and theme m
     </edge>
     <edge source="src.intellicrack.bridges.base" target="src.intellicrack.bridges.base.calculate_checksum">
       <data key="d6">defines</data>
+    </edge>
+    <edge source="src.intellicrack.bridges.base.ToolBridgeBase" target="abc.ABC">
+      <data key="d6">inherits</data>
     </edge>
     <edge source="src.intellicrack.bridges.base.StaticAnalysisBridge" target="ToolBridgeBase">
       <data key="d6">inherits</data>

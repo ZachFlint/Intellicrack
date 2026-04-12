@@ -121,7 +121,11 @@ class TestRunBridgeCoroutineAsync:
 
     @staticmethod
     def test_success_callback_invoked(qapp: QApplication) -> None:
-        """Verify call_finished signal delivers the coroutine result."""
+        """Verify call_finished signal delivers the coroutine result.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
         received: list[object] = []
 
         async def simple_coro() -> int:
@@ -142,7 +146,11 @@ class TestRunBridgeCoroutineAsync:
 
     @staticmethod
     def test_error_callback_invoked(qapp: QApplication) -> None:
-        """Verify call_error signal delivers the exception on failure."""
+        """Verify call_error signal delivers the exception on failure.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
         errors: list[object] = []
 
         async def failing_coro() -> None:
@@ -165,7 +173,11 @@ class TestRunBridgeCoroutineAsync:
 
     @staticmethod
     def test_worker_completes_without_callbacks(qapp: QApplication) -> None:
-        """Verify a worker completes even without connected callbacks."""
+        """Verify a worker completes even without connected callbacks.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
 
         async def noop_coro() -> int:
             await asyncio.sleep(0)
@@ -188,7 +200,11 @@ class TestBridgeCallWorker:
 
     @staticmethod
     def test_emits_call_finished_signal(qapp: QApplication) -> None:
-        """Verify call_finished signal emits the coroutine result."""
+        """Verify call_finished signal emits the coroutine result.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
         results: list[object] = []
 
         async def coro() -> str:
@@ -208,7 +224,11 @@ class TestBridgeCallWorker:
 
     @staticmethod
     def test_emits_call_error_signal(qapp: QApplication) -> None:
-        """Verify call_error signal emits the exception on failure."""
+        """Verify call_error signal emits the exception on failure.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
         errors: list[object] = []
 
         async def bad_coro() -> None:

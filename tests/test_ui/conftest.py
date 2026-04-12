@@ -30,7 +30,10 @@ if TYPE_CHECKING:
 
 
 class SignalRecorder:
-    """Records signal emissions for assertion without unittest.mock."""
+    """Records signal emissions for assertion without unittest.mock.
+
+    Construction takes no arguments and initialises an empty call history.
+    """
 
     def __init__(self) -> None:
         self.calls: list[tuple[Any, ...]] = []
@@ -71,7 +74,10 @@ class SignalRecorder:
 
 
 class DialogRecorder:
-    """Records dialog invocations for assertion without unittest.mock."""
+    """Records dialog invocations for assertion without unittest.mock.
+
+    Construction takes no arguments and initialises an empty call history.
+    """
 
     def __init__(self) -> None:
         self.calls: list[tuple[Any, ...]] = []
@@ -98,7 +104,7 @@ class NoOpSandboxManager:
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:
-        pass
+        del args, kwargs
 
     def __getattr__(self, name: str) -> Callable[..., None]:
         """Return a no-op callable for any attribute.
@@ -116,7 +122,7 @@ class CallRecorder:
     """Records arbitrary function calls for assertion.
 
     Args:
-        result: Value returned by each call.
+        result: Value returned by each invocation of this recorder.
     """
 
     def __init__(self, result: object = None) -> None:
@@ -155,7 +161,7 @@ def qapp() -> Generator[QApplication]:
     cleans it up afterward.
 
     Yields:
-        Generator[QApplication]:: QApplication instance for widget testing.
+        Generator[QApplication]: QApplication instance for widget testing.
     """
     existing = QApplication.instance()
     if existing is not None and isinstance(existing, QApplication):

@@ -13,7 +13,7 @@ fallback scanning against real byte data.
 from __future__ import annotations
 
 import struct
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 
 import pytest
 
@@ -118,12 +118,12 @@ class ErrorDocument:
     Used to test error signal emission from search workers.
     """
 
-    def search_hex(self, _query: str, _max_results: int) -> list[tuple[int, int]]:
+    def search_hex(self, _query: str, _max_results: int) -> NoReturn:
         """Raise ValueError unconditionally.
 
         Args:
-            _query: Ignored.
-            _max_results: Ignored.
+            _query: Ignored query pattern placeholder.
+            _max_results: Ignored maximum-results placeholder.
 
         Raises:
             ValueError: Always raised for testing.
@@ -156,7 +156,11 @@ class TestSearchWorkerExecution:
 
     @staticmethod
     def test_search_worker_hex_search(qtbot: QtBot) -> None:
-        """Verify hex search finds expected offsets in repeated pattern."""
+        """Verify hex search finds expected offsets in repeated pattern.
+
+        Args:
+            qtbot: pytest-qt bot fixture used to wait on Qt signals.
+        """
         pattern = b"\xde\xad\xbe\xef"
         data = pattern * 4
         doc = SimpleDocument(data)
@@ -178,7 +182,11 @@ class TestSearchWorkerExecution:
 
     @staticmethod
     def test_search_worker_text_search(qtbot: QtBot) -> None:
-        """Verify text search locates ASCII string in document."""
+        """Verify text search locates ASCII string in document.
+
+        Args:
+            qtbot: pytest-qt bot fixture used to wait on Qt signals.
+        """
         data = b"prefix_hello_suffix_hello_end"
         doc = SimpleDocument(data)
         worker = SearchWorker(doc, "Text", "hello", "utf-8", 100)
@@ -203,7 +211,11 @@ class TestSearchWorkerError:
 
     @staticmethod
     def test_search_worker_error(qtbot: QtBot) -> None:
-        """Verify search_error is emitted when document raises ValueError."""
+        """Verify search_error is emitted when document raises ValueError.
+
+        Args:
+            qtbot: pytest-qt bot fixture used to wait on Qt signals.
+        """
         doc = ErrorDocument()
         worker = SearchWorker(doc, "Hex", "DEAD", "utf-8", 100)
 
@@ -225,7 +237,11 @@ class TestNumericSearchWorker:
 
     @staticmethod
     def test_numeric_search_worker_fallback(qtbot: QtBot) -> None:
-        """Verify fallback scan finds known 32-bit value in byte data."""
+        """Verify fallback scan finds known 32-bit value in byte data.
+
+        Args:
+            qtbot: pytest-qt bot fixture used to wait on Qt signals.
+        """
         target_value: int = 42
         packed = struct.pack("<I", target_value)
         data = b"\x00" * 8 + packed + b"\x00" * 8 + packed + b"\x00" * 4
