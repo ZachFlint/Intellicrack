@@ -101,7 +101,11 @@ class TestSplashScreenCreation:
 
     @staticmethod
     def test_creates_splash_screen(qapp: QApplication) -> None:
-        """SplashScreen can be instantiated."""
+        """SplashScreen can be instantiated.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen()
         assert splash is not None
@@ -109,14 +113,22 @@ class TestSplashScreenCreation:
 
     @staticmethod
     def test_splash_has_correct_window_flags(splash_screen: SplashScreen) -> None:
-        """Splash screen has correct window flags."""
+        """Splash screen has correct window flags.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         flags = int(splash_screen.windowFlags())
         assert flags & _FRAMELESS_HINT
         assert flags & _STAYS_ON_TOP_HINT
 
     @staticmethod
     def test_splash_has_pixmap(splash_screen: SplashScreen) -> None:
-        """Splash screen has a valid pixmap."""
+        """Splash screen has a valid pixmap.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         pixmap = splash_screen.pixmap()
         assert not pixmap.isNull()
 
@@ -164,37 +176,61 @@ class TestProgressTracking:
 
     @staticmethod
     def test_initial_progress_is_zero(splash_screen: SplashScreen) -> None:
-        """Initial progress value is zero."""
+        """Initial progress value is zero.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert splash_screen.progress == 0
 
     @staticmethod
     def test_set_progress_updates_value(splash_screen: SplashScreen) -> None:
-        """set_progress updates progress value."""
+        """set_progress updates progress value.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_50)
         assert splash_screen.progress == _PROGRESS_50
 
     @staticmethod
     def test_set_progress_with_message(splash_screen: SplashScreen) -> None:
-        """set_progress can set status message."""
+        """set_progress can set status message.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_25, "Loading...")
         assert splash_screen.progress == _PROGRESS_25
         assert splash_screen.status == "Loading..."
 
     @staticmethod
     def test_progress_clamped_to_max(splash_screen: SplashScreen) -> None:
-        """Progress value is clamped to 100 maximum."""
+        """Progress value is clamped to 100 maximum.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_MAX_CLAMP)
         assert splash_screen.progress == _PROGRESS_100
 
     @staticmethod
     def test_progress_clamped_to_min(splash_screen: SplashScreen) -> None:
-        """Progress value is clamped to 0 minimum."""
+        """Progress value is clamped to 0 minimum.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_MIN_CLAMP)
         assert splash_screen.progress == 0
 
     @staticmethod
     def test_progress_updates_progress_bar(splash_screen: SplashScreen) -> None:
-        """Progress update creates animation targeting correct value."""
+        """Progress update creates animation targeting correct value.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_75)
         assert splash_screen.progress_animation is not None
         assert splash_screen.progress_animation.endValue() == _PROGRESS_75
@@ -205,19 +241,31 @@ class TestStatusMessage:
 
     @staticmethod
     def test_initial_status_message(splash_screen: SplashScreen) -> None:
-        """Initial status message is set."""
+        """Initial status message is set.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert len(splash_screen.status) > 0
         assert splash_screen.status == "Initializing..."
 
     @staticmethod
     def test_status_updated_with_progress(splash_screen: SplashScreen) -> None:
-        """Status message is updated via set_progress."""
+        """Status message is updated via set_progress.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_50, "Test message")
         assert splash_screen.status == "Test message"
 
     @staticmethod
     def test_status_preserved_without_message(splash_screen: SplashScreen) -> None:
-        """Status message is preserved when not provided."""
+        """Status message is preserved when not provided.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_25, "First message")
         splash_screen.set_progress(_PROGRESS_50)
         assert splash_screen.status == "First message"
@@ -228,13 +276,21 @@ class TestShowLoadingStep:
 
     @staticmethod
     def test_show_loading_step_updates_progress(splash_screen: SplashScreen) -> None:
-        """show_loading_step updates progress value."""
+        """show_loading_step updates progress value.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_30, "Loading tools...")
         assert splash_screen.progress == _PROGRESS_30
 
     @staticmethod
     def test_show_loading_step_updates_status(splash_screen: SplashScreen) -> None:
-        """show_loading_step updates status message."""
+        """show_loading_step updates status message.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_30, "Loading tools...")
         assert splash_screen.status == "Loading tools..."
 
@@ -244,12 +300,20 @@ class TestProgressSignal:
 
     @staticmethod
     def test_progress_signal_exists(splash_screen: SplashScreen) -> None:
-        """progress_updated signal is defined."""
+        """progress_updated signal is defined.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert hasattr(splash_screen, "progress_updated")
 
     @staticmethod
     def test_progress_signal_emits(splash_screen: SplashScreen) -> None:
-        """Signal can be emitted without error."""
+        """Signal can be emitted without error.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.progress_updated.emit(_PROGRESS_50, "Test")
 
 
@@ -258,30 +322,50 @@ class TestOverlayWidgets:
 
     @staticmethod
     def test_has_progress_bar(splash_screen: SplashScreen) -> None:
-        """Splash has progress bar widget."""
+        """Splash has progress bar widget.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert hasattr(splash_screen, "_progress_bar")
         assert isinstance(splash_screen.progress_bar, QProgressBar)
 
     @staticmethod
     def test_has_status_label(splash_screen: SplashScreen) -> None:
-        """Splash has status label widget."""
+        """Splash has status label widget.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert hasattr(splash_screen, "_status_label")
         assert isinstance(splash_screen.status_label, QLabel)
 
     @staticmethod
     def test_has_overlay_widget(splash_screen: SplashScreen) -> None:
-        """Splash has overlay widget."""
+        """Splash has overlay widget.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert hasattr(splash_screen, "_overlay")
 
     @staticmethod
     def test_progress_bar_range(splash_screen: SplashScreen) -> None:
-        """Progress bar has correct range."""
+        """Progress bar has correct range.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert splash_screen.progress_bar.minimum() == _PROGRESS_BAR_MIN
         assert splash_screen.progress_bar.maximum() == _PROGRESS_BAR_MAX
 
     @staticmethod
     def test_progress_bar_text_hidden(splash_screen: SplashScreen) -> None:
-        """Progress bar text is not visible."""
+        """Progress bar text is not visible.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert not splash_screen.progress_bar.isTextVisible()
 
 
@@ -375,7 +459,11 @@ class TestSplashScreenIntegration:
 
     @staticmethod
     def test_splash_screen_show_and_hide(qapp: QApplication) -> None:
-        """Splash screen can be shown and hidden."""
+        """Splash screen can be shown and hidden.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen()
         splash.show()
@@ -386,7 +474,11 @@ class TestSplashScreenIntegration:
 
     @staticmethod
     def test_splash_screen_progress_workflow(qapp: QApplication) -> None:
-        """Splash screen handles typical progress workflow."""
+        """Splash screen handles typical progress workflow.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen()
         splash.show()
@@ -410,7 +502,11 @@ class TestSplashScreenIntegration:
 
     @staticmethod
     def test_splash_screen_no_exceptions_on_operations(qapp: QApplication) -> None:
-        """Splash screen operations don't raise exceptions."""
+        """Splash screen operations don't raise exceptions.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         try:
             splash = SplashScreen()
@@ -429,28 +525,44 @@ class TestFadeAnimation:
 
     @staticmethod
     def test_show_animated_creates_animation(splash_screen: SplashScreen) -> None:
-        """show_animated creates a fade-in animation."""
+        """show_animated creates a fade-in animation.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.show_animated()
         assert splash_screen.fade_animation is not None
         assert isinstance(splash_screen.fade_animation, QPropertyAnimation)
 
     @staticmethod
     def test_show_animated_targets_full_opacity(splash_screen: SplashScreen) -> None:
-        """show_animated targets opacity 1.0."""
+        """show_animated targets opacity 1.0.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.show_animated()
         assert splash_screen.fade_animation is not None
         assert float(splash_screen.fade_animation.endValue()) == 1.0
 
     @staticmethod
     def test_show_animated_correct_duration(splash_screen: SplashScreen) -> None:
-        """show_animated uses correct fade duration."""
+        """show_animated uses correct fade duration.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.show_animated()
         assert splash_screen.fade_animation is not None
         assert splash_screen.fade_animation.duration() == FADE_DURATION_MS
 
     @staticmethod
     def test_finish_animated_creates_fadeout(splash_screen: SplashScreen) -> None:
-        """finish_animated creates a fade-out animation."""
+        """finish_animated creates a fade-out animation.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.show()
         target = QWidget()
         splash_screen.finish_animated(target)
@@ -460,7 +572,11 @@ class TestFadeAnimation:
 
     @staticmethod
     def test_finish_animated_targets_zero_opacity(splash_screen: SplashScreen) -> None:
-        """finish_animated targets opacity 0.0."""
+        """finish_animated targets opacity 0.0.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.show()
         target = QWidget()
         splash_screen.finish_animated(target)
@@ -474,24 +590,40 @@ class TestVersionLabel:
 
     @staticmethod
     def test_version_stored(splash_with_version: SplashScreen) -> None:
-        """Version string is stored and accessible via property."""
+        """Version string is stored and accessible via property.
+
+        Args:
+            splash_with_version: SplashScreen fixture instance constructed with a version string.
+        """
         assert splash_with_version.version == "1.2.3"
 
     @staticmethod
     def test_version_label_created(splash_with_version: SplashScreen) -> None:
-        """Version label is created with correct text."""
+        """Version label is created with correct text.
+
+        Args:
+            splash_with_version: SplashScreen fixture instance constructed with a version string.
+        """
         assert splash_with_version.version_label is not None
         assert isinstance(splash_with_version.version_label, QLabel)
         assert splash_with_version.version_label.text() == "v1.2.3"
 
     @staticmethod
     def test_no_version_label_when_empty(splash_screen: SplashScreen) -> None:
-        """No version label when version is empty string."""
+        """No version label when version is empty string.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert splash_screen.version_label is None
 
     @staticmethod
     def test_default_version_is_empty(splash_screen: SplashScreen) -> None:
-        """Default version is empty string."""
+        """Default version is empty string.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert not splash_screen.version
 
 
@@ -500,20 +632,32 @@ class TestProgressAnimation:
 
     @staticmethod
     def test_set_progress_creates_animation(splash_screen: SplashScreen) -> None:
-        """set_progress creates a QPropertyAnimation."""
+        """set_progress creates a QPropertyAnimation.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_50)
         assert splash_screen.progress_animation is not None
         assert isinstance(splash_screen.progress_animation, QPropertyAnimation)
 
     @staticmethod
     def test_progress_value_set_immediately(splash_screen: SplashScreen) -> None:
-        """Internal _progress_value is set immediately."""
+        """Internal _progress_value is set immediately.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_75)
         assert splash_screen.progress_value == _PROGRESS_75
 
     @staticmethod
     def test_rapid_progress_calls_no_error(splash_screen: SplashScreen) -> None:
-        """Rapid successive set_progress calls don't raise."""
+        """Rapid successive set_progress calls don't raise.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         for i in range(0, _PROGRESS_100 + 1, 5):
             splash_screen.set_progress(i)
 
@@ -521,7 +665,11 @@ class TestProgressAnimation:
     def test_progress_animation_correct_duration(
         splash_screen: SplashScreen,
     ) -> None:
-        """Progress animation has correct duration."""
+        """Progress animation has correct duration.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(_PROGRESS_50)
         assert splash_screen.progress_animation is not None
         assert splash_screen.progress_animation.duration() == PROGRESS_ANIM_DURATION_MS
@@ -532,13 +680,21 @@ class TestDpiScaling:
 
     @staticmethod
     def test_dpi_scale_is_positive(splash_screen: SplashScreen) -> None:
-        """dpi_scale property returns a positive float."""
+        """dpi_scale property returns a positive float.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert splash_screen.dpi_scale > 0.0
         assert isinstance(splash_screen.dpi_scale, float)
 
     @staticmethod
     def test_scaled_dimensions_positive(splash_screen: SplashScreen) -> None:
-        """Scaled dimensions are positive integers."""
+        """Scaled dimensions are positive integers.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert splash_screen.scaled_width > 0
         assert splash_screen.scaled_height > 0
 
@@ -565,29 +721,49 @@ class TestAnimatedGradient:
 
     @staticmethod
     def test_animation_timer_exists(splash_screen: SplashScreen) -> None:
-        """Animation timer is created during initialization."""
+        """Animation timer is created during initialization.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert hasattr(splash_screen, "_animation_timer")
 
     @staticmethod
     def test_gradient_time_initialized(splash_screen: SplashScreen) -> None:
-        """Gradient time starts at zero."""
+        """Gradient time starts at zero.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert getattr(splash_screen, "_gradient_time") == 0.0
 
     @staticmethod
     def test_active_pulse_time_initialized(splash_screen: SplashScreen) -> None:
-        """Active pulse time starts at zero."""
+        """Active pulse time starts at zero.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert getattr(splash_screen, "_active_pulse_time") == 0.0
 
     @staticmethod
     def test_show_animated_starts_timer(splash_screen: SplashScreen) -> None:
-        """show_animated starts the animation timer."""
+        """show_animated starts the animation timer.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.show_animated()
         timer = getattr(splash_screen, "_animation_timer")
         assert timer.isActive()
 
     @staticmethod
     def test_animation_tick_advances_time(splash_screen: SplashScreen) -> None:
-        """Animation tick advances gradient time."""
+        """Animation tick advances gradient time.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         initial: float = getattr(splash_screen, "_gradient_time")
         tick_fn = getattr(splash_screen, "_on_animation_tick")
         tick_fn()
@@ -599,19 +775,31 @@ class TestPipelineIndicator:
 
     @staticmethod
     def test_initial_stages_all_pending(splash_screen: SplashScreen) -> None:
-        """All stages start as PENDING."""
+        """All stages start as PENDING.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         stages: list[int] = getattr(splash_screen, "_stage_states")
         assert all(int(s) == _STATE_PENDING for s in stages)
 
     @staticmethod
     def test_stage_count(splash_screen: SplashScreen) -> None:
-        """Pipeline has exactly 8 stages."""
+        """Pipeline has exactly 8 stages.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         stages: list[int] = getattr(splash_screen, "_stage_states")
         assert len(stages) == 8
 
     @staticmethod
     def test_progress_completes_early_stages(splash_screen: SplashScreen) -> None:
-        """Progress at 50% completes stages with thresholds ending at or below 50."""
+        """Progress at 50% completes stages with thresholds ending at or below 50.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(50)
         stages: list[int] = getattr(splash_screen, "_stage_states")
         assert int(stages[0]) == _STATE_COMPLETE
@@ -620,14 +808,22 @@ class TestPipelineIndicator:
 
     @staticmethod
     def test_progress_activates_current_stage(splash_screen: SplashScreen) -> None:
-        """Progress at 50% activates the stage spanning that range."""
+        """Progress at 50% activates the stage spanning that range.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(50)
         stages: list[int] = getattr(splash_screen, "_stage_states")
         assert int(stages[3]) == _STATE_ACTIVE
 
     @staticmethod
     def test_progress_keeps_later_stages_pending(splash_screen: SplashScreen) -> None:
-        """Progress at 50% leaves later stages as PENDING."""
+        """Progress at 50% leaves later stages as PENDING.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(50)
         stages: list[int] = getattr(splash_screen, "_stage_states")
         for i in range(4, 8):
@@ -635,21 +831,33 @@ class TestPipelineIndicator:
 
     @staticmethod
     def test_full_progress_completes_all(splash_screen: SplashScreen) -> None:
-        """100% progress completes all stages."""
+        """100% progress completes all stages.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(100)
         stages: list[int] = getattr(splash_screen, "_stage_states")
         assert all(int(s) == _STATE_COMPLETE for s in stages)
 
     @staticmethod
     def test_mark_stage_failed(splash_screen: SplashScreen) -> None:
-        """mark_stage_failed sets a stage to FAILED."""
+        """mark_stage_failed sets a stage to FAILED.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.mark_stage_failed(2)
         stages: list[int] = getattr(splash_screen, "_stage_states")
         assert int(stages[2]) == _STATE_FAILED
 
     @staticmethod
     def test_failed_stage_preserved_on_progress(splash_screen: SplashScreen) -> None:
-        """FAILED stages are not overridden by progress updates."""
+        """FAILED stages are not overridden by progress updates.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.mark_stage_failed(1)
         splash_screen.set_progress(100)
         stages: list[int] = getattr(splash_screen, "_stage_states")
@@ -657,7 +865,11 @@ class TestPipelineIndicator:
 
     @staticmethod
     def test_mark_stage_failed_out_of_range(splash_screen: SplashScreen) -> None:
-        """mark_stage_failed with out-of-range index does not crash."""
+        """mark_stage_failed with out-of-range index does not crash.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.mark_stage_failed(-1)
         splash_screen.mark_stage_failed(99)
         stages: list[int] = getattr(splash_screen, "_stage_states")
@@ -669,7 +881,11 @@ class TestPaintEventRendering:
 
     @staticmethod
     def test_paint_event_no_crash(qapp: QApplication) -> None:
-        """Paint event renders without crashing."""
+        """Paint event renders without crashing.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         splash.show()
@@ -678,7 +894,11 @@ class TestPaintEventRendering:
 
     @staticmethod
     def test_paint_with_progress(qapp: QApplication) -> None:
-        """Paint event works after progress updates."""
+        """Paint event works after progress updates.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         splash.show()
@@ -688,7 +908,11 @@ class TestPaintEventRendering:
 
     @staticmethod
     def test_paint_full_pipeline(qapp: QApplication) -> None:
-        """Paint event works with all pipeline stages complete."""
+        """Paint event works with all pipeline stages complete.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="2.0.0")
         splash.show()
@@ -702,12 +926,20 @@ class TestStatusLabelProperty:
 
     @staticmethod
     def test_status_label_property_returns_qlabel(splash_screen: SplashScreen) -> None:
-        """status_label property returns a QLabel instance."""
+        """status_label property returns a QLabel instance.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assert isinstance(splash_screen.status_label, QLabel)
 
     @staticmethod
     def test_status_label_text_updates(splash_screen: SplashScreen) -> None:
-        """status_label text updates with set_progress."""
+        """status_label text updates with set_progress.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         splash_screen.set_progress(50, "Test message")
         assert splash_screen.status_label.text() == "Test message"
 
@@ -717,7 +949,11 @@ class TestSplashImageCompositing:
 
     @staticmethod
     def test_splash_image_loaded(splash_screen: SplashScreen) -> None:
-        """Splash image is loaded if splash.png exists."""
+        """Splash image is loaded if splash.png exists.
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         assets = get_assets_path()
         splash_path = assets / "splash.png"
         splash_image = getattr(splash_screen, "_splash_image")
@@ -728,7 +964,11 @@ class TestSplashImageCompositing:
 
     @staticmethod
     def test_overlay_hidden(splash_screen: SplashScreen) -> None:
-        """Overlay widget is hidden (painting done in paintEvent)."""
+        """Overlay widget is hidden (painting done in paintEvent).
+
+        Args:
+            splash_screen: SplashScreen fixture instance.
+        """
         overlay = getattr(splash_screen, "_overlay")
         assert not overlay.isVisible()
 
@@ -752,7 +992,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_full_startup_sequence(qapp: QApplication) -> None:
-        """Replicate the exact progress sequence from _run_application."""
+        """Replicate the exact progress sequence from _run_application.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         splash.show_animated()
@@ -776,7 +1020,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_pipeline_stages_advance_with_real_progress(qapp: QApplication) -> None:
-        """Pipeline stages transition PENDING->ACTIVE->COMPLETE matching real thresholds."""
+        """Pipeline stages transition PENDING->ACTIVE->COMPLETE matching real thresholds.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         splash.show_animated()
@@ -835,7 +1083,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_animation_timer_lifecycle(qapp: QApplication) -> None:
-        """Animation timer starts on show_animated and stops on finish_animated."""
+        """Animation timer starts on show_animated and stops on finish_animated.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         timer = getattr(splash, "_animation_timer")
@@ -854,7 +1106,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_rendering_at_every_progress_step(qapp: QApplication) -> None:
-        """All 5 render layers execute without error at every real progress value."""
+        """All 5 render layers execute without error at every real progress value.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         from PyQt6.QtCore import QRectF
         from PyQt6.QtGui import QPainter, QPixmap
@@ -888,7 +1144,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_failed_stage_renders_through_full_sequence(qapp: QApplication) -> None:
-        """A failed stage renders correctly through the entire progress sequence."""
+        """A failed stage renders correctly through the entire progress sequence.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         from PyQt6.QtCore import QRectF
         from PyQt6.QtGui import QPainter, QPixmap
@@ -916,7 +1176,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_show_animated_fade_in_properties(qapp: QApplication) -> None:
-        """show_animated creates correct fade-in animation targeting full opacity."""
+        """show_animated creates correct fade-in animation targeting full opacity.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         splash.show_animated()
@@ -929,7 +1193,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_finish_animated_fade_out_properties(qapp: QApplication) -> None:
-        """finish_animated creates correct fade-out animation targeting zero opacity."""
+        """finish_animated creates correct fade-out animation targeting zero opacity.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         splash.show_animated()
@@ -947,7 +1215,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_gradient_time_advances_across_ticks(qapp: QApplication) -> None:
-        """Gradient animation time accumulates correctly across multiple ticks."""
+        """Gradient animation time accumulates correctly across multiple ticks.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         splash = SplashScreen(version="1.0.0")
         tick_fn = getattr(splash, "_on_animation_tick")
@@ -965,7 +1237,11 @@ class TestEndToEndLifecycle:
 
     @staticmethod
     def test_version_renders_in_paint(qapp: QApplication) -> None:
-        """Version text is rendered during paintEvent when version is set."""
+        """Version text is rendered during paintEvent when version is set.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
         del qapp
         from PyQt6.QtCore import QRectF
         from PyQt6.QtGui import QPainter, QPixmap
