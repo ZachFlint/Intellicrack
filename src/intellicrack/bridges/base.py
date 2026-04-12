@@ -10,7 +10,7 @@ x64dbg, Frida, Cutter/Rizin, and other reverse engineering tools.
 
 from __future__ import annotations
 
-import abc
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
@@ -53,8 +53,6 @@ __all__ = [
     "ToolBridgeBase",
     "WatchpointInfo",
 ]
-
-_ERR_MUST_OVERRIDE = "must override method"
 
 
 @dataclass
@@ -232,7 +230,7 @@ class BridgeState:
         self.last_error = None
 
 
-class ToolBridgeBase(abc.ABC):
+class ToolBridgeBase(ABC):
     """Base class for tool bridges.
 
     All bridge implementations must inherit from this class and override the methods defined here. This ensures a consistent interface for
@@ -245,17 +243,13 @@ class ToolBridgeBase(abc.ABC):
         self._logger = get_logger(f"bridges.{self.__class__.__name__.lower()}").bind(bridge=self.__class__.__name__.lower())
 
     @property
-    @abc.abstractmethod
+    @abstractmethod
     def name(self) -> ToolName:
         """Get the tool's name.
 
         Returns:
             ToolName: The tool's name enum value.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
     @property
     def state(self) -> BridgeState:
@@ -285,47 +279,35 @@ class ToolBridgeBase(abc.ABC):
         return self._capabilities
 
     @property
-    @abc.abstractmethod
+    @abstractmethod
     def tool_definition(self) -> ToolDefinition:
         """Get tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: Tool definition with available functions.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Initialize the tool bridge.
 
         Args:
             tool_path: Optional path to tool installation.
                       If None, will auto-detect or download.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
     async def shutdown(self) -> None:
         """Shutdown the tool and cleanup resources."""
         self._logger.info("bridge_shutdown", bridge_class=self.__class__.__name__)
         self._state = BridgeState()
 
-    @abc.abstractmethod
+    @abstractmethod
     async def is_available(self) -> bool:
         """Check if the tool is installed and available.
 
         Returns:
             bool: True if the tool is ready.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
 
 class StaticAnalysisBridge(ToolBridgeBase):
@@ -343,7 +325,7 @@ class StaticAnalysisBridge(ToolBridgeBase):
             supported_formats=["pe", "elf", "macho"],
         )
 
-    @abc.abstractmethod
+    @abstractmethod
     async def load_binary(self, path: Path) -> BinaryInfo:
         """Load a binary for analysis.
 
@@ -352,22 +334,13 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             BinaryInfo: Information about the loaded binary.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def analyze(self) -> None:
-        """Run full analysis on loaded binary.
+        """Run full analysis on loaded binary."""
 
-        Raises:
-            RuntimeError: If the subclass does not override this method.
-        """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
-
-    @abc.abstractmethod
+    @abstractmethod
     async def get_functions(
         self,
         filter_pattern: str | None = None,
@@ -379,13 +352,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[FunctionInfo]: List of analyzed function information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_function(self, address: int) -> FunctionInfo | None:
         """Get function at specific address.
 
@@ -394,13 +363,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             FunctionInfo | None: Function info or None if not found.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def decompile(self, address: int) -> str:
         """Decompile function at address.
 
@@ -409,13 +374,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             str: Decompiled C pseudocode.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def disassemble(
         self,
         address: int,
@@ -429,13 +390,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[DisassemblyLine]: List of disassembly lines.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
         """Get cross-references to an address.
 
@@ -444,13 +401,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[CrossReference]: List of cross-references to the address.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
         """Get cross-references from an address.
 
@@ -459,13 +412,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[CrossReference]: List of cross-references from the address.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def search_strings(self, pattern: str) -> list[StringInfo]:
         """Search for strings matching pattern.
 
@@ -474,13 +423,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[StringInfo]: List of matching strings.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def search_bytes(self, pattern: bytes) -> list[int]:
         """Search for byte pattern.
 
@@ -489,37 +434,25 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[int]: List of match addresses.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_imports(self) -> list[ImportInfo]:
         """Get all imported functions.
 
         Returns:
             list[ImportInfo]: List of import information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_exports(self) -> list[ExportInfo]:
         """Get all exported functions.
 
         Returns:
             list[ExportInfo]: List of export information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
 
@@ -529,13 +462,9 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             bool: True if rename succeeded.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def add_comment(
         self,
         address: int,
@@ -551,11 +480,7 @@ class StaticAnalysisBridge(ToolBridgeBase):
 
         Returns:
             bool: True if comment was added.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
 
 class DynamicAnalysisBridge(ToolBridgeBase):
@@ -574,19 +499,15 @@ class DynamicAnalysisBridge(ToolBridgeBase):
             supported_formats=["pe"],
         )
 
-    @abc.abstractmethod
+    @abstractmethod
     async def attach(self, pid: int) -> None:
         """Attach to a running process.
 
         Args:
             pid: Process ID to attach to.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def spawn(
         self,
         path: Path,
@@ -600,22 +521,13 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Returns:
             int: PID of spawned process.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def detach(self) -> None:
-        """Detach from current process.
+        """Detach from current process."""
 
-        Raises:
-            RuntimeError: If the subclass does not override this method.
-        """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
-
-    @abc.abstractmethod
+    @abstractmethod
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read process memory.
 
@@ -625,13 +537,9 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Returns:
             bytes: Memory contents.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write to process memory.
 
@@ -641,25 +549,17 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Returns:
             int: Number of bytes written.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_memory_regions(self) -> list[MemoryRegion]:
         """Get process memory map.
 
         Returns:
             list[MemoryRegion]: List of memory regions.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def scan_memory(self, pattern: bytes) -> list[MemorySearchResult]:
         """Scan process memory for a pattern.
 
@@ -668,11 +568,7 @@ class DynamicAnalysisBridge(ToolBridgeBase):
 
         Returns:
             list[MemorySearchResult]: List of matches with context.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
 
 class DebuggerBridge(DynamicAnalysisBridge):
@@ -685,70 +581,43 @@ class DebuggerBridge(DynamicAnalysisBridge):
         super().__init__()
         self._capabilities.supports_debugging = True
 
-    @abc.abstractmethod
+    @abstractmethod
     async def run(self) -> None:
-        """Continue execution.
+        """Continue execution."""
 
-        Raises:
-            RuntimeError: If the subclass does not override this method.
-        """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
-
-    @abc.abstractmethod
+    @abstractmethod
     async def pause(self) -> None:
-        """Pause execution.
+        """Pause execution."""
 
-        Raises:
-            RuntimeError: If the subclass does not override this method.
-        """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
-
-    @abc.abstractmethod
+    @abstractmethod
     async def stop(self) -> None:
-        """Stop debugging (terminate process).
+        """Stop debugging (terminate process)."""
 
-        Raises:
-            RuntimeError: If the subclass does not override this method.
-        """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
-
-    @abc.abstractmethod
+    @abstractmethod
     async def step_into(self) -> int:
         """Single step into.
 
         Returns:
             int: New instruction pointer.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def step_over(self) -> int:
         """Single step over.
 
         Returns:
             int: New instruction pointer.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def step_out(self) -> int:
         """Step out of current function.
 
         Returns:
             int: New instruction pointer.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def set_breakpoint(
         self,
         address: int,
@@ -764,13 +633,9 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Returns:
             int: Breakpoint ID.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def remove_breakpoint(self, address: int) -> bool:
         """Remove a breakpoint.
 
@@ -779,37 +644,25 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Returns:
             bool: True if removed successfully.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_breakpoints(self) -> list[BreakpointInfo]:
         """Get all breakpoints.
 
         Returns:
             list[BreakpointInfo]: List of breakpoint information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_registers(self) -> RegisterState:
         """Get all register values.
 
         Returns:
             RegisterState: Current register state.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def set_register(self, register: str, value: int) -> bool:
         """Set a register value.
 
@@ -819,25 +672,17 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Returns:
             bool: True if set successfully.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_stack_trace(self) -> list[StackFrame]:
         """Get current stack trace.
 
         Returns:
             list[StackFrame]: List of stack frames.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def disassemble_at(
         self,
         address: int,
@@ -851,13 +696,9 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Returns:
             list[DisassemblyLine]: List of disassembly lines.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
 
@@ -867,11 +708,7 @@ class DebuggerBridge(DynamicAnalysisBridge):
 
         Returns:
             bytes: Assembled bytes.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
 
 class InstrumentationBridge(DynamicAnalysisBridge):
@@ -884,19 +721,15 @@ class InstrumentationBridge(DynamicAnalysisBridge):
         super().__init__()
         self._capabilities.supports_scripting = True
 
-    @abc.abstractmethod
+    @abstractmethod
     async def enumerate_modules(self) -> list[ModuleInfo]:
         """List all loaded modules in the process.
 
         Returns:
             list[ModuleInfo]: List of loaded module information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def enumerate_exports(self, module_name: str) -> list[ExportInfo]:
         """List exports of a module.
 
@@ -905,13 +738,9 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             list[ExportInfo]: List of export information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def hook_function(
         self,
         target: str,
@@ -927,13 +756,9 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             HookInfo: Information about the installed hook.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def remove_hook(self, hook_id: str) -> bool:
         """Remove a previously installed hook.
 
@@ -942,25 +767,17 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             bool: True if hook was removed successfully.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def get_hooks(self) -> list[HookInfo]:
         """Get all active hooks.
 
         Returns:
             list[HookInfo]: List of active hook information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def execute_script(self, script: str) -> str:
         """Execute custom script code.
 
@@ -969,13 +786,9 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             str: Script execution result.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def intercept_return(self, target: str, return_value: int) -> HookInfo:
         """Intercept a function and replace its return value.
 
@@ -985,13 +798,9 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             HookInfo: Information about the installed interception hook.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def call_function(
         self,
         address: int,
@@ -1005,13 +814,9 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             int: Function return value.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def enumerate_imports(self, module_name: str) -> list[ImportInfo]:
         """List imports of a module.
 
@@ -1020,23 +825,15 @@ class InstrumentationBridge(DynamicAnalysisBridge):
 
         Returns:
             list[ImportInfo]: List of import information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def enumerate_threads(self) -> list[ThreadInfo]:
         """List all threads in the attached process.
 
         Returns:
             list[ThreadInfo]: List of thread information.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
 
 class BinaryOperationsBridge(ToolBridgeBase):
@@ -1054,7 +851,7 @@ class BinaryOperationsBridge(ToolBridgeBase):
             supported_formats=["pe", "elf", "macho", "raw"],
         )
 
-    @abc.abstractmethod
+    @abstractmethod
     async def load_file(self, path: Path) -> BinaryInfo:
         """Load a binary file.
 
@@ -1063,13 +860,9 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             BinaryInfo: Information about the loaded binary.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def read_bytes(self, offset: int, size: int) -> bytes:
         """Read bytes from file.
 
@@ -1079,26 +872,18 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             bytes: Bytes read from the file.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def write_bytes(self, offset: int, data: bytes) -> None:
         """Write bytes to file.
 
         Args:
             offset: File offset.
             data: Bytes to write.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def apply_patch(self, patch: PatchInfo) -> bool:
         """Apply a patch to the binary.
 
@@ -1107,13 +892,9 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             bool: True if the patch was applied successfully.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def revert_patch(self, patch: PatchInfo) -> bool:
         """Revert a previously applied patch.
 
@@ -1122,13 +903,9 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             bool: True if the patch was reverted successfully.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def save(self, path: Path | None = None) -> Path:
         """Save the binary to file.
 
@@ -1137,13 +914,9 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             Path: Path where the file was saved.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def search_pattern(
         self,
         pattern: bytes,
@@ -1159,13 +932,9 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             list[int]: List of file offsets where the pattern was found.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
 
-    @abc.abstractmethod
+    @abstractmethod
     async def calculate_checksum(
         self,
         algorithm: str = "sha256",
@@ -1177,8 +946,4 @@ class BinaryOperationsBridge(ToolBridgeBase):
 
         Returns:
             str: Hex digest of the file hash.
-
-        Raises:
-            RuntimeError: If the subclass does not override this method.
         """
-        raise RuntimeError(_ERR_MUST_OVERRIDE)
