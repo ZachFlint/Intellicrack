@@ -45461,7 +45461,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._disassembly._create_disassembly_tab">
       <data key="d0">function</data>
@@ -45657,7 +45660,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_on_data_changed</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Handle document data-change signals by refreshing derived views.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._patches._update_patches">
       <data key="d0">function</data>
@@ -45708,21 +45711,27 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_populate_template_tree</data>
       <data key="d5">['self', 'fields']</data>
-      <data key="d4" />
+      <data key="d4">Populate the template preview tree from decoded structure fields.
+
+Args:
+    fields: Interpreted template field entries with metadata.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._highlight_template_fields">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_highlight_template_fields</data>
       <data key="d5">['self', 'fields']</data>
-      <data key="d4" />
+      <data key="d4">Apply region highlights in the hex view for template fields.
+
+Args:
+    fields: Interpreted template field entries with offsets and sizes.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._populate_template_combo">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_populate_template_combo</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Populate the template selector combo with available structures.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._pattern_editor._build_pattern_editor">
       <data key="d0">function</data>
@@ -45848,14 +45857,12 @@ Args:
       <data key="d4">Dialog for browsing and opening process memory regions.
 
 Provides a PID input, region listing, and region selection for
-loading process memory into the hex editor.
+loading process memory into the hex editor. After the dialog is
+accepted, ``region_selected`` holds the chosen ``(pid, base, size)``
+tuple or ``None`` when no region was picked.
 
 Args:
-    parent: Parent widget.
-
-Attributes:
-    region_selected: Set when the user selects a region to open.
-        Contains (pid, base_address, size) or None.</data>
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._process_memory.ProcessMemoryMixin">
       <data key="d0">class</data>
@@ -46639,14 +46646,20 @@ Args:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sections._select_template">
       <data key="d0">function</data>
       <data key="d1">python</data>
       <data key="d3">_select_template</data>
       <data key="d5">['self', 'template_name']</data>
-      <data key="d4" />
+      <data key="d4">Select a structure template by name for the current file type.
+
+Args:
+    template_name: Identifier of the template to activate.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sections._populate_sections">
       <data key="d0">function</data>
@@ -47313,7 +47326,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">_on_data_changed</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Handle document data-change signals by refreshing derived views.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._transforms._create_transforms_tab">
       <data key="d0">function</data>
@@ -47850,7 +47863,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">goto_offset</data>
       <data key="d5">['self', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Navigate the hex widget to the given byte offset.
+
+Args:
+    offset: Absolute byte offset within the active document.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._yara._create_yara_tab">
       <data key="d0">function</data>
