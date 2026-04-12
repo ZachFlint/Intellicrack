@@ -42,8 +42,19 @@ class SectionsMixin:
     _pattern_status_label: QLabel | None
     _pattern_registry: Any | None
 
-    def goto_offset(self, offset: int) -> None: ...
-    def _select_template(self, template_name: str) -> None: ...
+    def goto_offset(self, offset: int) -> None:
+        """Navigate the hex widget to the given byte offset.
+
+        Args:
+            offset: Absolute byte offset within the active document.
+        """
+
+    def _select_template(self, template_name: str) -> None:
+        """Select a structure template by name for the current file type.
+
+        Args:
+            template_name: Identifier of the template to activate.
+        """
 
     def _populate_sections(self) -> None:
         """Populate the sections tree using pefile."""

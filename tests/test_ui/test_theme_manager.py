@@ -83,33 +83,53 @@ class TestGetStylesheet:
 
     @staticmethod
     def test_get_dark_stylesheet(theme_manager: ThemeManager) -> None:
-        """get_stylesheet returns dark theme stylesheet."""
+        """get_stylesheet returns dark theme stylesheet.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         stylesheet = theme_manager.get_stylesheet(THEME_DARK)
         assert isinstance(stylesheet, str)
         assert len(stylesheet) > _MIN_STYLESHEET_LENGTH
 
     @staticmethod
     def test_get_light_stylesheet(theme_manager: ThemeManager) -> None:
-        """get_stylesheet returns light theme stylesheet."""
+        """get_stylesheet returns light theme stylesheet.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         stylesheet = theme_manager.get_stylesheet(THEME_LIGHT)
         assert isinstance(stylesheet, str)
         assert len(stylesheet) > _MIN_STYLESHEET_LENGTH
 
     @staticmethod
     def test_stylesheet_contains_qwidget(theme_manager: ThemeManager) -> None:
-        """Stylesheet contains QWidget styling."""
+        """Stylesheet contains QWidget styling.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         stylesheet = theme_manager.get_stylesheet(THEME_DARK)
         assert "QWidget" in stylesheet
 
     @staticmethod
     def test_stylesheet_contains_colors(theme_manager: ThemeManager) -> None:
-        """Stylesheet contains color definitions."""
+        """Stylesheet contains color definitions.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         stylesheet = theme_manager.get_stylesheet(THEME_DARK)
         assert "#" in stylesheet or "rgb" in stylesheet
 
     @staticmethod
     def test_stylesheet_cached(theme_manager: ThemeManager) -> None:
-        """Stylesheets are cached after first load."""
+        """Stylesheets are cached after first load.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         stylesheet1 = theme_manager.get_stylesheet(THEME_DARK)
         stylesheet2 = theme_manager.get_stylesheet(THEME_DARK)
         assert stylesheet1 == stylesheet2
@@ -122,28 +142,44 @@ class TestApplyTheme:
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_theme_returns_bool(theme_manager: ThemeManager) -> None:
-        """apply_theme returns a boolean."""
+        """apply_theme returns a boolean.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         result = theme_manager.apply_theme(THEME_DARK)
         assert isinstance(result, bool)
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_dark_theme_succeeds(theme_manager: ThemeManager) -> None:
-        """Applying dark theme succeeds."""
+        """Applying dark theme succeeds.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         result = theme_manager.apply_theme(THEME_DARK)
         assert result
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_light_theme_succeeds(theme_manager: ThemeManager) -> None:
-        """Applying light theme succeeds."""
+        """Applying light theme succeeds.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         result = theme_manager.apply_theme(THEME_LIGHT)
         assert result
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_theme_updates_current_theme(theme_manager: ThemeManager) -> None:
-        """apply_theme updates _current_theme."""
+        """apply_theme updates _current_theme.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         theme_manager.apply_theme(THEME_LIGHT)
         assert theme_manager.current_theme == THEME_LIGHT
 
@@ -153,7 +189,11 @@ class TestApplyTheme:
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_invalid_theme_uses_default(theme_manager: ThemeManager) -> None:
-        """Invalid theme name falls back to default."""
+        """Invalid theme name falls back to default.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         theme_manager.apply_theme("invalid_theme_name")
         assert theme_manager.current_theme == DEFAULT_THEME
 
@@ -163,13 +203,21 @@ class TestCurrentTheme:
 
     @staticmethod
     def test_current_theme_initial_value(theme_manager: ThemeManager) -> None:
-        """current_theme has correct initial value."""
+        """current_theme has correct initial value.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         assert theme_manager.current_theme == DEFAULT_THEME
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_current_theme_after_apply(theme_manager: ThemeManager) -> None:
-        """current_theme reflects applied theme."""
+        """current_theme reflects applied theme.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         theme_manager.apply_theme(THEME_LIGHT)
         assert theme_manager.current_theme == THEME_LIGHT
 
@@ -180,7 +228,11 @@ class TestToggleTheme:
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_toggle_from_dark_to_light(theme_manager: ThemeManager) -> None:
-        """Toggling from dark goes to light."""
+        """Toggling from dark goes to light.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         theme_manager.apply_theme(THEME_DARK)
         result = theme_manager.toggle_theme()
         assert result == THEME_LIGHT
@@ -189,7 +241,11 @@ class TestToggleTheme:
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_toggle_from_light_to_dark(theme_manager: ThemeManager) -> None:
-        """Toggling from light goes to dark."""
+        """Toggling from light goes to dark.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         theme_manager.apply_theme(THEME_LIGHT)
         result = theme_manager.toggle_theme()
         assert result == THEME_DARK
@@ -321,12 +377,20 @@ class TestThemeIntegrity:
 
     @staticmethod
     def test_styles_available_flag(theme_manager: ThemeManager) -> None:
-        """ThemeManager correctly detects styles availability."""
+        """ThemeManager correctly detects styles availability.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         assert theme_manager.styles_available
 
     @staticmethod
     def test_loaded_stylesheet_matches_file(theme_manager: ThemeManager) -> None:
-        """Loaded stylesheet matches file content."""
+        """Loaded stylesheet matches file content.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
         assets = get_assets_path()
         dark_path = assets / "styles" / "dark_theme.qss"
         file_content = dark_path.read_text(encoding="utf-8")

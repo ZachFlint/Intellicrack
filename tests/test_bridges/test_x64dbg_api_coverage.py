@@ -43,7 +43,11 @@ def bridge() -> X64DbgBridge:
 
 
 async def test_debugger_control_methods_exist(bridge: X64DbgBridge) -> None:
-    """Verify debugger control methods exist and raise ToolError when not connected."""
+    """Verify debugger control methods exist and raise ToolError when not connected.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     # These methods should try to send pipe commands and fail
 
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
@@ -66,7 +70,11 @@ async def test_debugger_control_methods_exist(bridge: X64DbgBridge) -> None:
 
 
 async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
-    """Verify breakpoint methods."""
+    """Verify breakpoint methods.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     # set_breakpoint adds to dict THEN sends command.
     # If command fails, we check if it handled it gracefully or if we catch it.
 
@@ -90,7 +98,11 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
 
 
 async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
-    """Verify watchpoint methods."""
+    """Verify watchpoint methods.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_watchpoint(_ADDR_WATCHPOINT, _WATCHPOINT_SIZE, "read")
 
@@ -100,7 +112,11 @@ async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
 
 
 async def test_register_management(bridge: X64DbgBridge) -> None:
-    """Verify register methods."""
+    """Verify register methods.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_register("rax", _REG_VALUE)
 
@@ -109,7 +125,11 @@ async def test_register_management(bridge: X64DbgBridge) -> None:
 
 
 async def test_run_command(bridge: X64DbgBridge) -> None:
-    """Verify run_command."""
+    """Verify run_command.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     # Mocking process to avoid "x64dbg not running" check effectively?
     # No, bridge._process is None.
     with pytest.raises(ToolError, match="x64dbg not running"):
@@ -118,7 +138,11 @@ async def test_run_command(bridge: X64DbgBridge) -> None:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 async def test_memory_allocation_real(bridge: X64DbgBridge) -> None:
-    """Verify allocate_memory and free_memory on current process."""
+    """Verify allocate_memory and free_memory on current process.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     bridge.attached_pid = os.getpid()
 
     addr = await bridge.allocate_memory(_ALLOC_SIZE)
@@ -136,7 +160,11 @@ async def test_memory_allocation_real(bridge: X64DbgBridge) -> None:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 async def test_process_info_real(bridge: X64DbgBridge) -> None:
-    """Verify process info gathering on current process."""
+    """Verify process info gathering on current process.
+
+    Args:
+        bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+    """
     bridge.attached_pid = os.getpid()
     bridge.binary_path = Path(sys.executable)
 

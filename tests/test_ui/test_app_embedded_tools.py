@@ -63,7 +63,11 @@ class TestEmbeddedToolsMenuIntegration:
     def test_embedded_tools_menu_exists(
         patched_window: MainWindow,
     ) -> None:
-        """Verify Embedded Tools submenu is created in Tools menu."""
+        """Verify Embedded Tools submenu is created in Tools menu.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+        """
         window = patched_window
         menubar = window.menuBar()
         assert menubar is not None, "Menu bar not found"
@@ -84,7 +88,11 @@ class TestEmbeddedToolsMenuIntegration:
     def test_embedded_tools_menu_actions_count(
         patched_window: MainWindow,
     ) -> None:
-        """Verify all 6 menu actions exist in Embedded Tools submenu."""
+        """Verify all 6 menu actions exist in Embedded Tools submenu.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+        """
         window = patched_window
         menubar = window.menuBar()
         assert menubar is not None
@@ -123,7 +131,11 @@ class TestToolbarButtonsIntegration:
     def test_toolbar_has_tool_buttons(
         patched_window: MainWindow,
     ) -> None:
-        """Verify x64dbg, Cutter, and HxD buttons exist in toolbar."""
+        """Verify x64dbg, Cutter, and HxD buttons exist in toolbar.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+        """
         window = patched_window
         assert hasattr(window, "_x64dbg_btn"), "x64dbg button not found"
         assert hasattr(window, "_cutter_btn"), "Cutter button not found"
@@ -145,7 +157,11 @@ class TestToolbarButtonsIntegration:
     def test_toolbar_button_tooltips(
         patched_window: MainWindow,
     ) -> None:
-        """Verify toolbar buttons have correct tooltips."""
+        """Verify toolbar buttons have correct tooltips.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+        """
         window = patched_window
 
         x64dbg_btn: object = window.x64dbg_btn
@@ -169,7 +185,12 @@ class TestEmbeddedToolHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _on_open_x64dbg calls add_x64dbg_tab."""
+        """Verify _on_open_x64dbg calls add_x64dbg_tab.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         recorder = CallRecorder(result=None)
         monkeypatch.setattr(window.tool_panel, "add_x64dbg_tab", recorder)
@@ -184,7 +205,12 @@ class TestEmbeddedToolHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _on_open_x64dbg shows error when widget creation fails."""
+        """Verify _on_open_x64dbg shows error when widget creation fails.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         tab_recorder = CallRecorder(result=None)
         error_recorder = CallRecorder()
@@ -201,7 +227,12 @@ class TestEmbeddedToolHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _on_open_cutter calls add_cutter_tab."""
+        """Verify _on_open_cutter calls add_cutter_tab.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         recorder = CallRecorder(result=None)
         monkeypatch.setattr(window.tool_panel, "add_cutter_tab", recorder)
@@ -216,7 +247,12 @@ class TestEmbeddedToolHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _on_open_hxd calls add_hxd_tab."""
+        """Verify _on_open_hxd calls add_hxd_tab.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         recorder = CallRecorder(result=None)
         monkeypatch.setattr(window.tool_panel, "add_hxd_tab", recorder)
@@ -235,7 +271,12 @@ class TestCurrentBinaryHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify warning shown when no binary is loaded for debug."""
+        """Verify warning shown when no binary is loaded for debug.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         window.current_binary = None
         recorder = CallRecorder()
@@ -250,7 +291,12 @@ class TestCurrentBinaryHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify warning shown when no binary is loaded for analysis."""
+        """Verify warning shown when no binary is loaded for analysis.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         window.current_binary = None
         recorder = CallRecorder()
@@ -265,7 +311,12 @@ class TestCurrentBinaryHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify warning shown when no binary is loaded for hex edit."""
+        """Verify warning shown when no binary is loaded for hex edit.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         window.current_binary = None
         recorder = CallRecorder()
@@ -280,7 +331,12 @@ class TestCurrentBinaryHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify binary is passed to x64dbg when loaded."""
+        """Verify binary is passed to x64dbg when loaded.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         test_path = Path("/test/binary.exe")
         window.current_binary = test_path
@@ -297,7 +353,12 @@ class TestCurrentBinaryHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify binary is passed to Cutter when loaded."""
+        """Verify binary is passed to Cutter when loaded.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         test_path = Path("/test/binary.exe")
         window.current_binary = test_path
@@ -314,7 +375,12 @@ class TestCurrentBinaryHandlers:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify binary is passed to HxD when loaded."""
+        """Verify binary is passed to HxD when loaded.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         test_path = Path("/test/binary.exe")
         window.current_binary = test_path
@@ -334,7 +400,11 @@ class TestCurrentBinaryTracking:
     def test_current_binary_initialized_to_none(
         patched_window: MainWindow,
     ) -> None:
-        """Verify _current_binary starts as None."""
+        """Verify _current_binary starts as None.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+        """
         current_binary: object = patched_window.current_binary
         assert current_binary is None
 
@@ -343,7 +413,12 @@ class TestCurrentBinaryTracking:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _load_binary updates _current_binary."""
+        """Verify _load_binary updates _current_binary.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         window = patched_window
         test_path = Path("/test/sample.exe")
         run_async_recorder = CallRecorder()
@@ -363,7 +438,12 @@ class TestErrorDialogs:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _show_tool_error displays QMessageBox warning."""
+        """Verify _show_tool_error displays QMessageBox warning.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         recorder = DialogRecorder()
         monkeypatch.setattr(QMessageBox, "warning", staticmethod(recorder))
 
@@ -379,7 +459,12 @@ class TestErrorDialogs:
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _show_no_binary_warning displays QMessageBox information."""
+        """Verify _show_no_binary_warning displays QMessageBox information.
+
+        Args:
+            patched_window: MainWindow fixture with SandboxManager patched out.
+            monkeypatch: Pytest monkeypatch fixture used to replace attributes during the test.
+        """
         recorder = DialogRecorder()
         monkeypatch.setattr(QMessageBox, "information", staticmethod(recorder))
 

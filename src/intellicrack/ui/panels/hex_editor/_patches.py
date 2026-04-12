@@ -30,7 +30,8 @@ class PatchesMixin:
     _patches_tree: QTreeWidget | None
     _original_data_cache: dict[int, int]
 
-    def _on_data_changed(self) -> None: ...
+    def _on_data_changed(self) -> None:
+        """Handle document data-change signals by refreshing derived views."""
 
     def _update_patches(self) -> None:
         """Update the patches tree by comparing modified offsets to originals."""
