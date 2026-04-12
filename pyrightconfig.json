@@ -1,6 +1,7 @@
 {
   "include": [
-    "src/intellicrack"
+    "src/intellicrack",
+    "tests"
   ],
   "exclude": [
     "**/__pycache__",
@@ -21,7 +22,8 @@
     "docs",
     ".pixi",
     "CLI Coding",
-    "Screenshots"
+    "Screenshots",
+    "tests/test_ui"
   ],
   "typeCheckingMode": "strict",
   "pythonVersion": "3.13",

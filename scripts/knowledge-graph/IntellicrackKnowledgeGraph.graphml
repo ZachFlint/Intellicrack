@@ -50186,6 +50186,11 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d2">D:\Intellicrack\AGENTS.md</data>
       <data key="d3">AGENTS.md</data>
     </node>
+    <node id="CHANGELOG.md">
+      <data key="d0">documentation</data>
+      <data key="d2">D:\Intellicrack\CHANGELOG.md</data>
+      <data key="d3">CHANGELOG.md</data>
+    </node>
     <node id="CLAUDE.md">
       <data key="d0">documentation</data>
       <data key="d2">D:\Intellicrack\CLAUDE.md</data>
@@ -50480,6 +50485,11 @@ This package provides asset loading, icon management, font handling, and theme m
       <data key="d0">config</data>
       <data key="d2">D:\Intellicrack\reports\json\blinter_findings.json</data>
       <data key="d3">blinter_findings.json</data>
+    </node>
+    <node id="reports/json/bp_fresh.json">
+      <data key="d0">config</data>
+      <data key="d2">D:\Intellicrack\reports\json\bp_fresh.json</data>
+      <data key="d3">bp_fresh.json</data>
     </node>
     <node id="reports/json/cargo-deny_findings.json">
       <data key="d0">config</data>
