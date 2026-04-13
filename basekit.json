@@ -1,0 +1,568 @@
+{
+  "preferences": {
+    "layout": "vertical",
+    "downloadsource": "oneapi-toolkit",
+    "startCategory": "packages",
+    "loadDefault": true
+  },
+  "preset": {},
+  "category": [
+    {
+      "id": "packages",
+      "name": "Packages",
+      "helptext": "Preset packages suitable for specific use cases. ",
+      "dynamicEvent": [
+        "dynamic-command",
+        "content-block"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "oneapi-toolkit",
+          "name": "Intel® oneAPI Base Toolkit",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "oneapi-toolkit-os",
+            "oneapi-desc"
+          ]
+        },
+        {
+          "id": "cpp-essentials",
+          "name": "Intel® C++ Essentials",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-os",
+            "cpp-essentials-tools",
+            "cpp-essentials-desc"
+          ]
+        },
+        {
+          "id": "dl-essentials",
+          "name": "Intel® Deep Learning Essentials",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-essentials-os",
+            "dl-tools",
+            "dl-desc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "oneapi-toolkit-os",
+      "name": "Operating System",
+      "helptext": "Select the operating system for your development environment.",
+      "dynamicEvent": [
+        "dynamic-command"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "linux",
+          "name": "Linux*",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "oneapi-lin"
+          ]
+        },
+        {
+          "id": "windows",
+          "name": "Windows*",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "oneapi-win"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cpp-essentials-os",
+      "name": "Operating System",
+      "helptext": "Select the operating system for your development environment.",
+      "dynamicEvent": [
+        "dynamic-command"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "linux",
+          "name": "Linux*",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-lin",
+            "cpp-essentials-tools"
+          ]
+        },
+        {
+          "id": "windows",
+          "name": "Windows*",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-win"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dl-essentials-os",
+      "name": "Operating System",
+      "helptext": "Select the operating system for your development environment.",
+      "dynamicEvent": [
+        "dynamic-command"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "linux",
+          "name": "Linux*",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "dl-lin"
+          ]
+        },
+        {
+          "id": "windows",
+          "name": "Windows*",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-win"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "oneapi-win",
+      "name": "Installer Type",
+      "helptext": "Choose your preferred installation method.",
+      "dynamicEvent": [
+        "dynamic-command"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "offline",
+          "name": "Offline Installer",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        },
+        {
+          "id": "online",
+          "name": "Online Installer",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cpp-essentials-win",
+      "name": "Installer Type",
+      "helptext": "Choose your preferred installation method.",
+      "dynamicEvent": [
+        "dynamic-command"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "offline",
+          "name": "Offline Installer",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        },
+        {
+          "id": "online",
+          "name": "Online Installer",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dl-win",
+      "name": "Installer Type",
+      "helptext": "Choose your preferred installation method.",
+      "dynamicEvent": [
+        "dynamic-command"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "offline",
+          "name": "Offline Installer",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        },
+        {
+          "id": "online",
+          "name": "Online Installer",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "oneapi-lin",
+      "name": "Installer Type",
+      "helptext": "Choose your preferred installation method.",
+      "dynamicEvent": [
+        "package-code-block"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "offline",
+          "name": "Offline Installer",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        },
+        {
+          "id": "online",
+          "name": "Online Installer",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        },
+        {
+          "id": "apt",
+          "name": "APT",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        },
+        {
+          "id": "yum-zypper",
+          "name": "YUM or Zypper",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        },
+        {
+          "id": "docker",
+          "name": "Docker*",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "oneapi-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cpp-essentials-lin",
+      "name": "Installer Type",
+      "helptext": "Choose your preferred installation method.",
+      "dynamicEvent": [
+        "package-code-block"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "offline",
+          "name": "Offline Installer",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        },
+        {
+          "id": "online",
+          "name": "Online Installer",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        },
+        {
+          "id": "apt",
+          "name": "APT",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        },
+        {
+          "id": "yum-zypper",
+          "name": "YUM or Zypper",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        },
+        {
+          "id": "docker",
+          "name": "Docker*",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "cpp-essentials-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dl-lin",
+      "name": "Installer Type",
+      "helptext": "Choose your preferred installation method.",
+      "dynamicEvent": [
+        "package-code-block"
+      ],
+      "type": "button",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "id": "offline",
+          "name": "Offline Installer",
+          "default": true,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        },
+        {
+          "id": "online",
+          "name": "Online Installer",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        },
+        {
+          "id": "apt",
+          "name": "APT",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        },
+        {
+          "id": "yum-zypper",
+          "name": "YUM or Zypper",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        },
+        {
+          "id": "docker",
+          "name": "Docker*",
+          "default": false,
+          "disabled": false,
+          "children": [
+            "dl-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "oneapi-tools",
+      "name": "What's Included",
+      "helptext": "",
+      "dynamicEvent": [],
+      "type": "text",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "name": "",
+          "toggleOpen": "",
+          "toggleText": "",
+          "toggleTextData": [
+            "Intel® oneAPI DPC++/C++ Compiler",
+            "Intel® DPC++ Compatibility Tool",
+            "Intel® Distribution for GDB*",
+            "Intel® oneAPI DPC++ Library (oneDPL)",
+            "Intel® oneAPI Threading Building Blocks (oneTBB)",
+            "Intel® oneAPI Math Kernel Library (oneMKL)",
+            "Intel® oneAPI Deep Neural Network Library (oneDNN)",
+            "Intel® oneAPI Data Analytics Library (oneDAL)",
+            "Intel® oneAPI Collective Communications Library (oneCCL)",
+            "Intel® Integrated Performance Primitives",
+            "Intel® Cryptography Primitives Library",
+            "Intel® Advisor",
+            "Intel® VTune™ Profiler"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cpp-essentials-tools",
+      "name": "What's Included",
+      "helptext": "",
+      "dynamicEvent": [],
+      "type": "text",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "name": "",
+          "toggleOpen": "",
+          "toggleText": "",
+          "toggleTextData": [
+            "Intel® oneAPI DPC++/C++ Compiler",
+            "Intel® DPC++ Compatibility Tool",
+            "Intel® Distribution for GDB*",
+            "Intel® oneAPI DPC++ Library (oneDPL)",
+            "Intel® oneAPI Threading Building Blocks (oneTBB)",
+            "Intel® oneAPI Math Kernel Library (oneMKL)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dl-tools",
+      "name": "What's Included",
+      "helptext": "",
+      "dynamicEvent": [],
+      "type": "text",
+      "multi": false,
+      "selectAll": false,
+      "choices": [
+        {
+          "name": "",
+          "toggleOpen": "",
+          "toggleText": "",
+          "toggleTextData": [
+            "Intel® oneAPI DPC++/C++ Compiler",
+            "Intel® oneAPI DPC++ Library (oneDPL)",
+            "Intel® oneAPI Deep Neural Network Library (oneDNN)",
+            "Intel® oneAPI Collective Communications Library (oneCCL)",
+            "Intel® oneAPI Math Kernel Library (oneMKL)"
+          ]
+        }
+      ],
+      "group": []
+    }
+  ],
+  "irc": {
+    "unbundledComponents": {
+      "cpp-essentials": "f6ca5bd4-ace0-4043-aabc-06dac81d7abd",
+      "oneapi-toolkit": "1686358a-3b46-4a36-960f-f40e3229c467",
+      "dl-essentials": "d9d6c69f-4e9f-4023-a9b5-1b4f70d62719"
+    },
+    "eloquaDetails": {
+      "categoryEloqua": {
+        "cpp-essentials": {
+          "formName": "oneapiToolkitDwnldMKA-36243",
+          "tacticId": "MKA-36243",
+          "sourceId": "satg_WW_satgobmpdt_FMOI_EN_2023_oneAPI Tookit Download_C-MKA-30708_T-MKA-36243",
+          "productName": "Intel® C++ Essentials - Community Support"
+        },
+        "oneapi-toolkit": {
+          "formName": "oneapiToolkitDwnldMKA-36243",
+          "tacticId": "MKA-36243",
+          "sourceId": "satg_WW_satgobmpdt_FMOI_EN_2023_oneAPI Tookit Download_C-MKA-30708_T-MKA-36243",
+          "productName": "Intel® oneAPI Base Toolkit - Community Support"
+        },
+        "dl-essentials": {
+          "formName": "oneapiToolkitDwnldMKA-36243",
+          "tacticId": "MKA-36243",
+          "sourceId": "satg_WW_satgobmpdt_FMOI_EN_2023_oneAPI Tookit Download_C-MKA-30708_T-MKA-36243",
+          "productName": "Intel® Deep Learning Essentials - Community Support"
+        }
+      }
+    }
+  },
+  "title": {
+    "subTitle": []
+  },
+  "codeCommand": {
+    "apt": [
+      {
+        "staticCommand": "sudo apt install ",
+        "dynamicCommand": {
+          "oneapi-toolkit": "intel-oneapi-base-toolkit",
+          "cpp-essentials": "intel-cpp-essentials",
+          "dl-essentials": "intel-deep-learning-essentials"
+        }
+      }
+    ],
+    "yum-zypper": [
+      {
+        "staticCommand": "sudo yum install ",
+        "dynamicCommand": {
+          "oneapi-toolkit": "intel-oneapi-base-toolkit",
+          "cpp-essentials": "intel-cpp-essentials",
+          "dl-essentials": "intel-deep-learning-essentials"
+        }
+      },
+      {
+        "staticCommand": "sudo zypper install  ",
+        "dynamicCommand": {
+          "oneapi-toolkit": "intel-oneapi-base-toolkit",
+          "cpp-essentials": "intel-cpp-essentials",
+          "dl-essentials": "intel-deep-learning-essentials"
+        }
+      }
+    ],
+    "docker": [
+      {
+        "dynamicCommand": {
+          "oneapi-toolkit": "docker pull intel/oneapi-basekit:latest ",
+          "cpp-essentials": "docker pull intel/cpp-essentials:latest",
+          "dl-essentials": "docker pull intel/deep-learning-essentials:latest"
+        }
+      }
+    ]
+  }
+}
