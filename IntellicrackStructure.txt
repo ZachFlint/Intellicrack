@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Sun, Apr 12, 2026 07:15:42 PM
+Generated: Mon, Apr 13, 2026 04:05:28 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -2798,7 +2798,12 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   │   ├── custom_20260322_022321.xml
 │   │   │   ├── custom_20260322_190221.txt
 │   │   │   ├── custom_20260322_190221.xml
-│   │   │   └── custom_20260326_220325.txt
+│   │   │   ├── custom_20260326_220325.txt
+│   │   │   ├── unit_20260412_152934.txt
+│   │   │   ├── unit_20260412_152934.xml
+│   │   │   └── unit_20260412_173430.txt
+│   │   ├── _sandbox_checkpoints.log
+│   │   ├── _sandbox_output.txt
 │   │   ├── _sandbox_pytest_args.txt
 │   │   └── _sandbox_verbose.log
 │   ├── txt/
@@ -26604,6 +26609,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │   │   ├── __init__.pyi
 │   │   ├── _frida.pyi
 │   │   └── core.pyi
+│   ├── keystone/
+│   │   └── __init__.pyi
 │   ├── PIL/
 │   │   ├── __init__.pyi
 │   │   └── Image.pyi
@@ -28180,6 +28187,10 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── .yamllint
 ├── .yarnrc.yml
 ├── AGENTS.md
+├── basekit-data-content.json
+├── basekit-products.json
+├── basekit.html
+├── basekit.json
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── cliff.toml
@@ -28192,6 +28203,8 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 ├── desktop.ini
 ├── GEMINI.md
 ├── gemini_cli_config.json
+├── intel.oneapi.win.deep-learning-essentials.product,v=2025.3.1+8.dot
+├── intel_page.html
 ├── Intellicrack.cmd
 ├── IntellicrackKnowledgeGraph.html
 ├── IntellicrackStructure.hta

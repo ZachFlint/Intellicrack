@@ -31,6 +31,41 @@ function checkFileStillHasViolations(filePath, violations) {
         return false;
     }
 
+    const normalizedPath = filePath.replace(/\\/g, '/').toLowerCase();
+
+    const DOC_EXTENSIONS = [
+        '.md',
+        '.mdx',
+        '.markdown',
+        '.rst',
+        '.txt',
+        '.adoc',
+        '.asciidoc',
+        '.tex',
+        '.org',
+        '.wiki',
+    ];
+    const ext = path.extname(normalizedPath);
+    if (DOC_EXTENSIONS.includes(ext)) {
+        logToFile(`Skipping documentation file at stop-check: ${filePath} (extension: ${ext})`);
+        return false;
+    }
+
+    const DOC_PATH_FRAGMENTS = [
+        '.claude/plans/',
+        '.claude/agents/',
+        '.claude/commands/',
+        '.claude/skills/',
+        '/docs/',
+        '/documentation/',
+    ];
+    for (const fragment of DOC_PATH_FRAGMENTS) {
+        if (normalizedPath.includes(fragment)) {
+            logToFile(`Skipping documentation path at stop-check: ${filePath} (matched fragment: ${fragment})`);
+            return false;
+        }
+    }
+
     try {
         const content = fs.readFileSync(filePath, 'utf8');
 

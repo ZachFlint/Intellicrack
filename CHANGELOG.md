@@ -107,4 +107,67 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
+- Update knowledge graph and workspace configuration (``)
+Synchronize the Intellicrack knowledge graph with the current project structure and update environment configurations. This includes refreshing module mappings, updating file paths in GraphML metadata, and cleaning up stale worktree references.
+- Update `IntellicrackKnowledgeGraph.dot` and `.graphml` with current module relationships
+- Remove stale `.claude/worktrees` agent references
+- Add `basekit` data files and update `requirements.txt` dependencies
+- Refactor QEMU sandbox image conversion to use a native PPM-to-PNG implementation
+- Update Ghidra and Cutter UI panel logic for better compatibility with SIP-generated bindings
+
+
+### Documentation
+
+- Fix docstring findings in bridges (non-base)  (`ca08959`)
+
+- Fix docstring findings in core orchestration  (`33eb946`)
+
+- Fix docstring findings in tests/test_providers  (`7afae48`)
+
+- Fix docstring findings in tests/test_ui small + conftest  (`e17c6ec`)
+
+- Fix docstring findings in tests/test_ui large files  (`a290f29`)
+Adds Args sections to 153 test docstrings across test_splash_screen,
+test_xpu_status, test_process_panel, and test_app_embedded_tools,
+documenting all fixture parameters to satisfy darglint DAR101 findings.
+
+- Fix docstring findings in ui/panels process_panel + remaining  (`4765fe1`)
+Remove inherited ``tool_started`` and ``tool_closed`` signal entries from
+the ``ProcessPanel`` class docstring ``Attributes`` section, since those
+signals are declared on ``AnalysisPanelBase`` and should not appear in
+the subclass Attributes list.  Fixes pydoclint DOC602/DOC603.
+
+- Fix docstring findings in tests/test_core + test_sandbox  (`2723994`)
+
+- Fix docstring findings in bridges/base.py  (`f3a62af`)
+Eliminates 49 darglint DAR202 findings by converting abstract method
+bodies from 'raise RuntimeError(_ERR_MUST_OVERRIDE)' to docstring-only
+bodies and removing the corresponding 'Raises: RuntimeError' sections.
+Switches to direct abstractmethod import (aligning with providers/base.py
+pattern) so darglint recognizes abstract methods and skips return-check.
+The @abstractmethod decorator already prevents instantiation of
+non-overriding subclasses, so behavior is preserved.
+
+- Fix docstring findings in tests/test_bridges  (`46e305e`)
+Add Args/Returns/Yields sections and class Attributes where darglint
+(DAR101/DAR201/DAR301) and pydoclint (DOC203/DOC404/DOC601/DOC603) were
+unhappy about missing or inconsistent documentation. Google-style
+throughout, return/yield types spelled out to match signatures.
+
+- Fix docstring findings in providers  (`0862b91`)
+Add Google-style docstrings to inner/nested functions flagged by
+interrogate INT001 across provider modules:
+- discovery.ModelDiscovery.discover_all.discover_one
+- discovery.ModelDiscovery.get_recommended_model.cost_key
+- google.GoogleProvider.chat._generate
+- google.GoogleProvider.chat_stream._start_stream
+- local_transformers.LocalTransformersProvider._stream_generate._forward_pass
+- ollama.OllamaProvider._fetch_model_metadata._query_single
+Interrogate coverage raised from 97.9% to 100% for the providers
+package. pydoclint and darglint remain clean. Ruff stays clean.
+
+- Fix docstring findings in tests/test_hexpat + test_scripts  (`09ee9c1`)
+
+- Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
+
 

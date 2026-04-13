@@ -129,6 +129,41 @@ function main() {
             process.exit(0);
         }
 
+        const DOC_EXTENSIONS = [
+            '.md',
+            '.mdx',
+            '.markdown',
+            '.rst',
+            '.txt',
+            '.adoc',
+            '.asciidoc',
+            '.tex',
+            '.org',
+            '.wiki',
+        ];
+        const ext = path.extname(normalizedPath);
+        if (DOC_EXTENSIONS.includes(ext)) {
+            logToFile(`Skipping documentation file: ${filePath} (extension: ${ext})`);
+            clearViolations();
+            process.exit(0);
+        }
+
+        const DOC_PATH_FRAGMENTS = [
+            '.claude/plans/',
+            '.claude/agents/',
+            '.claude/commands/',
+            '.claude/skills/',
+            '/docs/',
+            '/documentation/',
+        ];
+        for (const fragment of DOC_PATH_FRAGMENTS) {
+            if (normalizedPath.includes(fragment)) {
+                logToFile(`Skipping documentation path: ${filePath} (matched fragment: ${fragment})`);
+                clearViolations();
+                process.exit(0);
+            }
+        }
+
         const validTools = [
             'Write',
             'Edit',

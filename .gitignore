@@ -459,3 +459,7 @@ intellicrack/utils/templates/
 
 .gemini/
 gha-creds-*.json
+
+# Claude Code /batch worktrees (ephemeral, never tracked)
+.claude/worktrees/
+
