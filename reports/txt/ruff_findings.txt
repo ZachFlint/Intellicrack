@@ -1,13 +1,569 @@
-6 findings in D:\Intellicrack\src\intellicrack\bridges\x64dbg.py
+13 findings in D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py
 
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1172:133: COM812 Trailing comma missing
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:82:9: D107 Missing docstring in `__init__`
 
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1183:135: COM812 Trailing comma missing
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:122:9: D107 Missing docstring in `__init__`
 
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1278:133: COM812 Trailing comma missing
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:161:9: D107 Missing docstring in `__init__`
 
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1320:137: COM812 Trailing comma missing
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:198:9: D107 Missing docstring in `__init__`
 
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:1421:132: COM812 Trailing comma missing
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:237:9: D107 Missing docstring in `__init__`
 
-D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:3129:9: PLR1730 Replace `if` statement with `alignment = max(alignment, 1)`
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:277:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:318:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:357:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:396:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:465:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:545:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:646:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_tabs.py:757:9: D107 Missing docstring in `__init__`
+
+
+10 findings in D:\Intellicrack\src\intellicrack\core\types.py
+
+D:\Intellicrack\src\intellicrack\core\types.py:1479:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1512:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1552:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1589:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1626:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1660:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1695:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1735:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1771:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\types.py:1835:9: D107 Missing docstring in `__init__`
+
+
+6 findings in D:\Intellicrack\src\intellicrack\bridges\base.py
+
+D:\Intellicrack\src\intellicrack\bridges\base.py:240:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\bridges\base.py:319:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\bridges\base.py:492:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\bridges\base.py:580:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\bridges\base.py:720:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\bridges\base.py:845:9: D107 Missing docstring in `__init__`
+
+
+6 findings in D:\Intellicrack\src\intellicrack\ui\highlighter.py
+
+D:\Intellicrack\src\intellicrack\ui\highlighter.py:44:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\highlighter.py:152:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\highlighter.py:504:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\highlighter.py:708:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\highlighter.py:947:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\highlighter.py:1123:9: D107 Missing docstring in `__init__`
+
+
+6 findings in D:\Intellicrack\src\intellicrack\ui\provider_config.py
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:199:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:301:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:527:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:822:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:1370:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\provider_config.py:2377:9: D107 Missing docstring in `__init__`
+
+
+6 findings in D:\Intellicrack\src\intellicrack\ui\tool_config.py
+
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:110:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:381:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:572:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:707:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1017:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tool_config.py:1190:9: D107 Missing docstring in `__init__`
+
+
+5 findings in D:\Intellicrack\src\intellicrack\ui\preferences.py
+
+D:\Intellicrack\src\intellicrack\ui\preferences.py:102:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\preferences.py:211:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\preferences.py:306:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\preferences.py:372:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\preferences.py:470:9: D107 Missing docstring in `__init__`
+
+
+5 findings in D:\Intellicrack\src\intellicrack\ui\tools.py
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:402:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:484:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:590:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:677:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\tools.py:774:9: D107 Missing docstring in `__init__`
+
+
+4 findings in D:\Intellicrack\src\intellicrack\core\hexpat_compiler.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat_compiler.py:33:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\hexpat_compiler.py:464:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\hexpat_compiler.py:683:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\hexpat_compiler.py:1162:9: D107 Missing docstring in `__init__`
+
+
+4 findings in D:\Intellicrack\src\intellicrack\core\transform_pipeline.py
+
+D:\Intellicrack\src\intellicrack\core\transform_pipeline.py:49:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\transform_pipeline.py:61:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\transform_pipeline.py:257:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\transform_pipeline.py:729:9: D107 Missing docstring in `__init__`
+
+
+4 findings in D:\Intellicrack\src\intellicrack\ui\panels\graph_view.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:135:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:234:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:305:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\graph_view.py:498:9: D107 Missing docstring in `__init__`
+
+
+4 findings in D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py:142:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py:213:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py:301:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\stack_viewer.py:429:9: D107 Missing docstring in `__init__`
+
+
+3 findings in D:\Intellicrack\src\intellicrack\ui\chat.py
+
+D:\Intellicrack\src\intellicrack\ui\chat.py:63:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\chat.py:224:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\chat.py:378:9: D107 Missing docstring in `__init__`
+
+
+3 findings in D:\Intellicrack\src\intellicrack\ui\sandbox_config.py
+
+D:\Intellicrack\src\intellicrack\ui\sandbox_config.py:81:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\sandbox_config.py:280:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\sandbox_config.py:749:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\core\hexpat\errors.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\errors.py:20:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\hexpat\errors.py:65:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\core\hexpat\evaluator.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\evaluator.py:141:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\hexpat\evaluator.py:261:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\core\logging.py
+
+D:\Intellicrack\src\intellicrack\core\logging.py:277:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\logging.py:603:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\core\script_gen.py
+
+D:\Intellicrack\src\intellicrack\core\script_gen.py:482:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\script_gen.py:760:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\core\session.py
+
+D:\Intellicrack\src\intellicrack\core\session.py:212:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\core\session.py:784:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\credentials\oauth.py
+
+D:\Intellicrack\src\intellicrack\credentials\oauth.py:359:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\credentials\oauth.py:442:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\providers\base.py
+
+D:\Intellicrack\src\intellicrack\providers\base.py:153:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\providers\base.py:582:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\providers\discovery.py
+
+D:\Intellicrack\src\intellicrack\providers\discovery.py:98:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\providers\discovery.py:303:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\sandbox\manager.py
+
+D:\Intellicrack\src\intellicrack\sandbox\manager.py:47:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\sandbox\manager.py:91:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\ui\app.py
+
+D:\Intellicrack\src\intellicrack\ui\app.py:129:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\app.py:180:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:148:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor_widget.py:368:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:62:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\panels\vnc_widget.py:483:9: D107 Missing docstring in `__init__`
+
+
+2 findings in D:\Intellicrack\src\intellicrack\ui\session_manager.py
+
+D:\Intellicrack\src\intellicrack\ui\session_manager.py:84:9: D107 Missing docstring in `__init__`
+
+D:\Intellicrack\src\intellicrack\ui\session_manager.py:825:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\cutter.py
+
+D:\Intellicrack\src\intellicrack\bridges\cutter.py:732:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py
+
+D:\Intellicrack\src\intellicrack\bridges\frida_bridge.py:1068:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\ghidra.py
+
+D:\Intellicrack\src\intellicrack\bridges\ghidra.py:96:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\hex_editor.py
+
+D:\Intellicrack\src\intellicrack\bridges\hex_editor.py:275:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\hex_state.py
+
+D:\Intellicrack\src\intellicrack\bridges\hex_state.py:94:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\installer.py
+
+D:\Intellicrack\src\intellicrack\bridges\installer.py:201:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\named_pipe_client.py
+
+D:\Intellicrack\src\intellicrack\bridges\named_pipe_client.py:61:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\process.py
+
+D:\Intellicrack\src\intellicrack\bridges\process.py:719:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py
+
+D:\Intellicrack\src\intellicrack\bridges\sandbox_bridge.py:94:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\schemas.py
+
+D:\Intellicrack\src\intellicrack\bridges\schemas.py:153:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\bridges\x64dbg.py
+
+D:\Intellicrack\src\intellicrack\bridges\x64dbg.py:376:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\analysis_aggregator.py
+
+D:\Intellicrack\src\intellicrack\core\analysis_aggregator.py:45:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\disassembler.py
+
+D:\Intellicrack\src\intellicrack\core\disassembler.py:114:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\data_reader.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\data_reader.py:33:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\interpreter.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\interpreter.py:57:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\lexer.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\lexer.py:25:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\parser.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\parser.py:128:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\pattern_registry.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\pattern_registry.py:59:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\preprocessor.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\preprocessor.py:77:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\stdlib.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\stdlib.py:43:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\hexpat\type_system.py
+
+D:\Intellicrack\src\intellicrack\core\hexpat\type_system.py:151:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\process_manager.py
+
+D:\Intellicrack\src\intellicrack\core\process_manager.py:147:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\template_manager.py
+
+D:\Intellicrack\src\intellicrack\core\template_manager.py:73:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\tools.py
+
+D:\Intellicrack\src\intellicrack\core\tools.py:84:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\core\yara_scanner.py
+
+D:\Intellicrack\src\intellicrack\core\yara_scanner.py:86:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\credentials\env_loader.py
+
+D:\Intellicrack\src\intellicrack\credentials\env_loader.py:151:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\credentials\store.py
+
+D:\Intellicrack\src\intellicrack\credentials\store.py:99:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\anthropic.py
+
+D:\Intellicrack\src\intellicrack\providers\anthropic.py:64:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\google.py
+
+D:\Intellicrack\src\intellicrack\providers\google.py:65:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\grok.py
+
+D:\Intellicrack\src\intellicrack\providers\grok.py:85:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\huggingface.py
+
+D:\Intellicrack\src\intellicrack\providers\huggingface.py:70:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\local_transformers.py
+
+D:\Intellicrack\src\intellicrack\providers\local_transformers.py:165:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\model_loader.py
+
+D:\Intellicrack\src\intellicrack\providers\model_loader.py:121:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\ollama.py
+
+D:\Intellicrack\src\intellicrack\providers\ollama.py:71:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\openai.py
+
+D:\Intellicrack\src\intellicrack\providers\openai.py:86:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\openrouter.py
+
+D:\Intellicrack\src\intellicrack\providers\openrouter.py:68:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\providers\registry.py
+
+D:\Intellicrack\src\intellicrack\providers\registry.py:39:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\sandbox\windows.py
+
+D:\Intellicrack\src\intellicrack\sandbox\windows.py:114:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\confirmation_dialog.py
+
+D:\Intellicrack\src\intellicrack\ui\confirmation_dialog.py:47:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\dialogs\splash_screen.py
+
+D:\Intellicrack\src\intellicrack\ui\dialogs\splash_screen.py:166:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panel_dock.py
+
+D:\Intellicrack\src\intellicrack\ui\panel_dock.py:57:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\analysis_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\analysis_panel.py:61:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\async_bridge.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\async_bridge.py:112:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\base_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\base_panel.py:65:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\cutter_panel.py:120:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\frida_panel.py:107:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\ghidra_panel.py:140:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\hex_editor\panel.py:132:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\hxd_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\hxd_panel.py:118:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\sandbox_panel.py:77:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py
+
+D:\Intellicrack\src\intellicrack\ui\panels\x64dbg_panel.py:110:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\resources\font_manager.py
+
+D:\Intellicrack\src\intellicrack\ui\resources\font_manager.py:60:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py
+
+D:\Intellicrack\src\intellicrack\ui\resources\icon_manager.py:201:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\resources\resource_helper.py
+
+D:\Intellicrack\src\intellicrack\ui\resources\resource_helper.py:38:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py
+
+D:\Intellicrack\src\intellicrack\ui\resources\theme_manager.py:1125:9: D107 Missing docstring in `__init__`
+
+
+1 findings in D:\Intellicrack\src\intellicrack\ui\xpu_status.py
+
+D:\Intellicrack\src\intellicrack\ui\xpu_status.py:92:9: D107 Missing docstring in `__init__`

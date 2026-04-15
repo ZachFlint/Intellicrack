@@ -1,15 +1,15 @@
 2 findings in src/intellicrack/bridges\hex_editor.py
 
-src/intellicrack/bridges\hex_editor.py:5134: [Medium] B102:exec_used: Use of exec detected.
+src/intellicrack/bridges\hex_editor.py:5331: [Medium] B102:exec_used: Use of exec detected.
 
-src/intellicrack/bridges\hex_editor.py:5375: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False
+src/intellicrack/bridges\hex_editor.py:5572: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False
 
 
 2 findings in src/intellicrack/sandbox\qemu.py
 
-src/intellicrack/sandbox\qemu.py:2618: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory.
+src/intellicrack/sandbox\qemu.py:2735: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory.
 
-src/intellicrack/sandbox\qemu.py:2619: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory.
+src/intellicrack/sandbox\qemu.py:2736: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory.
 
 
 1 findings in src/intellicrack/sandbox\analysis.py
@@ -19,9 +19,9 @@ src/intellicrack/sandbox\analysis.py:47: [Medium] B104:hardcoded_bind_all_interf
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_scripting.py
 
-src/intellicrack/ui\panels\hex_editor\_scripting.py:547: [Medium] B102:exec_used: Use of exec detected.
+src/intellicrack/ui\panels\hex_editor\_scripting.py:552: [Medium] B102:exec_used: Use of exec detected.
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_signatures.py
 
-src/intellicrack/ui\panels\hex_editor\_signatures.py:176: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False
+src/intellicrack/ui\panels\hex_editor\_signatures.py:177: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False

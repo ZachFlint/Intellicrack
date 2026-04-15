@@ -43,17 +43,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.hook_function.on_message'"
+            "text": "Missing docstring for '_extract_command_line_from_peb.ProcessBasicInformation'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "bridges/x64dbg.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1828,
+                  "startLine": 269,
                   "startColumn": 1
                 }
               }
@@ -64,13 +64,223 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.execute_persistent_script.on_message'"
+            "text": "Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4786,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4860,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'DataReader.from_document.read_fn'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/data_reader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'DataReader.from_bytes.read_fn'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/data_reader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 71,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_sizeof'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1899,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_addressof'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1902,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_typenameof'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1905,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_assert'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1911,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_print'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1919,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_format'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1922,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_unsigned'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
@@ -85,17 +295,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge._execute_script_and_wait.on_message'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_signed'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2078,
+                  "startLine": 1947,
                   "startColumn": 1
                 }
               }
@@ -106,17 +316,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.allocate_memory.on_message'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_string'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2293,
+                  "startLine": 1957,
                   "startColumn": 1
                 }
               }
@@ -127,17 +337,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.replace_function.on_message'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_find_sequence'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2625,
+                  "startLine": 1966,
                   "startColumn": 1
                 }
               }
@@ -148,17 +358,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.stalker_follow.on_stalker_message'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_min'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2830,
+                  "startLine": 1976,
                   "startColumn": 1
                 }
               }
@@ -169,17 +379,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.enable_child_gating.on_child_added'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_max'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2924,
+                  "startLine": 1980,
                   "startColumn": 1
                 }
               }
@@ -190,17 +400,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.enable_crash_reporting.on_process_crashed'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_abs'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3019,
+                  "startLine": 1984,
                   "startColumn": 1
                 }
               }
@@ -211,17 +421,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.allocate_string.on_message'"
+            "text": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_strlen'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "core/hexpat/evaluator.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3314,
+                  "startLine": 1993,
                   "startColumn": 1
                 }
               }
@@ -232,689 +442,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'FridaBridge.set_exception_handler.on_message'"
+            "text": "Missing docstring for 'OAuthCallbackServer.start.serve'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
+                  "uri": "credentials/oauth.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3697,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.stalker_add_call_probe.on_message'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3866,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.objc_hook_method.on_message'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4227,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.java_hook_method.on_message'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4452,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.create_cmodule.on_message'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4546,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.socket_listen.on_message'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4835,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.sqlite_open.on_message'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5085,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'FridaBridge.monitor_path.on_change'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5367,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'GhidraBridge.start_headless._start_process'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/ghidra.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1131,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.calculate_hash_custom_crc.reflect'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3081,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.read'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5072,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.write'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5081,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.insert'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5087,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.delete'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5093,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.length'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5097,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.search_hex'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5102,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.search_text'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5107,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.add_bookmark'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5113,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'HexEditorBridge.run_python_script.safe_print'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5120,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'NamedPipeClient._open_handle'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/named_pipe_client.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 268,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'NamedPipeClient._close_handle'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/named_pipe_client.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 319,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'NamedPipeClient._read_exact_sync'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/named_pipe_client.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 324,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'NamedPipeClient._write_sync'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/named_pipe_client.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 373,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'NamedPipeClient._cancel_io'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/named_pipe_client.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 411,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'ProcessBridge.get_windows._enum_impl'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/process.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2092,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge.get_registers.parse_int'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2310,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge.get_registers.get_reg'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2321,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge.get_memory_regions.MemoryBasicInformation'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2617,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge._get_threads.ThreadEntry32'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2946,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge._get_modules.ModuleEntry32W'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3015,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge.get_privileges.LUID'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4610,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge.adjust_privilege.LUID'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4648,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'X64DbgBridge.adjust_privilege.TokenPrivileges'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4651,
+                  "startLine": 376,
                   "startColumn": 1
                 }
               }
@@ -1051,17 +589,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'ModelDiscovery.discover_all.discover_one'"
+            "text": "Missing docstring for 'extract_iocs._add_ioc'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "providers/discovery.py",
+                  "uri": "sandbox/analysis.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 351,
+                  "startLine": 444,
                   "startColumn": 1
                 }
               }
@@ -1072,17 +610,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'ModelDiscovery.get_recommended_model.cost_key'"
+            "text": "Missing docstring for 'extract_iocs._scan_text'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "providers/discovery.py",
+                  "uri": "sandbox/analysis.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 705,
+                  "startLine": 466,
                   "startColumn": 1
                 }
               }
@@ -1093,80 +631,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'GoogleProvider.chat._generate'"
+            "text": "Missing docstring for 'generate_timeline._should_include'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "providers/google.py",
+                  "uri": "sandbox/analysis.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 281,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'GoogleProvider.chat_stream._start_stream'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 396,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'LocalTransformersProvider._stream_generate._forward_pass'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "providers/local_transformers.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 676,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'OllamaProvider._fetch_model_metadata._query_single'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "providers/ollama.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 380,
+                  "startLine": 547,
                   "startColumn": 1
                 }
               }
@@ -1187,28 +662,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 727,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'QEMUSandbox.capture_screenshot._convert_to_png'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2441,
+                  "startLine": 854,
                   "startColumn": 1
                 }
               }
@@ -1229,7 +683,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2636,
+                  "startLine": 2753,
                   "startColumn": 1
                 }
               }
@@ -1250,7 +704,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2716,
+                  "startLine": 2833,
                   "startColumn": 1
                 }
               }
@@ -1271,7 +725,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2754,
+                  "startLine": 2871,
                   "startColumn": 1
                 }
               }
@@ -1366,6 +820,48 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
+            "text": "Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 735,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 745,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
             "text": "Missing docstring for 'MainWindow._refresh_system_status.fetch_status'"
           },
           "locations": [
@@ -1377,6 +873,27 @@
                 },
                 "region": {
                   "startLine": 786,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 942,
                   "startColumn": 1
                 }
               }
@@ -1534,6 +1051,27 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
+            "text": "Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1533,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
             "text": "Missing docstring for 'MainWindow._on_browse_models.fetch'"
           },
           "locations": [
@@ -1576,6 +1114,69 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
+            "text": "Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1675,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1693,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._on_process_attached._on_done'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1964,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
             "text": "Missing docstring for 'MainWindow._on_cancel.cancel'"
           },
           "locations": [
@@ -1597,6 +1198,27 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
+            "text": "Missing docstring for 'ChatPanel.add_streaming_message.append_chunk'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/chat.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 486,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
             "text": "Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'"
           },
           "locations": [
@@ -1608,6 +1230,27 @@
                 },
                 "region": {
                   "startLine": 866,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProviderConfigDialog._load_providers._conn_tested_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1006,
                   "startColumn": 1
                 }
               }
@@ -1660,6 +1303,69 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
+            "text": "Missing docstring for 'ProviderSettingsWidget._setup_ui._key_visibility_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1415,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProviderSettingsWidget._refresh_models._refresh_finished_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2020,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProviderSettingsWidget._test_connection._test_finished_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2097,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
             "text": "Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'"
           },
           "locations": [
@@ -1681,17 +1387,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'DisassemblyMixin.goto_offset'"
+            "text": "Missing docstring for 'SandboxConfigDialog._test_sandbox._test_finished_slot'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_disassembly.py",
+                  "uri": "ui/sandbox_config.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 49,
+                  "startLine": 609,
                   "startColumn": 1
                 }
               }
@@ -1702,17 +1408,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'PatchesMixin._on_data_changed'"
+            "text": "Missing docstring for 'SessionManagerDialog._load_sessions_from_disk._sort_key'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_patches.py",
+                  "uri": "ui/session_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 33,
+                  "startLine": 339,
                   "startColumn": 1
                 }
               }
@@ -1723,17 +1429,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'PatternEditorMixin._populate_template_tree'"
+            "text": "Missing docstring for 'ToolSettingsWidget._check_status._status_slot'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_pattern_editor.py",
+                  "uri": "ui/tool_config.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 70,
+                  "startLine": 886,
                   "startColumn": 1
                 }
               }
@@ -1744,17 +1450,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'PatternEditorMixin._highlight_template_fields'"
+            "text": "Missing docstring for 'ToolSettingsWidget._install_tool._install_slot'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_pattern_editor.py",
+                  "uri": "ui/tool_config.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 71,
+                  "startLine": 948,
                   "startColumn": 1
                 }
               }
@@ -1765,17 +1471,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'PatternEditorMixin._populate_template_combo'"
+            "text": "Missing docstring for 'ToolStatusDialog._refresh_status._tool_status_slot'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_pattern_editor.py",
+                  "uri": "ui/tool_config.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 72,
+                  "startLine": 1324,
                   "startColumn": 1
                 }
               }
@@ -1786,17 +1492,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'SectionsMixin.goto_offset'"
+            "text": "Missing docstring for 'find_window_by_pid._enum_callback'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_sections.py",
+                  "uri": "ui/win32_embed.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 45,
+                  "startLine": 65,
                   "startColumn": 1
                 }
               }
@@ -1807,17 +1513,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'SectionsMixin._select_template'"
+            "text": "Missing docstring for 'poll_and_embed._try_embed'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_sections.py",
+                  "uri": "ui/win32_embed.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 46,
+                  "startLine": 155,
                   "startColumn": 1
                 }
               }
@@ -1828,17 +1534,17 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'TransformsMixin._on_data_changed'"
+            "text": "Missing docstring for 'GhidraPanel._dispatch_func_menu_action._show_conventions'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_transforms.py",
+                  "uri": "ui/panels/ghidra_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 76,
+                  "startLine": 1946,
                   "startColumn": 1
                 }
               }
@@ -1849,17 +1555,1340 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for 'YaraMixin.goto_offset'"
+            "text": "Missing docstring for 'HexEditorWidget.contextMenuEvent._copy_as_slot'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "ui/panels/hex_editor/_yara.py",
+                  "uri": "ui/panels/hex_editor_widget.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 59,
+                  "startLine": 1876,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorWidget.contextMenuEvent._mode_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1909,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorWidget.contextMenuEvent._minimap_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1919,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SandboxPanel._create_content._vnc_status_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 261,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ScriptManagerPanel._on_validate.reset_status'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 804,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'StackViewerPanel._setup_ui._auto_refresh_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 469,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'X64DbgPanel._populate_toolbar._toggle_64bit_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 167,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'X64DbgPanel._try_embed_debugger_window._on_embedded'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/x64dbg_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1008,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'DataInspectorMixin._create_bit_editor_group._make_bit_handler'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_data_inspector.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 129,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'DataInspectorMixin._create_bit_editor_group._make_bit_handler._handler'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_data_inspector.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 130,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ScriptWorker._execute._safe_print'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_scripting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 533,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SearchMixin._build_numeric_search_panel._range_toggled_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_search.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 435,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'EntropyGraphWidget.paintEvent.x_coord'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_widgets.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 150,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'EntropyGraphWidget.paintEvent.y_coord'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_widgets.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 153,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ByteDistributionWidget.paintEvent.bar_h'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/_widgets.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 246,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorPanel._build_side_panels._on_log_toggled'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 456,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorPanel._build_side_panels._log_toggled_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 459,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorPanel.set_state_holder.on_state_event'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 815,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 957,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler._handler'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 958,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._refresh_regions._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 369,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._on_read._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 407,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._on_write._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 470,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._on_allocate._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 483,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._on_free._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 515,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._on_protect._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 548,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MemoryTab._on_search._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_memory_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 569,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._refresh_modules._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 283,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._on_inject._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 336,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._on_inject._on_error'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 343,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._refresh_handles._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 357,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._refresh_heaps._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 387,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._refresh_com._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 410,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModulesTab._refresh_dotnet._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_modules_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 431,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._build_system_tab._auto_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 168,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._build_tracked_tab._tracked_auto_slot'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 251,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_refresh._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 324,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_refresh._on_error'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 331,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_attach._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 439,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_attach._on_error'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 443,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_detach._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 458,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_terminate._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 492,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._on_inject_dll._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 518,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._load_process_info._on_info'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 532,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProcessTab._load_process_info._on_env'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_process_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 549,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._refresh_privileges._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 475,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._refresh_windows._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 518,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._refresh_services._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 542,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_read_peb._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 570,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_read_teb._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 594,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_pipe_connect._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 613,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._refresh_mitigations._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 649,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_reg_read._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 681,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_reg_enum_keys._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 699,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_reg_enum_values._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 716,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_gui_resources._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 730,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_job_info._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 750,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'SystemTab._on_raw_query._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_system_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 771,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ThreadsTab._refresh_threads._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_threads_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 345,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ThreadsTab._refresh_registers._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_threads_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 390,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ThreadsTab._on_stack_walk._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_threads_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 443,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ThreadsTab._on_seh_enumerate._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_threads_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 476,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ThreadsTab._on_fiber._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_threads_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 506,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ThreadsTab._on_tls._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/process_panel/_threads_tab.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 528,
                   "startColumn": 1
                 }
               }
@@ -1871,7 +2900,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:07:08.248775+00:00"
+          "endTimeUtc": "2026-04-15T03:35:31.345468+00:00"
         }
       ]
     }

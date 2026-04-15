@@ -215,9 +215,7 @@ def _ppm_p6_to_png(ppm_path: Path, png_path: Path) -> None:
     """
     width, height, pixels = _parse_ppm_p6(ppm_path.read_bytes())
     stride = width * 3
-    raw_scanlines = b"".join(
-        b"\x00" + pixels[row * stride : (row + 1) * stride] for row in range(height)
-    )
+    raw_scanlines = b"".join(b"\x00" + pixels[row * stride : (row + 1) * stride] for row in range(height))
     png_bytes = (
         _PNG_SIGNATURE
         + _encode_png_chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))

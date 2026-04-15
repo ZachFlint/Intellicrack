@@ -1,7 +1,7 @@
 {
   "tool": "flake8",
-  "generated": "2026-04-11T07:06:56.380291+00:00",
-  "total_findings": 80,
+  "generated": "2026-04-15T03:35:13.804995+00:00",
+  "total_findings": 86,
   "total_files": 25,
   "files": [
     {
@@ -9,158 +9,158 @@
       "count": 22,
       "findings": [
         {
-          "line": 502,
+          "line": 518,
           "column": 141,
           "code": "E501",
           "message": "line too long (141 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:502:141: E501 line too long (141 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:518:141: E501 line too long (141 > 140 characters)"
         },
         {
-          "line": 520,
+          "line": 536,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:520:141: E501 line too long (160 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:536:141: E501 line too long (160 > 140 characters)"
         },
         {
-          "line": 531,
+          "line": 547,
           "column": 141,
           "code": "E501",
           "message": "line too long (161 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:531:141: E501 line too long (161 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:547:141: E501 line too long (161 > 140 characters)"
         },
         {
-          "line": 542,
+          "line": 558,
           "column": 141,
           "code": "E501",
           "message": "line too long (149 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:542:141: E501 line too long (149 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:558:141: E501 line too long (149 > 140 characters)"
         },
         {
-          "line": 553,
+          "line": 569,
           "column": 141,
           "code": "E501",
           "message": "line too long (147 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:553:141: E501 line too long (147 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:569:141: E501 line too long (147 > 140 characters)"
         },
         {
-          "line": 575,
+          "line": 591,
           "column": 141,
           "code": "E501",
           "message": "line too long (181 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:575:141: E501 line too long (181 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:591:141: E501 line too long (181 > 140 characters)"
         },
         {
-          "line": 586,
+          "line": 602,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:586:141: E501 line too long (160 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:602:141: E501 line too long (160 > 140 characters)"
         },
         {
-          "line": 613,
+          "line": 629,
           "column": 141,
           "code": "E501",
           "message": "line too long (153 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:613:141: E501 line too long (153 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:629:141: E501 line too long (153 > 140 characters)"
         },
         {
-          "line": 645,
+          "line": 661,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:645:141: E501 line too long (142 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:661:141: E501 line too long (142 > 140 characters)"
         },
         {
-          "line": 670,
+          "line": 694,
           "column": 141,
           "code": "E501",
           "message": "line too long (149 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:670:141: E501 line too long (149 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:694:141: E501 line too long (149 > 140 characters)"
         },
         {
-          "line": 681,
+          "line": 705,
           "column": 141,
           "code": "E501",
           "message": "line too long (201 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:681:141: E501 line too long (201 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:705:141: E501 line too long (201 > 140 characters)"
         },
         {
-          "line": 692,
+          "line": 716,
           "column": 141,
           "code": "E501",
           "message": "line too long (178 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:692:141: E501 line too long (178 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:716:141: E501 line too long (178 > 140 characters)"
         },
         {
-          "line": 703,
+          "line": 727,
           "column": 141,
           "code": "E501",
           "message": "line too long (169 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:703:141: E501 line too long (169 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:727:141: E501 line too long (169 > 140 characters)"
         },
         {
-          "line": 714,
+          "line": 738,
           "column": 141,
           "code": "E501",
           "message": "line too long (181 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:714:141: E501 line too long (181 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:738:141: E501 line too long (181 > 140 characters)"
         },
         {
-          "line": 726,
+          "line": 750,
           "column": 141,
           "code": "E501",
           "message": "line too long (167 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:726:141: E501 line too long (167 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:750:141: E501 line too long (167 > 140 characters)"
         },
         {
-          "line": 737,
+          "line": 761,
           "column": 141,
           "code": "E501",
           "message": "line too long (169 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:737:141: E501 line too long (169 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:761:141: E501 line too long (169 > 140 characters)"
         },
         {
-          "line": 779,
+          "line": 807,
           "column": 141,
           "code": "E501",
           "message": "line too long (165 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:779:141: E501 line too long (165 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:807:141: E501 line too long (165 > 140 characters)"
         },
         {
-          "line": 790,
+          "line": 818,
           "column": 141,
           "code": "E501",
           "message": "line too long (171 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:790:141: E501 line too long (171 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:818:141: E501 line too long (171 > 140 characters)"
         },
         {
-          "line": 801,
+          "line": 829,
           "column": 141,
           "code": "E501",
           "message": "line too long (174 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:801:141: E501 line too long (174 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:829:141: E501 line too long (174 > 140 characters)"
         },
         {
-          "line": 812,
+          "line": 840,
           "column": 141,
           "code": "E501",
           "message": "line too long (161 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:812:141: E501 line too long (161 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:840:141: E501 line too long (161 > 140 characters)"
         },
         {
-          "line": 833,
+          "line": 861,
           "column": 141,
           "code": "E501",
           "message": "line too long (160 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:833:141: E501 line too long (160 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:861:141: E501 line too long (160 > 140 characters)"
         },
         {
-          "line": 849,
+          "line": 877,
           "column": 141,
           "code": "E501",
           "message": "line too long (162 > 140 characters)",
-          "raw": "tests/test_sandbox\\test_analysis.py:849:141: E501 line too long (162 > 140 characters)"
+          "raw": "tests/test_sandbox\\test_analysis.py:877:141: E501 line too long (162 > 140 characters)"
         }
       ]
     },
@@ -169,67 +169,129 @@
       "count": 9,
       "findings": [
         {
-          "line": 2898,
+          "line": 2922,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:2898:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:2922:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 3350,
+          "line": 3374,
           "column": 141,
           "code": "E501",
           "message": "line too long (144 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:3350:141: E501 line too long (144 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:3374:141: E501 line too long (144 > 140 characters)"
         },
         {
-          "line": 3431,
+          "line": 3455,
           "column": 141,
           "code": "E501",
           "message": "line too long (161 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:3431:141: E501 line too long (161 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:3455:141: E501 line too long (161 > 140 characters)"
         },
         {
-          "line": 3874,
+          "line": 3898,
           "column": 141,
           "code": "E501",
           "message": "line too long (192 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:3874:141: E501 line too long (192 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:3898:141: E501 line too long (192 > 140 characters)"
         },
         {
-          "line": 3953,
+          "line": 3977,
           "column": 141,
           "code": "E501",
           "message": "line too long (203 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:3953:141: E501 line too long (203 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:3977:141: E501 line too long (203 > 140 characters)"
         },
         {
-          "line": 4018,
+          "line": 4042,
           "column": 141,
           "code": "E501",
           "message": "line too long (205 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:4018:141: E501 line too long (205 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:4042:141: E501 line too long (205 > 140 characters)"
         },
         {
-          "line": 4297,
+          "line": 4321,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:4297:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:4321:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 4641,
+          "line": 4665,
           "column": 141,
           "code": "E501",
           "message": "line too long (162 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:4641:141: E501 line too long (162 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:4665:141: E501 line too long (162 > 140 characters)"
         },
         {
-          "line": 4754,
+          "line": 4778,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\ghidra.py:4754:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\ghidra.py:4778:141: E501 line too long (142 > 140 characters)"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_bridges\\test_frida_bridge.py",
+      "count": 8,
+      "findings": [
+        {
+          "line": 27,
+          "column": 1,
+          "code": "F401",
+          "message": "'intellicrack.core.types.ImportInfo' imported but unused",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:27:1: F401 'intellicrack.core.types.ImportInfo' imported but unused"
+        },
+        {
+          "line": 27,
+          "column": 1,
+          "code": "F401",
+          "message": "'intellicrack.core.types.ThreadInfo' imported but unused",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:27:1: F401 'intellicrack.core.types.ThreadInfo' imported but unused"
+        },
+        {
+          "line": 451,
+          "column": 14,
+          "code": "F821",
+          "message": "undefined name 'cast'",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:451:14: F821 undefined name 'cast'"
+        },
+        {
+          "line": 481,
+          "column": 14,
+          "code": "F821",
+          "message": "undefined name 'cast'",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:481:14: F821 undefined name 'cast'"
+        },
+        {
+          "line": 498,
+          "column": 14,
+          "code": "F821",
+          "message": "undefined name 'cast'",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:498:14: F821 undefined name 'cast'"
+        },
+        {
+          "line": 572,
+          "column": 14,
+          "code": "F821",
+          "message": "undefined name 'cast'",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:572:14: F821 undefined name 'cast'"
+        },
+        {
+          "line": 589,
+          "column": 15,
+          "code": "F821",
+          "message": "undefined name 'cast'",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:589:15: F821 undefined name 'cast'"
+        },
+        {
+          "line": 609,
+          "column": 14,
+          "code": "F821",
+          "message": "undefined name 'cast'",
+          "raw": "tests/test_bridges\\test_frida_bridge.py:609:14: F821 undefined name 'cast'"
         }
       ]
     },
@@ -422,18 +484,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 540,
+          "line": 548,
           "column": 141,
           "code": "E501",
           "message": "line too long (146 > 140 characters)",
-          "raw": "src/intellicrack/core\\orchestrator.py:540:141: E501 line too long (146 > 140 characters)"
+          "raw": "src/intellicrack/core\\orchestrator.py:548:141: E501 line too long (146 > 140 characters)"
         },
         {
-          "line": 587,
+          "line": 595,
           "column": 141,
           "code": "E501",
           "message": "line too long (232 > 140 characters)",
-          "raw": "src/intellicrack/core\\orchestrator.py:587:141: E501 line too long (232 > 140 characters)"
+          "raw": "src/intellicrack/core\\orchestrator.py:595:141: E501 line too long (232 > 140 characters)"
         }
       ]
     },
@@ -482,38 +544,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 2524,
+          "line": 2641,
           "column": 141,
           "code": "E501",
           "message": "line too long (142 > 140 characters)",
-          "raw": "src/intellicrack/sandbox\\qemu.py:2524:141: E501 line too long (142 > 140 characters)"
+          "raw": "src/intellicrack/sandbox\\qemu.py:2641:141: E501 line too long (142 > 140 characters)"
         },
         {
-          "line": 2533,
+          "line": 2650,
           "column": 141,
           "code": "E501",
           "message": "line too long (163 > 140 characters)",
-          "raw": "src/intellicrack/sandbox\\qemu.py:2533:141: E501 line too long (163 > 140 characters)"
-        }
-      ]
-    },
-    {
-      "path": "tests/test_bridges\\test_cutter.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 28,
-          "column": 1,
-          "code": "F401",
-          "message": "'asyncio' imported but unused",
-          "raw": "tests/test_bridges\\test_cutter.py:28:1: F401 'asyncio' imported but unused"
-        },
-        {
-          "line": 158,
-          "column": 5,
-          "code": "F811",
-          "message": "redefinition of unused 'asyncio' from line 28",
-          "raw": "tests/test_bridges\\test_cutter.py:158:5: F811 redefinition of unused 'asyncio' from line 28"
+          "raw": "src/intellicrack/sandbox\\qemu.py:2650:141: E501 line too long (163 > 140 characters)"
         }
       ]
     },
@@ -582,18 +624,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 196,
+          "line": 220,
           "column": 9,
           "code": "F841",
           "message": "local variable '_chunks' is assigned to but never used",
-          "raw": "tests/test_providers\\test_agentic_capabilities.py:196:9: F841 local variable '_chunks' is assigned to but never used"
+          "raw": "tests/test_providers\\test_agentic_capabilities.py:220:9: F841 local variable '_chunks' is assigned to but never used"
         },
         {
-          "line": 217,
+          "line": 245,
           "column": 9,
           "code": "F841",
           "message": "local variable '_chunks' is assigned to but never used",
-          "raw": "tests/test_providers\\test_agentic_capabilities.py:217:9: F841 local variable '_chunks' is assigned to but never used"
+          "raw": "tests/test_providers\\test_agentic_capabilities.py:245:9: F841 local variable '_chunks' is assigned to but never used"
         }
       ]
     },
@@ -602,11 +644,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 750,
+          "line": 755,
           "column": 141,
           "code": "E501",
           "message": "line too long (215 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\process.py:750:141: E501 line too long (215 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\process.py:755:141: E501 line too long (215 > 140 characters)"
         }
       ]
     },
@@ -615,11 +657,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 3537,
+          "line": 3607,
           "column": 141,
           "code": "E501",
           "message": "line too long (143 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\x64dbg.py:3537:141: E501 line too long (143 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\x64dbg.py:3607:141: E501 line too long (143 > 140 characters)"
         }
       ]
     },
@@ -680,11 +722,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 52,
+          "line": 81,
           "column": 9,
           "code": "F841",
           "message": "local variable '_store' is assigned to but never used",
-          "raw": "tests/test_core\\test_main.py:52:9: F841 local variable '_store' is assigned to but never used"
+          "raw": "tests/test_core\\test_main.py:81:9: F841 local variable '_store' is assigned to but never used"
         }
       ]
     },

@@ -23,13 +23,13 @@
             {
               "id": "F401",
               "shortDescription": {
-                "text": "'asyncio' imported but unused"
+                "text": "'intellicrack.core.types.ImportInfo' imported but unused"
               }
             },
             {
-              "id": "F811",
+              "id": "F821",
               "shortDescription": {
-                "text": "redefinition of unused 'asyncio' from line 28"
+                "text": "undefined name 'cast'"
               }
             },
             {
@@ -62,7 +62,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2898,
+                  "startLine": 2922,
                   "startColumn": 141
                 }
               }
@@ -83,7 +83,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3350,
+                  "startLine": 3374,
                   "startColumn": 141
                 }
               }
@@ -104,7 +104,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3431,
+                  "startLine": 3455,
                   "startColumn": 141
                 }
               }
@@ -125,7 +125,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3874,
+                  "startLine": 3898,
                   "startColumn": 141
                 }
               }
@@ -146,7 +146,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3953,
+                  "startLine": 3977,
                   "startColumn": 141
                 }
               }
@@ -167,7 +167,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4018,
+                  "startLine": 4042,
                   "startColumn": 141
                 }
               }
@@ -188,7 +188,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4297,
+                  "startLine": 4321,
                   "startColumn": 141
                 }
               }
@@ -209,7 +209,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4641,
+                  "startLine": 4665,
                   "startColumn": 141
                 }
               }
@@ -230,7 +230,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4754,
+                  "startLine": 4778,
                   "startColumn": 141
                 }
               }
@@ -251,7 +251,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 750,
+                  "startLine": 755,
                   "startColumn": 141
                 }
               }
@@ -272,7 +272,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3537,
+                  "startLine": 3607,
                   "startColumn": 141
                 }
               }
@@ -335,7 +335,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 540,
+                  "startLine": 548,
                   "startColumn": 141
                 }
               }
@@ -356,7 +356,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 587,
+                  "startLine": 595,
                   "startColumn": 141
                 }
               }
@@ -461,7 +461,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2524,
+                  "startLine": 2641,
                   "startColumn": 141
                 }
               }
@@ -482,7 +482,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2533,
+                  "startLine": 2650,
                   "startColumn": 141
                 }
               }
@@ -619,17 +619,17 @@
           "ruleId": "F401",
           "level": "warning",
           "message": {
-            "text": "'asyncio' imported but unused"
+            "text": "'intellicrack.core.types.ImportInfo' imported but unused"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_bridges/test_cutter.py",
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 28,
+                  "startLine": 27,
                   "startColumn": 1
                 }
               }
@@ -637,21 +637,147 @@
           ]
         },
         {
-          "ruleId": "F811",
+          "ruleId": "F401",
           "level": "warning",
           "message": {
-            "text": "redefinition of unused 'asyncio' from line 28"
+            "text": "'intellicrack.core.types.ThreadInfo' imported but unused"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_bridges/test_cutter.py",
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 158,
-                  "startColumn": 5
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'cast'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 451,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'cast'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 481,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'cast'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 498,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'cast'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 572,
+                  "startColumn": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'cast'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 589,
+                  "startColumn": 15
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "F821",
+          "level": "warning",
+          "message": {
+            "text": "undefined name 'cast'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 609,
+                  "startColumn": 14
                 }
               }
             }
@@ -734,7 +860,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 52,
+                  "startLine": 81,
                   "startColumn": 9
                 }
               }
@@ -1217,7 +1343,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 196,
+                  "startLine": 220,
                   "startColumn": 9
                 }
               }
@@ -1238,7 +1364,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 217,
+                  "startLine": 245,
                   "startColumn": 9
                 }
               }
@@ -1259,7 +1385,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 502,
+                  "startLine": 518,
                   "startColumn": 141
                 }
               }
@@ -1280,7 +1406,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 520,
+                  "startLine": 536,
                   "startColumn": 141
                 }
               }
@@ -1301,7 +1427,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 531,
+                  "startLine": 547,
                   "startColumn": 141
                 }
               }
@@ -1322,7 +1448,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 542,
+                  "startLine": 558,
                   "startColumn": 141
                 }
               }
@@ -1343,7 +1469,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 553,
+                  "startLine": 569,
                   "startColumn": 141
                 }
               }
@@ -1364,7 +1490,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 575,
+                  "startLine": 591,
                   "startColumn": 141
                 }
               }
@@ -1385,7 +1511,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 586,
+                  "startLine": 602,
                   "startColumn": 141
                 }
               }
@@ -1406,7 +1532,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 613,
+                  "startLine": 629,
                   "startColumn": 141
                 }
               }
@@ -1427,7 +1553,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 645,
+                  "startLine": 661,
                   "startColumn": 141
                 }
               }
@@ -1448,7 +1574,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 670,
+                  "startLine": 694,
                   "startColumn": 141
                 }
               }
@@ -1469,7 +1595,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 681,
+                  "startLine": 705,
                   "startColumn": 141
                 }
               }
@@ -1490,7 +1616,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 692,
+                  "startLine": 716,
                   "startColumn": 141
                 }
               }
@@ -1511,7 +1637,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 703,
+                  "startLine": 727,
                   "startColumn": 141
                 }
               }
@@ -1532,7 +1658,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 714,
+                  "startLine": 738,
                   "startColumn": 141
                 }
               }
@@ -1553,7 +1679,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 726,
+                  "startLine": 750,
                   "startColumn": 141
                 }
               }
@@ -1574,7 +1700,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 737,
+                  "startLine": 761,
                   "startColumn": 141
                 }
               }
@@ -1595,7 +1721,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 779,
+                  "startLine": 807,
                   "startColumn": 141
                 }
               }
@@ -1616,7 +1742,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 790,
+                  "startLine": 818,
                   "startColumn": 141
                 }
               }
@@ -1637,7 +1763,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 801,
+                  "startLine": 829,
                   "startColumn": 141
                 }
               }
@@ -1658,7 +1784,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 812,
+                  "startLine": 840,
                   "startColumn": 141
                 }
               }
@@ -1679,7 +1805,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 833,
+                  "startLine": 861,
                   "startColumn": 141
                 }
               }
@@ -1700,7 +1826,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 849,
+                  "startLine": 877,
                   "startColumn": 141
                 }
               }
@@ -1733,7 +1859,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:06:56.380291+00:00"
+          "endTimeUtc": "2026-04-15T03:35:13.804995+00:00"
         }
       ]
     }

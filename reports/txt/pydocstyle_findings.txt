@@ -54,17 +54,17 @@ src/intellicrack/core\types.py:1835: D107: in public method `__init__`: - Missin
 
 6 findings in src/intellicrack/bridges\base.py
 
-src/intellicrack/bridges\base.py:242: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:240: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:337: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:319: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:567: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:492: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:684: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:580: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:883: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:720: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/bridges\base.py:1048: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\base.py:845: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 6 findings in src/intellicrack/ui\highlighter.py
@@ -179,13 +179,13 @@ src/intellicrack/core\hexpat_compiler.py:1162: D107: in public method `__init__`
 
 4 findings in src/intellicrack/core\transform_pipeline.py
 
-src/intellicrack/core\transform_pipeline.py:45: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:49: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\transform_pipeline.py:52: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:61: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\transform_pipeline.py:248: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:257: D107: in public method `__init__`: - Missing docstring in __init__
 
-src/intellicrack/core\transform_pipeline.py:720: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\transform_pipeline.py:729: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 4 findings in src/intellicrack/ui\panels\graph_view.py
@@ -212,22 +212,13 @@ src/intellicrack/ui\panels\stack_viewer.py:429: D107: in public method `__init__
 
 4 findings in tests/test_ui\conftest.py
 
-tests/test_ui\conftest.py:35: D107: in public method `__init__`: - Missing docstring in __init__
+tests/test_ui\conftest.py:38: D107: in public method `__init__`: - Missing docstring in __init__
 
-tests/test_ui\conftest.py:76: D107: in public method `__init__`: - Missing docstring in __init__
+tests/test_ui\conftest.py:82: D107: in public method `__init__`: - Missing docstring in __init__
 
-tests/test_ui\conftest.py:100: D107: in public method `__init__`: - Missing docstring in __init__
+tests/test_ui\conftest.py:106: D107: in public method `__init__`: - Missing docstring in __init__
 
-tests/test_ui\conftest.py:122: D107: in public method `__init__`: - Missing docstring in __init__
-
-
-3 findings in src/intellicrack/sandbox\qemu.py
-
-src/intellicrack/sandbox\qemu.py:206: D107: in public method `__init__`: - Missing docstring in __init__
-
-src/intellicrack/sandbox\qemu.py:419: D107: in public method `__init__`: - Missing docstring in __init__
-
-src/intellicrack/sandbox\qemu.py:622: D107: in public method `__init__`: - Missing docstring in __init__
+tests/test_ui\conftest.py:128: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 3 findings in src/intellicrack/ui\chat.py
@@ -334,6 +325,13 @@ src/intellicrack/ui\session_manager.py:84: D107: in public method `__init__`: - 
 src/intellicrack/ui\session_manager.py:825: D107: in public method `__init__`: - Missing docstring in __init__
 
 
+2 findings in src/intellicrack/ui\panels\async_bridge.py
+
+src/intellicrack/ui\panels\async_bridge.py:112: D107: in public method `__init__`: - Missing docstring in __init__
+
+src/intellicrack/ui\panels\async_bridge.py:134: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function
+
+
 2 findings in src/intellicrack/ui\panels\hex_editor_widget.py
 
 src/intellicrack/ui\panels\hex_editor_widget.py:148: D107: in public method `__init__`: - Missing docstring in __init__
@@ -357,57 +355,57 @@ src/intellicrack/ui\panels\hex_editor\_search.py:159: D107: in public method `__
 
 1 findings in src/intellicrack/bridges\cutter.py
 
-src/intellicrack/bridges\cutter.py:727: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\cutter.py:732: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\frida_bridge.py
 
-src/intellicrack/bridges\frida_bridge.py:1065: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\frida_bridge.py:1068: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\ghidra.py
 
-src/intellicrack/bridges\ghidra.py:91: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\ghidra.py:96: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\hex_editor.py
 
-src/intellicrack/bridges\hex_editor.py:167: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\hex_editor.py:275: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\hex_state.py
 
-src/intellicrack/bridges\hex_state.py:92: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\hex_state.py:94: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\installer.py
 
-src/intellicrack/bridges\installer.py:197: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\installer.py:201: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\named_pipe_client.py
 
-src/intellicrack/bridges\named_pipe_client.py:56: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\named_pipe_client.py:61: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\process.py
 
-src/intellicrack/bridges\process.py:714: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\process.py:719: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\sandbox_bridge.py
 
-src/intellicrack/bridges\sandbox_bridge.py:90: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\sandbox_bridge.py:94: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\schemas.py
 
-src/intellicrack/bridges\schemas.py:149: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\schemas.py:153: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:369: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/bridges\x64dbg.py:376: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\analysis_aggregator.py
@@ -418,11 +416,6 @@ src/intellicrack/core\analysis_aggregator.py:45: D107: in public method `__init_
 1 findings in src/intellicrack/core\disassembler.py
 
 src/intellicrack/core\disassembler.py:114: D107: in public method `__init__`: - Missing docstring in __init__
-
-
-1 findings in src/intellicrack/core\orchestrator.py
-
-src/intellicrack/core\orchestrator.py:189: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\process_manager.py
@@ -467,12 +460,12 @@ src/intellicrack/core\hexpat\parser.py:128: D107: in public method `__init__`: -
 
 1 findings in src/intellicrack/core\hexpat\pattern_registry.py
 
-src/intellicrack/core\hexpat\pattern_registry.py:58: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\pattern_registry.py:59: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\preprocessor.py
 
-src/intellicrack/core\hexpat\preprocessor.py:73: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/core\hexpat\preprocessor.py:77: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/core\hexpat\stdlib.py
@@ -575,11 +568,6 @@ src/intellicrack/ui\dialogs\splash_screen.py:166: D107: in public method `__init
 src/intellicrack/ui\panels\analysis_panel.py:61: D107: in public method `__init__`: - Missing docstring in __init__
 
 
-1 findings in src/intellicrack/ui\panels\async_bridge.py
-
-src/intellicrack/ui\panels\async_bridge.py:112: D107: in public method `__init__`: - Missing docstring in __init__
-
-
 1 findings in src/intellicrack/ui\panels\base_panel.py
 
 src/intellicrack/ui\panels\base_panel.py:65: D107: in public method `__init__`: - Missing docstring in __init__
@@ -597,7 +585,7 @@ src/intellicrack/ui\panels\frida_panel.py:107: D107: in public method `__init__`
 
 1 findings in src/intellicrack/ui\panels\ghidra_panel.py
 
-src/intellicrack/ui\panels\ghidra_panel.py:145: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\ghidra_panel.py:140: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hxd_panel.py
@@ -625,14 +613,9 @@ src/intellicrack/ui\panels\hex_editor\panel.py:132: D107: in public method `__in
 src/intellicrack/ui\panels\hex_editor\_comparison.py:50: D107: in public method `__init__`: - Missing docstring in __init__
 
 
-1 findings in src/intellicrack/ui\panels\hex_editor\_disassembly.py
-
-src/intellicrack/ui\panels\hex_editor\_disassembly.py:49: D102: in public method `goto_offset`: - Missing docstring in public method
-
-
 1 findings in src/intellicrack/ui\panels\hex_editor\_process_memory.py
 
-src/intellicrack/ui\panels\hex_editor\_process_memory.py:79: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\hex_editor\_process_memory.py:77: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_sandbox.py
@@ -642,12 +625,7 @@ src/intellicrack/ui\panels\hex_editor\_sandbox.py:99: D107: in public method `__
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_scripting.py
 
-src/intellicrack/ui\panels\hex_editor\_scripting.py:496: D107: in public method `__init__`: - Missing docstring in __init__
-
-
-1 findings in src/intellicrack/ui\panels\hex_editor\_sections.py
-
-src/intellicrack/ui\panels\hex_editor\_sections.py:45: D102: in public method `goto_offset`: - Missing docstring in public method
+src/intellicrack/ui\panels\hex_editor\_scripting.py:501: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_signatures.py
@@ -660,14 +638,9 @@ src/intellicrack/ui\panels\hex_editor\_signatures.py:55: D107: in public method 
 src/intellicrack/ui\panels\hex_editor\_statistics.py:81: D107: in public method `__init__`: - Missing docstring in __init__
 
 
-1 findings in src/intellicrack/ui\panels\hex_editor\_yara.py
-
-src/intellicrack/ui\panels\hex_editor\_yara.py:59: D102: in public method `goto_offset`: - Missing docstring in public method
-
-
 1 findings in src/intellicrack/ui\panels\process_panel\_base.py
 
-src/intellicrack/ui\panels\process_panel\_base.py:77: D107: in public method `__init__`: - Missing docstring in __init__
+src/intellicrack/ui\panels\process_panel\_base.py:75: D107: in public method `__init__`: - Missing docstring in __init__
 
 
 1 findings in src/intellicrack/ui\panels\process_panel\_memory_tab.py

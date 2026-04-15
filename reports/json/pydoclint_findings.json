@@ -1,7 +1,7 @@
 {
   "tool": "pydoclint",
-  "generated": "2026-04-11T07:07:09.282511+00:00",
-  "total_findings": 29,
+  "generated": "2026-04-15T03:35:35.383351+00:00",
+  "total_findings": 33,
   "total_files": 5,
   "files": [
     {
@@ -165,6 +165,74 @@
       ]
     },
     {
+      "path": "src/intellicrack/core/orchestrator.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 158,
+          "column": null,
+          "code": "DOC304",
+          "message": "Class `Orchestrator`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
+          "raw": "158: DOC304: Class `Orchestrator`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+        },
+        {
+          "line": 435,
+          "column": null,
+          "code": "DOC503",
+          "message": "Method `Orchestrator._run_agent_loop` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError'].",
+          "raw": "435: DOC503: Method `Orchestrator._run_agent_loop` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError']."
+        },
+        {
+          "line": 944,
+          "column": null,
+          "code": "DOC503",
+          "message": "Method `Orchestrator._stream_response` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError'].",
+          "raw": "944: DOC503: Method `Orchestrator._stream_response` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError']."
+        },
+        {
+          "line": 1065,
+          "column": null,
+          "code": "DOC503",
+          "message": "Method `Orchestrator._execute_tool_calls` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError']. Raised exceptions in the body: ['asyncio.CancelledError'].",
+          "raw": "1065: DOC503: Method `Orchestrator._execute_tool_calls` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError']. Raised exceptions in the body: ['asyncio.CancelledError']."
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/qemu.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": 173,
+          "column": null,
+          "code": "DOC203",
+          "message": "Function `_parse_ppm_p6` return type(s) in docstring not consistent with the return annotation. Return annotation types: ['tuple[int, int, bytes]']; docstring return section types: ['']",
+          "raw": "173: DOC203: Function `_parse_ppm_p6` return type(s) in docstring not consistent with the return annotation. Return annotation types: ['tuple[int, int, bytes]']; docstring return section types: ['']"
+        },
+        {
+          "line": 304,
+          "column": null,
+          "code": "DOC304",
+          "message": "Class `QMPClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
+          "raw": "304: DOC304: Class `QMPClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+        },
+        {
+          "line": 523,
+          "column": null,
+          "code": "DOC304",
+          "message": "Class `GuestAgentClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
+          "raw": "523: DOC304: Class `GuestAgentClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+        },
+        {
+          "line": 721,
+          "column": null,
+          "code": "DOC304",
+          "message": "Class `QEMUSandbox`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
+          "raw": "721: DOC304: Class `QEMUSandbox`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack/bridges/schemas.py",
       "count": 2,
       "findings": [
@@ -181,46 +249,6 @@
           "code": "DOC203",
           "message": "Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).",
           "raw": "28: DOC203: Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s)."
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/ui/panels/hex_editor/_process_memory.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 65,
-          "column": null,
-          "code": "DOC602",
-          "message": "Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
-          "raw": "65: DOC602: Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
-        },
-        {
-          "line": 65,
-          "column": null,
-          "code": "DOC603",
-          "message": "Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
-          "raw": "65: DOC603: Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/ui/panels/process_panel/_base.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 55,
-          "column": null,
-          "code": "DOC602",
-          "message": "Class `ProcessPanel`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
-          "raw": "55: DOC602: Class `ProcessPanel`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
-        },
-        {
-          "line": 55,
-          "column": null,
-          "code": "DOC603",
-          "message": "Class `ProcessPanel`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [tool_closed: , tool_started: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)",
-          "raw": "55: DOC603: Class `ProcessPanel`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [tool_closed: , tool_started: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
         }
       ]
     },

@@ -2668,9 +2668,8 @@ class X64DbgBridge(DebuggerBridge):
         class MemoryBasicInformation(ctypes.Structure):
             """Windows ``MEMORY_BASIC_INFORMATION`` layout for ``VirtualQueryEx``.
 
-            Used as the output buffer when walking the target process
-            address space to enumerate committed, reserved, and free
-            memory regions together with their protection flags.
+            Used as the output buffer when walking the target process address space to enumerate committed, reserved, and free memory
+            regions together with their protection flags.
             """
 
             _fields_ = [

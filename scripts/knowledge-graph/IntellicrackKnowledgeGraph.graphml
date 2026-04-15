@@ -2896,12 +2896,9 @@ This module provides runtime instrumentation capabilities using Frida for functi
       <data key="d3">FridaBridge</data>
       <data key="d4">Bridge for Frida dynamic instrumentation.
 
-Provides function hooking, memory manipulation, and script execution
-capabilities using the Frida framework. Instances own the device and
-session slots, the script and hook registries, the message-handler
-dispatch state, process identifier tracking for attach/spawn,
-stalker and child-gating bookkeeping, crash and allocation caches,
-cancellable references, and the declared dynamic-analysis
+Provides function hooking, memory manipulation, and script execution capabilities using the Frida framework. Instances own the device
+and session slots, the script and hook registries, the message-handler dispatch state, process identifier tracking for attach/spawn,
+stalker and child-gating bookkeeping, crash and allocation caches, cancellable references, and the declared dynamic-analysis
 capabilities advertised to the orchestrator.</data>
     </node>
     <node id="intellicrack.bridges.base.InstrumentationBridge" />
@@ -8579,12 +8576,9 @@ Attributes:
       <data key="d3">HexDocumentState</data>
       <data key="d4">Thread-safe shared state holder for a hex document.
 
-Maintains the canonical document instance, cursor offset, selection
-range, and file path. Registered callbacks are notified on state
-changes, enabling the bridge and GUI to stay in sync without direct
-coupling. Instances own the active document slot, the associated
-file path, cursor offset, selection range, the callback registry, a
-threading lock and re-entrancy guard used during notification, plus
+Maintains the canonical document instance, cursor offset, selection range, and file path. Registered callbacks are notified on state
+changes, enabling the bridge and GUI to stay in sync without direct coupling. Instances own the active document slot, the associated
+file path, cursor offset, selection range, the callback registry, a threading lock and re-entrancy guard used during notification, plus
 default highlight rules and display mode used...</data>
     </node>
     <node id="src.intellicrack.bridges.hex_state.__init__">
@@ -13497,9 +13491,8 @@ Returns:
       <data key="d3">MemoryBasicInformation</data>
       <data key="d4">Windows ``MEMORY_BASIC_INFORMATION`` layout for ``VirtualQueryEx``.
 
-Used as the output buffer when walking the target process
-address space to enumerate committed, reserved, and free
-memory regions together with their protection flags.</data>
+Used as the output buffer when walking the target process address space to enumerate committed, reserved, and free memory
+regions together with their protection flags.</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.ThreadEntry32">
       <data key="d0">class</data>

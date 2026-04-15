@@ -262,9 +262,9 @@ src\intellicrack\core\hexpat\interpreter.py:229:4: [91mDC04[0m Method `[1mcom
 
 2 findings in src\intellicrack\core\hexpat\pattern_registry.py
 
-src\intellicrack\core\hexpat\pattern_registry.py:119:4: [91mDC04[0m Method `[1mget_pattern[0m` is never used
+src\intellicrack\core\hexpat\pattern_registry.py:120:4: [91mDC04[0m Method `[1mget_pattern[0m` is never used
 
-src\intellicrack\core\hexpat\pattern_registry.py:183:4: [91mDC04[0m Method `[1mload_source[0m` is never used
+src\intellicrack\core\hexpat\pattern_registry.py:184:4: [91mDC04[0m Method `[1mload_source[0m` is never used
 
 
 2 findings in src\intellicrack\core\hexpat\stdlib.py
@@ -283,16 +283,16 @@ src\intellicrack\core\logging.py:585:0: [91mDC03[0m Class `[1mOperationTimer
 
 2 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:104:0: [91mDC01[0m Variable `[1mPIDFILE_MAX_RETRIES[0m` is never used
+src\intellicrack\sandbox\qemu.py:106:0: [91mDC01[0m Variable `[1mPIDFILE_MAX_RETRIES[0m` is never used
 
-src\intellicrack\sandbox\qemu.py:105:0: [91mDC01[0m Variable `[1mPIDFILE_RETRY_DELAY[0m` is never used
+src\intellicrack\sandbox\qemu.py:107:0: [91mDC01[0m Variable `[1mPIDFILE_RETRY_DELAY[0m` is never used
 
 
 2 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
-src\intellicrack\ui\panels\ghidra_panel.py:178:8: [91mDC05[0m Attribute `[1m_debug_info_btn[0m` is never used
+src\intellicrack\ui\panels\ghidra_panel.py:173:8: [91mDC05[0m Attribute `[1m_debug_info_btn[0m` is never used
 
-src\intellicrack\ui\panels\ghidra_panel.py:179:8: [91mDC05[0m Attribute `[1m_diff_btn[0m` is never used
+src\intellicrack\ui\panels\ghidra_panel.py:174:8: [91mDC05[0m Attribute `[1m_diff_btn[0m` is never used
 
 
 2 findings in src\intellicrack\ui\panels\stack_viewer.py
@@ -323,7 +323,7 @@ src\intellicrack\bridges\cutter.py:79:0: [91mDC01[0m Variable `[1mR2_COMMAND_
 
 1 findings in src\intellicrack\bridges\hex_state.py
 
-src\intellicrack\bridges\hex_state.py:139:4: [91mDC04[0m Method `[1mget_current_state[0m` is never used
+src\intellicrack\bridges\hex_state.py:141:4: [91mDC04[0m Method `[1mget_current_state[0m` is never used
 
 
 1 findings in src\intellicrack\bridges\x64dbg.py
@@ -373,7 +373,7 @@ src\intellicrack\ui\panels\frida_panel.py:229:8: [91mDC05[0m Attribute `[1m_j
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_pattern_editor.py
 
-src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:552:4: [91mDC04[0m Method `[1m_refresh_template_combo[0m` is never used
+src\intellicrack\ui\panels\hex_editor\_pattern_editor.py:565:4: [91mDC04[0m Method `[1m_refresh_template_combo[0m` is never used
 
 
 1 findings in src\intellicrack\ui\panels\hxd_panel.py

@@ -91,10 +91,10 @@ codespell,src/intellicrack\bridges\process.py,9,,,SPELL,SPELL,'SEH' ==> 'SHE',,,
 codespell,src/intellicrack\bridges\process.py,469,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack\bridges\process.py,473,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack\bridges\process.py,664,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,750,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,2814,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,2818,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,2828,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,755,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,2834,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,2838,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,2848,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
 codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
 codespell,src/intellicrack-hexcore\_typos.toml,13,,,SPELL,SPELL,"'ue' ==> 'use, due'",,,,,,,,,,,ue,"use, due"
@@ -184,6 +184,9 @@ codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,
 codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack\bridges\x64dbg.py,1278,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\x64dbg.py,2337,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
+codespell,src/intellicrack\bridges\x64dbg.py,3980,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
@@ -208,15 +211,13 @@ codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_deriv
 codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,161,,,SPELL,SPELL,'VAs' ==> 'was',,,,,,,,,,,VAs,was
-codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,170,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
-codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,171,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
+codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,163,,,SPELL,SPELL,'VAs' ==> 'was',,,,,,,,,,,VAs,was
+codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,172,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
+codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,173,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
 codespell,src/intellicrack\bridges\_win32_types.py,622,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack\bridges\_win32_types.py,627,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\x64dbg.py,1265,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\x64dbg.py,3910,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,tests/test_bridges\test_process_bridge.py,685,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,tests/test_bridges\test_process_bridge.py,690,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,tests/test_bridges\test_process_bridge.py,1136,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,tests/test_bridges\test_process_bridge.py,1141,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,tests/test_hexcore_e2e\test_bridge_encoding_decoding.py,77,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
 codespell,tests/test_hexcore_e2e\test_bridge_encoding_decoding.py,94,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
 codespell,tests/test_hexcore_e2e\test_encodings.py,59,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf

@@ -1942,6 +1942,7 @@ class GhidraPanel(AnalysisPanelBase):
             )
 
         elif chosen is actions["conventions"]:
+
             def _show_conventions(r: object) -> None:
                 if isinstance(r, list):
                     conv_list = cast("list[object]", r)

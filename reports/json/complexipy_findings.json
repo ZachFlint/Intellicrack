@@ -1,8 +1,8 @@
 {
   "tool": "complexipy",
-  "generated": "2026-04-11T07:07:43.663743+00:00",
-  "total_findings": 178,
-  "total_files": 62,
+  "generated": "2026-04-15T03:36:06.615200+00:00",
+  "total_findings": 173,
+  "total_files": 60,
   "files": [
     {
       "path": "src\\intellicrack\\bridges\\hex_editor.py",
@@ -430,7 +430,7 @@
     },
     {
       "path": "src\\intellicrack\\bridges\\x64dbg.py",
-      "count": 9,
+      "count": 8,
       "findings": [
         {
           "line": null,
@@ -479,14 +479,6 @@
           "complexity": 20,
           "message": "X64DbgBridge::get_labels - cognitive complexity 20 (exceeds threshold)",
           "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::get_labels - cognitive complexity 20 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "X64DbgBridge::find_pattern",
-          "complexity": 21,
-          "message": "X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py: X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)"
         },
         {
           "line": null,
@@ -1319,28 +1311,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "GhidraPanel::_apply_cfg",
-          "complexity": 17,
-          "message": "GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py: GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "GhidraPanel::_dispatch_func_menu_action",
-          "complexity": 27,
-          "message": "GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py: GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py",
       "count": 2,
       "findings": [
@@ -1359,28 +1329,6 @@
           "complexity": 25,
           "message": "SearchMixin::_on_numeric_search - cognitive complexity 25 (exceeds threshold)",
           "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py: SearchMixin::_on_numeric_search - cognitive complexity 25 (exceeds threshold)"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "name": "TemplatesMixin::_bookmark_pe_structure",
-          "complexity": 24,
-          "message": "TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py: TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)"
-        },
-        {
-          "line": null,
-          "column": null,
-          "name": "TemplatesMixin::_bookmark_elf_structure",
-          "complexity": 34,
-          "message": "TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py: TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)"
         }
       ]
     },

@@ -81,6 +81,18 @@
               }
             },
             {
+              "id": "WPS509",
+              "shortDescription": {
+                "text": "Found incorrectly nested ternary"
+              }
+            },
+            {
+              "id": "WPS324",
+              "shortDescription": {
+                "text": "Found inconsistent `return` statement"
+              }
+            },
+            {
               "id": "WPS474",
               "shortDescription": {
                 "text": "Found import object collision: HexPatCompiler"
@@ -108,12 +120,6 @@
               "id": "WPS460",
               "shortDescription": {
                 "text": "Found single element destructuring"
-              }
-            },
-            {
-              "id": "WPS509",
-              "shortDescription": {
-                "text": "Found incorrectly nested ternary"
               }
             },
             {
@@ -210,12 +216,6 @@
               "id": "WPS518",
               "shortDescription": {
                 "text": "Found implicit `enumerate()` call"
-              }
-            },
-            {
-              "id": "WPS324",
-              "shortDescription": {
-                "text": "Found inconsistent `return` statement"
               }
             },
             {
@@ -1310,7 +1310,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 989,
+                  "startLine": 994,
                   "startColumn": 5
                 }
               }
@@ -1331,7 +1331,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1602,
+                  "startLine": 1607,
                   "startColumn": 40
                 }
               }
@@ -1352,7 +1352,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2286,
+                  "startLine": 2291,
                   "startColumn": 44
                 }
               }
@@ -1373,7 +1373,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2695,
+                  "startLine": 2700,
                   "startColumn": 37
                 }
               }
@@ -1520,7 +1520,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1147,
+                  "startLine": 1150,
                   "startColumn": 5
                 }
               }
@@ -1541,7 +1541,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1147,
+                  "startLine": 1150,
                   "startColumn": 5
                 }
               }
@@ -1562,7 +1562,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1982,
+                  "startLine": 2001,
                   "startColumn": 5
                 }
               }
@@ -1583,7 +1583,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2022,
+                  "startLine": 2041,
                   "startColumn": 34
                 }
               }
@@ -1604,7 +1604,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2714,
+                  "startLine": 2755,
                   "startColumn": 36
                 }
               }
@@ -1625,7 +1625,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2714,
+                  "startLine": 2755,
                   "startColumn": 57
                 }
               }
@@ -1646,7 +1646,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2714,
+                  "startLine": 2755,
                   "startColumn": 78
                 }
               }
@@ -1667,7 +1667,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2714,
+                  "startLine": 2755,
                   "startColumn": 99
                 }
               }
@@ -1688,7 +1688,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2754,
+                  "startLine": 2795,
                   "startColumn": 5
                 }
               }
@@ -1709,7 +1709,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3806,
+                  "startLine": 3887,
                   "startColumn": 34
                 }
               }
@@ -1751,7 +1751,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1036,
+                  "startLine": 1041,
                   "startColumn": 5
                 }
               }
@@ -1772,8 +1772,71 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1088,
+                  "startLine": 1093,
                   "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS509",
+          "level": "warning",
+          "message": {
+            "text": "Found incorrectly nested ternary"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1962,
+                  "startColumn": 22
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS509",
+          "level": "warning",
+          "message": {
+            "text": "Found incorrectly nested ternary"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1964,
+                  "startColumn": 22
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS509",
+          "level": "warning",
+          "message": {
+            "text": "Found incorrectly nested ternary"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1966,
+                  "startColumn": 22
                 }
               }
             }
@@ -1793,8 +1856,71 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1961,
+                  "startLine": 1985,
                   "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS211",
+          "level": "warning",
+          "message": {
+            "text": "Found too many arguments: 10 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 87,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS324",
+          "level": "warning",
+          "message": {
+            "text": "Found inconsistent `return` statement"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 135,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS324",
+          "level": "warning",
+          "message": {
+            "text": "Found inconsistent `return` statement"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 147,
+                  "startColumn": 9
                 }
               }
             }
@@ -1814,7 +1940,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 65,
+                  "startLine": 167,
                   "startColumn": 5
                 }
               }
@@ -1835,7 +1961,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 65,
+                  "startLine": 167,
                   "startColumn": 5
                 }
               }
@@ -1856,7 +1982,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 79,
+                  "startLine": 181,
                   "startColumn": 5
                 }
               }
@@ -1877,7 +2003,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 79,
+                  "startLine": 181,
                   "startColumn": 5
                 }
               }
@@ -1898,7 +2024,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 92,
+                  "startLine": 194,
                   "startColumn": 5
                 }
               }
@@ -1919,7 +2045,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 101,
+                  "startLine": 203,
                   "startColumn": 5
                 }
               }
@@ -1940,7 +2066,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 111,
+                  "startLine": 213,
                   "startColumn": 5
                 }
               }
@@ -1961,7 +2087,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 152,
+                  "startLine": 254,
                   "startColumn": 21
                 }
               }
@@ -1982,7 +2108,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2114,
+                  "startLine": 2222,
                   "startColumn": 5
                 }
               }
@@ -2003,7 +2129,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2114,
+                  "startLine": 2222,
                   "startColumn": 5
                 }
               }
@@ -2024,7 +2150,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2177,
+                  "startLine": 2285,
                   "startColumn": 36
                 }
               }
@@ -2045,7 +2171,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2180,
+                  "startLine": 2288,
                   "startColumn": 36
                 }
               }
@@ -2066,7 +2192,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2183,
+                  "startLine": 2291,
                   "startColumn": 31
                 }
               }
@@ -2087,7 +2213,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2185,
+                  "startLine": 2293,
                   "startColumn": 36
                 }
               }
@@ -2108,7 +2234,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3023,
+                  "startLine": 3131,
                   "startColumn": 5
                 }
               }
@@ -2129,7 +2255,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3023,
+                  "startLine": 3131,
                   "startColumn": 5
                 }
               }
@@ -2150,7 +2276,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3243,
+                  "startLine": 3364,
                   "startColumn": 5
                 }
               }
@@ -2171,7 +2297,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3243,
+                  "startLine": 3364,
                   "startColumn": 5
                 }
               }
@@ -2192,7 +2318,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3285,
+                  "startLine": 3406,
                   "startColumn": 38
                 }
               }
@@ -2213,7 +2339,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3320,
+                  "startLine": 3441,
                   "startColumn": 5
                 }
               }
@@ -2234,7 +2360,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3374,
+                  "startLine": 3495,
                   "startColumn": 21
                 }
               }
@@ -2255,7 +2381,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3440,
+                  "startLine": 3561,
                   "startColumn": 5
                 }
               }
@@ -2276,7 +2402,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3478,
+                  "startLine": 3599,
                   "startColumn": 32
                 }
               }
@@ -2297,7 +2423,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3819,
+                  "startLine": 3940,
                   "startColumn": 5
                 }
               }
@@ -2318,7 +2444,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3912,
+                  "startLine": 4033,
                   "startColumn": 13
                 }
               }
@@ -2339,7 +2465,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4393,
+                  "startLine": 4514,
                   "startColumn": 5
                 }
               }
@@ -2360,7 +2486,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4450,
+                  "startLine": 4571,
                   "startColumn": 19
                 }
               }
@@ -2381,7 +2507,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4451,
+                  "startLine": 4572,
                   "startColumn": 34
                 }
               }
@@ -2402,7 +2528,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4451,
+                  "startLine": 4572,
                   "startColumn": 45
                 }
               }
@@ -2423,7 +2549,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4454,
+                  "startLine": 4575,
                   "startColumn": 41
                 }
               }
@@ -2444,7 +2570,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4456,
+                  "startLine": 4577,
                   "startColumn": 35
                 }
               }
@@ -2465,7 +2591,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4458,
+                  "startLine": 4579,
                   "startColumn": 54
                 }
               }
@@ -2486,7 +2612,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4461,
+                  "startLine": 4582,
                   "startColumn": 39
                 }
               }
@@ -2507,7 +2633,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4973,
+                  "startLine": 5094,
                   "startColumn": 9
                 }
               }
@@ -2528,7 +2654,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4977,
+                  "startLine": 5098,
                   "startColumn": 5
                 }
               }
@@ -2549,7 +2675,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5049,
+                  "startLine": 5170,
                   "startColumn": 5
                 }
               }
@@ -2570,7 +2696,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5068,
+                  "startLine": 5189,
                   "startColumn": 9
                 }
               }
@@ -2591,7 +2717,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5118,
+                  "startLine": 5304,
                   "startColumn": 59
                 }
               }
@@ -2612,7 +2738,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5132,
+                  "startLine": 5329,
                   "startColumn": 9
                 }
               }
@@ -2633,7 +2759,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5132,
+                  "startLine": 5329,
                   "startColumn": 9
                 }
               }
@@ -2654,7 +2780,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5133,
+                  "startLine": 5330,
                   "startColumn": 24
                 }
               }
@@ -2675,7 +2801,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5134,
+                  "startLine": 5331,
                   "startColumn": 13
                 }
               }
@@ -2696,7 +2822,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5137,
+                  "startLine": 5334,
                   "startColumn": 9
                 }
               }
@@ -2717,7 +2843,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5273,
+                  "startLine": 5470,
                   "startColumn": 5
                 }
               }
@@ -2738,7 +2864,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5402,
+                  "startLine": 5599,
                   "startColumn": 5
                 }
               }
@@ -2759,7 +2885,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5466,
+                  "startLine": 5663,
                   "startColumn": 5
                 }
               }
@@ -2780,7 +2906,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5833,
+                  "startLine": 6030,
                   "startColumn": 5
                 }
               }
@@ -2801,7 +2927,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5833,
+                  "startLine": 6030,
                   "startColumn": 5
                 }
               }
@@ -2822,7 +2948,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5939,
+                  "startLine": 6136,
                   "startColumn": 5
                 }
               }
@@ -2843,7 +2969,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6008,
+                  "startLine": 6205,
                   "startColumn": 1
                 }
               }
@@ -2864,7 +2990,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6096,
+                  "startLine": 6295,
                   "startColumn": 1
                 }
               }
@@ -2885,7 +3011,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 549,
                   "startColumn": 17
                 }
               }
@@ -2906,7 +3032,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 222,
+                  "startLine": 226,
                   "startColumn": 5
                 }
               }
@@ -2927,7 +3053,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 222,
+                  "startLine": 226,
                   "startColumn": 5
                 }
               }
@@ -2948,7 +3074,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 222,
+                  "startLine": 226,
                   "startColumn": 5
                 }
               }
@@ -2969,7 +3095,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 262,
+                  "startLine": 266,
                   "startColumn": 13
                 }
               }
@@ -2990,7 +3116,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 269,
+                  "startLine": 273,
                   "startColumn": 17
                 }
               }
@@ -3011,7 +3137,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 425,
+                  "startLine": 429,
                   "startColumn": 5
                 }
               }
@@ -3032,7 +3158,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 464,
+                  "startLine": 468,
                   "startColumn": 5
                 }
               }
@@ -3053,7 +3179,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 464,
+                  "startLine": 468,
                   "startColumn": 5
                 }
               }
@@ -3074,7 +3200,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 519,
+                  "startLine": 523,
                   "startColumn": 9
                 }
               }
@@ -3095,7 +3221,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 558,
+                  "startLine": 562,
                   "startColumn": 9
                 }
               }
@@ -3116,7 +3242,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 562,
+                  "startLine": 566,
                   "startColumn": 5
                 }
               }
@@ -3137,7 +3263,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 562,
+                  "startLine": 566,
                   "startColumn": 5
                 }
               }
@@ -3158,7 +3284,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 605,
+                  "startLine": 609,
                   "startColumn": 9
                 }
               }
@@ -3305,7 +3431,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 754,
+                  "startLine": 759,
                   "startColumn": 5
                 }
               }
@@ -3326,7 +3452,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1455,
+                  "startLine": 1460,
                   "startColumn": 5
                 }
               }
@@ -3347,7 +3473,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1483,
+                  "startLine": 1488,
                   "startColumn": 9
                 }
               }
@@ -3368,7 +3494,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1654,
+                  "startLine": 1659,
                   "startColumn": 5
                 }
               }
@@ -3389,7 +3515,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2599,
+                  "startLine": 2619,
                   "startColumn": 5
                 }
               }
@@ -3410,7 +3536,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2698,
+                  "startLine": 2718,
                   "startColumn": 5
                 }
               }
@@ -3431,7 +3557,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2874,
+                  "startLine": 2894,
                   "startColumn": 5
                 }
               }
@@ -3452,7 +3578,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2907,
+                  "startLine": 2927,
                   "startColumn": 13
                 }
               }
@@ -3494,7 +3620,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 577,
+                  "startLine": 581,
                   "startColumn": 1
                 }
               }
@@ -3515,7 +3641,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 632,
+                  "startLine": 636,
                   "startColumn": 1
                 }
               }
@@ -3599,7 +3725,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 383,
+                  "startLine": 390,
                   "startColumn": 9
                 }
               }
@@ -3620,7 +3746,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1933,
+                  "startLine": 1955,
                   "startColumn": 5
                 }
               }
@@ -3641,7 +3767,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2617,
+                  "startLine": 2668,
                   "startColumn": 9
                 }
               }
@@ -3662,7 +3788,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2618,
+                  "startLine": 2675,
                   "startColumn": 13
                 }
               }
@@ -3683,7 +3809,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2775,
+                  "startLine": 2832,
                   "startColumn": 5
                 }
               }
@@ -3704,7 +3830,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2833,
+                  "startLine": 2890,
                   "startColumn": 46
                 }
               }
@@ -3725,7 +3851,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2865,
+                  "startLine": 2922,
                   "startColumn": 9
                 }
               }
@@ -3746,7 +3872,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2946,
+                  "startLine": 3003,
                   "startColumn": 9
                 }
               }
@@ -3767,7 +3893,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2947,
+                  "startLine": 3011,
                   "startColumn": 13
                 }
               }
@@ -3788,7 +3914,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3015,
+                  "startLine": 3079,
                   "startColumn": 9
                 }
               }
@@ -3809,7 +3935,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3016,
+                  "startLine": 3087,
                   "startColumn": 13
                 }
               }
@@ -3820,7 +3946,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'X64DbgBridge.find_pattern' is too complex (13)"
+            "text": "'X64DbgBridge.find_pattern' is too complex (12)"
           },
           "locations": [
             {
@@ -3830,7 +3956,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3113,
+                  "startLine": 3184,
                   "startColumn": 5
                 }
               }
@@ -3851,7 +3977,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3544,
+                  "startLine": 3614,
                   "startColumn": 35
                 }
               }
@@ -3872,7 +3998,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3569,
+                  "startLine": 3639,
                   "startColumn": 9
                 }
               }
@@ -3893,7 +4019,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3585,
+                  "startLine": 3655,
                   "startColumn": 13
                 }
               }
@@ -3914,7 +4040,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4199,
+                  "startLine": 4269,
                   "startColumn": 31
                 }
               }
@@ -3935,7 +4061,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4215,
+                  "startLine": 4285,
                   "startColumn": 5
                 }
               }
@@ -3956,7 +4082,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4610,
+                  "startLine": 4680,
                   "startColumn": 21
                 }
               }
@@ -3977,7 +4103,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4611,
+                  "startLine": 4689,
                   "startColumn": 25
                 }
               }
@@ -3998,7 +4124,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4648,
+                  "startLine": 4726,
                   "startColumn": 13
                 }
               }
@@ -4019,7 +4145,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4649,
+                  "startLine": 4735,
                   "startColumn": 17
                 }
               }
@@ -4040,7 +4166,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4651,
+                  "startLine": 4737,
                   "startColumn": 13
                 }
               }
@@ -4061,7 +4187,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4652,
+                  "startLine": 4745,
                   "startColumn": 17
                 }
               }
@@ -4082,7 +4208,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4652,
+                  "startLine": 4745,
                   "startColumn": 17
                 }
               }
@@ -4103,7 +4229,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4694,
+                  "startLine": 4787,
                   "startColumn": 62
                 }
               }
@@ -4124,7 +4250,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4731,
+                  "startLine": 4824,
                   "startColumn": 68
                 }
               }
@@ -4145,7 +4271,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4767,
+                  "startLine": 4860,
                   "startColumn": 9
                 }
               }
@@ -4166,7 +4292,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4768,
+                  "startLine": 4861,
                   "startColumn": 13
                 }
               }
@@ -5573,7 +5699,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 132,
+                  "startLine": 133,
                   "startColumn": 5
                 }
               }
@@ -5594,7 +5720,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 79,
+                  "startLine": 83,
                   "startColumn": 5
                 }
               }
@@ -5615,7 +5741,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 111,
+                  "startLine": 115,
                   "startColumn": 9
                 }
               }
@@ -5636,7 +5762,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 194,
+                  "startLine": 198,
                   "startColumn": 5
                 }
               }
@@ -5657,7 +5783,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 409,
+                  "startLine": 413,
                   "startColumn": 1
                 }
               }
@@ -5678,7 +5804,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 433,
+                  "startLine": 437,
                   "startColumn": 5
                 }
               }
@@ -6182,7 +6308,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 412,
+                  "startLine": 420,
                   "startColumn": 9
                 }
               }
@@ -6203,7 +6329,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 427,
+                  "startLine": 435,
                   "startColumn": 5
                 }
               }
@@ -6224,7 +6350,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 936,
+                  "startLine": 944,
                   "startColumn": 5
                 }
               }
@@ -6245,7 +6371,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1008,
+                  "startLine": 1016,
                   "startColumn": 5
                 }
               }
@@ -6266,7 +6392,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1152,
+                  "startLine": 1160,
                   "startColumn": 9
                 }
               }
@@ -6287,7 +6413,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1372,
+                  "startLine": 1380,
                   "startColumn": 9
                 }
               }
@@ -6308,7 +6434,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1572,
+                  "startLine": 1580,
                   "startColumn": 9
                 }
               }
@@ -6329,8 +6455,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1700,
+                  "startLine": 1708,
                   "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS421",
+          "level": "warning",
+          "message": {
+            "text": "Found wrong function call: vars"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1956,
+                  "startColumn": 9
                 }
               }
             }
@@ -6581,7 +6728,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 102,
+                  "startLine": 111,
                   "startColumn": 1
                 }
               }
@@ -6602,7 +6749,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 102,
+                  "startLine": 111,
                   "startColumn": 1
                 }
               }
@@ -6623,7 +6770,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 696,
+                  "startLine": 705,
                   "startColumn": 29
                 }
               }
@@ -7505,7 +7652,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 433,
+                  "startLine": 443,
                   "startColumn": 13
                 }
               }
@@ -7526,7 +7673,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 468,
+                  "startLine": 478,
                   "startColumn": 5
                 }
               }
@@ -7547,7 +7694,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 511,
+                  "startLine": 521,
                   "startColumn": 9
                 }
               }
@@ -7568,7 +7715,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 561,
+                  "startLine": 571,
                   "startColumn": 5
                 }
               }
@@ -7589,7 +7736,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 669,
+                  "startLine": 679,
                   "startColumn": 5
                 }
               }
@@ -7610,7 +7757,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 669,
+                  "startLine": 679,
                   "startColumn": 5
                 }
               }
@@ -7757,7 +7904,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 322,
+                  "startLine": 328,
                   "startColumn": 9
                 }
               }
@@ -7778,7 +7925,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 336,
+                  "startLine": 342,
                   "startColumn": 5
                 }
               }
@@ -7799,7 +7946,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 336,
+                  "startLine": 342,
                   "startColumn": 5
                 }
               }
@@ -7820,7 +7967,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 446,
+                  "startLine": 458,
                   "startColumn": 9
                 }
               }
@@ -7841,7 +7988,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 573,
+                  "startLine": 585,
                   "startColumn": 5
                 }
               }
@@ -7862,7 +8009,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 617,
+                  "startLine": 629,
                   "startColumn": 41
                 }
               }
@@ -7883,7 +8030,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 618,
+                  "startLine": 630,
                   "startColumn": 41
                 }
               }
@@ -8513,7 +8660,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 682,
+                  "startLine": 696,
                   "startColumn": 39
                 }
               }
@@ -8534,7 +8681,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 699,
+                  "startLine": 713,
                   "startColumn": 37
                 }
               }
@@ -8555,7 +8702,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 699,
+                  "startLine": 713,
                   "startColumn": 44
                 }
               }
@@ -8576,7 +8723,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 824,
+                  "startLine": 838,
                   "startColumn": 17
                 }
               }
@@ -8597,7 +8744,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 912,
+                  "startLine": 926,
                   "startColumn": 5
                 }
               }
@@ -8828,7 +8975,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 399,
+                  "startLine": 409,
                   "startColumn": 13
                 }
               }
@@ -8849,7 +8996,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 410,
+                  "startLine": 420,
                   "startColumn": 5
                 }
               }
@@ -8870,7 +9017,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 524,
+                  "startLine": 534,
                   "startColumn": 9
                 }
               }
@@ -8891,7 +9038,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 569,
+                  "startLine": 579,
                   "startColumn": 5
                 }
               }
@@ -8912,7 +9059,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 569,
+                  "startLine": 579,
                   "startColumn": 5
                 }
               }
@@ -8933,7 +9080,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 649,
+                  "startLine": 659,
                   "startColumn": 17
                 }
               }
@@ -8954,7 +9101,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 667,
+                  "startLine": 677,
                   "startColumn": 9
                 }
               }
@@ -8975,7 +9122,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 740,
+                  "startLine": 750,
                   "startColumn": 17
                 }
               }
@@ -8996,7 +9143,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 749,
+                  "startLine": 759,
                   "startColumn": 9
                 }
               }
@@ -9941,7 +10088,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 223,
+                  "startLine": 338,
                   "startColumn": 9
                 }
               }
@@ -9962,7 +10109,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 224,
+                  "startLine": 339,
                   "startColumn": 13
                 }
               }
@@ -9983,7 +10130,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 224,
+                  "startLine": 339,
                   "startColumn": 13
                 }
               }
@@ -10004,7 +10151,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 275,
+                  "startLine": 390,
                   "startColumn": 13
                 }
               }
@@ -10025,7 +10172,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 453,
+                  "startLine": 574,
                   "startColumn": 17
                 }
               }
@@ -10046,7 +10193,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 453,
+                  "startLine": 574,
                   "startColumn": 17
                 }
               }
@@ -10067,7 +10214,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 500,
+                  "startLine": 621,
                   "startColumn": 13
                 }
               }
@@ -10088,7 +10235,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 551,
+                  "startLine": 672,
                   "startColumn": 13
                 }
               }
@@ -10109,7 +10256,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 556,
+                  "startLine": 677,
                   "startColumn": 17
                 }
               }
@@ -10130,7 +10277,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 873,
+                  "startLine": 1000,
                   "startColumn": 5
                 }
               }
@@ -10151,7 +10298,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 987,
+                  "startLine": 1114,
                   "startColumn": 5
                 }
               }
@@ -10172,7 +10319,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1077,
+                  "startLine": 1204,
                   "startColumn": 9
                 }
               }
@@ -10193,7 +10340,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1275,
+                  "startLine": 1402,
                   "startColumn": 31
                 }
               }
@@ -10214,7 +10361,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1280,
+                  "startLine": 1407,
                   "startColumn": 29
                 }
               }
@@ -10235,7 +10382,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1707,
+                  "startLine": 1834,
                   "startColumn": 5
                 }
               }
@@ -10256,7 +10403,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1707,
+                  "startLine": 1834,
                   "startColumn": 5
                 }
               }
@@ -10277,7 +10424,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2403,
+                  "startLine": 2530,
                   "startColumn": 5
                 }
               }
@@ -10298,7 +10445,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2463,
+                  "startLine": 2580,
                   "startColumn": 5
                 }
               }
@@ -10319,7 +10466,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2522,
+                  "startLine": 2639,
                   "startColumn": 17
                 }
               }
@@ -10340,7 +10487,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2523,
+                  "startLine": 2640,
                   "startColumn": 17
                 }
               }
@@ -10361,7 +10508,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2525,
+                  "startLine": 2642,
                   "startColumn": 17
                 }
               }
@@ -10382,7 +10529,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2586,
+                  "startLine": 2703,
                   "startColumn": 5
                 }
               }
@@ -10403,7 +10550,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2586,
+                  "startLine": 2703,
                   "startColumn": 5
                 }
               }
@@ -10424,7 +10571,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2660,
+                  "startLine": 2777,
                   "startColumn": 5
                 }
               }
@@ -10445,7 +10592,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2660,
+                  "startLine": 2777,
                   "startColumn": 5
                 }
               }
@@ -10466,7 +10613,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2690,
+                  "startLine": 2807,
                   "startColumn": 29
                 }
               }
@@ -11464,7 +11611,7 @@
           "ruleId": "WPS203",
           "level": "warning",
           "message": {
-            "text": "Found module with too many imported names: 56 > 50"
+            "text": "Found module with too many imported names: 57 > 50"
           },
           "locations": [
             {
@@ -11516,7 +11663,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 151,
+                  "startLine": 146,
                   "startColumn": 9
                 }
               }
@@ -11527,7 +11674,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'GhidraPanel._dispatch_func_menu_action' is too complex (19)"
+            "text": "'GhidraPanel._apply_cfg' is too complex (11)"
           },
           "locations": [
             {
@@ -11537,7 +11684,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1867,
+                  "startLine": 1717,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GhidraPanel._dispatch_func_menu_action' is too complex (21)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1872,
                   "startColumn": 5
                 }
               }
@@ -11558,7 +11726,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1884,
+                  "startLine": 1889,
                   "startColumn": 9
                 }
               }
@@ -11579,7 +11747,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2558,
+                  "startLine": 2570,
                   "startColumn": 65
                 }
               }
@@ -11936,7 +12104,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 118,
+                  "startLine": 123,
                   "startColumn": 5
                 }
               }
@@ -11957,7 +12125,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 118,
+                  "startLine": 123,
                   "startColumn": 5
                 }
               }
@@ -12041,7 +12209,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 35,
+                  "startLine": 36,
                   "startColumn": 5
                 }
               }
@@ -12062,7 +12230,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 52,
+                  "startLine": 53,
                   "startColumn": 20
                 }
               }
@@ -12083,7 +12251,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 141,
+                  "startLine": 142,
                   "startColumn": 5
                 }
               }
@@ -12104,7 +12272,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 174,
+                  "startLine": 175,
                   "startColumn": 21
                 }
               }
@@ -12125,7 +12293,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 177,
+                  "startLine": 178,
                   "startColumn": 21
                 }
               }
@@ -12146,7 +12314,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 179,
+                  "startLine": 180,
                   "startColumn": 17
                 }
               }
@@ -12167,7 +12335,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 184,
+                  "startLine": 185,
                   "startColumn": 21
                 }
               }
@@ -12188,7 +12356,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 188,
+                  "startLine": 189,
                   "startColumn": 43
                 }
               }
@@ -12209,7 +12377,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 196,
+                  "startLine": 197,
                   "startColumn": 9
                 }
               }
@@ -12230,7 +12398,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 171,
+                  "startLine": 184,
                   "startColumn": 5
                 }
               }
@@ -12251,7 +12419,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 221,
+                  "startLine": 234,
                   "startColumn": 5
                 }
               }
@@ -12272,7 +12440,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 273,
+                  "startLine": 286,
                   "startColumn": 5
                 }
               }
@@ -12293,7 +12461,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 461,
+                  "startLine": 474,
                   "startColumn": 5
                 }
               }
@@ -12314,7 +12482,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 486,
+                  "startLine": 499,
                   "startColumn": 13
                 }
               }
@@ -12337,6 +12505,27 @@
                 "region": {
                   "startLine": 10,
                   "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS234",
+          "level": "warning",
+          "message": {
+            "text": "Found overly complex annotation: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_process_memory.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 9
                 }
               }
             }
@@ -12419,7 +12608,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 512,
+                  "startLine": 517,
                   "startColumn": 9
                 }
               }
@@ -12440,7 +12629,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 522,
+                  "startLine": 527,
                   "startColumn": 30
                 }
               }
@@ -12461,7 +12650,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 546,
+                  "startLine": 551,
                   "startColumn": 20
                 }
               }
@@ -12482,7 +12671,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 552,
                   "startColumn": 9
                 }
               }
@@ -12587,7 +12776,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 222,
+                  "startLine": 233,
                   "startColumn": 5
                 }
               }
@@ -12650,7 +12839,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 199,
+                  "startLine": 200,
                   "startColumn": 5
                 }
               }
@@ -12671,7 +12860,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 257,
+                  "startLine": 258,
                   "startColumn": 5
                 }
               }
@@ -12703,7 +12892,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'TemplatesMixin._bookmark_pe_structure' is too complex (21)"
+            "text": "'TemplatesMixin._bookmark_pe_structure' is too complex (25)"
           },
           "locations": [
             {
@@ -12713,7 +12902,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 307,
+                  "startLine": 309,
                   "startColumn": 5
                 }
               }
@@ -12734,7 +12923,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 307,
+                  "startLine": 309,
                   "startColumn": 5
                 }
               }
@@ -12745,7 +12934,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'TemplatesMixin._bookmark_elf_structure' is too complex (21)"
+            "text": "'TemplatesMixin._bookmark_elf_structure' is too complex (25)"
           },
           "locations": [
             {
@@ -12755,7 +12944,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 403,
+                  "startLine": 415,
                   "startColumn": 5
                 }
               }
@@ -12776,7 +12965,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 403,
+                  "startLine": 415,
                   "startColumn": 5
                 }
               }
@@ -12797,7 +12986,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 435,
+                  "startLine": 451,
                   "startColumn": 44
                 }
               }
@@ -12818,7 +13007,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 449,
+                  "startLine": 467,
                   "startColumn": 50
                 }
               }
@@ -12839,7 +13028,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 463,
+                  "startLine": 483,
                   "startColumn": 44
                 }
               }
@@ -12860,7 +13049,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 214,
+                  "startLine": 215,
                   "startColumn": 28
                 }
               }
@@ -12881,7 +13070,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 401,
+                  "startLine": 402,
                   "startColumn": 5
                 }
               }
@@ -12902,7 +13091,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 536,
+                  "startLine": 537,
                   "startColumn": 5
                 }
               }
@@ -12923,7 +13112,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 536,
+                  "startLine": 537,
                   "startColumn": 5
                 }
               }
@@ -12944,7 +13133,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 680,
+                  "startLine": 681,
                   "startColumn": 5
                 }
               }
@@ -12965,7 +13154,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 715,
+                  "startLine": 716,
                   "startColumn": 5
                 }
               }
@@ -12986,7 +13175,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 715,
+                  "startLine": 716,
                   "startColumn": 5
                 }
               }
@@ -13007,7 +13196,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 767,
+                  "startLine": 768,
                   "startColumn": 5
                 }
               }
@@ -13028,7 +13217,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 785,
+                  "startLine": 786,
                   "startColumn": 9
                 }
               }
@@ -13091,7 +13280,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 116,
+                  "startLine": 121,
                   "startColumn": 5
                 }
               }
@@ -13112,7 +13301,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 116,
+                  "startLine": 121,
                   "startColumn": 5
                 }
               }
@@ -14269,48 +14458,6 @@
                 "region": {
                   "startLine": 296,
                   "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS509",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrectly nested ternary"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1477,
-                  "startColumn": 52
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS509",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrectly nested ternary"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1518,
-                  "startColumn": 52
                 }
               }
             }
@@ -15497,7 +15644,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:06:47.331768+00:00"
+          "endTimeUtc": "2026-04-15T03:35:12.469158+00:00"
         }
       ]
     }

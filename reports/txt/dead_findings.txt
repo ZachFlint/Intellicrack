@@ -1,112 +1,112 @@
 54 findings in src/intellicrack/bridges/frida_bridge.py
 
-post_message is never read, defined in src/intellicrack/bridges/frida_bridge.py:3131
+post_message is never read, defined in src/intellicrack/bridges/frida_bridge.py:3200
 
-eternalize_script is never read, defined in src/intellicrack/bridges/frida_bridge.py:3153
+eternalize_script is never read, defined in src/intellicrack/bridges/frida_bridge.py:3222
 
-rpc_call is never read, defined in src/intellicrack/bridges/frida_bridge.py:3176
+rpc_call is never read, defined in src/intellicrack/bridges/frida_bridge.py:3245
 
-create_cancellable is never read, defined in src/intellicrack/bridges/frida_bridge.py:3212
+create_cancellable is never read, defined in src/intellicrack/bridges/frida_bridge.py:3281
 
-patch_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:3240
+patch_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:3309
 
-allocate_string is never read, defined in src/intellicrack/bridges/frida_bridge.py:3279
+allocate_string is never read, defined in src/intellicrack/bridges/frida_bridge.py:3348
 
-enumerate_symbols is never read, defined in src/intellicrack/bridges/frida_bridge.py:3345
+enumerate_symbols is never read, defined in src/intellicrack/bridges/frida_bridge.py:3420
 
-load_module is never read, defined in src/intellicrack/bridges/frida_bridge.py:3405
+load_module is never read, defined in src/intellicrack/bridges/frida_bridge.py:3480
 
-find_module_by_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:3447
+find_module_by_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:3522
 
-find_functions_matching is never read, defined in src/intellicrack/bridges/frida_bridge.py:3487
+find_functions_matching is never read, defined in src/intellicrack/bridges/frida_bridge.py:3562
 
-disassemble_instruction is never read, defined in src/intellicrack/bridges/frida_bridge.py:3544
+disassemble_instruction is never read, defined in src/intellicrack/bridges/frida_bridge.py:3619
 
-get_backtrace is never read, defined in src/intellicrack/bridges/frida_bridge.py:3595
+get_backtrace is never read, defined in src/intellicrack/bridges/frida_bridge.py:3670
 
-set_exception_handler is never read, defined in src/intellicrack/bridges/frida_bridge.py:3662
+set_exception_handler is never read, defined in src/intellicrack/bridges/frida_bridge.py:3737
 
-revert_hook is never read, defined in src/intellicrack/bridges/frida_bridge.py:3709
+revert_hook is never read, defined in src/intellicrack/bridges/frida_bridge.py:3790
 
-flush_interceptor is never read, defined in src/intellicrack/bridges/frida_bridge.py:3742
+flush_interceptor is never read, defined in src/intellicrack/bridges/frida_bridge.py:3823
 
-call_system_function is never read, defined in src/intellicrack/bridges/frida_bridge.py:3766
+call_system_function is never read, defined in src/intellicrack/bridges/frida_bridge.py:3847
 
-stalker_add_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:3836
+stalker_add_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:3917
 
-stalker_remove_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:3878
+stalker_remove_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:3965
 
-objc_enumerate_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:3989
+objc_enumerate_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4076
 
-objc_enumerate_protocols is never read, defined in src/intellicrack/bridges/frida_bridge.py:4016
+objc_enumerate_protocols is never read, defined in src/intellicrack/bridges/frida_bridge.py:4103
 
-objc_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4043
+objc_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4130
 
-objc_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4092
+objc_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4179
 
-objc_get_class_methods is never read, defined in src/intellicrack/bridges/frida_bridge.py:4140
+objc_get_class_methods is never read, defined in src/intellicrack/bridges/frida_bridge.py:4227
 
-objc_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:4176
+objc_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:4263
 
-java_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4260
+java_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4353
 
-java_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4309
+java_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4402
 
-java_use is never read, defined in src/intellicrack/bridges/frida_bridge.py:4354
+java_use is never read, defined in src/intellicrack/bridges/frida_bridge.py:4447
 
-java_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:4393
+java_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:4486
 
-java_deoptimize is never read, defined in src/intellicrack/bridges/frida_bridge.py:4480
+java_deoptimize is never read, defined in src/intellicrack/bridges/frida_bridge.py:4579
 
-create_cmodule is never read, defined in src/intellicrack/bridges/frida_bridge.py:4510
+create_cmodule is never read, defined in src/intellicrack/bridges/frida_bridge.py:4609
 
-kernel_enumerate_modules is never read, defined in src/intellicrack/bridges/frida_bridge.py:4571
+kernel_enumerate_modules is never read, defined in src/intellicrack/bridges/frida_bridge.py:4676
 
-kernel_enumerate_ranges is never read, defined in src/intellicrack/bridges/frida_bridge.py:4620
+kernel_enumerate_ranges is never read, defined in src/intellicrack/bridges/frida_bridge.py:4725
 
-kernel_read is never read, defined in src/intellicrack/bridges/frida_bridge.py:4673
+kernel_read is never read, defined in src/intellicrack/bridges/frida_bridge.py:4778
 
-kernel_write is never read, defined in src/intellicrack/bridges/frida_bridge.py:4709
+kernel_write is never read, defined in src/intellicrack/bridges/frida_bridge.py:4814
 
-kernel_alloc is never read, defined in src/intellicrack/bridges/frida_bridge.py:4742
+kernel_alloc is never read, defined in src/intellicrack/bridges/frida_bridge.py:4847
 
-kernel_protect is never read, defined in src/intellicrack/bridges/frida_bridge.py:4773
+kernel_protect is never read, defined in src/intellicrack/bridges/frida_bridge.py:4878
 
-socket_listen is never read, defined in src/intellicrack/bridges/frida_bridge.py:4804
+socket_listen is never read, defined in src/intellicrack/bridges/frida_bridge.py:4909
 
-socket_connect is never read, defined in src/intellicrack/bridges/frida_bridge.py:4846
+socket_connect is never read, defined in src/intellicrack/bridges/frida_bridge.py:4957
 
-socket_type is never read, defined in src/intellicrack/bridges/frida_bridge.py:4882
+socket_type is never read, defined in src/intellicrack/bridges/frida_bridge.py:4993
 
-socket_local_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:4911
+socket_local_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:5022
 
-socket_peer_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:4941
+socket_peer_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:5052
 
-file_read_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:4971
+file_read_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5082
 
-file_write_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5009
+file_write_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5120
 
-sqlite_open is never read, defined in src/intellicrack/bridges/frida_bridge.py:5045
+sqlite_open is never read, defined in src/intellicrack/bridges/frida_bridge.py:5156
 
-sqlite_exec is never read, defined in src/intellicrack/bridges/frida_bridge.py:5110
+sqlite_exec is never read, defined in src/intellicrack/bridges/frida_bridge.py:5227
 
-sqlite_dump is never read, defined in src/intellicrack/bridges/frida_bridge.py:5135
+sqlite_dump is never read, defined in src/intellicrack/bridges/frida_bridge.py:5252
 
-write_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:5167
+write_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:5284
 
-cloak_add_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5214
+cloak_add_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5331
 
-cloak_remove_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5240
+cloak_remove_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5357
 
-cloak_add_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:5266
+cloak_add_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:5383
 
-cloak_remove_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:5293
+cloak_remove_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:5410
 
-compile_typescript is never read, defined in src/intellicrack/bridges/frida_bridge.py:5321
+compile_typescript is never read, defined in src/intellicrack/bridges/frida_bridge.py:5438
 
-monitor_path is never read, defined in src/intellicrack/bridges/frida_bridge.py:5347
+monitor_path is never read, defined in src/intellicrack/bridges/frida_bridge.py:5464
 
-stop_monitor is never read, defined in src/intellicrack/bridges/frida_bridge.py:5391
+stop_monitor is never read, defined in src/intellicrack/bridges/frida_bridge.py:5515
 
 
 44 findings in src/intellicrack/bridges/_win32_types.py
@@ -204,242 +204,242 @@ get_psapi is never read, defined in src/intellicrack/bridges/_win32_types.py:864
 
 R2_COMMAND_TIMEOUT is never read, defined in src/intellicrack/bridges/cutter.py:79
 
-r2_cmd is never read, defined in src/intellicrack/bridges/cutter.py:763
+r2_cmd is never read, defined in src/intellicrack/bridges/cutter.py:768
 
-get_debug_info is never read, defined in src/intellicrack/bridges/cutter.py:1862
+get_debug_info is never read, defined in src/intellicrack/bridges/cutter.py:1867
 
-get_classes is never read, defined in src/intellicrack/bridges/cutter.py:1878
+get_classes is never read, defined in src/intellicrack/bridges/cutter.py:1883
 
-get_callgraph is never read, defined in src/intellicrack/bridges/cutter.py:1985
+get_callgraph is never read, defined in src/intellicrack/bridges/cutter.py:1990
 
-get_vtables is never read, defined in src/intellicrack/bridges/cutter.py:2001
+get_vtables is never read, defined in src/intellicrack/bridges/cutter.py:2006
 
-get_syscalls is never read, defined in src/intellicrack/bridges/cutter.py:2025
+get_syscalls is never read, defined in src/intellicrack/bridges/cutter.py:2030
 
-add_flag is never read, defined in src/intellicrack/bridges/cutter.py:2132
+add_flag is never read, defined in src/intellicrack/bridges/cutter.py:2137
 
-resolve_flag is never read, defined in src/intellicrack/bridges/cutter.py:2153
+resolve_flag is never read, defined in src/intellicrack/bridges/cutter.py:2158
 
-get_unions is never read, defined in src/intellicrack/bridges/cutter.py:2207
+get_unions is never read, defined in src/intellicrack/bridges/cutter.py:2212
 
-get_typedefs is never read, defined in src/intellicrack/bridges/cutter.py:2239
+get_typedefs is never read, defined in src/intellicrack/bridges/cutter.py:2244
 
-get_function_types is never read, defined in src/intellicrack/bridges/cutter.py:2255
+get_function_types is never read, defined in src/intellicrack/bridges/cutter.py:2260
 
-import_c_header is never read, defined in src/intellicrack/bridges/cutter.py:2271
+import_c_header is never read, defined in src/intellicrack/bridges/cutter.py:2276
 
-esil_emulate_function is never read, defined in src/intellicrack/bridges/cutter.py:2331
+esil_emulate_function is never read, defined in src/intellicrack/bridges/cutter.py:2336
 
-esil_set_pc is never read, defined in src/intellicrack/bridges/cutter.py:2366
+esil_set_pc is never read, defined in src/intellicrack/bridges/cutter.py:2371
 
-get_zignatures is never read, defined in src/intellicrack/bridges/cutter.py:2385
+get_zignatures is never read, defined in src/intellicrack/bridges/cutter.py:2390
 
-generate_zignatures is never read, defined in src/intellicrack/bridges/cutter.py:2401
+generate_zignatures is never read, defined in src/intellicrack/bridges/cutter.py:2406
 
-add_zignature is never read, defined in src/intellicrack/bridges/cutter.py:2421
+add_zignature is never read, defined in src/intellicrack/bridges/cutter.py:2426
 
-search_zignatures is never read, defined in src/intellicrack/bridges/cutter.py:2441
+search_zignatures is never read, defined in src/intellicrack/bridges/cutter.py:2446
 
-save_project is never read, defined in src/intellicrack/bridges/cutter.py:2457
+save_project is never read, defined in src/intellicrack/bridges/cutter.py:2462
 
-open_project is never read, defined in src/intellicrack/bridges/cutter.py:2476
+open_project is never read, defined in src/intellicrack/bridges/cutter.py:2481
 
-list_projects is never read, defined in src/intellicrack/bridges/cutter.py:2495
+list_projects is never read, defined in src/intellicrack/bridges/cutter.py:2500
 
-set_config is never read, defined in src/intellicrack/bridges/cutter.py:2531
+set_config is never read, defined in src/intellicrack/bridges/cutter.py:2536
 
-write_xor is never read, defined in src/intellicrack/bridges/cutter.py:2551
+write_xor is never read, defined in src/intellicrack/bridges/cutter.py:2556
 
-write_add is never read, defined in src/intellicrack/bridges/cutter.py:2573
+write_add is never read, defined in src/intellicrack/bridges/cutter.py:2578
 
-write_sub is never read, defined in src/intellicrack/bridges/cutter.py:2595
+write_sub is never read, defined in src/intellicrack/bridges/cutter.py:2600
 
-write_from_file is never read, defined in src/intellicrack/bridges/cutter.py:2617
+write_from_file is never read, defined in src/intellicrack/bridges/cutter.py:2622
 
-write_to_file is never read, defined in src/intellicrack/bridges/cutter.py:2637
+write_to_file is never read, defined in src/intellicrack/bridges/cutter.py:2642
 
-write_value is never read, defined in src/intellicrack/bridges/cutter.py:2658
+write_value is never read, defined in src/intellicrack/bridges/cutter.py:2663
 
-write_string is never read, defined in src/intellicrack/bridges/cutter.py:2679
+write_string is never read, defined in src/intellicrack/bridges/cutter.py:2684
 
-search_string_live is never read, defined in src/intellicrack/bridges/cutter.py:2700
+search_string_live is never read, defined in src/intellicrack/bridges/cutter.py:2705
 
-search_assembly_pattern is never read, defined in src/intellicrack/bridges/cutter.py:2720
+search_assembly_pattern is never read, defined in src/intellicrack/bridges/cutter.py:2725
 
-search_crypto_constants is never read, defined in src/intellicrack/bridges/cutter.py:2740
+search_crypto_constants is never read, defined in src/intellicrack/bridges/cutter.py:2745
 
-search_magic is never read, defined in src/intellicrack/bridges/cutter.py:2756
+search_magic is never read, defined in src/intellicrack/bridges/cutter.py:2761
 
-search_value is never read, defined in src/intellicrack/bridges/cutter.py:2772
+search_value is never read, defined in src/intellicrack/bridges/cutter.py:2777
 
-compare_bytes is never read, defined in src/intellicrack/bridges/cutter.py:2793
+compare_bytes is never read, defined in src/intellicrack/bridges/cutter.py:2798
 
-compare_disassembly is never read, defined in src/intellicrack/bridges/cutter.py:2813
+compare_disassembly is never read, defined in src/intellicrack/bridges/cutter.py:2818
 
-hexdump_words is never read, defined in src/intellicrack/bridges/cutter.py:2879
+hexdump_words is never read, defined in src/intellicrack/bridges/cutter.py:2884
 
-disassemble_function is never read, defined in src/intellicrack/bridges/cutter.py:2899
+disassemble_function is never read, defined in src/intellicrack/bridges/cutter.py:2904
 
 
 35 findings in src/intellicrack/bridges/x64dbg.py
 
 MIN_LINE_PARTS is never read, defined in src/intellicrack/bridges/x64dbg.py:142
 
-get_module_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:3689
+get_module_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:3759
 
-find_references is never read, defined in src/intellicrack/bridges/x64dbg.py:3704
+find_references is never read, defined in src/intellicrack/bridges/x64dbg.py:3774
 
-find_string_references is never read, defined in src/intellicrack/bridges/x64dbg.py:3720
+find_string_references is never read, defined in src/intellicrack/bridges/x64dbg.py:3790
 
-find_intermodular_calls is never read, defined in src/intellicrack/bridges/x64dbg.py:3733
+find_intermodular_calls is never read, defined in src/intellicrack/bridges/x64dbg.py:3803
 
-get_function_cfg is never read, defined in src/intellicrack/bridges/x64dbg.py:3763
+get_function_cfg is never read, defined in src/intellicrack/bridges/x64dbg.py:3833
 
-clear_database is never read, defined in src/intellicrack/bridges/x64dbg.py:3799
+clear_database is never read, defined in src/intellicrack/bridges/x64dbg.py:3869
 
-restore_patch is never read, defined in src/intellicrack/bridges/x64dbg.py:3824
+restore_patch is never read, defined in src/intellicrack/bridges/x64dbg.py:3894
 
-set_thread_name is never read, defined in src/intellicrack/bridges/x64dbg.py:3892
+set_thread_name is never read, defined in src/intellicrack/bridges/x64dbg.py:3962
 
-get_pe_directories is never read, defined in src/intellicrack/bridges/x64dbg.py:3957
+get_pe_directories is never read, defined in src/intellicrack/bridges/x64dbg.py:4027
 
-add_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:3975
+add_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:4045
 
-remove_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:3991
+remove_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:4061
 
-get_watches is never read, defined in src/intellicrack/bridges/x64dbg.py:4007
+get_watches is never read, defined in src/intellicrack/bridges/x64dbg.py:4077
 
-set_logging_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4022
+set_logging_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4092
 
-configure_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4040
+configure_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4110
 
-set_dll_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4072
+set_dll_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4142
 
-get_trace_record is never read, defined in src/intellicrack/bridges/x64dbg.py:4123
+get_trace_record is never read, defined in src/intellicrack/bridges/x64dbg.py:4193
 
-step_count is never read, defined in src/intellicrack/bridges/x64dbg.py:4142
+step_count is never read, defined in src/intellicrack/bridges/x64dbg.py:4212
 
-animate_start is never read, defined in src/intellicrack/bridges/x64dbg.py:4157
+animate_start is never read, defined in src/intellicrack/bridges/x64dbg.py:4227
 
-animate_stop is never read, defined in src/intellicrack/bridges/x64dbg.py:4171
+animate_stop is never read, defined in src/intellicrack/bridges/x64dbg.py:4241
 
-analyze_entropy is never read, defined in src/intellicrack/bridges/x64dbg.py:4181
+analyze_entropy is never read, defined in src/intellicrack/bridges/x64dbg.py:4251
 
-script_load is never read, defined in src/intellicrack/bridges/x64dbg.py:4278
+script_load is never read, defined in src/intellicrack/bridges/x64dbg.py:4348
 
-script_run is never read, defined in src/intellicrack/bridges/x64dbg.py:4291
+script_run is never read, defined in src/intellicrack/bridges/x64dbg.py:4361
 
-script_cmd is never read, defined in src/intellicrack/bridges/x64dbg.py:4301
+script_cmd is never read, defined in src/intellicrack/bridges/x64dbg.py:4371
 
-script_abort is never read, defined in src/intellicrack/bridges/x64dbg.py:4314
+script_abort is never read, defined in src/intellicrack/bridges/x64dbg.py:4384
 
-plugin_load is never read, defined in src/intellicrack/bridges/x64dbg.py:4324
+plugin_load is never read, defined in src/intellicrack/bridges/x64dbg.py:4394
 
-plugin_unload is never read, defined in src/intellicrack/bridges/x64dbg.py:4337
+plugin_unload is never read, defined in src/intellicrack/bridges/x64dbg.py:4407
 
-plugin_list is never read, defined in src/intellicrack/bridges/x64dbg.py:4350
+plugin_list is never read, defined in src/intellicrack/bridges/x64dbg.py:4420
 
-detect_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:4388
+detect_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:4458
 
-patch_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:4404
+patch_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:4474
 
-reconstruct_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:4435
+reconstruct_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:4505
 
-goto_address is never read, defined in src/intellicrack/bridges/x64dbg.py:4463
+goto_address is never read, defined in src/intellicrack/bridges/x64dbg.py:4533
 
-break_on_tls_callbacks is never read, defined in src/intellicrack/bridges/x64dbg.py:4516
+break_on_tls_callbacks is never read, defined in src/intellicrack/bridges/x64dbg.py:4586
 
-get_privileges is never read, defined in src/intellicrack/bridges/x64dbg.py:4573
+get_privileges is never read, defined in src/intellicrack/bridges/x64dbg.py:4643
 
-adjust_privilege is never read, defined in src/intellicrack/bridges/x64dbg.py:4630
+adjust_privilege is never read, defined in src/intellicrack/bridges/x64dbg.py:4708
 
 
 29 findings in src/intellicrack/bridges/hex_editor.py
 
-_U16_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:127
+_U16_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:229
 
-_U32_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:128
+_U32_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:230
 
-_U64_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:129
+_U64_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:231
 
-_PE_CHECKSUM_RELATIVE is never read, defined in src/intellicrack/bridges/hex_editor.py:136
+_PE_CHECKSUM_RELATIVE is never read, defined in src/intellicrack/bridges/hex_editor.py:238
 
-_MAX_BPS_DIFF_LEN is never read, defined in src/intellicrack/bridges/hex_editor.py:143
+_MAX_BPS_DIFF_LEN is never read, defined in src/intellicrack/bridges/hex_editor.py:245
 
-_MIN_BPS_AHEAD_MATCH is never read, defined in src/intellicrack/bridges/hex_editor.py:144
+_MIN_BPS_AHEAD_MATCH is never read, defined in src/intellicrack/bridges/hex_editor.py:246
 
-_UPS_MIN_PATCH_SIZE is never read, defined in src/intellicrack/bridges/hex_editor.py:151
+_UPS_MIN_PATCH_SIZE is never read, defined in src/intellicrack/bridges/hex_editor.py:253
 
-_NDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:155
+_NDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:257
 
-_HDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:156
+_HDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:258
 
-save_to_sandbox is never read, defined in src/intellicrack/bridges/hex_editor.py:2405
+save_to_sandbox is never read, defined in src/intellicrack/bridges/hex_editor.py:2513
 
-get_entropy is never read, defined in src/intellicrack/bridges/hex_editor.py:2556
+get_entropy is never read, defined in src/intellicrack/bridges/hex_editor.py:2664
 
-apply_arithmetic_to_selection is never read, defined in src/intellicrack/bridges/hex_editor.py:3819
+apply_arithmetic_to_selection is never read, defined in src/intellicrack/bridges/hex_editor.py:3940
 
-set_va_base is never read, defined in src/intellicrack/bridges/hex_editor.py:4034
+set_va_base is never read, defined in src/intellicrack/bridges/hex_editor.py:4155
 
-auto_detect_va_mappings is never read, defined in src/intellicrack/bridges/hex_editor.py:4110
+auto_detect_va_mappings is never read, defined in src/intellicrack/bridges/hex_editor.py:4231
 
-get_strings is never read, defined in src/intellicrack/bridges/hex_editor.py:4324
+get_strings is never read, defined in src/intellicrack/bridges/hex_editor.py:4445
 
-generate_structure_bookmarks is never read, defined in src/intellicrack/bridges/hex_editor.py:4473
+generate_structure_bookmarks is never read, defined in src/intellicrack/bridges/hex_editor.py:4594
 
-export_annotated_html is never read, defined in src/intellicrack/bridges/hex_editor.py:4640
+export_annotated_html is never read, defined in src/intellicrack/bridges/hex_editor.py:4761
 
-export_annotated_pdf is never read, defined in src/intellicrack/bridges/hex_editor.py:4692
+export_annotated_pdf is never read, defined in src/intellicrack/bridges/hex_editor.py:4813
 
-snap_to_alignment is never read, defined in src/intellicrack/bridges/hex_editor.py:4827
+snap_to_alignment is never read, defined in src/intellicrack/bridges/hex_editor.py:4948
 
-set_alignment_grid is never read, defined in src/intellicrack/bridges/hex_editor.py:4845
+set_alignment_grid is never read, defined in src/intellicrack/bridges/hex_editor.py:4966
 
-base_convert is never read, defined in src/intellicrack/bridges/hex_editor.py:4977
+base_convert is never read, defined in src/intellicrack/bridges/hex_editor.py:5098
 
-run_python_script is never read, defined in src/intellicrack/bridges/hex_editor.py:5049
+run_python_script is never read, defined in src/intellicrack/bridges/hex_editor.py:5170
 
-set_chunk_size is never read, defined in src/intellicrack/bridges/hex_editor.py:5175
+set_chunk_size is never read, defined in src/intellicrack/bridges/hex_editor.py:5372
 
-set_memory_budget is never read, defined in src/intellicrack/bridges/hex_editor.py:5207
+set_memory_budget is never read, defined in src/intellicrack/bridges/hex_editor.py:5404
 
-set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5221, src/intellicrack/ui/panels/hex_editor_widget.py:477
+set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5418, src/intellicrack/ui/panels/hex_editor_widget.py:477
 
-get_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5236
+get_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5433
 
-scan_die_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5244
+scan_die_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5441
 
-scan_clamav_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5340
+scan_clamav_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5537
 
-scan_custom_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5466
+scan_custom_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5663
 
 
 12 findings in src/intellicrack/bridges/ghidra.py
 
-create_bridge_script is never read, defined in src/intellicrack/bridges/ghidra.py:1246
+create_bridge_script is never read, defined in src/intellicrack/bridges/ghidra.py:1259
 
-bridge_script_path is never read, defined in src/intellicrack/bridges/ghidra.py:1255
+bridge_script_path is never read, defined in src/intellicrack/bridges/ghidra.py:1268
 
-get_register_value is never read, defined in src/intellicrack/bridges/ghidra.py:3399
+get_register_value is never read, defined in src/intellicrack/bridges/ghidra.py:3423
 
-add_reference is never read, defined in src/intellicrack/bridges/ghidra.py:3499
+add_reference is never read, defined in src/intellicrack/bridges/ghidra.py:3523
 
-delete_reference is never read, defined in src/intellicrack/bridges/ghidra.py:3544
+delete_reference is never read, defined in src/intellicrack/bridges/ghidra.py:3568
 
-get_instruction_flow is never read, defined in src/intellicrack/bridges/ghidra.py:3991
+get_instruction_flow is never read, defined in src/intellicrack/bridges/ghidra.py:4015
 
-create_data_type is never read, defined in src/intellicrack/bridges/ghidra.py:4029
+create_data_type is never read, defined in src/intellicrack/bridges/ghidra.py:4053
 
-create_data is never read, defined in src/intellicrack/bridges/ghidra.py:4108
+create_data is never read, defined in src/intellicrack/bridges/ghidra.py:4132
 
-get_program_tree is never read, defined in src/intellicrack/bridges/ghidra.py:4402
+get_program_tree is never read, defined in src/intellicrack/bridges/ghidra.py:4426
 
-get_properties is never read, defined in src/intellicrack/bridges/ghidra.py:4435
+get_properties is never read, defined in src/intellicrack/bridges/ghidra.py:4459
 
-manage_thunks is never read, defined in src/intellicrack/bridges/ghidra.py:4609
+manage_thunks is never read, defined in src/intellicrack/bridges/ghidra.py:4633
 
-manage_external_references is never read, defined in src/intellicrack/bridges/ghidra.py:4652
+manage_external_references is never read, defined in src/intellicrack/bridges/ghidra.py:4676
 
 
 9 findings in src/intellicrack/bridges/process.py
@@ -448,45 +448,45 @@ _ERR_PSAPI_NA is never read, defined in src/intellicrack/bridges/process.py:148
 
 _ERR_NO_THREAD is never read, defined in src/intellicrack/bridges/process.py:150
 
-pipe_read is never read, defined in src/intellicrack/bridges/process.py:3105
+pipe_read is never read, defined in src/intellicrack/bridges/process.py:3125
 
-pipe_write is never read, defined in src/intellicrack/bridges/process.py:3129
+pipe_write is never read, defined in src/intellicrack/bridges/process.py:3149
 
-device_open is never read, defined in src/intellicrack/bridges/process.py:3351
+device_open is never read, defined in src/intellicrack/bridges/process.py:3371
 
-device_ioctl is never read, defined in src/intellicrack/bridges/process.py:3382
+device_ioctl is never read, defined in src/intellicrack/bridges/process.py:3402
 
-device_close is never read, defined in src/intellicrack/bridges/process.py:3426
+device_close is never read, defined in src/intellicrack/bridges/process.py:3446
 
-create_section is never read, defined in src/intellicrack/bridges/process.py:3728
+create_section is never read, defined in src/intellicrack/bridges/process.py:3748
 
-map_section is never read, defined in src/intellicrack/bridges/process.py:3762
+map_section is never read, defined in src/intellicrack/bridges/process.py:3782
 
 
 9 findings in src/intellicrack/sandbox/qemu.py
 
-PIDFILE_MAX_RETRIES is never read, defined in src/intellicrack/sandbox/qemu.py:104
+PIDFILE_MAX_RETRIES is never read, defined in src/intellicrack/sandbox/qemu.py:106
 
-PIDFILE_RETRY_DELAY is never read, defined in src/intellicrack/sandbox/qemu.py:105
+PIDFILE_RETRY_DELAY is never read, defined in src/intellicrack/sandbox/qemu.py:107
 
-_parse_service_log is never read, defined in src/intellicrack/sandbox/qemu.py:1948
+_parse_service_log is never read, defined in src/intellicrack/sandbox/qemu.py:2075
 
-_parse_kernel_object_log is never read, defined in src/intellicrack/sandbox/qemu.py:1982
+_parse_kernel_object_log is never read, defined in src/intellicrack/sandbox/qemu.py:2109
 
-_parse_dll_log is never read, defined in src/intellicrack/sandbox/qemu.py:2016
+_parse_dll_log is never read, defined in src/intellicrack/sandbox/qemu.py:2143
 
-_parse_injection_log is never read, defined in src/intellicrack/sandbox/qemu.py:2050
+_parse_injection_log is never read, defined in src/intellicrack/sandbox/qemu.py:2177
 
-_parse_resource_log is never read, defined in src/intellicrack/sandbox/qemu.py:2085
+_parse_resource_log is never read, defined in src/intellicrack/sandbox/qemu.py:2212
 
-_parse_clipboard_log is never read, defined in src/intellicrack/sandbox/qemu.py:2120
+_parse_clipboard_log is never read, defined in src/intellicrack/sandbox/qemu.py:2247
 
-_parse_api_trace_log is never read, defined in src/intellicrack/sandbox/qemu.py:2155
+_parse_api_trace_log is never read, defined in src/intellicrack/sandbox/qemu.py:2282
 
 
 8 findings in src/intellicrack/ui/panels/hex_editor_widget.py
 
-set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5221, src/intellicrack/ui/panels/hex_editor_widget.py:477
+set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5418, src/intellicrack/ui/panels/hex_editor_widget.py:477
 
 set_entropy_data is never read, defined in src/intellicrack/ui/panels/hex_editor_widget.py:163
 
@@ -600,11 +600,11 @@ get_source_name is never read, defined in src/intellicrack/ui/panels/stack_viewe
 
 3 findings in src/intellicrack/bridges/sandbox_bridge.py
 
-anti_evasion is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:1370
+anti_evasion is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:1374
 
-detect_c2 is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:1666
+detect_c2 is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:1670
 
-diff is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:1705
+diff is never read, defined in src/intellicrack/bridges/sandbox_bridge.py:1709
 
 
 3 findings in src/intellicrack/core/config.py
@@ -669,7 +669,7 @@ MAX_TITLE_LEN is never read, defined in src/intellicrack/ui/win32_embed.py:37
 
 1 findings in src/intellicrack/bridges/hex_state.py
 
-get_current_state is never read, defined in src/intellicrack/bridges/hex_state.py:139
+get_current_state is never read, defined in src/intellicrack/bridges/hex_state.py:141
 
 
 1 findings in src/intellicrack/core/hexpat/data_reader.py
@@ -679,7 +679,7 @@ read_fixed_string is never read, defined in src/intellicrack/core/hexpat/data_re
 
 1 findings in src/intellicrack/core/hexpat/pattern_registry.py
 
-load_source is never read, defined in src/intellicrack/core/hexpat/pattern_registry.py:183
+load_source is never read, defined in src/intellicrack/core/hexpat/pattern_registry.py:184
 
 
 1 findings in src/intellicrack/core/hexpat/stdlib.py
@@ -754,7 +754,7 @@ _DIFF_CHUNK_SIZE is never read, defined in src/intellicrack/ui/panels/hex_editor
 
 1 findings in src/intellicrack/ui/panels/hex_editor/_pattern_editor.py
 
-_refresh_template_combo is never read, defined in src/intellicrack/ui/panels/hex_editor/_pattern_editor.py:552
+_refresh_template_combo is never read, defined in src/intellicrack/ui/panels/hex_editor/_pattern_editor.py:565
 
 
 1 findings in src/intellicrack/ui/panels/hex_editor/panel.py

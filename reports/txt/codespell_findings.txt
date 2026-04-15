@@ -202,13 +202,13 @@ src/intellicrack\bridges\process.py:473: SEH ==> SHE
 
 src/intellicrack\bridges\process.py:664: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:750: SEH ==> SHE
+src/intellicrack\bridges\process.py:755: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2814: SEH ==> SHE
+src/intellicrack\bridges\process.py:2834: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2818: SEH ==> SHE
+src/intellicrack\bridges\process.py:2838: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2828: SEH ==> SHE
+src/intellicrack\bridges\process.py:2848: SEH ==> SHE
 
 
 8 findings in src/intellicrack-hexcore\_typos.toml
@@ -437,6 +437,15 @@ src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:5: ser ==>
 src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:11: ser ==> set
 
 
+3 findings in src/intellicrack\bridges\x64dbg.py
+
+src/intellicrack\bridges\x64dbg.py:1278: SEH ==> SHE
+
+src/intellicrack\bridges\x64dbg.py:2337: unparseable ==> unparsable
+
+src/intellicrack\bridges\x64dbg.py:3980: SEH ==> SHE
+
+
 3 findings in src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d
 
 src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:1: inout ==> input, in out
@@ -511,11 +520,11 @@ src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d:31:
 
 3 findings in tests/test_hexcore_e2e\test_bridge_va_mapping.py
 
-tests/test_hexcore_e2e\test_bridge_va_mapping.py:161: VAs ==> was
+tests/test_hexcore_e2e\test_bridge_va_mapping.py:163: VAs ==> was
 
-tests/test_hexcore_e2e\test_bridge_va_mapping.py:170: vas ==> was
+tests/test_hexcore_e2e\test_bridge_va_mapping.py:172: vas ==> was
 
-tests/test_hexcore_e2e\test_bridge_va_mapping.py:171: vas ==> was
+tests/test_hexcore_e2e\test_bridge_va_mapping.py:173: vas ==> was
 
 
 2 findings in src/intellicrack\bridges\_win32_types.py
@@ -525,18 +534,11 @@ src/intellicrack\bridges\_win32_types.py:622: SEH ==> SHE
 src/intellicrack\bridges\_win32_types.py:627: SEH ==> SHE
 
 
-2 findings in src/intellicrack\bridges\x64dbg.py
-
-src/intellicrack\bridges\x64dbg.py:1265: SEH ==> SHE
-
-src/intellicrack\bridges\x64dbg.py:3910: SEH ==> SHE
-
-
 2 findings in tests/test_bridges\test_process_bridge.py
 
-tests/test_bridges\test_process_bridge.py:685: SEH ==> SHE
+tests/test_bridges\test_process_bridge.py:1136: SEH ==> SHE
 
-tests/test_bridges\test_process_bridge.py:690: SEH ==> SHE
+tests/test_bridges\test_process_bridge.py:1141: SEH ==> SHE
 
 
 2 findings in tests/test_hexcore_e2e\test_bridge_encoding_decoding.py

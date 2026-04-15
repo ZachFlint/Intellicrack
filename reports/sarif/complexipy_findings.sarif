@@ -351,13 +351,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "X64DbgBridge::get_watchpoints - cognitive complexity 27 (exceeds threshold)"
           }
         },
@@ -876,20 +869,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "CFGGraphScene::_compute_layers - cognitive complexity 19 (exceeds threshold)"
           }
         },
@@ -1052,20 +1031,6 @@
           "level": "warning",
           "message": {
             "text": "SignatureScanWorker::_scan_die - cognitive complexity 32 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)"
           }
         },
         {
@@ -1269,7 +1234,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:07:43.663743+00:00"
+          "endTimeUtc": "2026-04-15T03:36:06.615200+00:00"
         }
       ]
     }
