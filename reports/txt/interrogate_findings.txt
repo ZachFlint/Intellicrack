@@ -1,43 +1,12 @@
-17 findings in bridges\frida_bridge.py
+18 findings in ui\app.py
 
-bridges\frida_bridge.py:1828: INT001 Missing docstring for 'FridaBridge.hook_function.on_message'
+ui\app.py:735: INT001 Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'
 
-bridges\frida_bridge.py:1937: INT001 Missing docstring for 'FridaBridge.execute_persistent_script.on_message'
-
-bridges\frida_bridge.py:2078: INT001 Missing docstring for 'FridaBridge._execute_script_and_wait.on_message'
-
-bridges\frida_bridge.py:2293: INT001 Missing docstring for 'FridaBridge.allocate_memory.on_message'
-
-bridges\frida_bridge.py:2625: INT001 Missing docstring for 'FridaBridge.replace_function.on_message'
-
-bridges\frida_bridge.py:2830: INT001 Missing docstring for 'FridaBridge.stalker_follow.on_stalker_message'
-
-bridges\frida_bridge.py:2924: INT001 Missing docstring for 'FridaBridge.enable_child_gating.on_child_added'
-
-bridges\frida_bridge.py:3019: INT001 Missing docstring for 'FridaBridge.enable_crash_reporting.on_process_crashed'
-
-bridges\frida_bridge.py:3314: INT001 Missing docstring for 'FridaBridge.allocate_string.on_message'
-
-bridges\frida_bridge.py:3697: INT001 Missing docstring for 'FridaBridge.set_exception_handler.on_message'
-
-bridges\frida_bridge.py:3866: INT001 Missing docstring for 'FridaBridge.stalker_add_call_probe.on_message'
-
-bridges\frida_bridge.py:4227: INT001 Missing docstring for 'FridaBridge.objc_hook_method.on_message'
-
-bridges\frida_bridge.py:4452: INT001 Missing docstring for 'FridaBridge.java_hook_method.on_message'
-
-bridges\frida_bridge.py:4546: INT001 Missing docstring for 'FridaBridge.create_cmodule.on_message'
-
-bridges\frida_bridge.py:4835: INT001 Missing docstring for 'FridaBridge.socket_listen.on_message'
-
-bridges\frida_bridge.py:5085: INT001 Missing docstring for 'FridaBridge.sqlite_open.on_message'
-
-bridges\frida_bridge.py:5367: INT001 Missing docstring for 'FridaBridge.monitor_path.on_change'
-
-
-11 findings in ui\app.py
+ui\app.py:745: INT001 Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'
 
 ui\app.py:786: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'
+
+ui\app.py:942: INT001 Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'
 
 ui\app.py:969: INT001 Missing docstring for 'MainWindow._on_user_message.process'
 
@@ -53,66 +22,172 @@ ui\app.py:1360: INT001 Missing docstring for 'MainWindow._apply_tool_settings._r
 
 ui\app.py:1444: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'
 
+ui\app.py:1533: INT001 Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'
+
 ui\app.py:1564: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'
 
 ui\app.py:1669: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'
 
+ui\app.py:1675: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'
+
+ui\app.py:1693: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'
+
+ui\app.py:1964: INT001 Missing docstring for 'MainWindow._on_process_attached._on_done'
+
 ui\app.py:2096: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'
 
 
-10 findings in bridges\hex_editor.py
+14 findings in core\hexpat\evaluator.py
 
-bridges\hex_editor.py:3081: INT001 Missing docstring for 'HexEditorBridge.calculate_hash_custom_crc.reflect'
+core\hexpat\evaluator.py:1899: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_sizeof'
 
-bridges\hex_editor.py:5072: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.read'
+core\hexpat\evaluator.py:1902: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_addressof'
 
-bridges\hex_editor.py:5081: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.write'
+core\hexpat\evaluator.py:1905: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_typenameof'
 
-bridges\hex_editor.py:5087: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.insert'
+core\hexpat\evaluator.py:1911: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_assert'
 
-bridges\hex_editor.py:5093: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.delete'
+core\hexpat\evaluator.py:1919: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_print'
 
-bridges\hex_editor.py:5097: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.length'
+core\hexpat\evaluator.py:1922: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_format'
 
-bridges\hex_editor.py:5102: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.search_hex'
+core\hexpat\evaluator.py:1937: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_unsigned'
 
-bridges\hex_editor.py:5107: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.search_text'
+core\hexpat\evaluator.py:1947: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_signed'
 
-bridges\hex_editor.py:5113: INT001 Missing docstring for 'HexEditorBridge.run_python_script._DocAPI.add_bookmark'
+core\hexpat\evaluator.py:1957: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_string'
 
-bridges\hex_editor.py:5120: INT001 Missing docstring for 'HexEditorBridge.run_python_script.safe_print'
+core\hexpat\evaluator.py:1966: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_find_sequence'
 
+core\hexpat\evaluator.py:1976: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_min'
 
-8 findings in bridges\x64dbg.py
+core\hexpat\evaluator.py:1980: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_max'
 
-bridges\x64dbg.py:2310: INT001 Missing docstring for 'X64DbgBridge.get_registers.parse_int'
+core\hexpat\evaluator.py:1984: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_abs'
 
-bridges\x64dbg.py:2321: INT001 Missing docstring for 'X64DbgBridge.get_registers.get_reg'
-
-bridges\x64dbg.py:2617: INT001 Missing docstring for 'X64DbgBridge.get_memory_regions.MemoryBasicInformation'
-
-bridges\x64dbg.py:2946: INT001 Missing docstring for 'X64DbgBridge._get_threads.ThreadEntry32'
-
-bridges\x64dbg.py:3015: INT001 Missing docstring for 'X64DbgBridge._get_modules.ModuleEntry32W'
-
-bridges\x64dbg.py:4610: INT001 Missing docstring for 'X64DbgBridge.get_privileges.LUID'
-
-bridges\x64dbg.py:4648: INT001 Missing docstring for 'X64DbgBridge.adjust_privilege.LUID'
-
-bridges\x64dbg.py:4651: INT001 Missing docstring for 'X64DbgBridge.adjust_privilege.TokenPrivileges'
+core\hexpat\evaluator.py:1993: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_strlen'
 
 
-5 findings in bridges\named_pipe_client.py
+13 findings in ui\panels\process_panel\_system_tab.py
 
-bridges\named_pipe_client.py:268: INT001 Missing docstring for 'NamedPipeClient._open_handle'
+ui\panels\process_panel\_system_tab.py:475: INT001 Missing docstring for 'SystemTab._refresh_privileges._on_success'
 
-bridges\named_pipe_client.py:319: INT001 Missing docstring for 'NamedPipeClient._close_handle'
+ui\panels\process_panel\_system_tab.py:518: INT001 Missing docstring for 'SystemTab._refresh_windows._on_success'
 
-bridges\named_pipe_client.py:324: INT001 Missing docstring for 'NamedPipeClient._read_exact_sync'
+ui\panels\process_panel\_system_tab.py:542: INT001 Missing docstring for 'SystemTab._refresh_services._on_success'
 
-bridges\named_pipe_client.py:373: INT001 Missing docstring for 'NamedPipeClient._write_sync'
+ui\panels\process_panel\_system_tab.py:570: INT001 Missing docstring for 'SystemTab._on_read_peb._on_success'
 
-bridges\named_pipe_client.py:411: INT001 Missing docstring for 'NamedPipeClient._cancel_io'
+ui\panels\process_panel\_system_tab.py:594: INT001 Missing docstring for 'SystemTab._on_read_teb._on_success'
+
+ui\panels\process_panel\_system_tab.py:613: INT001 Missing docstring for 'SystemTab._on_pipe_connect._on_success'
+
+ui\panels\process_panel\_system_tab.py:649: INT001 Missing docstring for 'SystemTab._refresh_mitigations._on_success'
+
+ui\panels\process_panel\_system_tab.py:681: INT001 Missing docstring for 'SystemTab._on_reg_read._on_success'
+
+ui\panels\process_panel\_system_tab.py:699: INT001 Missing docstring for 'SystemTab._on_reg_enum_keys._on_success'
+
+ui\panels\process_panel\_system_tab.py:716: INT001 Missing docstring for 'SystemTab._on_reg_enum_values._on_success'
+
+ui\panels\process_panel\_system_tab.py:730: INT001 Missing docstring for 'SystemTab._on_gui_resources._on_success'
+
+ui\panels\process_panel\_system_tab.py:750: INT001 Missing docstring for 'SystemTab._on_job_info._on_success'
+
+ui\panels\process_panel\_system_tab.py:771: INT001 Missing docstring for 'SystemTab._on_raw_query._on_success'
+
+
+11 findings in ui\panels\process_panel\_process_tab.py
+
+ui\panels\process_panel\_process_tab.py:168: INT001 Missing docstring for 'ProcessTab._build_system_tab._auto_slot'
+
+ui\panels\process_panel\_process_tab.py:251: INT001 Missing docstring for 'ProcessTab._build_tracked_tab._tracked_auto_slot'
+
+ui\panels\process_panel\_process_tab.py:324: INT001 Missing docstring for 'ProcessTab._on_refresh._on_success'
+
+ui\panels\process_panel\_process_tab.py:331: INT001 Missing docstring for 'ProcessTab._on_refresh._on_error'
+
+ui\panels\process_panel\_process_tab.py:439: INT001 Missing docstring for 'ProcessTab._on_attach._on_success'
+
+ui\panels\process_panel\_process_tab.py:443: INT001 Missing docstring for 'ProcessTab._on_attach._on_error'
+
+ui\panels\process_panel\_process_tab.py:458: INT001 Missing docstring for 'ProcessTab._on_detach._on_success'
+
+ui\panels\process_panel\_process_tab.py:492: INT001 Missing docstring for 'ProcessTab._on_terminate._on_success'
+
+ui\panels\process_panel\_process_tab.py:518: INT001 Missing docstring for 'ProcessTab._on_inject_dll._on_success'
+
+ui\panels\process_panel\_process_tab.py:532: INT001 Missing docstring for 'ProcessTab._load_process_info._on_info'
+
+ui\panels\process_panel\_process_tab.py:549: INT001 Missing docstring for 'ProcessTab._load_process_info._on_env'
+
+
+8 findings in ui\provider_config.py
+
+ui\provider_config.py:866: INT001 Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'
+
+ui\provider_config.py:1006: INT001 Missing docstring for 'ProviderConfigDialog._load_providers._conn_tested_slot'
+
+ui\provider_config.py:1277: INT001 Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'
+
+ui\provider_config.py:1316: INT001 Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'
+
+ui\provider_config.py:1415: INT001 Missing docstring for 'ProviderSettingsWidget._setup_ui._key_visibility_slot'
+
+ui\provider_config.py:2020: INT001 Missing docstring for 'ProviderSettingsWidget._refresh_models._refresh_finished_slot'
+
+ui\provider_config.py:2097: INT001 Missing docstring for 'ProviderSettingsWidget._test_connection._test_finished_slot'
+
+ui\provider_config.py:2328: INT001 Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'
+
+
+7 findings in ui\panels\process_panel\_memory_tab.py
+
+ui\panels\process_panel\_memory_tab.py:369: INT001 Missing docstring for 'MemoryTab._refresh_regions._on_success'
+
+ui\panels\process_panel\_memory_tab.py:407: INT001 Missing docstring for 'MemoryTab._on_read._on_success'
+
+ui\panels\process_panel\_memory_tab.py:470: INT001 Missing docstring for 'MemoryTab._on_write._on_success'
+
+ui\panels\process_panel\_memory_tab.py:483: INT001 Missing docstring for 'MemoryTab._on_allocate._on_success'
+
+ui\panels\process_panel\_memory_tab.py:515: INT001 Missing docstring for 'MemoryTab._on_free._on_success'
+
+ui\panels\process_panel\_memory_tab.py:548: INT001 Missing docstring for 'MemoryTab._on_protect._on_success'
+
+ui\panels\process_panel\_memory_tab.py:569: INT001 Missing docstring for 'MemoryTab._on_search._on_success'
+
+
+7 findings in ui\panels\process_panel\_modules_tab.py
+
+ui\panels\process_panel\_modules_tab.py:283: INT001 Missing docstring for 'ModulesTab._refresh_modules._on_success'
+
+ui\panels\process_panel\_modules_tab.py:336: INT001 Missing docstring for 'ModulesTab._on_inject._on_success'
+
+ui\panels\process_panel\_modules_tab.py:343: INT001 Missing docstring for 'ModulesTab._on_inject._on_error'
+
+ui\panels\process_panel\_modules_tab.py:357: INT001 Missing docstring for 'ModulesTab._refresh_handles._on_success'
+
+ui\panels\process_panel\_modules_tab.py:387: INT001 Missing docstring for 'ModulesTab._refresh_heaps._on_success'
+
+ui\panels\process_panel\_modules_tab.py:410: INT001 Missing docstring for 'ModulesTab._refresh_com._on_success'
+
+ui\panels\process_panel\_modules_tab.py:431: INT001 Missing docstring for 'ModulesTab._refresh_dotnet._on_success'
+
+
+6 findings in ui\panels\process_panel\_threads_tab.py
+
+ui\panels\process_panel\_threads_tab.py:345: INT001 Missing docstring for 'ThreadsTab._refresh_threads._on_success'
+
+ui\panels\process_panel\_threads_tab.py:390: INT001 Missing docstring for 'ThreadsTab._refresh_registers._on_success'
+
+ui\panels\process_panel\_threads_tab.py:443: INT001 Missing docstring for 'ThreadsTab._on_stack_walk._on_success'
+
+ui\panels\process_panel\_threads_tab.py:476: INT001 Missing docstring for 'ThreadsTab._on_seh_enumerate._on_success'
+
+ui\panels\process_panel\_threads_tab.py:506: INT001 Missing docstring for 'ThreadsTab._on_fiber._on_success'
+
+ui\panels\process_panel\_threads_tab.py:528: INT001 Missing docstring for 'ThreadsTab._on_tls._on_success'
 
 
 5 findings in credentials\store.py
@@ -128,17 +203,28 @@ credentials\store.py:439: INT001 Missing docstring for 'CredentialStore.delete._
 credentials\store.py:598: INT001 Missing docstring for '_CredentialStoreHolder'
 
 
-5 findings in sandbox\qemu.py
+5 findings in ui\panels\hex_editor\panel.py
 
-sandbox\qemu.py:727: INT001 Missing docstring for 'QEMUSandbox._find_qemu._find_existing'
+ui\panels\hex_editor\panel.py:456: INT001 Missing docstring for 'HexEditorPanel._build_side_panels._on_log_toggled'
 
-sandbox\qemu.py:2441: INT001 Missing docstring for 'QEMUSandbox.capture_screenshot._convert_to_png'
+ui\panels\hex_editor\panel.py:459: INT001 Missing docstring for 'HexEditorPanel._build_side_panels._log_toggled_slot'
 
-sandbox\qemu.py:2636: INT001 Missing docstring for 'QEMUSandbox.extract_dropped_files._create_zip'
+ui\panels\hex_editor\panel.py:815: INT001 Missing docstring for 'HexEditorPanel.set_state_holder.on_state_event'
 
-sandbox\qemu.py:2716: INT001 Missing docstring for 'QEMUSandbox.yara_scan._format_yara_match'
+ui\panels\hex_editor\panel.py:957: INT001 Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler'
 
-sandbox\qemu.py:2754: INT001 Missing docstring for 'QEMUSandbox.yara_scan._extract_zips'
+ui\panels\hex_editor\panel.py:958: INT001 Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler._handler'
+
+
+4 findings in sandbox\qemu.py
+
+sandbox\qemu.py:854: INT001 Missing docstring for 'QEMUSandbox._find_qemu._find_existing'
+
+sandbox\qemu.py:2753: INT001 Missing docstring for 'QEMUSandbox.extract_dropped_files._create_zip'
+
+sandbox\qemu.py:2833: INT001 Missing docstring for 'QEMUSandbox.yara_scan._format_yara_match'
+
+sandbox\qemu.py:2871: INT001 Missing docstring for 'QEMUSandbox.yara_scan._extract_zips'
 
 
 4 findings in sandbox\windows.py
@@ -152,45 +238,84 @@ sandbox\windows.py:1281: INT001 Missing docstring for 'WindowsSandbox.yara_scan.
 sandbox\windows.py:1316: INT001 Missing docstring for 'WindowsSandbox.yara_scan._extract_zips'
 
 
-4 findings in ui\provider_config.py
+3 findings in bridges\x64dbg.py
 
-ui\provider_config.py:866: INT001 Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'
+bridges\x64dbg.py:269: INT001 Missing docstring for '_extract_command_line_from_peb.ProcessBasicInformation'
 
-ui\provider_config.py:1277: INT001 Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'
+bridges\x64dbg.py:4786: INT001 Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'
 
-ui\provider_config.py:1316: INT001 Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'
-
-ui\provider_config.py:2328: INT001 Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'
+bridges\x64dbg.py:4860: INT001 Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'
 
 
-3 findings in ui\panels\hex_editor\_pattern_editor.py
+3 findings in sandbox\analysis.py
 
-ui\panels\hex_editor\_pattern_editor.py:70: INT001 Missing docstring for 'PatternEditorMixin._populate_template_tree'
+sandbox\analysis.py:444: INT001 Missing docstring for 'extract_iocs._add_ioc'
 
-ui\panels\hex_editor\_pattern_editor.py:71: INT001 Missing docstring for 'PatternEditorMixin._highlight_template_fields'
+sandbox\analysis.py:466: INT001 Missing docstring for 'extract_iocs._scan_text'
 
-ui\panels\hex_editor\_pattern_editor.py:72: INT001 Missing docstring for 'PatternEditorMixin._populate_template_combo'
-
-
-2 findings in providers\discovery.py
-
-providers\discovery.py:351: INT001 Missing docstring for 'ModelDiscovery.discover_all.discover_one'
-
-providers\discovery.py:705: INT001 Missing docstring for 'ModelDiscovery.get_recommended_model.cost_key'
+sandbox\analysis.py:547: INT001 Missing docstring for 'generate_timeline._should_include'
 
 
-2 findings in providers\google.py
+3 findings in ui\tool_config.py
 
-providers\google.py:281: INT001 Missing docstring for 'GoogleProvider.chat._generate'
+ui\tool_config.py:886: INT001 Missing docstring for 'ToolSettingsWidget._check_status._status_slot'
 
-providers\google.py:396: INT001 Missing docstring for 'GoogleProvider.chat_stream._start_stream'
+ui\tool_config.py:948: INT001 Missing docstring for 'ToolSettingsWidget._install_tool._install_slot'
+
+ui\tool_config.py:1324: INT001 Missing docstring for 'ToolStatusDialog._refresh_status._tool_status_slot'
 
 
-2 findings in ui\panels\hex_editor\_sections.py
+3 findings in ui\panels\hex_editor_widget.py
 
-ui\panels\hex_editor\_sections.py:45: INT001 Missing docstring for 'SectionsMixin.goto_offset'
+ui\panels\hex_editor_widget.py:1876: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._copy_as_slot'
 
-ui\panels\hex_editor\_sections.py:46: INT001 Missing docstring for 'SectionsMixin._select_template'
+ui\panels\hex_editor_widget.py:1909: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._mode_slot'
+
+ui\panels\hex_editor_widget.py:1919: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._minimap_slot'
+
+
+3 findings in ui\panels\hex_editor\_widgets.py
+
+ui\panels\hex_editor\_widgets.py:150: INT001 Missing docstring for 'EntropyGraphWidget.paintEvent.x_coord'
+
+ui\panels\hex_editor\_widgets.py:153: INT001 Missing docstring for 'EntropyGraphWidget.paintEvent.y_coord'
+
+ui\panels\hex_editor\_widgets.py:246: INT001 Missing docstring for 'ByteDistributionWidget.paintEvent.bar_h'
+
+
+2 findings in core\hexpat\data_reader.py
+
+core\hexpat\data_reader.py:54: INT001 Missing docstring for 'DataReader.from_document.read_fn'
+
+core\hexpat\data_reader.py:71: INT001 Missing docstring for 'DataReader.from_bytes.read_fn'
+
+
+2 findings in credentials\oauth.py
+
+credentials\oauth.py:376: INT001 Missing docstring for 'OAuthCallbackServer.start.serve'
+
+credentials\oauth.py:935: INT001 Missing docstring for '_OAuthManagerHolder'
+
+
+2 findings in ui\win32_embed.py
+
+ui\win32_embed.py:65: INT001 Missing docstring for 'find_window_by_pid._enum_callback'
+
+ui\win32_embed.py:155: INT001 Missing docstring for 'poll_and_embed._try_embed'
+
+
+2 findings in ui\panels\x64dbg_panel.py
+
+ui\panels\x64dbg_panel.py:167: INT001 Missing docstring for 'X64DbgPanel._populate_toolbar._toggle_64bit_slot'
+
+ui\panels\x64dbg_panel.py:1008: INT001 Missing docstring for 'X64DbgPanel._try_embed_debugger_window._on_embedded'
+
+
+2 findings in ui\panels\hex_editor\_data_inspector.py
+
+ui\panels\hex_editor\_data_inspector.py:129: INT001 Missing docstring for 'DataInspectorMixin._create_bit_editor_group._make_bit_handler'
+
+ui\panels\hex_editor\_data_inspector.py:130: INT001 Missing docstring for 'DataInspectorMixin._create_bit_editor_group._make_bit_handler._handler'
 
 
 1 findings in main.py
@@ -198,46 +323,46 @@ ui\panels\hex_editor\_sections.py:46: INT001 Missing docstring for 'SectionsMixi
 main.py:427: INT001 Missing docstring for '_initialize_providers._init_one'
 
 
-1 findings in bridges\ghidra.py
+1 findings in ui\chat.py
 
-bridges\ghidra.py:1131: INT001 Missing docstring for 'GhidraBridge.start_headless._start_process'
-
-
-1 findings in bridges\process.py
-
-bridges\process.py:2092: INT001 Missing docstring for 'ProcessBridge.get_windows._enum_impl'
+ui\chat.py:486: INT001 Missing docstring for 'ChatPanel.add_streaming_message.append_chunk'
 
 
-1 findings in credentials\oauth.py
+1 findings in ui\sandbox_config.py
 
-credentials\oauth.py:935: INT001 Missing docstring for '_OAuthManagerHolder'
-
-
-1 findings in providers\local_transformers.py
-
-providers\local_transformers.py:676: INT001 Missing docstring for 'LocalTransformersProvider._stream_generate._forward_pass'
+ui\sandbox_config.py:609: INT001 Missing docstring for 'SandboxConfigDialog._test_sandbox._test_finished_slot'
 
 
-1 findings in providers\ollama.py
+1 findings in ui\session_manager.py
 
-providers\ollama.py:380: INT001 Missing docstring for 'OllamaProvider._fetch_model_metadata._query_single'
-
-
-1 findings in ui\panels\hex_editor\_disassembly.py
-
-ui\panels\hex_editor\_disassembly.py:49: INT001 Missing docstring for 'DisassemblyMixin.goto_offset'
+ui\session_manager.py:339: INT001 Missing docstring for 'SessionManagerDialog._load_sessions_from_disk._sort_key'
 
 
-1 findings in ui\panels\hex_editor\_patches.py
+1 findings in ui\panels\ghidra_panel.py
 
-ui\panels\hex_editor\_patches.py:33: INT001 Missing docstring for 'PatchesMixin._on_data_changed'
-
-
-1 findings in ui\panels\hex_editor\_transforms.py
-
-ui\panels\hex_editor\_transforms.py:76: INT001 Missing docstring for 'TransformsMixin._on_data_changed'
+ui\panels\ghidra_panel.py:1946: INT001 Missing docstring for 'GhidraPanel._dispatch_func_menu_action._show_conventions'
 
 
-1 findings in ui\panels\hex_editor\_yara.py
+1 findings in ui\panels\sandbox_panel.py
 
-ui\panels\hex_editor\_yara.py:59: INT001 Missing docstring for 'YaraMixin.goto_offset'
+ui\panels\sandbox_panel.py:261: INT001 Missing docstring for 'SandboxPanel._create_content._vnc_status_slot'
+
+
+1 findings in ui\panels\script_manager.py
+
+ui\panels\script_manager.py:804: INT001 Missing docstring for 'ScriptManagerPanel._on_validate.reset_status'
+
+
+1 findings in ui\panels\stack_viewer.py
+
+ui\panels\stack_viewer.py:469: INT001 Missing docstring for 'StackViewerPanel._setup_ui._auto_refresh_slot'
+
+
+1 findings in ui\panels\hex_editor\_scripting.py
+
+ui\panels\hex_editor\_scripting.py:533: INT001 Missing docstring for 'ScriptWorker._execute._safe_print'
+
+
+1 findings in ui\panels\hex_editor\_search.py
+
+ui\panels\hex_editor\_search.py:435: INT001 Missing docstring for 'SearchMixin._build_numeric_search_panel._range_toggled_slot'

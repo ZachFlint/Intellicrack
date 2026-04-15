@@ -502,27 +502,6 @@
           ]
         },
         {
-          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
-          "level": "warning",
-          "message": {
-            "text": "The variable 'output' is assigned but never used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/generate-map.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 15,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -544,21 +523,21 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingWriteHost",
+          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
           "level": "warning",
           "message": {
-            "text": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+            "text": "The variable 'output' is assigned but never used."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/generate-structure.ps1",
+                  "uri": "D:/Intellicrack/scripts/generate-map.ps1",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 33,
-                  "startColumn": 1
+                  "startLine": 15,
+                  "startColumn": 5
                 }
               }
             }
@@ -580,6 +559,27 @@
                 "region": {
                   "startLine": 13,
                   "startColumn": 15
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/generate-structure.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
                 }
               }
             }
@@ -767,7 +767,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 88,
+                  "startLine": 100,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
+          "level": "warning",
+          "message": {
+            "text": "The variable 'diffInput' is assigned but never used."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/git-commit.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 60,
                   "startColumn": 5
                 }
               }
@@ -809,7 +830,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 78,
+                  "startLine": 80,
+                  "startColumn": 50
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'git-commit.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/git-commit.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 90,
                   "startColumn": 66
                 }
               }
@@ -830,29 +872,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 88,
+                  "startLine": 100,
                   "startColumn": 57
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
-          "level": "warning",
-          "message": {
-            "text": "The variable 'diffInput' is assigned but never used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/git-commit.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 60,
-                  "startColumn": 5
                 }
               }
             }
@@ -1510,6 +1531,48 @@
           ]
         },
         {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/lint-check.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/lint-check.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -1546,48 +1609,6 @@
                 "region": {
                   "startLine": 23,
                   "startColumn": 88
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/lint-check.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 15,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/lint-check.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 23,
-                  "startColumn": 5
                 }
               }
             }
@@ -1678,27 +1699,6 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/lint-jsonlint.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 35,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -1734,6 +1734,27 @@
                 },
                 "region": {
                   "startLine": 16,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/lint-jsonlint.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
                   "startColumn": 5
                 }
               }
@@ -2434,6 +2455,27 @@
           ]
         },
         {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'update-changelog.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/update-changelog.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 55
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
           "level": "warning",
           "message": {
@@ -2560,27 +2602,6 @@
           ]
         },
         {
-          "ruleId": "PSReviewUnusedParameter",
-          "level": "warning",
-          "message": {
-            "text": "The parameter 'sender' has been declared but not used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/clipboard_monitor.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 91,
-                  "startColumn": 11
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
           "level": "warning",
           "message": {
@@ -2596,6 +2617,27 @@
                 "region": {
                   "startLine": 87,
                   "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSReviewUnusedParameter",
+          "level": "warning",
+          "message": {
+            "text": "The parameter 'sender' has been declared but not used."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/clipboard_monitor.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 91,
+                  "startColumn": 11
                 }
               }
             }
@@ -3698,7 +3740,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:09:21.642174+00:00"
+          "endTimeUtc": "2026-04-15T03:37:39.157366+00:00"
         }
       ]
     }

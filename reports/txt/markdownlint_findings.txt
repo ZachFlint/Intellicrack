@@ -920,6 +920,91 @@ vendor/ImHex-Patterns/README.md:350:63 error MD060/table-column-style Table colu
 vendor/ImHex-Patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
 
 
+41 findings in CHANGELOG.md
+
+CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
+
+CHANGELOG.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 647]
+
+CHANGELOG.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
+
+CHANGELOG.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 180]
+
+CHANGELOG.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 162]
+
+CHANGELOG.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+
+CHANGELOG.md:21:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+
+CHANGELOG.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 163]
+
+CHANGELOG.md:23:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+
+CHANGELOG.md:24:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
+
+CHANGELOG.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 149]
+
+CHANGELOG.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
+
+CHANGELOG.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+
+CHANGELOG.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
+
+CHANGELOG.md:31:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
+
+CHANGELOG.md:32:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+
+CHANGELOG.md:33:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+
+CHANGELOG.md:35:81 error MD013/line-length Line length [Expected: 80; Actual: 160]
+
+CHANGELOG.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
+
+CHANGELOG.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
+
+CHANGELOG.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 135]
+
+CHANGELOG.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 146]
+
+CHANGELOG.md:41:81 error MD013/line-length Line length [Expected: 80; Actual: 171]
+
+CHANGELOG.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+
+CHANGELOG.md:44:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+CHANGELOG.md:58:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
+
+CHANGELOG.md:65:81 error MD013/line-length Line length [Expected: 80; Actual: 250]
+
+CHANGELOG.md:67:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+
+CHANGELOG.md:68:81 error MD013/line-length Line length [Expected: 80; Actual: 110]
+
+CHANGELOG.md:69:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+CHANGELOG.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+CHANGELOG.md:71:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
+
+CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
+
+CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
+
+CHANGELOG.md:85:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
+
+CHANGELOG.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+
+CHANGELOG.md:88:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+
+CHANGELOG.md:90:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
+
+CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
+
+CHANGELOG.md:115:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+
 30 findings in GEMINI.md
 
 GEMINI.md:1:81 error MD013/line-length Line length [Expected: 80; Actual: 158]

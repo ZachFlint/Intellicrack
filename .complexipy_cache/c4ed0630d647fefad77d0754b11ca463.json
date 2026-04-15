@@ -2247,12 +2247,6 @@
     {
       "complexity": 4,
       "file_name": "ghidra.py",
-      "function_name": "GhidraBridge::search_strings",
-      "path": "src\\intellicrack\\bridges\\ghidra.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "ghidra.py",
       "function_name": "GhidraBridge::start_headless",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
@@ -2338,6 +2332,12 @@
       "complexity": 12,
       "file_name": "ghidra.py",
       "function_name": "GhidraBridge::get_functions",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::search_strings",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
@@ -2440,6 +2440,54 @@
       "complexity": 0,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::tool_definition",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::__init__",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::add_page",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::cell",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::ln",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::output",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::set_auto_page_break",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::set_fill_color",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "hex_editor.py",
+      "function_name": "_FPDFProtocol::set_font",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -5355,6 +5403,12 @@
     {
       "complexity": 20,
       "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::find_pattern",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 20,
+      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_comments",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -5362,12 +5416,6 @@
       "complexity": 20,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_labels",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 21,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::find_pattern",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -11503,6 +11551,18 @@
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
+      "complexity": 0,
+      "file_name": "qemu.py",
+      "function_name": "_encode_png_chunk",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "qemu.py",
+      "function_name": "_ppm_p6_to_png",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
       "complexity": 1,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::__init__",
@@ -11641,6 +11701,12 @@
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
+      "complexity": 5,
+      "file_name": "qemu.py",
+      "function_name": "_parse_ppm_p6",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
       "complexity": 7,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_generate_execution_script",
@@ -11752,6 +11818,12 @@
       "complexity": 8,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::stop",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "qemu.py",
+      "function_name": "_read_ppm_token",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
@@ -13725,7 +13797,7 @@
     {
       "complexity": 3,
       "file_name": "cutter_panel.py",
-      "function_name": "_perm_to_rwx",
+      "function_name": "perm_to_rwx",
       "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py"
     },
     {
@@ -14877,12 +14949,6 @@
     {
       "complexity": 1,
       "file_name": "ghidra_panel.py",
-      "function_name": "GhidraPanel::_create_scripting_tab",
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_on_analyze",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
@@ -15273,6 +15339,12 @@
     {
       "complexity": 3,
       "file_name": "ghidra_panel.py",
+      "function_name": "GhidraPanel::_create_scripting_tab",
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_handle_edit_signature",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
@@ -15421,6 +15493,12 @@
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
     {
+      "complexity": 8,
+      "file_name": "ghidra_panel.py",
+      "function_name": "GhidraPanel::_apply_diff_results",
+      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
+    },
+    {
       "complexity": 9,
       "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_apply_pcode",
@@ -15439,19 +15517,13 @@
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
     {
-      "complexity": 12,
-      "file_name": "ghidra_panel.py",
-      "function_name": "GhidraPanel::_apply_diff_results",
-      "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
-    },
-    {
-      "complexity": 17,
+      "complexity": 23,
       "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_apply_cfg",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
     {
-      "complexity": 27,
+      "complexity": 30,
       "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_dispatch_func_menu_action",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
@@ -15733,7 +15805,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py"
     },
     {
-      "complexity": 10,
+      "complexity": 11,
       "file_name": "_data_inspector.py",
       "function_name": "DataInspectorMixin::_on_decode_text",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_data_inspector.py"
@@ -16107,12 +16179,6 @@
     {
       "complexity": 0,
       "file_name": "_scripting.py",
-      "function_name": "ScriptingMixin::_create_scripting_tab",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "_scripting.py",
       "function_name": "_DocAPI::__init__",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
     },
@@ -16174,6 +16240,12 @@
       "complexity": 1,
       "file_name": "_scripting.py",
       "function_name": "ScriptWorker::run",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_scripting.py",
+      "function_name": "ScriptingMixin::_create_scripting_tab",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
     },
     {
@@ -16699,7 +16771,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
     },
     {
-      "complexity": 8,
+      "complexity": 9,
       "file_name": "_templates.py",
       "function_name": "TemplatesMixin::_bookmark_pe_sections",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
@@ -16711,19 +16783,19 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
     },
     {
-      "complexity": 11,
+      "complexity": 12,
       "file_name": "_templates.py",
       "function_name": "TemplatesMixin::_on_auto_bookmark_structure",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
     },
     {
-      "complexity": 24,
+      "complexity": 28,
       "file_name": "_templates.py",
       "function_name": "TemplatesMixin::_bookmark_pe_structure",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
     },
     {
-      "complexity": 34,
+      "complexity": 38,
       "file_name": "_templates.py",
       "function_name": "TemplatesMixin::_bookmark_elf_structure",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_templates.py"
@@ -20079,18 +20151,6 @@
     {
       "complexity": 1,
       "file_name": "x64dbg_panel.py",
-      "function_name": "X64DbgPanel::_apply_module_exports",
-      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "x64dbg_panel.py",
-      "function_name": "X64DbgPanel::_apply_module_sections",
-      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::_apply_procinfo",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
     },
@@ -20338,6 +20398,18 @@
       "complexity": 2,
       "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::_apply_memmap",
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "x64dbg_panel.py",
+      "function_name": "X64DbgPanel::_apply_module_exports",
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "x64dbg_panel.py",
+      "function_name": "X64DbgPanel::_apply_module_sections",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
     },
     {

@@ -1,7 +1,7 @@
 INTELLICRACK PROJECT FILE TREE STRUCTURE
 ========================================
 
-Generated: Mon, Apr 13, 2026 04:05:28 AM
+Generated: Wed, Apr 15, 2026 03:38:29 AM
 Directory: D:\Intellicrack
 
 This document provides a simple text-based tree structure of the Intellicrack project.
@@ -10661,7 +10661,7 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   ├── examples/
 │       │   │   │   ├── incremental/
 │       │   │   │   │   └── intellicrack_hexcore-37uad4mtonp3y/
-│       │   │   │   │       ├── s-hhj3aoxrho-1tigzw9-5jbzdlhgeau2sinpaa9mmang4/
+│       │   │   │   │       ├── s-hhma6013rc-14jc59a-5jbzdlhgeau2sinpaa9mmang4/
 │       │   │   │   │       │   ├── 02kc94qgfif9r9mzczgti5kgz.o
 │       │   │   │   │       │   ├── 030l1sdr49jfczfkof1cuj0g5.o
 │       │   │   │   │       │   ├── 03b54xpq1p2ll7cog2t03q7e5.o
@@ -10921,11 +10921,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 │       │   │   │   │       │   ├── f2qn7nxyvbbq5h977kns34ziq.o
 │       │   │   │   │       │   ├── query-cache.bin
 │       │   │   │   │       │   └── work-products.bin
-│       │   │   │   │       └── s-hhj3aoxrho-1tigzw9.lock
+│       │   │   │   │       └── s-hhma6013rc-14jc59a.lock
 │       │   │   │   └── .cargo-lock
 │       │   │   ├── .rustc_info.json
-│       │   │   ├── intellicrack-hexcore-19616-3680224037595484272_14.profraw
-│       │   │   ├── intellicrack-hexcore-24080-3680224037595484272_12.profraw
+│       │   │   ├── intellicrack-hexcore-20808-3680224037595484272_18.profraw
+│       │   │   ├── intellicrack-hexcore-21880-3680224037595484272_12.profraw
 │       │   │   └── intellicrack-hexcore-profraw-list
 │       │   ├── maturin/
 │       │   │   └── intellicrack_hexcore.dll

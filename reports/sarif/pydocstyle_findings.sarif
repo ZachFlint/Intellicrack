@@ -15,9 +15,9 @@
               }
             },
             {
-              "id": "D102",
+              "id": "D103",
               "shortDescription": {
-                "text": "in public method `goto_offset`: - Missing docstring in public method"
+                "text": "in public function `run_bridge_coroutine`: - Missing docstring in public function"
               }
             }
           ]
@@ -38,7 +38,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 242,
+                  "startLine": 240,
                   "startColumn": 1
                 }
               }
@@ -59,7 +59,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 337,
+                  "startLine": 319,
                   "startColumn": 1
                 }
               }
@@ -80,7 +80,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 567,
+                  "startLine": 492,
                   "startColumn": 1
                 }
               }
@@ -101,7 +101,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 684,
+                  "startLine": 580,
                   "startColumn": 1
                 }
               }
@@ -122,7 +122,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 883,
+                  "startLine": 720,
                   "startColumn": 1
                 }
               }
@@ -143,7 +143,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1048,
+                  "startLine": 845,
                   "startColumn": 1
                 }
               }
@@ -164,7 +164,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 727,
+                  "startLine": 732,
                   "startColumn": 1
                 }
               }
@@ -185,7 +185,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1065,
+                  "startLine": 1068,
                   "startColumn": 1
                 }
               }
@@ -206,7 +206,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 91,
+                  "startLine": 96,
                   "startColumn": 1
                 }
               }
@@ -227,7 +227,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 167,
+                  "startLine": 275,
                   "startColumn": 1
                 }
               }
@@ -248,7 +248,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 92,
+                  "startLine": 94,
                   "startColumn": 1
                 }
               }
@@ -269,7 +269,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 197,
+                  "startLine": 201,
                   "startColumn": 1
                 }
               }
@@ -290,7 +290,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 56,
+                  "startLine": 61,
                   "startColumn": 1
                 }
               }
@@ -311,7 +311,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 714,
+                  "startLine": 719,
                   "startColumn": 1
                 }
               }
@@ -332,7 +332,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 90,
+                  "startLine": 94,
                   "startColumn": 1
                 }
               }
@@ -353,7 +353,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 149,
+                  "startLine": 153,
                   "startColumn": 1
                 }
               }
@@ -374,7 +374,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 369,
+                  "startLine": 376,
                   "startColumn": 1
                 }
               }
@@ -559,27 +559,6 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/orchestrator.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 189,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "D107",
-          "level": "warning",
-          "message": {
-            "text": "in public method `__init__`: - Missing docstring in __init__"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
                   "uri": "src/intellicrack/core/process_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
@@ -731,7 +710,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 45,
+                  "startLine": 49,
                   "startColumn": 1
                 }
               }
@@ -752,7 +731,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 52,
+                  "startLine": 61,
                   "startColumn": 1
                 }
               }
@@ -773,7 +752,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 248,
+                  "startLine": 257,
                   "startColumn": 1
                 }
               }
@@ -794,7 +773,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 720,
+                  "startLine": 729,
                   "startColumn": 1
                 }
               }
@@ -1235,7 +1214,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 58,
+                  "startLine": 59,
                   "startColumn": 1
                 }
               }
@@ -1256,7 +1235,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 73,
+                  "startLine": 77,
                   "startColumn": 1
                 }
               }
@@ -1719,69 +1698,6 @@
                 },
                 "region": {
                   "startLine": 91,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "D107",
-          "level": "warning",
-          "message": {
-            "text": "in public method `__init__`: - Missing docstring in __init__"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 206,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "D107",
-          "level": "warning",
-          "message": {
-            "text": "in public method `__init__`: - Missing docstring in __init__"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 419,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "D107",
-          "level": "warning",
-          "message": {
-            "text": "in public method `__init__`: - Missing docstring in __init__"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 622,
                   "startColumn": 1
                 }
               }
@@ -2734,6 +2650,27 @@
           ]
         },
         {
+          "ruleId": "D103",
+          "level": "warning",
+          "message": {
+            "text": "in public function `run_bridge_coroutine`: - Missing docstring in public function"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/async_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 134,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "D107",
           "level": "warning",
           "message": {
@@ -3083,7 +3020,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 145,
+                  "startLine": 140,
                   "startColumn": 1
                 }
               }
@@ -3511,27 +3448,6 @@
           ]
         },
         {
-          "ruleId": "D102",
-          "level": "warning",
-          "message": {
-            "text": "in public method `goto_offset`: - Missing docstring in public method"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_disassembly.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 49,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "D107",
           "level": "warning",
           "message": {
@@ -3545,7 +3461,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 79,
+                  "startLine": 77,
                   "startColumn": 1
                 }
               }
@@ -3587,7 +3503,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 496,
+                  "startLine": 501,
                   "startColumn": 1
                 }
               }
@@ -3630,27 +3546,6 @@
                 },
                 "region": {
                   "startLine": 159,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "D102",
-          "level": "warning",
-          "message": {
-            "text": "in public method `goto_offset`: - Missing docstring in public method"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_sections.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 45,
                   "startColumn": 1
                 }
               }
@@ -3805,27 +3700,6 @@
           ]
         },
         {
-          "ruleId": "D102",
-          "level": "warning",
-          "message": {
-            "text": "in public method `goto_offset`: - Missing docstring in public method"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_yara.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 59,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "D107",
           "level": "warning",
           "message": {
@@ -3839,7 +3713,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 77,
+                  "startLine": 75,
                   "startColumn": 1
                 }
               }
@@ -4196,7 +4070,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 35,
+                  "startLine": 38,
                   "startColumn": 1
                 }
               }
@@ -4217,7 +4091,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 76,
+                  "startLine": 82,
                   "startColumn": 1
                 }
               }
@@ -4238,7 +4112,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 100,
+                  "startLine": 106,
                   "startColumn": 1
                 }
               }
@@ -4259,7 +4133,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 122,
+                  "startLine": 128,
                   "startColumn": 1
                 }
               }
@@ -4271,7 +4145,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:07:11.504011+00:00"
+          "endTimeUtc": "2026-04-15T03:35:33.892789+00:00"
         }
       ]
     }

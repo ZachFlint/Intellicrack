@@ -21,21 +21,15 @@
               }
             },
             {
+              "id": "DOC304",
+              "shortDescription": {
+                "text": "Class `Orchestrator`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+              }
+            },
+            {
               "id": "DOC503",
               "shortDescription": {
-                "text": "Method `LLMProviderBase._retry_with_backoff` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions']."
-              }
-            },
-            {
-              "id": "DOC602",
-              "shortDescription": {
-                "text": "Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
-              }
-            },
-            {
-              "id": "DOC603",
-              "shortDescription": {
-                "text": "Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+                "text": "Method `Orchestrator._run_agent_loop` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError']."
               }
             }
           ]
@@ -78,6 +72,90 @@
                 },
                 "region": {
                   "startLine": 28,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DOC304",
+          "level": "warning",
+          "message": {
+            "text": "Class `Orchestrator`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 158,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DOC503",
+          "level": "warning",
+          "message": {
+            "text": "Method `Orchestrator._run_agent_loop` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError']."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 435,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DOC503",
+          "level": "warning",
+          "message": {
+            "text": "Method `Orchestrator._stream_response` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError', 'RuntimeError']. Raised exceptions in the body: ['RuntimeError', 'asyncio.CancelledError']."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 944,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DOC503",
+          "level": "warning",
+          "message": {
+            "text": "Method `Orchestrator._execute_tool_calls` exceptions in the \"Raises\" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['CancelledError']. Raised exceptions in the body: ['asyncio.CancelledError']."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/orchestrator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1065,
                   "startColumn": 1
                 }
               }
@@ -568,20 +646,20 @@
           ]
         },
         {
-          "ruleId": "DOC602",
+          "ruleId": "DOC203",
           "level": "warning",
           "message": {
-            "text": "Class `ProcessMemoryDialog`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+            "text": "Function `_parse_ppm_p6` return type(s) in docstring not consistent with the return annotation. Return annotation types: ['tuple[int, int, bytes]']; docstring return section types: ['']"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_process_memory.py",
+                  "uri": "src/intellicrack/sandbox/qemu.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 65,
+                  "startLine": 173,
                   "startColumn": 1
                 }
               }
@@ -589,20 +667,20 @@
           ]
         },
         {
-          "ruleId": "DOC603",
+          "ruleId": "DOC304",
           "level": "warning",
           "message": {
-            "text": "Class `ProcessMemoryDialog`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [region_selected: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+            "text": "Class `QMPClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_process_memory.py",
+                  "uri": "src/intellicrack/sandbox/qemu.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 65,
+                  "startLine": 304,
                   "startColumn": 1
                 }
               }
@@ -610,20 +688,20 @@
           ]
         },
         {
-          "ruleId": "DOC602",
+          "ruleId": "DOC304",
           "level": "warning",
           "message": {
-            "text": "Class `ProcessPanel`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+            "text": "Class `GuestAgentClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/process_panel/_base.py",
+                  "uri": "src/intellicrack/sandbox/qemu.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 55,
+                  "startLine": 523,
                   "startColumn": 1
                 }
               }
@@ -631,20 +709,20 @@
           ]
         },
         {
-          "ruleId": "DOC603",
+          "ruleId": "DOC304",
           "level": "warning",
           "message": {
-            "text": "Class `ProcessPanel`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [tool_closed: , tool_started: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)"
+            "text": "Class `QEMUSandbox`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/process_panel/_base.py",
+                  "uri": "src/intellicrack/sandbox/qemu.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 55,
+                  "startLine": 721,
                   "startColumn": 1
                 }
               }
@@ -656,7 +734,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:07:09.282511+00:00"
+          "endTimeUtc": "2026-04-15T03:35:35.383351+00:00"
         }
       ]
     }

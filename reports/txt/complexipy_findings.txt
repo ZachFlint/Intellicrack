@@ -110,7 +110,7 @@ src\intellicrack\bridges\frida_bridge.py: FridaBridge::shutdown - cognitive comp
 src\intellicrack\bridges\frida_bridge.py: FridaBridge::objc_hook_method - cognitive complexity 29 (exceeds threshold)
 
 
-9 findings in src\intellicrack\bridges\x64dbg.py
+8 findings in src\intellicrack\bridges\x64dbg.py
 
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::_get_parent_pid - cognitive complexity 16 (exceeds threshold)
 
@@ -123,8 +123,6 @@ src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_stack_trace - cognitive co
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_comments - cognitive complexity 20 (exceeds threshold)
 
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_labels - cognitive complexity 20 (exceeds threshold)
-
-src\intellicrack\bridges\x64dbg.py: X64DbgBridge::find_pattern - cognitive complexity 21 (exceeds threshold)
 
 src\intellicrack\bridges\x64dbg.py: X64DbgBridge::get_watchpoints - cognitive complexity 27 (exceeds threshold)
 
@@ -373,25 +371,11 @@ src\intellicrack\sandbox\windows.py: WindowsSandbox::extract_dropped_files - cog
 src\intellicrack\sandbox\windows.py: WindowsSandbox::yara_scan - cognitive complexity 22 (exceeds threshold)
 
 
-2 findings in src\intellicrack\ui\panels\ghidra_panel.py
-
-src\intellicrack\ui\panels\ghidra_panel.py: GhidraPanel::_apply_cfg - cognitive complexity 17 (exceeds threshold)
-
-src\intellicrack\ui\panels\ghidra_panel.py: GhidraPanel::_dispatch_func_menu_action - cognitive complexity 27 (exceeds threshold)
-
-
 2 findings in src\intellicrack\ui\panels\hex_editor\_search.py
 
 src\intellicrack\ui\panels\hex_editor\_search.py: NumericSearchWorker::_search_fallback - cognitive complexity 20 (exceeds threshold)
 
 src\intellicrack\ui\panels\hex_editor\_search.py: SearchMixin::_on_numeric_search - cognitive complexity 25 (exceeds threshold)
-
-
-2 findings in src\intellicrack\ui\panels\hex_editor\_templates.py
-
-src\intellicrack\ui\panels\hex_editor\_templates.py: TemplatesMixin::_bookmark_pe_structure - cognitive complexity 24 (exceeds threshold)
-
-src\intellicrack\ui\panels\hex_editor\_templates.py: TemplatesMixin::_bookmark_elf_structure - cognitive complexity 34 (exceeds threshold)
 
 
 2 findings in src\intellicrack\ui\panels\hex_editor\panel.py

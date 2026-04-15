@@ -1474,9 +1474,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """
         self._mod_sections_btn.setEnabled(True)
         raw_sections: list[object] = [*result] if isinstance(result, list) else []
-        sections: list[dict[str, object]] = [
-            cast("dict[str, object]", s) for s in raw_sections if isinstance(s, dict)
-        ]
+        sections: list[dict[str, object]] = [cast("dict[str, object]", s) for s in raw_sections if isinstance(s, dict)]
         self._mod_detail_table.setRowCount(0)
         for sec in sections:
             row = self._mod_detail_table.rowCount()
@@ -1516,9 +1514,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """
         self._mod_exports_btn.setEnabled(True)
         raw_exports: list[object] = [*result] if isinstance(result, list) else []
-        exports: list[dict[str, object]] = [
-            cast("dict[str, object]", e) for e in raw_exports if isinstance(e, dict)
-        ]
+        exports: list[dict[str, object]] = [cast("dict[str, object]", e) for e in raw_exports if isinstance(e, dict)]
         self._mod_detail_table.setRowCount(0)
         for exp in exports:
             row = self._mod_detail_table.rowCount()

@@ -1,6 +1,6 @@
 {
   "tool": "deadcode",
-  "generated": "2026-04-11T07:08:00.852015+00:00",
+  "generated": "2026-04-15T03:36:23.912590+00:00",
   "total_findings": 144,
   "total_files": 35,
   "files": [
@@ -759,16 +759,16 @@
       "count": 2,
       "findings": [
         {
-          "line": 119,
+          "line": 120,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_pattern\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:119:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_pattern\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:120:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_pattern\u001b[0m` is never used"
         },
         {
-          "line": 183,
+          "line": 184,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_source\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:183:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_source\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\core\\hexpat\\pattern_registry.py:184:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mload_source\u001b[0m` is never used"
         }
       ]
     },
@@ -813,16 +813,16 @@
       "count": 2,
       "findings": [
         {
-          "line": 104,
+          "line": 106,
           "column": null,
           "message": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIDFILE_MAX_RETRIES\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:104:0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIDFILE_MAX_RETRIES\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:106:0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIDFILE_MAX_RETRIES\u001b[0m` is never used"
         },
         {
-          "line": 105,
+          "line": 107,
           "column": null,
           "message": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIDFILE_RETRY_DELAY\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:105:0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIDFILE_RETRY_DELAY\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:107:0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIDFILE_RETRY_DELAY\u001b[0m` is never used"
         }
       ]
     },
@@ -831,16 +831,16 @@
       "count": 2,
       "findings": [
         {
-          "line": 178,
+          "line": 173,
           "column": null,
           "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_debug_info_btn\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:178:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_debug_info_btn\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:173:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_debug_info_btn\u001b[0m` is never used"
         },
         {
-          "line": 179,
+          "line": 174,
           "column": null,
           "message": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_diff_btn\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:179:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_diff_btn\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:174:8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_diff_btn\u001b[0m` is never used"
         }
       ]
     },
@@ -915,10 +915,10 @@
       "count": 1,
       "findings": [
         {
-          "line": 139,
+          "line": 141,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_state\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\bridges\\hex_state.py:139:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_state\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\bridges\\hex_state.py:141:4: \u001b[91mDC04\u001b[0m Method `\u001b[1mget_current_state\u001b[0m` is never used"
         }
       ]
     },
@@ -1035,10 +1035,10 @@
       "count": 1,
       "findings": [
         {
-          "line": 552,
+          "line": 565,
           "column": null,
           "message": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_refresh_template_combo\u001b[0m` is never used",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:552:4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_refresh_template_combo\u001b[0m` is never used"
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py:565:4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_refresh_template_combo\u001b[0m` is never used"
         }
       ]
     },

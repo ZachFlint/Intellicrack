@@ -1059,12 +1059,9 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
 class FridaBridge(InstrumentationBridge):
     """Bridge for Frida dynamic instrumentation.
 
-    Provides function hooking, memory manipulation, and script execution
-    capabilities using the Frida framework. Instances own the device and
-    session slots, the script and hook registries, the message-handler
-    dispatch state, process identifier tracking for attach/spawn,
-    stalker and child-gating bookkeeping, crash and allocation caches,
-    cancellable references, and the declared dynamic-analysis
+    Provides function hooking, memory manipulation, and script execution capabilities using the Frida framework. Instances own the device
+    and session slots, the script and hook registries, the message-handler dispatch state, process identifier tracking for attach/spawn,
+    stalker and child-gating bookkeeping, crash and allocation caches, cancellable references, and the declared dynamic-analysis
     capabilities advertised to the orchestrator.
     """
 

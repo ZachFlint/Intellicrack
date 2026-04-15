@@ -1,69 +1,88 @@
 22 findings in tests/test_sandbox\test_analysis.py
 
-tests/test_sandbox\test_analysis.py:502:141: E501 line too long (141 > 140 characters)
+tests/test_sandbox\test_analysis.py:518:141: E501 line too long (141 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:520:141: E501 line too long (160 > 140 characters)
+tests/test_sandbox\test_analysis.py:536:141: E501 line too long (160 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:531:141: E501 line too long (161 > 140 characters)
+tests/test_sandbox\test_analysis.py:547:141: E501 line too long (161 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:542:141: E501 line too long (149 > 140 characters)
+tests/test_sandbox\test_analysis.py:558:141: E501 line too long (149 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:553:141: E501 line too long (147 > 140 characters)
+tests/test_sandbox\test_analysis.py:569:141: E501 line too long (147 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:575:141: E501 line too long (181 > 140 characters)
+tests/test_sandbox\test_analysis.py:591:141: E501 line too long (181 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:586:141: E501 line too long (160 > 140 characters)
+tests/test_sandbox\test_analysis.py:602:141: E501 line too long (160 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:613:141: E501 line too long (153 > 140 characters)
+tests/test_sandbox\test_analysis.py:629:141: E501 line too long (153 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:645:141: E501 line too long (142 > 140 characters)
+tests/test_sandbox\test_analysis.py:661:141: E501 line too long (142 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:670:141: E501 line too long (149 > 140 characters)
+tests/test_sandbox\test_analysis.py:694:141: E501 line too long (149 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:681:141: E501 line too long (201 > 140 characters)
+tests/test_sandbox\test_analysis.py:705:141: E501 line too long (201 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:692:141: E501 line too long (178 > 140 characters)
+tests/test_sandbox\test_analysis.py:716:141: E501 line too long (178 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:703:141: E501 line too long (169 > 140 characters)
+tests/test_sandbox\test_analysis.py:727:141: E501 line too long (169 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:714:141: E501 line too long (181 > 140 characters)
+tests/test_sandbox\test_analysis.py:738:141: E501 line too long (181 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:726:141: E501 line too long (167 > 140 characters)
+tests/test_sandbox\test_analysis.py:750:141: E501 line too long (167 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:737:141: E501 line too long (169 > 140 characters)
+tests/test_sandbox\test_analysis.py:761:141: E501 line too long (169 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:779:141: E501 line too long (165 > 140 characters)
+tests/test_sandbox\test_analysis.py:807:141: E501 line too long (165 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:790:141: E501 line too long (171 > 140 characters)
+tests/test_sandbox\test_analysis.py:818:141: E501 line too long (171 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:801:141: E501 line too long (174 > 140 characters)
+tests/test_sandbox\test_analysis.py:829:141: E501 line too long (174 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:812:141: E501 line too long (161 > 140 characters)
+tests/test_sandbox\test_analysis.py:840:141: E501 line too long (161 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:833:141: E501 line too long (160 > 140 characters)
+tests/test_sandbox\test_analysis.py:861:141: E501 line too long (160 > 140 characters)
 
-tests/test_sandbox\test_analysis.py:849:141: E501 line too long (162 > 140 characters)
+tests/test_sandbox\test_analysis.py:877:141: E501 line too long (162 > 140 characters)
 
 
 9 findings in src/intellicrack/bridges\ghidra.py
 
-src/intellicrack/bridges\ghidra.py:2898:141: E501 line too long (146 > 140 characters)
+src/intellicrack/bridges\ghidra.py:2922:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:3350:141: E501 line too long (144 > 140 characters)
+src/intellicrack/bridges\ghidra.py:3374:141: E501 line too long (144 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:3431:141: E501 line too long (161 > 140 characters)
+src/intellicrack/bridges\ghidra.py:3455:141: E501 line too long (161 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:3874:141: E501 line too long (192 > 140 characters)
+src/intellicrack/bridges\ghidra.py:3898:141: E501 line too long (192 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:3953:141: E501 line too long (203 > 140 characters)
+src/intellicrack/bridges\ghidra.py:3977:141: E501 line too long (203 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:4018:141: E501 line too long (205 > 140 characters)
+src/intellicrack/bridges\ghidra.py:4042:141: E501 line too long (205 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:4297:141: E501 line too long (146 > 140 characters)
+src/intellicrack/bridges\ghidra.py:4321:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:4641:141: E501 line too long (162 > 140 characters)
+src/intellicrack/bridges\ghidra.py:4665:141: E501 line too long (162 > 140 characters)
 
-src/intellicrack/bridges\ghidra.py:4754:141: E501 line too long (142 > 140 characters)
+src/intellicrack/bridges\ghidra.py:4778:141: E501 line too long (142 > 140 characters)
+
+
+8 findings in tests/test_bridges\test_frida_bridge.py
+
+tests/test_bridges\test_frida_bridge.py:27:1: F401 'intellicrack.core.types.ImportInfo' imported but unused
+
+tests/test_bridges\test_frida_bridge.py:27:1: F401 'intellicrack.core.types.ThreadInfo' imported but unused
+
+tests/test_bridges\test_frida_bridge.py:451:14: F821 undefined name 'cast'
+
+tests/test_bridges\test_frida_bridge.py:481:14: F821 undefined name 'cast'
+
+tests/test_bridges\test_frida_bridge.py:498:14: F821 undefined name 'cast'
+
+tests/test_bridges\test_frida_bridge.py:572:14: F821 undefined name 'cast'
+
+tests/test_bridges\test_frida_bridge.py:589:15: F821 undefined name 'cast'
+
+tests/test_bridges\test_frida_bridge.py:609:14: F821 undefined name 'cast'
 
 
 7 findings in tests/test_hexcore_e2e\test_hashing.py
@@ -127,9 +146,9 @@ tests/test_bridges\test_x64dbg_new_methods.py:292:9: F841 local variable '_buf_a
 
 2 findings in src/intellicrack/core\orchestrator.py
 
-src/intellicrack/core\orchestrator.py:540:141: E501 line too long (146 > 140 characters)
+src/intellicrack/core\orchestrator.py:548:141: E501 line too long (146 > 140 characters)
 
-src/intellicrack/core\orchestrator.py:587:141: E501 line too long (232 > 140 characters)
+src/intellicrack/core\orchestrator.py:595:141: E501 line too long (232 > 140 characters)
 
 
 2 findings in src/intellicrack/core\script_gen.py
@@ -148,16 +167,9 @@ src/intellicrack/providers\xpu_utils.py:557:141: E501 line too long (179 > 140 c
 
 2 findings in src/intellicrack/sandbox\qemu.py
 
-src/intellicrack/sandbox\qemu.py:2524:141: E501 line too long (142 > 140 characters)
+src/intellicrack/sandbox\qemu.py:2641:141: E501 line too long (142 > 140 characters)
 
-src/intellicrack/sandbox\qemu.py:2533:141: E501 line too long (163 > 140 characters)
-
-
-2 findings in tests/test_bridges\test_cutter.py
-
-tests/test_bridges\test_cutter.py:28:1: F401 'asyncio' imported but unused
-
-tests/test_bridges\test_cutter.py:158:5: F811 redefinition of unused 'asyncio' from line 28
+src/intellicrack/sandbox\qemu.py:2650:141: E501 line too long (163 > 140 characters)
 
 
 2 findings in tests/test_hexcore_e2e\test_hexpat_type_system_e2e.py
@@ -183,19 +195,19 @@ tests/test_hexcore_e2e\test_templates.py:666:9: F841 local variable '_exc' is as
 
 2 findings in tests/test_providers\test_agentic_capabilities.py
 
-tests/test_providers\test_agentic_capabilities.py:196:9: F841 local variable '_chunks' is assigned to but never used
+tests/test_providers\test_agentic_capabilities.py:220:9: F841 local variable '_chunks' is assigned to but never used
 
-tests/test_providers\test_agentic_capabilities.py:217:9: F841 local variable '_chunks' is assigned to but never used
+tests/test_providers\test_agentic_capabilities.py:245:9: F841 local variable '_chunks' is assigned to but never used
 
 
 1 findings in src/intellicrack/bridges\process.py
 
-src/intellicrack/bridges\process.py:750:141: E501 line too long (215 > 140 characters)
+src/intellicrack/bridges\process.py:755:141: E501 line too long (215 > 140 characters)
 
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:3537:141: E501 line too long (143 > 140 characters)
+src/intellicrack/bridges\x64dbg.py:3607:141: E501 line too long (143 > 140 characters)
 
 
 1 findings in src/intellicrack/core\config.py
@@ -220,7 +232,7 @@ src/intellicrack/ui\tool_config.py:97:141: E501 line too long (142 > 140 charact
 
 1 findings in tests/test_core\test_main.py
 
-tests/test_core\test_main.py:52:9: F841 local variable '_store' is assigned to but never used
+tests/test_core\test_main.py:81:9: F841 local variable '_store' is assigned to but never used
 
 
 1 findings in tests/test_hexcore_e2e\test_hexpat_compiler_e2e.py

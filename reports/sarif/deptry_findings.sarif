@@ -19,12 +19,6 @@
               "shortDescription": {
                 "text": "'structlog' imported but it is a transitive dependency"
               }
-            },
-            {
-              "id": "DEP001",
-              "shortDescription": {
-                "text": "'fpdf' imported but missing from the dependency definitions"
-              }
             }
           ]
         }
@@ -808,27 +802,6 @@
           ]
         },
         {
-          "ruleId": "DEP001",
-          "level": "warning",
-          "message": {
-            "text": "'fpdf' imported but missing from the dependency definitions"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 6031,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "DEP003",
           "level": "warning",
           "message": {
@@ -968,7 +941,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1799,
+                  "startLine": 1807,
                   "startColumn": 12
                 }
               }
@@ -989,7 +962,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1831,
+                  "startLine": 1839,
                   "startColumn": 12
                 }
               }
@@ -1010,7 +983,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1868,
+                  "startLine": 1876,
                   "startColumn": 12
                 }
               }
@@ -1031,7 +1004,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1897,
+                  "startLine": 1905,
                   "startColumn": 12
                 }
               }
@@ -1052,7 +1025,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1932,
+                  "startLine": 1940,
                   "startColumn": 12
                 }
               }
@@ -1411,27 +1384,6 @@
                 "region": {
                   "startLine": 18,
                   "startColumn": 8
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "DEP001",
-          "level": "warning",
-          "message": {
-            "text": "'PIL' imported but missing from the dependency definitions"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2437,
-                  "startColumn": 13
                 }
               }
             }
@@ -4046,7 +3998,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-11T07:08:19.022997+00:00"
+          "endTimeUtc": "2026-04-15T03:36:39.217780+00:00"
         }
       ]
     }

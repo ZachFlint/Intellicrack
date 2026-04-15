@@ -209,15 +209,15 @@ pyproject.toml: DEP002 'tox' defined as a dependency but not used in the codebas
 
 src\intellicrack\core\orchestrator.py:23:8: DEP003 'structlog' imported but it is a transitive dependency
 
-src\intellicrack\core\orchestrator.py:1799:12: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\core\orchestrator.py:1807:12: DEP003 'lief' imported but it is a transitive dependency
 
-src\intellicrack\core\orchestrator.py:1831:12: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\core\orchestrator.py:1839:12: DEP003 'lief' imported but it is a transitive dependency
 
-src\intellicrack\core\orchestrator.py:1868:12: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\core\orchestrator.py:1876:12: DEP003 'lief' imported but it is a transitive dependency
 
-src\intellicrack\core\orchestrator.py:1897:12: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\core\orchestrator.py:1905:12: DEP003 'lief' imported but it is a transitive dependency
 
-src\intellicrack\core\orchestrator.py:1932:12: DEP003 'lief' imported but it is a transitive dependency
+src\intellicrack\core\orchestrator.py:1940:12: DEP003 'lief' imported but it is a transitive dependency
 
 
 4 findings in src\intellicrack\ui\provider_config.py
@@ -615,11 +615,6 @@ src\intellicrack\bridges\cutter.py:21:8: DEP003 'r2pipe' imported but it is a tr
 src\intellicrack\bridges\frida_bridge.py:20:8: DEP003 'frida' imported but it is a transitive dependency
 
 
-1 findings in src\intellicrack\bridges\hex_editor.py
-
-src\intellicrack\bridges\hex_editor.py:6031:5: DEP001 'fpdf' imported but missing from the dependency definitions
-
-
 1 findings in src\intellicrack\bridges\installer.py
 
 src\intellicrack\bridges\installer.py:22:8: DEP003 'httpx' imported but it is a transitive dependency
@@ -663,11 +658,6 @@ src\intellicrack\providers\ollama.py:21:8: DEP003 'httpx' imported but it is a t
 1 findings in src\intellicrack\providers\openrouter.py
 
 src\intellicrack\providers\openrouter.py:18:8: DEP003 'httpx' imported but it is a transitive dependency
-
-
-1 findings in src\intellicrack\sandbox\qemu.py
-
-src\intellicrack\sandbox\qemu.py:2437:13: DEP001 'PIL' imported but missing from the dependency definitions
 
 
 1 findings in src\intellicrack\ui\confirmation_dialog.py

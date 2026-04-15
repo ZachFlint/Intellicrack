@@ -76,6 +76,14 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Update knowledge graph and workspace configuration (`b59c83b`)
+Synchronize the Intellicrack knowledge graph with the current project structure and update environment configurations. This includes refreshing module mappings, updating file paths in GraphML metadata, and cleaning up stale worktree references.
+- Update `IntellicrackKnowledgeGraph.dot` and `.graphml` with current module relationships
+- Remove stale `.claude/worktrees` agent references
+- Add `basekit` data files and update `requirements.txt` dependencies
+- Refactor QEMU sandbox image conversion to use a native PPM-to-PNG implementation
+- Update Ghidra and Cutter UI panel logic for better compatibility with SIP-generated bindings
+
 - Improve NUL file cleaning script efficiency (`f905df9`)
 The `clean_nul.py` script has been refactored for better performance and robustness. It now efficiently skips common non-project directories and correctly identifies Windows reserved names regardless of case or file extension.
 * `scripts/clean_nul.py`:
@@ -106,14 +114,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
-- Update knowledge graph and workspace configuration (``)
-Synchronize the Intellicrack knowledge graph with the current project structure and update environment configurations. This includes refreshing module mappings, updating file paths in GraphML metadata, and cleaning up stale worktree references.
-- Update `IntellicrackKnowledgeGraph.dot` and `.graphml` with current module relationships
-- Remove stale `.claude/worktrees` agent references
-- Add `basekit` data files and update `requirements.txt` dependencies
-- Refactor QEMU sandbox image conversion to use a native PPM-to-PNG implementation
-- Update Ghidra and Cutter UI panel logic for better compatibility with SIP-generated bindings
 
 
 ### Documentation
