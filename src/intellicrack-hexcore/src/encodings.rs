@@ -163,7 +163,16 @@ pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingE
     let lower = encoding_name.to_lowercase();
     match lower.as_str() {
         "ascii" => {
-            let bytes: Vec<u8> = text.chars().map(|c| (c as u32).to_le_bytes()[0]).collect();
+            let mut bytes = Vec::with_capacity(text.len());
+            for ch in text.chars() {
+                let cp = ch as u32;
+                if cp > 0x7F {
+                    return Err(EncodingError::EncodeFailed(format!(
+                        "U+{cp:04X} cannot be encoded in ASCII"
+                    )));
+                }
+                bytes.push(ch as u8);
+            }
             Ok(bytes)
         }
         "utf-8" | "utf8" => Ok(text.as_bytes().to_vec()),
@@ -201,8 +210,6 @@ pub fn search_text_encoded(
         return Vec::new();
     }
 
-    let mut results: Vec<(usize, usize)> = Vec::new();
-
     let Ok(search_bytes) = encode_text(text, encoding_name) else {
         return Vec::new();
     };
@@ -211,41 +218,81 @@ pub fn search_text_encoded(
         return Vec::new();
     }
 
-    find_pattern(data, &search_bytes, max_results, &mut results);
+    if case_sensitive {
+        let mut results: Vec<(usize, usize)> = Vec::new();
+        find_pattern(data, &search_bytes, max_results, &mut results);
+        return results;
+    }
 
-    if !case_sensitive {
-        let lower_text = text.to_lowercase();
-        if lower_text != text {
-            if let Ok(lower_bytes) = encode_text(&lower_text, encoding_name) {
-                if lower_bytes != search_bytes {
-                    let before_count = results.len();
-                    find_pattern(data, &lower_bytes, max_results, &mut results);
-                    if results.len() > before_count {
-                        results.sort_unstable_by_key(|&(offset, _)| offset);
-                        results.dedup();
-                    }
-                }
-            }
+    search_text_case_insensitive(data, text, encoding_name, search_bytes.len(), max_results)
+}
+
+fn unit_width(encoding_name: &str) -> usize {
+    match encoding_name.to_lowercase().as_str() {
+        "utf-16le" | "utf16le" | "utf-16be" | "utf16be" => 2,
+        _ => 1,
+    }
+}
+
+fn search_text_case_insensitive(
+    data: &[u8],
+    needle: &str,
+    encoding_name: &str,
+    window_len: usize,
+    max_results: usize,
+) -> Vec<(usize, usize)> {
+    if window_len == 0 || data.len() < window_len {
+        return Vec::new();
+    }
+
+    let needle_lower = needle.to_lowercase();
+    let step = unit_width(encoding_name);
+    let mut results: Vec<(usize, usize)> = Vec::new();
+    let last_start = data.len() - window_len;
+    let mut offset: usize = 0;
+
+    while offset <= last_start && results.len() < max_results {
+        let window = &data[offset..offset + window_len];
+        if window_matches_case_insensitive(window, &needle_lower, encoding_name) {
+            results.push((offset, window_len));
+            offset += window_len.max(step);
+        } else {
+            offset += step;
         }
-
-        let upper_text = text.to_uppercase();
-        if upper_text != text && upper_text != lower_text {
-            if let Ok(upper_bytes) = encode_text(&upper_text, encoding_name) {
-                if upper_bytes != search_bytes {
-                    let before_count = results.len();
-                    find_pattern(data, &upper_bytes, max_results, &mut results);
-                    if results.len() > before_count {
-                        results.sort_unstable_by_key(|&(offset, _)| offset);
-                        results.dedup();
-                    }
-                }
-            }
-        }
-
-        results.truncate(max_results);
     }
 
     results
+}
+
+fn window_matches_case_insensitive(window: &[u8], needle_lower: &str, encoding_name: &str) -> bool {
+    let lower = encoding_name.to_lowercase();
+    let decoded: String = match lower.as_str() {
+        "ascii" => {
+            if window.iter().any(|&b| b & 0x80 != 0) {
+                return false;
+            }
+            window.iter().map(|&b| b as char).collect()
+        }
+        "ebcdic" | "ebcdic-cp037" | "cp037" => {
+            let (s, had_replacement) = decode_ebcdic(window);
+            if had_replacement {
+                return false;
+            }
+            s
+        }
+        _ => {
+            let Ok(enc) = resolve_encoding(encoding_name) else {
+                return false;
+            };
+            let (cow, had_errors) = enc.decode_without_bom_handling(window);
+            if had_errors {
+                return false;
+            }
+            cow.into_owned()
+        }
+    };
+
+    decoded.to_lowercase() == needle_lower
 }
 
 fn find_pattern(
@@ -521,6 +568,43 @@ mod tests {
         let data = b"Hello hello HELLO";
         let results = search_text_encoded(data, "hello", "utf-8", false, 10);
         assert!(results.len() >= 2);
+    }
+
+    #[test]
+    fn test_search_text_mixed_case_ascii() {
+        let data = b"say hello to the world";
+        let results = search_text_encoded(data, "HeLLo", "utf-8", false, 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], (4, 5));
+    }
+
+    #[test]
+    fn test_search_text_mixed_case_matches_upper() {
+        let data = b"the WORLD is here";
+        let results = search_text_encoded(data, "WoRlD", "utf-8", false, 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], (4, 5));
+    }
+
+    #[test]
+    fn test_search_text_mixed_case_cyrillic_utf16le() {
+        let target = "привет";
+        let haystack: Vec<u8> = target.encode_utf16().flat_map(u16::to_le_bytes).collect();
+        let results = search_text_encoded(&haystack, "ПрИвЕт", "utf-16le", false, 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].0, 0);
+        assert_eq!(results[0].1, haystack.len());
+    }
+
+    #[test]
+    fn test_encode_ascii_rejects_non_ascii() {
+        let result = encode_text("café", "ascii");
+        assert!(result.is_err());
+        if let Err(EncodingError::EncodeFailed(msg)) = result {
+            assert!(msg.contains("U+00E9"));
+        } else {
+            panic!("expected EncodeFailed");
+        }
     }
 
     #[test]
