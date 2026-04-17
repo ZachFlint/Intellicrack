@@ -164,6 +164,11 @@ class SplashScreen(QSplashScreen):
     progress_updated = pyqtSignal(int, str)
 
     def __init__(self, version: str = "") -> None:
+        """Initialize the SplashScreen with the given version string.
+
+        Args:
+            version: Application version string to display.
+        """
         dpi_scale = SplashScreen._compute_dpi_scale()
         scaled_w = int(SPLASH_WIDTH * dpi_scale)
         scaled_h = int(SPLASH_HEIGHT * dpi_scale)

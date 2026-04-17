@@ -113,7 +113,9 @@ fn extract_utf16le_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
                 chars.clear();
                 in_string = true;
             }
-            chars.push(code_unit as u8 as char);
+            chars.push(char::from(
+                u8::try_from(code_unit).expect("ASCII range fits in u8"),
+            ));
         } else if in_string {
             if chars.len() >= min_length {
                 let content: String = chars.iter().collect();
@@ -158,6 +160,7 @@ fn extract_utf16le_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
 /// * `include_ascii` - Whether to scan for ASCII strings
 /// * `include_utf16` - Whether to scan for UTF-16LE strings
 /// * `max_results` - Maximum number of results to return
+#[must_use]
 pub fn extract_strings(
     data: &[u8],
     min_length: usize,

@@ -24,6 +24,14 @@ class HexPatError(Exception):
         column: int = 0,
         file: str = "",
     ) -> None:
+        """Initialize the HexPatError with location and message details.
+
+        Args:
+            message: Human-readable error description.
+            line: Source line number where the error occurred.
+            column: Source column number where the error occurred.
+            file: Source file path where the error occurred.
+        """
         self.message: str = message
         self.line: int = line
         self.column: int = column
@@ -70,6 +78,15 @@ class HexPatRuntimeError(HexPatError):
         file: str = "",
         offset: int = 0,
     ) -> None:
+        """Initialize the HexPatRuntimeError with location, message, and data offset.
+
+        Args:
+            message: Human-readable error description.
+            line: Source line number where the error occurred.
+            column: Source column number where the error occurred.
+            file: Source file path where the error occurred.
+            offset: Byte offset in the binary data.
+        """
         self.offset: int = offset
         if offset > 0:
             message = f"{message} (at data offset 0x{offset:X})"

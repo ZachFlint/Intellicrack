@@ -42,6 +42,12 @@ class HighlightRule:
     __slots__ = ("format", "pattern")
 
     def __init__(self, pattern: str, text_format: QTextCharFormat) -> None:
+        """Initialize the HighlightRule with a pattern and format.
+
+        Args:
+            pattern: Regular expression pattern to match.
+            text_format: Text character format to apply to matches.
+        """
         self.pattern = QRegularExpression(pattern)
         self.format = text_format
 
@@ -150,6 +156,11 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
+        """Initialize the CSyntaxHighlighter with C/C++ highlighting rules.
+
+        Args:
+            parent: Parent QTextDocument to highlight.
+        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._multi_line_comment_format = QTextCharFormat()
@@ -502,6 +513,11 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
+        """Initialize the AssemblySyntaxHighlighter with assembly highlighting rules.
+
+        Args:
+            parent: Parent QTextDocument to highlight.
+        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._setup_rules()
@@ -706,6 +722,11 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
+        """Initialize the PythonSyntaxHighlighter with Python highlighting rules.
+
+        Args:
+            parent: Parent QTextDocument to highlight.
+        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._triple_quote_format = QTextCharFormat()
@@ -945,6 +966,11 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
     )
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
+        """Initialize the JavaScriptSyntaxHighlighter with JavaScript highlighting rules.
+
+        Args:
+            parent: Parent QTextDocument to highlight.
+        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._multi_line_comment_format = QTextCharFormat()
@@ -1121,6 +1147,11 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
     BUILTINS: ClassVar[tuple[str, ...]] = ("sizeof", "addressof")
 
     def __init__(self, parent: QTextDocument | None = None) -> None:
+        """Initialize the HexPatSyntaxHighlighter with HexPat pattern language highlighting rules.
+
+        Args:
+            parent: Parent QTextDocument to highlight.
+        """
         super().__init__(parent)
         self._rules: list[HighlightRule] = []
         self._multi_line_comment_format = QTextCharFormat()

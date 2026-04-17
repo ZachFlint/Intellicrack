@@ -197,6 +197,11 @@ class CredentialSourceDetector:
     ENV_VAR_MAPPING: ClassVar[dict[str, str]] = get_api_key_env_var_mapping()
 
     def __init__(self, config_path: Path) -> None:
+        """Initialize the CredentialSourceDetector for a given config path.
+
+        Args:
+            config_path: Path to the provider configuration JSON file.
+        """
         self._config_path = config_path
         self._env_file_vars: set[str] = set()
         self._load_env_file_vars()
@@ -305,6 +310,14 @@ class ConnectionTestWorker(QThread):
         api_base: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ConnectionTestWorker for a provider.
+
+        Args:
+            provider_id: Identifier of the provider to test.
+            api_key: API key to use for the connection test.
+            api_base: Optional custom API base URL.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.provider_id = provider_id
         self._api_key = api_key
@@ -532,6 +545,15 @@ class ModelRefreshWorker(QThread):
         provider: LLMProviderBase | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ModelRefreshWorker for a provider.
+
+        Args:
+            provider_id: Identifier of the provider to refresh models for.
+            api_key: API key to authenticate with the provider.
+            api_base: Optional custom API base URL.
+            provider: Optional pre-connected provider instance to use directly.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.provider_id = provider_id
         self._api_key = api_key
@@ -825,6 +847,13 @@ class ProviderConfigDialog(QDialog):
         model_discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ProviderConfigDialog.
+
+        Args:
+            provider_registry: Optional registry of available LLM providers.
+            model_discovery: Optional model discovery service for fetching available models.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._registry = provider_registry
         self._discovery = model_discovery
@@ -1376,6 +1405,16 @@ class ProviderSettingsWidget(QFrame):
         model_discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ProviderSettingsWidget for a single provider.
+
+        Args:
+            provider_id: Identifier of the provider to configure.
+            registry: Optional provider registry for connection management.
+            config_path: Optional path to the provider configuration file.
+            credential_detector: Optional detector for identifying credential sources.
+            model_discovery: Optional model discovery service.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.provider_id = provider_id
         self._registry = registry
@@ -2382,6 +2421,15 @@ class ModelSelectionDialog(QDialog):
         discovery: ModelDiscovery | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ModelSelectionDialog with available models.
+
+        Args:
+            models: List of available models to display.
+            current_model: Currently selected model identifier.
+            provider_name: Name of the provider these models belong to.
+            discovery: Optional model discovery service for filtering and recommendations.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._models = models
         self._current_model = current_model

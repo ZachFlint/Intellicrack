@@ -157,8 +157,6 @@ D:\Intellicrack\scripts\git-commit.ps1:61:12: [Warning] Invoke-Expression is use
 
 D:\Intellicrack\scripts\git-commit.ps1:100:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)
 
-D:\Intellicrack\scripts\git-commit.ps1:60:5: [Warning] The variable 'diffInput' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)
-
 D:\Intellicrack\scripts\git-commit.ps1:47:40: [Warning] File 'git-commit.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
 
 D:\Intellicrack\scripts\git-commit.ps1:80:50: [Warning] File 'git-commit.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
@@ -166,6 +164,8 @@ D:\Intellicrack\scripts\git-commit.ps1:80:50: [Warning] File 'git-commit.ps1' us
 D:\Intellicrack\scripts\git-commit.ps1:90:66: [Warning] File 'git-commit.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
 
 D:\Intellicrack\scripts\git-commit.ps1:100:57: [Warning] File 'git-commit.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
+
+D:\Intellicrack\scripts\git-commit.ps1:60:5: [Warning] The variable 'diffInput' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)
 
 
 9 findings in D:\Intellicrack\scripts\kill-processes.ps1
@@ -333,9 +333,9 @@ D:\Intellicrack\scripts\generate-map.ps1:15:5: [Warning] The variable 'output' i
 
 D:\Intellicrack\scripts\generate-structure.ps1:13:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)
 
-D:\Intellicrack\scripts\generate-structure.ps1:33:1: [Warning] File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
 D:\Intellicrack\scripts\generate-structure.ps1:13:5: [Warning] The variable 'output' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)
+
+D:\Intellicrack\scripts\generate-structure.ps1:33:1: [Warning] File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
 
 
 3 findings in D:\Intellicrack\scripts\git-commit-hooks.ps1
@@ -397,9 +397,9 @@ D:\Intellicrack\scripts\docs-pdf.ps1:14:113: [Warning] File 'docs-pdf.ps1' uses 
 
 2 findings in D:\Intellicrack\scripts\install-rust-tools.ps1
 
-D:\Intellicrack\scripts\install-rust-tools.ps1:30:9: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)
-
 D:\Intellicrack\scripts\install-rust-tools.ps1:28:5: [Warning] File 'install-rust-tools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
+
+D:\Intellicrack\scripts\install-rust-tools.ps1:30:9: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)
 
 
 2 findings in D:\Intellicrack\scripts\nul-cleanup.ps1
@@ -411,9 +411,9 @@ D:\Intellicrack\scripts\nul-cleanup.ps1:29:1: [Warning] File 'nul-cleanup.ps1' u
 
 2 findings in D:\Intellicrack\scripts\test-verify-real.ps1
 
-D:\Intellicrack\scripts\test-verify-real.ps1:10:89: [Warning] File 'test-verify-real.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
-
 D:\Intellicrack\scripts\test-verify-real.ps1:10:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)
+
+D:\Intellicrack\scripts\test-verify-real.ps1:10:89: [Warning] File 'test-verify-real.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)
 
 
 2 findings in D:\Intellicrack\src\intellicrack\sandbox\scripts\api_trace.ps1

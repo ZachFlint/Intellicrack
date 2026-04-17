@@ -1,8 +1,8 @@
 2 findings in src/intellicrack/bridges\hex_editor.py
 
-src/intellicrack/bridges\hex_editor.py:5331: [Medium] B102:exec_used: Use of exec detected.
+src/intellicrack/bridges\hex_editor.py:5332: [Medium] B102:exec_used: Use of exec detected.
 
-src/intellicrack/bridges\hex_editor.py:5572: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False
+src/intellicrack/bridges\hex_editor.py:5573: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False
 
 
 2 findings in src/intellicrack/sandbox\qemu.py
@@ -19,9 +19,9 @@ src/intellicrack/sandbox\analysis.py:47: [Medium] B104:hardcoded_bind_all_interf
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_scripting.py
 
-src/intellicrack/ui\panels\hex_editor\_scripting.py:552: [Medium] B102:exec_used: Use of exec detected.
+src/intellicrack/ui\panels\hex_editor\_scripting.py:571: [Medium] B102:exec_used: Use of exec detected.
 
 
 1 findings in src/intellicrack/ui\panels\hex_editor\_signatures.py
 
-src/intellicrack/ui\panels\hex_editor\_signatures.py:177: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False
+src/intellicrack/ui\panels\hex_editor\_signatures.py:185: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False

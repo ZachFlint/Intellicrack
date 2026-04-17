@@ -168,6 +168,12 @@ class LocalTransformersProvider(LLMProviderBase):
         *,
         prefer_xpu: bool = True,
     ) -> None:
+        """Initialize the LocalTransformersProvider with optional cache and device preferences.
+
+        Args:
+            model_cache: Optional model cache instance. Uses the global cache if None.
+            prefer_xpu: Whether to prefer Intel XPU acceleration over CPU when available.
+        """
         super().__init__()
         self._model_cache = model_cache or get_global_model_cache()
         self._prefer_xpu = prefer_xpu

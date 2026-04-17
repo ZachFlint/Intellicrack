@@ -87,6 +87,15 @@ class SandboxTestWorker(QThread):
         read_only: bool = False,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the SandboxTestWorker with sandbox configuration.
+
+        Args:
+            network_enabled: Whether networking is enabled in the sandbox.
+            memory_limit_mb: Memory limit in MB for the sandbox.
+            shared_folder: Path to the host-side shared folder.
+            read_only: Whether the shared folder is read-only.
+            parent: Parent QThread.
+        """
         super().__init__(parent)
         self._network_enabled = network_enabled
         self._memory_limit_mb = memory_limit_mb
@@ -282,6 +291,12 @@ class SandboxConfigDialog(QDialog):
         sandbox_manager: SandboxManager | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the SandboxConfigDialog with an optional sandbox manager.
+
+        Args:
+            sandbox_manager: Sandbox manager for creating and controlling sandbox instances.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._manager = sandbox_manager
         self._is_available = False
@@ -751,6 +766,12 @@ class SandboxMonitorWidget(QFrame):
         sandbox_manager: SandboxManager | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the SandboxMonitorWidget with an optional sandbox manager.
+
+        Args:
+            sandbox_manager: Sandbox manager instance for monitoring.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._manager = sandbox_manager
         self._sandbox_pid: int | None = None

@@ -58,6 +58,7 @@ class FontManager:
     _instance: ClassVar[FontManager | None] = None
 
     def __init__(self) -> None:
+        """Initialize the FontManager instance."""
         self.fonts_loaded: bool = False
         self._loaded_families: list[str] = []
         self._code_font_family: str = ""

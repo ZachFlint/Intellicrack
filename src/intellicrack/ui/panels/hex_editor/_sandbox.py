@@ -106,6 +106,17 @@ class SandboxWorker(QThread):
         timeout: int,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the SandboxWorker with operation parameters.
+
+        Args:
+            operation: Either ``"save"`` or ``"test"``.
+            file_path: Path to the binary file.
+            sandbox_type: Sandbox backend (``"docker"``, ``"qemu"``, ``"windows_sandbox"``).
+            dest_path: Destination path inside the sandbox.
+            command_args: Command-line arguments for test execution.
+            timeout: Maximum wait time in seconds.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._operation = operation
         self._file_path = file_path

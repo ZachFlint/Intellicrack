@@ -717,6 +717,7 @@ class ProcessBridge(ToolBridgeBase):
     PAGE_EXECUTE_READWRITE = PAGE_EXECUTE_READWRITE
 
     def __init__(self) -> None:
+        """Initialize the ProcessBridge instance."""
         super().__init__()
         self._attached_pid: int | None = None
         self._process_handle: int | None = None

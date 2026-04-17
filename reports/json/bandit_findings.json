@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-04-15T03:36:34.444179+00:00",
+  "generated": "2026-04-17T05:38:04.698530+00:00",
   "total_findings": 7,
   "total_files": 5,
   "files": [
@@ -9,22 +9,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 5331,
+          "line": 5332,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B102:exec_used",
           "message": "Use of exec detected.",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:5331: [Medium] B102:exec_used: Use of exec detected."
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5332: [Medium] B102:exec_used: Use of exec detected."
         },
         {
-          "line": 5572,
+          "line": 5573,
           "column": null,
           "severity": "High",
           "confidence": "High",
           "code": "B324:hashlib",
           "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:5572: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5573: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
         }
       ]
     },
@@ -72,13 +72,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 552,
+          "line": 571,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B102:exec_used",
           "message": "Use of exec detected.",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py:552: [Medium] B102:exec_used: Use of exec detected."
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py:571: [Medium] B102:exec_used: Use of exec detected."
         }
       ]
     },
@@ -87,13 +87,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 177,
+          "line": 185,
           "column": null,
           "severity": "High",
           "confidence": "High",
           "code": "B324:hashlib",
           "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py:177: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py:185: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
         }
       ]
     }

@@ -92,6 +92,7 @@ class HexDocumentState:
     """
 
     def __init__(self) -> None:
+        """Initialize the HexDocumentState instance."""
         self._document: HexDocumentFull | None = None
         self._file_path: Path | None = None
         self._cursor_offset: int = 0

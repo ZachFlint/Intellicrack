@@ -50,6 +50,13 @@ class SandboxInstance:
         sandbox_type: SandboxType,
         binary_path: Path | None = None,
     ) -> None:
+        """Initialize the SandboxInstance with a sandbox implementation.
+
+        Args:
+            sandbox: The sandbox implementation to manage.
+            sandbox_type: Type of sandbox being managed.
+            binary_path: Path to the binary being analyzed in this sandbox.
+        """
         self.id = str(uuid4())
         self.sandbox_type = sandbox_type
         self.sandbox = sandbox
@@ -93,6 +100,12 @@ class SandboxManager:
         default_config: SandboxConfig | None = None,
         max_instances: int = DEFAULT_MAX_INSTANCES,
     ) -> None:
+        """Initialize the SandboxManager with default configuration and instance limits.
+
+        Args:
+            default_config: Default configuration for new sandboxes. If None, uses SandboxConfig defaults.
+            max_instances: Maximum number of concurrent sandbox instances allowed.
+        """
         self._instances: dict[str, SandboxInstance] = {}
         self._default_config = default_config or SandboxConfig()
         self._max_instances = max_instances

@@ -112,6 +112,11 @@ class WindowsSandbox(SandboxBase):
     SANDBOX_SHARED_PATH = "C:\\Users\\WDAGUtilityAccount\\Desktop\\Shared"
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
+        """Initialize the WindowsSandbox with the given configuration.
+
+        Args:
+            config: Sandbox configuration for execution settings. If None, uses defaults.
+        """
         super().__init__(config)
         self.process: Popen[bytes] | None = None
         self._wsb_path: Path | None = None

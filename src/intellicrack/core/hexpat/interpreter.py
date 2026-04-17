@@ -59,6 +59,12 @@ class HexPatInterpreter:
         include_paths: list[Path] | None = None,
         std_lib_path: Path | None = None,
     ) -> None:
+        """Initialize the HexPatInterpreter with include search paths.
+
+        Args:
+            include_paths: Additional directories to search for included files.
+            std_lib_path: Override path for the standard library directory.
+        """
         paths: list[Path] = []
 
         lib_path = std_lib_path if std_lib_path is not None else _STD_LIB_DIR

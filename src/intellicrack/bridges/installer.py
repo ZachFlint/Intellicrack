@@ -199,6 +199,11 @@ class ToolInstaller:
     """
 
     def __init__(self, tools_directory: Path) -> None:
+        """Initialize the ToolInstaller with the given target directory.
+
+        Args:
+            tools_directory: Directory where tools should be installed.
+        """
         self.tools_directory = tools_directory
         self._http_client: httpx.AsyncClient | None = None
 

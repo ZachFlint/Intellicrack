@@ -63,6 +63,12 @@ class NamedPipeClient:
         config: PipeConfig | None = None,
         event_handler: EventHandler | None = None,
     ) -> None:
+        """Initialize the NamedPipeClient with the given configuration.
+
+        Args:
+            config: Pipe configuration, or None to use defaults.
+            event_handler: Optional callback for pipe events.
+        """
         self._config = config or PipeConfig()
         self._handle: int | None = None
         self._lock = asyncio.Lock()

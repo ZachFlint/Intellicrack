@@ -119,6 +119,11 @@ class ModelCache:
     """
 
     def __init__(self, max_memory_bytes: int = _DEFAULT_CACHE_SIZE_BYTES) -> None:
+        """Initialize the ModelCache with a memory limit.
+
+        Args:
+            max_memory_bytes: Maximum memory in bytes allowed for cached models.
+        """
         self._cache: OrderedDict[str, LoadedModel] = OrderedDict()
         self._lock = threading.RLock()
         self._max_memory_bytes = max_memory_bytes

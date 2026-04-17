@@ -84,6 +84,12 @@ class YaraScanner:
     """
 
     def __init__(self, timeout: int = 60) -> None:
+        """Initialize the YaraScanner with a match timeout.
+
+        Args:
+            timeout: Maximum seconds allowed per match operation before
+                a ``TimeoutError`` is raised by the YARA engine.
+        """
         self._timeout = timeout
         if not _yara_available:
             _logger.warning("yara-python is not installed; YARA scanning unavailable")

@@ -73,6 +73,11 @@ class ProcessPanel(AnalysisPanelBase):
     process_detached: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ProcessPanel.
+
+        Args:
+            parent: Parent widget.
+        """
         self._bridge: ProcessBridge | None = None
         self._state = _PanelState.DISCONNECTED
         self._attached_pid: int | None = None

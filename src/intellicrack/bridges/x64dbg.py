@@ -374,6 +374,7 @@ class X64DbgBridge(DebuggerBridge):
     COMMAND_TIMEOUT = 10.0
 
     def __init__(self) -> None:
+        """Initialize the X64DbgBridge instance."""
         super().__init__()
         self._x64dbg_path: Path | None = None
         self._process: Popen[bytes] | None = None

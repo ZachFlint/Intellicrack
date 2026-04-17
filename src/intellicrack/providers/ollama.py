@@ -69,6 +69,7 @@ class OllamaProvider(LLMProviderBase):
     CLOUD_API_URL = os.environ.get("INTELLICRACK_OLLAMA_CLOUD_URL", "https://ollama.com")
 
     def __init__(self) -> None:
+        """Initialize the OllamaProvider instance."""
         super().__init__()
         self._local_client: httpx.AsyncClient | None = None
         self._cloud_client: httpx.AsyncClient | None = None

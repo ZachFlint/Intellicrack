@@ -145,6 +145,7 @@ class ProcessManager:
         return cast("Self", cls._instance)
 
     def __init__(self) -> None:
+        """Initialize the ProcessManager singleton instance."""
         if self._initialized:
             return
 

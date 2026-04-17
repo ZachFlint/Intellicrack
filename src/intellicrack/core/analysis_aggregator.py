@@ -43,6 +43,11 @@ class AnalysisAggregator:
     """
 
     def __init__(self, tools: ToolRegistry) -> None:
+        """Initialize the AnalysisAggregator with a tool registry.
+
+        Args:
+            tools: ToolRegistry providing access to bridge instances.
+        """
         self._tools = tools
 
     async def aggregate(

@@ -130,6 +130,12 @@ class HexPatParser:
         tokens: list[Token],
         file_path: str = "<input>",
     ) -> None:
+        """Initialize the HexPatParser with a token stream.
+
+        Args:
+            tokens: Flat token list produced by the lexer.
+            file_path: Source file path used for error location reporting.
+        """
         self._tokens: list[Token] = tokens
         self._pos: int = 0
         self.file_path: str = file_path

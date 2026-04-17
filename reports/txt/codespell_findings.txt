@@ -202,13 +202,13 @@ src/intellicrack\bridges\process.py:473: SEH ==> SHE
 
 src/intellicrack\bridges\process.py:664: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:755: SEH ==> SHE
+src/intellicrack\bridges\process.py:756: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2834: SEH ==> SHE
+src/intellicrack\bridges\process.py:2835: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2838: SEH ==> SHE
+src/intellicrack\bridges\process.py:2839: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2848: SEH ==> SHE
+src/intellicrack\bridges\process.py:2849: SEH ==> SHE
 
 
 8 findings in src/intellicrack-hexcore\_typos.toml
@@ -342,11 +342,11 @@ src/intellicrack\ui\panels\process_panel\_threads_tab.py:7: SEH ==> SHE
 
 src/intellicrack\ui\panels\process_panel\_threads_tab.py:48: SEH ==> SHE
 
-src/intellicrack\ui\panels\process_panel\_threads_tab.py:237: SEH ==> SHE
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:242: SEH ==> SHE
 
-src/intellicrack\ui\panels\process_panel\_threads_tab.py:240: SEH ==> SHE
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:245: SEH ==> SHE
 
-src/intellicrack\ui\panels\process_panel\_threads_tab.py:469: SEH ==> SHE
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:474: SEH ==> SHE
 
 
 4 findings in src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d
@@ -439,11 +439,11 @@ src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:11: ser ==
 
 3 findings in src/intellicrack\bridges\x64dbg.py
 
-src/intellicrack\bridges\x64dbg.py:1278: SEH ==> SHE
+src/intellicrack\bridges\x64dbg.py:1279: SEH ==> SHE
 
-src/intellicrack\bridges\x64dbg.py:2337: unparseable ==> unparsable
+src/intellicrack\bridges\x64dbg.py:2338: unparseable ==> unparsable
 
-src/intellicrack\bridges\x64dbg.py:3980: SEH ==> SHE
+src/intellicrack\bridges\x64dbg.py:3981: SEH ==> SHE
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d

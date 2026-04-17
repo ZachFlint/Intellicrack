@@ -730,6 +730,7 @@ class CutterBridge(StaticAnalysisBridge):
     """
 
     def __init__(self) -> None:
+        """Initialize the CutterBridge instance."""
         super().__init__()
         self._r2: Any = None
         self._tool_path: Path | None = None

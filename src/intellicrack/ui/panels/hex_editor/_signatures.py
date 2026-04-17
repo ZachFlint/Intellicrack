@@ -59,6 +59,14 @@ class SignatureScanWorker(QThread):
         db_path: str,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the SignatureScanWorker with document data and database info.
+
+        Args:
+            doc_data: Full document contents as bytes.
+            db_type: Database format (``"die"``, ``"clamav"``, ``"custom"``).
+            db_path: Path to the signature database file.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._doc_data = doc_data
         self._db_type = db_type

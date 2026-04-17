@@ -96,6 +96,11 @@ class DiscoveryCache:
     """
 
     def __init__(self, ttl_seconds: int = 3600) -> None:
+        """Initialize the DiscoveryCache with the given TTL.
+
+        Args:
+            ttl_seconds: Cache entry time-to-live in seconds.
+        """
         self._ttl_seconds = ttl_seconds
         self._cache: dict[ProviderName, _CacheEntry] = {}
         self._lock = asyncio.Lock()
@@ -306,6 +311,13 @@ class ModelDiscovery:
         cache_ttl: int = 3600,
         timeout_per_provider: float = 30.0,
     ) -> None:
+        """Initialize the ModelDiscovery orchestrator.
+
+        Args:
+            registry: Provider registry containing registered providers.
+            cache_ttl: Cache time-to-live in seconds.
+            timeout_per_provider: Timeout in seconds for each provider's discovery request.
+        """
         self._registry = registry
         self._cache = DiscoveryCache(ttl_seconds=cache_ttl)
         self._timeout = timeout_per_provider

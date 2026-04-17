@@ -60,6 +60,13 @@ class DetachedPanelWindow(QMainWindow):
         title: str,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the DetachedPanelWindow with the given panel and title.
+
+        Args:
+            panel: The widget to display in the detached window.
+            title: Window title displayed in the title bar.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._panel: QWidget = panel
         self._title: str = title

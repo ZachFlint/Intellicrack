@@ -80,6 +80,11 @@ class AllStringsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the AllStringsTab with a table for string display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -120,6 +125,11 @@ class SymbolsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the SymbolsTab with a table for symbol display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -159,6 +169,11 @@ class LibrariesTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the LibrariesTab with a table for library display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -196,6 +211,11 @@ class HeadersTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the HeadersTab with a table for header field display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -235,6 +255,11 @@ class RelocationsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the RelocationsTab with a table for relocation display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -275,6 +300,11 @@ class ResourcesTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ResourcesTab with a table for resource display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -316,6 +346,11 @@ class CommentsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the CommentsTab with a table for comment display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -355,6 +390,11 @@ class FlagsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the FlagsTab with a table for flag display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -394,6 +434,11 @@ class ROPGadgetsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ROPGadgetsTab with search input and results table.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -463,6 +508,11 @@ class HexdumpTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the HexdumpTab with address and length inputs and output display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         fm = FontManager.get_instance()
         layout = QVBoxLayout(self)
@@ -543,6 +593,11 @@ class ESILConsoleTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ESILConsoleTab with expression input and output display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         fm = FontManager.get_instance()
         layout = QVBoxLayout(self)
@@ -644,6 +699,11 @@ class TypeBrowserTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the TypeBrowserTab with a tree widget for type browsing.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -755,6 +815,11 @@ class SegmentsTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the SegmentsTab with a table for segment display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

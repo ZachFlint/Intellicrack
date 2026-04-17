@@ -90,6 +90,11 @@ class XPUStatusDialog(QDialog):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the XPUStatusDialog with device and memory status display.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle("XPU Status")
         self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)

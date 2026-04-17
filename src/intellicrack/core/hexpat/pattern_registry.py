@@ -57,6 +57,11 @@ class PatternRegistry:
     """
 
     def __init__(self, pattern_dirs: list[Path] | None = None) -> None:
+        """Initialize the PatternRegistry with directories to scan.
+
+        Args:
+            pattern_dirs: Directories to scan for .hexpat files.
+        """
         self._pattern_dirs: list[Path] = list(pattern_dirs) if pattern_dirs else []
         self._patterns: list[PatternMetadata] = []
         self._by_name: dict[str, PatternMetadata] = {}

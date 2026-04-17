@@ -94,6 +94,7 @@ class GhidraBridge(StaticAnalysisBridge):
     DECOMPILE_TIMEOUT_SECONDS: int = 60
 
     def __init__(self) -> None:
+        """Initialize the GhidraBridge instance."""
         super().__init__()
         self._ghidra_path: Path | None = None
         self._bridge: object | None = None

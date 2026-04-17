@@ -31,6 +31,13 @@ class HexPatError(Exception):
     """
 
     def __init__(self, message: str, line: int = 0, column: int = 0) -> None:
+        """Initialize the HexPatError with a message and source location.
+
+        Args:
+            message: Human-readable error description.
+            line: Source line number where the error occurred.
+            column: Source column number where the error occurred.
+        """
         self.message = message
         self.line = line
         self.column = column
@@ -462,6 +469,11 @@ class HexPatLexer:
     """
 
     def __init__(self, source: str) -> None:
+        """Initialize the HexPatLexer with source code to tokenize.
+
+        Args:
+            source: Source code string to tokenize.
+        """
         self._source = source
         self._pos = 0
         self._line = 1
@@ -681,6 +693,11 @@ class HexPatParser:
     """
 
     def __init__(self, tokens: list[Token]) -> None:
+        """Initialize the HexPatParser with a list of tokens.
+
+        Args:
+            tokens: List of tokens from the lexer.
+        """
         self._tokens = tokens
         self._pos = 0
 
@@ -1160,6 +1177,11 @@ class HexPatCodegen:
     """
 
     def __init__(self, declarations: list[DeclNode]) -> None:
+        """Initialize the HexPatCodegen with parsed declarations.
+
+        Args:
+            declarations: List of parsed declaration nodes.
+        """
         self._decls = declarations
         self._nested_structs: dict[str, StructDecl] = {}
         self._nested_unions: dict[str, UnionDecl] = {}

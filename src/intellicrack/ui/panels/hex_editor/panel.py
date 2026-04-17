@@ -130,6 +130,11 @@ class HexEditorPanel(
     context_push_requested: pyqtSignal = pyqtSignal(dict)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the HexEditorPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         self._hex_widget: Any | None = None
         self.document: Any | None = None
         self.file_path: Path | None = None

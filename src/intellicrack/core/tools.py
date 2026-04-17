@@ -82,6 +82,11 @@ class ToolRegistry:
     """
 
     def __init__(self, tools_dir: Path) -> None:
+        """Initialize the ToolRegistry with a tools directory.
+
+        Args:
+            tools_dir: Directory for tool installations.
+        """
         self._bridges: dict[ToolName, ToolBridgeBase] = {}
         from intellicrack.bridges.installer import ToolInstaller
 

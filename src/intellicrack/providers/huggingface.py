@@ -68,6 +68,7 @@ class HuggingFaceProvider(LLMProviderBase):
     MODELS_API_URL: ClassVar[str] = "https://huggingface.co/api/models"
 
     def __init__(self) -> None:
+        """Initialize the HuggingFaceProvider instance."""
         super().__init__()
         self.client: httpx.AsyncClient | None = None
         self._api_token: str | None = None

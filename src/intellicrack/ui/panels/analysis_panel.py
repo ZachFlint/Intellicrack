@@ -59,6 +59,11 @@ class BridgeAnalysisPanel(QWidget):
     address_navigate = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the AnalysisPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._current_analysis: BridgeAnalysisSummary | None = None
         self._mono_font = FontManager.get_instance().get_code_font(9)

@@ -275,6 +275,11 @@ class IntellicrackLogger:
     name: str
 
     def __init__(self, name: str = "intellicrack") -> None:
+        """Initialize the IntellicrackLogger with a logger name.
+
+        Args:
+            name: The name for this logger instance.
+        """
         self.name = name
 
     @staticmethod
@@ -606,6 +611,13 @@ class OperationTimer:
         logger_name: str = "operations",
         **context: object,
     ) -> None:
+        """Initialize the OperationTimer with an operation name and context.
+
+        Args:
+            operation: The operation name.
+            logger_name: The logger name to use.
+            **context: Additional context for the log.
+        """
         self.operation = operation
         self.logger_name = logger_name
         self.context = context

@@ -31,6 +31,13 @@ class DataReader:
     """
 
     def __init__(self, read_fn: Callable[[int, int], bytes], length: int) -> None:
+        """Initialize the DataReader with a read function and data length.
+
+        Args:
+            read_fn: A callable ``(offset, length) -> bytes`` that returns
+                the requested byte slice from the underlying data source.
+            length: Total number of bytes available in the data source.
+        """
         self._read_fn = read_fn
         self._length = length
 

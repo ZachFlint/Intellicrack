@@ -149,6 +149,7 @@ class TypeRegistry:
     """
 
     def __init__(self) -> None:
+        """Initialize the TypeRegistry instance."""
         self._structs: dict[str, StructTypeInfo] = {}
         self._unions: dict[str, UnionTypeInfo] = {}
         self._enums: dict[str, EnumTypeInfo] = {}

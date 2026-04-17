@@ -66,6 +66,7 @@ class OpenRouterProvider(LLMProviderBase):
     BASE_URL = "https://openrouter.ai/api/v1"
 
     def __init__(self) -> None:
+        """Initialize the OpenRouterProvider instance."""
         super().__init__()
         self.client: httpx.AsyncClient | None = None
         self._api_key: str | None = None

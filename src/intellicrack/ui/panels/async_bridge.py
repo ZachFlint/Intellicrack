@@ -114,6 +114,12 @@ class BridgeCallWorker(QThread):
         coro: Coroutine[object, object, object],
         parent: QObject | None = None,
     ) -> None:
+        """Initialize the AsyncBridgeWorker with the given coroutine.
+
+        Args:
+            coro: Coroutine to execute on the persistent event loop.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._coro: Coroutine[object, object, object] = coro
         _: object = self.finished.connect(self.deleteLater)

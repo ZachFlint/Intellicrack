@@ -199,6 +199,7 @@ class IconManager:
     _instance: ClassVar[IconManager | None] = None
 
     def __init__(self) -> None:
+        """Initialize the IconManager instance."""
         self.icon_cache: dict[str, QIcon] = {}
         self.pixmap_cache: dict[tuple[str, int], QPixmap] = {}
         self.icons_available: bool = self._check_icons_available()

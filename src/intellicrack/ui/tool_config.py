@@ -113,6 +113,13 @@ class ToolInstallWorker(QThread):
         install_path: Path,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolInstallWorker for a specific tool.
+
+        Args:
+            tool_id: Identifier of the tool to install.
+            install_path: Filesystem path where the tool should be installed.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._tool_id = tool_id
         self._install_path = install_path
@@ -384,6 +391,13 @@ class ToolStatusCheckWorker(QThread):
         tool_path: str,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolStatusCheckWorker for a specific tool.
+
+        Args:
+            tool_id: Identifier of the tool to check.
+            tool_path: Filesystem path to the tool executable.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._tool_id = tool_id
         self._tool_path = tool_path
@@ -575,6 +589,13 @@ class ToolConfigDialog(QDialog):
         tools_directory: Path | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolConfigDialog.
+
+        Args:
+            tool_registry: Optional registry of available analysis tools.
+            tools_directory: Optional base directory for tool installations.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._registry = tool_registry
         self._tools_directory = tools_directory or Path("D:/Intellicrack/tools")
@@ -714,6 +735,17 @@ class ToolSettingsWidget(QFrame):
         config_path: Path | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolSettingsWidget for a single tool.
+
+        Args:
+            tool_id: Identifier of the tool.
+            display_name: Human-readable name for display.
+            description: Tool description text.
+            tools_directory: Base directory for tool installations.
+            registry: Optional tool registry for status queries.
+            config_path: Optional path to the tool configuration file.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._tool_id = tool_id
         self._display_name = display_name
@@ -1015,6 +1047,11 @@ class ToolCapabilitiesWidget(QFrame):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ToolCapabilitiesWidget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -1192,6 +1229,12 @@ class ToolStatusDialog(QDialog):
         tool_registry: ToolRegistry | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolStatusDialog.
+
+        Args:
+            tool_registry: Optional registry of available analysis tools.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._registry = tool_registry
         self._config_path = get_config_file("tools.json")

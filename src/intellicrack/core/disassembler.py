@@ -112,6 +112,7 @@ class HexDisassembler:
     """
 
     def __init__(self) -> None:
+        """Initialize the Disassembler instance."""
         self._cs_mod: ModuleType | None = _capstone_mod
         if self._cs_mod is not None:
             version: str = str(getattr(self._cs_mod, "__version__", "unknown"))

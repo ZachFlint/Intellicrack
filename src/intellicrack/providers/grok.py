@@ -83,6 +83,7 @@ class GrokProvider(LLMProviderBase):
     BASE_URL: str = "https://api.x.ai/v1"
 
     def __init__(self) -> None:
+        """Initialize the GrokProvider instance."""
         super().__init__()
         self.client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None

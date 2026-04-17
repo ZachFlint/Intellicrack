@@ -49,6 +49,12 @@ class ToolConfirmationDialog(QDialog):
         call: ToolCall,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolConfirmationDialog with the given tool call.
+
+        Args:
+            call: The tool call to confirm.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._call = call
         self._approved = False

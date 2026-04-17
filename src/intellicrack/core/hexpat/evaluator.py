@@ -91,6 +91,11 @@ class _ReturnSignalError(Exception):
     """
 
     def __init__(self, value: PatternValue) -> None:
+        """Initialize the _ReturnSignalError with the returned value.
+
+        Args:
+            value: The PatternValue being returned from the function.
+        """
         super().__init__()
         self.value: PatternValue = value
 
@@ -139,6 +144,11 @@ class EvalScope:
     """
 
     def __init__(self, parent: EvalScope | None = None) -> None:
+        """Initialize the EvalScope with an optional parent scope.
+
+        Args:
+            parent: The enclosing parent scope, or None for root scope.
+        """
         self._bindings: dict[str, PatternValue] = {}
         self._parent: EvalScope | None = parent
 
@@ -264,6 +274,13 @@ class HexPatEvaluator:
         type_registry: TypeRegistry,
         pragma: PragmaInfo,
     ) -> None:
+        """Initialize the HexPatEvaluator with data access and type information.
+
+        Args:
+            data_reader: Byte-access wrapper over the binary data.
+            type_registry: Registry of all user-defined types.
+            pragma: Parsed pragma directives controlling evaluation behaviour.
+        """
         self._data: DataReader = data_reader
         self._types: TypeRegistry = type_registry
         self._pragma: PragmaInfo = pragma

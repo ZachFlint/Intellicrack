@@ -565,27 +565,6 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingWriteHost",
-          "level": "warning",
-          "message": {
-            "text": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/generate-structure.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 33,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
           "level": "warning",
           "message": {
@@ -601,6 +580,27 @@
                 "region": {
                   "startLine": 13,
                   "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/generate-structure.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 1
                 }
               }
             }
@@ -775,27 +775,6 @@
           ]
         },
         {
-          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
-          "level": "warning",
-          "message": {
-            "text": "The variable 'diffInput' is assigned but never used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/git-commit.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 60,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -874,6 +853,27 @@
                 "region": {
                   "startLine": 100,
                   "startColumn": 57
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
+          "level": "warning",
+          "message": {
+            "text": "The variable 'diffInput' is assigned but never used."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/git-commit.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 5
                 }
               }
             }
@@ -1111,27 +1111,6 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/install-rust-tools.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 30,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -1147,6 +1126,27 @@
                 "region": {
                   "startLine": 28,
                   "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/install-rust-tools.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 9
                 }
               }
             }
@@ -2413,27 +2413,6 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingWriteHost",
-          "level": "warning",
-          "message": {
-            "text": "File 'test-verify-real.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/test-verify-real.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 10,
-                  "startColumn": 89
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingInvokeExpression",
           "level": "warning",
           "message": {
@@ -2449,6 +2428,27 @@
                 "region": {
                   "startLine": 10,
                   "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingWriteHost",
+          "level": "warning",
+          "message": {
+            "text": "File 'test-verify-real.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/test-verify-real.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10,
+                  "startColumn": 89
                 }
               }
             }
@@ -3740,7 +3740,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-15T03:37:39.157366+00:00"
+          "endTimeUtc": "2026-04-17T05:39:31.820913+00:00"
         }
       ]
     }

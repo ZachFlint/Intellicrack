@@ -84,6 +84,13 @@ class StatisticsWorker(QThread):
         entropy_block_size: int,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the StatisticsWorker with document and block size.
+
+        Args:
+            document: Hex document to compute statistics for.
+            entropy_block_size: Block size in bytes for entropy calculation.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self.document: Any = document
         self._entropy_block_size: int = entropy_block_size

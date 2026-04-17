@@ -366,6 +366,11 @@ class SandboxBase:
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
+        """Initialize the SandboxBase with optional configuration.
+
+        Args:
+            config: Optional sandbox configuration.
+        """
         self._config = config or SandboxConfig()
         self._state = SandboxState()
 

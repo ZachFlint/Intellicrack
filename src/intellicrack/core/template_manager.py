@@ -71,6 +71,11 @@ class TemplateManager:
     """
 
     def __init__(self, config_dir: Path) -> None:
+        """Initialize the TemplateManager with a configuration directory.
+
+        Args:
+            config_dir: Base configuration directory.
+        """
         self._config_dir = config_dir
         self._templates_dir = config_dir / "templates"
         self._builtin_dir = self._templates_dir / "builtin"

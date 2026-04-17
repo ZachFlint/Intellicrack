@@ -116,6 +116,11 @@ class HxDPanel(QWidget):
     tool_closed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the HxDPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.hxd_exe: Path | None = _find_hxd_executable()
         self.current_file: Path | None = None
