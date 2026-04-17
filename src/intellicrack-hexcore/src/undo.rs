@@ -112,6 +112,10 @@ impl UndoManager {
         self.saved_index = Some(self.undo_stack.len());
     }
 
+    pub fn mark_unsaved(&mut self) {
+        self.saved_index = None;
+    }
+
     #[must_use]
     pub fn is_modified(&self) -> bool {
         match self.saved_index {
@@ -284,6 +288,14 @@ mod tests {
             offset: 1,
             data: vec![2],
         });
+        assert!(um.is_modified());
+    }
+
+    #[test]
+    fn test_mark_unsaved() {
+        let mut um = UndoManager::new();
+        assert!(!um.is_modified());
+        um.mark_unsaved();
         assert!(um.is_modified());
     }
 
