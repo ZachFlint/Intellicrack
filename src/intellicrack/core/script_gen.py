@@ -480,6 +480,11 @@ class ScriptManager:
     scripts: dict[str, Script]
 
     def __init__(self, scripts_dir: Path) -> None:
+        """Initialize the ScriptManager with a storage directory.
+
+        Args:
+            scripts_dir: Directory for storing scripts.
+        """
         self.scripts_dir = scripts_dir
         self.scripts = {}
         self._validator = ScriptValidator()
@@ -758,7 +763,7 @@ class ScriptGenerator:
     """Generates AI prompts for dynamic script generation in Intellicrack."""
 
     def __init__(self) -> None:
-        pass
+        """Initialize the ScriptGenerator instance."""
 
     @staticmethod
     def prepare_ai_prompt(context: ScriptContext, language: ScriptLanguage) -> str:

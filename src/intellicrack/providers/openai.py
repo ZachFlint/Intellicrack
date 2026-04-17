@@ -84,6 +84,7 @@ class OpenAIProvider(LLMProviderBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the OpenAIProvider instance."""
         super().__init__()
         self.client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None

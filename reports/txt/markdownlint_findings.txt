@@ -986,23 +986,23 @@ CHANGELOG.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 94
 
 CHANGELOG.md:71:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
 
-CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
+CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
 
-CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
+CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:85:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
+CHANGELOG.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
 
-CHANGELOG.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+CHANGELOG.md:92:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
 
-CHANGELOG.md:88:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+CHANGELOG.md:93:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
 
-CHANGELOG.md:90:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
 
-CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
+CHANGELOG.md:96:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
 
-CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
+CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-CHANGELOG.md:115:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:106:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
 
 
 30 findings in GEMINI.md

@@ -75,6 +75,11 @@ class SandboxPanel(AnalysisPanelBase):
     sandbox_created: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the SandboxPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._sandbox: SandboxBase | None = None
         self._sandbox_manager: SandboxManager | None = None

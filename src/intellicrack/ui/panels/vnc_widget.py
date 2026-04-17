@@ -60,6 +60,7 @@ class RFBClient:
     framebuffer: QImage | None
 
     def __init__(self) -> None:
+        """Initialize the RFBClient instance."""
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._connected: bool = False
@@ -481,6 +482,11 @@ class VNCWidget(QWidget):
     connection_status_changed: pyqtSignal = pyqtSignal(bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the VNCWidget instance.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.client = RFBClient()
         self.update_timer = QTimer(self)

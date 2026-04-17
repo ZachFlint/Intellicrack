@@ -94,6 +94,11 @@ class EntropyGraphWidget(QWidget):
     block_clicked: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the EntropyGraphWidget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._entropy_values: list[float] = []
         self._block_size: int = 4096
@@ -199,6 +204,11 @@ class ByteDistributionWidget(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ByteDistributionWidget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._counts: list[int] = [0] * 256
         self._log_scale: bool = False
@@ -298,6 +308,12 @@ class CustomCrcDialog(QDialog):
     """
 
     def __init__(self, data: bytes, parent: QWidget | None = None) -> None:
+        """Initialize the CustomCrcDialog with data to compute CRC over.
+
+        Args:
+            data: The byte data to compute the CRC over.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._data = data
         self.setWindowTitle("Custom CRC Calculator")
@@ -388,6 +404,12 @@ class _DigramMatrixWidget(QWidget):
         matrix_data: list[int],
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the _DigramMatrixWidget with bigram count data.
+
+        Args:
+            matrix_data: Flat list of 65536 integers (256 x 256 bigram counts).
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._matrix = matrix_data
         self._max_val = max(matrix_data) if matrix_data else 1
@@ -490,6 +512,12 @@ class DigramMatrixDialog(QDialog):
         matrix_data: list[int],
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the DigramMatrixDialog with bigram count data.
+
+        Args:
+            matrix_data: Flat list of 65536 integers (256 x 256 bigram counts).
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle("Digram Matrix")
         self.setMinimumSize(QSize(_DIGRAM_DIALOG_MIN, _DIGRAM_DIALOG_MIN))
@@ -530,6 +558,14 @@ class LargeFileSettingsDialog(QDialog):
         current_usage_mb: float,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the LargeFileSettingsDialog with current memory settings.
+
+        Args:
+            current_chunk_kb: Current chunk size in kilobytes.
+            current_budget_mb: Current memory budget in megabytes.
+            current_usage_mb: Current memory usage in megabytes.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle("Large File Settings")
         self.setMinimumWidth(400)

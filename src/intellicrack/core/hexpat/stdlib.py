@@ -41,6 +41,11 @@ class BuiltinFunctions:
     """
 
     def __init__(self, data_reader: DataReader) -> None:
+        """Initialize the StdLib with a data reader for binary access.
+
+        Args:
+            data_reader: The DataReader wrapping the target binary.
+        """
         self._data: DataReader = data_reader
         self._endian: str = "little"
         self._array_index: int = 0

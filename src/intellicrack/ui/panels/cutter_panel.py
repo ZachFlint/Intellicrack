@@ -118,6 +118,11 @@ class CutterPanel(AnalysisPanelBase):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the CutterPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         self._bridge: CutterBridge | None = None
         self._current_binary: Path | None = None
         super().__init__(parent)

@@ -23,6 +23,12 @@ class HexPatLexer:
     """
 
     def __init__(self, source: str, file_path: str = "<input>") -> None:
+        """Initialize the HexPatLexer with source text and file path.
+
+        Args:
+            source: The raw source text to tokenize.
+            file_path: Optional file path used in error messages.
+        """
         self._source = source
         self._pos = 0
         self._line = 1

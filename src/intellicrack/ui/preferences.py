@@ -100,6 +100,12 @@ class GeneralSettingsWidget(QWidget):
     """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
+        """Initialize the GeneralSettingsWidget with application configuration.
+
+        Args:
+            config: Application configuration instance.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -209,6 +215,12 @@ class AppearanceSettingsWidget(QWidget):
     """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
+        """Initialize the AppearanceSettingsWidget with application configuration.
+
+        Args:
+            config: Application configuration instance.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -304,6 +316,12 @@ class SessionSettingsWidget(QWidget):
     """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
+        """Initialize the SessionSettingsWidget with application configuration.
+
+        Args:
+            config: Application configuration instance.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -370,6 +388,12 @@ class LoggingSettingsWidget(QWidget):
     """
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
+        """Initialize the LoggingSettingsWidget with application configuration.
+
+        Args:
+            config: Application configuration instance.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._config = config
         self._setup_ui()
@@ -468,6 +492,12 @@ class PreferencesDialog(QDialog):
     settings_changed = pyqtSignal(Config)
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
+        """Initialize the PreferencesDialog with application configuration.
+
+        Args:
+            config: Application configuration instance.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._config = config
         self._settings_widgets: list[GeneralSettingsWidget | AppearanceSettingsWidget | SessionSettingsWidget | LoggingSettingsWidget] = []

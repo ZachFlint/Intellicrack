@@ -210,6 +210,11 @@ class SessionStore:
     """
 
     def __init__(self, db_path: Path) -> None:
+        """Initialize the SessionStore with a database path.
+
+        Args:
+            db_path: Path to the SQLite database file.
+        """
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         _logger.debug("session_store_init", db_path=str(db_path))
@@ -788,6 +793,13 @@ class SessionManager:
         auto_save: bool = True,
         save_interval: int = 300,
     ) -> None:
+        """Initialize the SessionManager with a store and save settings.
+
+        Args:
+            store: Session persistence store.
+            auto_save: Whether to auto-save changes.
+            save_interval: Interval between auto-saves in seconds.
+        """
         self.store = store
         self._current: Session | None = None
         self.auto_save = auto_save

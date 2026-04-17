@@ -87,6 +87,13 @@ class SessionManagerDialog(QDialog):
         current_session_id: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the SessionManagerDialog with session state.
+
+        Args:
+            session_manager: Session manager for loading and saving sessions.
+            current_session_id: ID of the currently active session.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._manager = session_manager
         self._current_session_id = current_session_id
@@ -823,6 +830,11 @@ class NewSessionDialog(QDialog):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the NewSessionDialog.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
 
         self._setup_ui()

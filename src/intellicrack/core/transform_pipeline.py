@@ -47,6 +47,11 @@ class UnsupportedConstantTypeError(TypeError):
     """
 
     def __init__(self, type_name: str) -> None:
+        """Initialize the UnsupportedConstantTypeError with the offending type name.
+
+        Args:
+            type_name: Name of the AST constant type that is unsupported.
+        """
         super().__init__(f"Unsupported constant type: {type_name}")
 
 
@@ -59,6 +64,12 @@ class TransformParamError(ValueError):
     """
 
     def __init__(self, node_name: str, detail: str) -> None:
+        """Initialize the TransformParamError with node name and detail.
+
+        Args:
+            node_name: Name of the transform node that produced the error.
+            detail: Description of the invalid parameter or reason.
+        """
         super().__init__(f"{node_name}: {detail}")
 
 
@@ -260,6 +271,13 @@ class RustTransformNode(TransformNode):
         transform_category: str = "",
         transform_description: str = "",
     ) -> None:
+        """Initialize the RustTransformNode with transform metadata.
+
+        Args:
+            transform_name: Name of the Rust-side transform to invoke.
+            transform_category: Category string for the transform.
+            transform_description: Human-readable description.
+        """
         self._name = transform_name
         self._category = transform_category
         self._description = transform_description
@@ -727,6 +745,7 @@ class TransformPipeline:
     """
 
     def __init__(self) -> None:
+        """Initialize the TransformPipeline instance."""
         self._steps: list[PipelineStep] = []
 
     def add_step(self, node: TransformNode, params: dict[str, Any] | None = None) -> int:

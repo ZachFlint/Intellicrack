@@ -1123,6 +1123,7 @@ class ThemeManager:
     _instance: ClassVar[ThemeManager | None] = None
 
     def __init__(self) -> None:
+        """Initialize the ThemeManager instance."""
         self._current_theme: str = DEFAULT_THEME
         self.theme_cache: dict[str, str] = {}
         self.styles_available: bool = self._check_styles_available()

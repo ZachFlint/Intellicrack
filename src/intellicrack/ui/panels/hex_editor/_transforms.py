@@ -829,6 +829,12 @@ class _BlockFillDialog(QDialog):
     """
 
     def __init__(self, hex_widget: object, parent: QWidget | None = None) -> None:
+        """Initialize the _BlockFillDialog with fill parameters.
+
+        Args:
+            hex_widget: The hex editor widget for pre-filling cursor/selection values.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle("Fill Block")
         layout = QVBoxLayout(self)
@@ -876,6 +882,12 @@ class _BlockCopyMoveDialog(QDialog):
     """
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
+        """Initialize the _BlockCopyMoveDialog with window title.
+
+        Args:
+            title: Dialog window title.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle(title)
         layout = QVBoxLayout(self)
@@ -914,6 +926,11 @@ class _BlockSwapDialog(QDialog):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the _BlockSwapDialog.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle("Swap Blocks")
         layout = QVBoxLayout(self)

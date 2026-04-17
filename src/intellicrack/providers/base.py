@@ -151,6 +151,7 @@ class LLMProviderBase(ABC):
     """
 
     def __init__(self) -> None:
+        """Initialize the LLMProviderBase instance."""
         self._credentials: ProviderCredentials | None = None
         self.connected: bool = False
         self._cancel_requested: bool = False
@@ -580,6 +581,7 @@ class ToolCallBufferManager:
     """
 
     def __init__(self) -> None:
+        """Initialize the ToolCallBufferManager instance."""
         self._buffers: dict[int, dict[str, str]] = {}
 
     def accumulate(

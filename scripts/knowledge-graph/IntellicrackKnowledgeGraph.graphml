@@ -617,7 +617,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the BinaryOperationsBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.base.name">
       <data key="d0">function</data>
@@ -1504,7 +1504,7 @@ this bridge exposes to the orchestrator.</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the CutterBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.cutter.r2">
       <data key="d0">function</data>
@@ -2908,7 +2908,7 @@ capabilities advertised to the orchestrator.</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the FridaBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.frida_bridge.name">
       <data key="d0">function</data>
@@ -4674,7 +4674,7 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the GhidraBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.ghidra.ghidra_path">
       <data key="d0">function</data>
@@ -6133,7 +6133,7 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexEditorBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.hex_editor.set_auto_page_break">
       <data key="d0">function</data>
@@ -8586,7 +8586,7 @@ default highlight rules and display mode used...</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexDocumentState instance.</data>
     </node>
     <node id="src.intellicrack.bridges.hex_state.document">
       <data key="d0">function</data>
@@ -9077,7 +9077,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'tools_directory']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ToolInstaller with the given target directory.
+
+Args:
+    tools_directory: Directory where tools should be installed.</data>
     </node>
     <node id="src.intellicrack.bridges.installer._get_client">
       <data key="d0">function</data>
@@ -9323,7 +9326,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'config', 'event_handler']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the NamedPipeClient with the given configuration.
+
+Args:
+    config: Pipe configuration, or None to use defaults.
+    event_handler: Optional callback for pipe events.</data>
     </node>
     <node id="src.intellicrack.bridges.named_pipe_client.is_connected">
       <data key="d0">function</data>
@@ -9546,7 +9553,7 @@ DLL references (``ker...</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ProcessBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.process.name">
       <data key="d0">function</data>
@@ -10707,7 +10714,7 @@ describing the dynamic-analysis features this bridge can provide.</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SandboxBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.sandbox_bridge.name">
       <data key="d0">function</data>
@@ -11550,7 +11557,12 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'message', 'location', 'severity']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ValidationError with the given details.
+
+Args:
+    message: Error description.
+    location: Where the error occurred (e.g., "func.param").
+    severity: Error severity level.</data>
     </node>
     <node id="src.intellicrack.bridges.schemas.__str__">
       <data key="d0">function</data>
@@ -11704,7 +11716,7 @@ flag, the ev...</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the X64DbgBridge instance.</data>
     </node>
     <node id="src.intellicrack.bridges.x64dbg.attached_pid">
       <data key="d0">function</data>
@@ -13985,7 +13997,10 @@ dependency: bridges.base -&gt; core.logging -&gt; core.__init__ -&gt; core.tools
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'tools']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the AnalysisAggregator with a tool registry.
+
+Args:
+    tools: ToolRegistry providing access to bridge instances.</data>
     </node>
     <node id="src.intellicrack.core.analysis_aggregator.aggregate">
       <data key="d0">function</data>
@@ -14462,7 +14477,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the Disassembler instance.</data>
     </node>
     <node id="src.intellicrack.core.disassembler.available">
       <data key="d0">function</data>
@@ -14821,7 +14836,10 @@ Orchestrates the lexer, parser, and codegen pipeline.</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'declarations']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatCodegen with parsed declarations.
+
+Args:
+    declarations: List of parsed declaration nodes.</data>
     </node>
     <node id="src.intellicrack.core.hexpat_compiler.tokenize">
       <data key="d0">function</data>
@@ -15531,7 +15549,12 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'operation', 'logger_name']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the OperationTimer with an operation name and context.
+
+Args:
+    operation: The operation name.
+    logger_name: The logger name to use.
+    **context: Additional context for the log.</data>
     </node>
     <node id="src.intellicrack.core.logging.configure">
       <data key="d0">function</data>
@@ -16552,7 +16575,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ProcessManager singleton instance.</data>
     </node>
     <node id="src.intellicrack.core.process_manager.get_instance">
       <data key="d0">function</data>
@@ -17245,7 +17268,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ScriptGenerator instance.</data>
     </node>
     <node id="src.intellicrack.core.script_gen.add_script">
       <data key="d0">function</data>
@@ -17539,7 +17562,12 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'store']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SessionManager with a store and save settings.
+
+Args:
+    store: Session persistence store.
+    auto_save: Whether to auto-save changes.
+    save_interval: Interval between auto-saves in seconds.</data>
     </node>
     <node id="src.intellicrack.core.session._connection">
       <data key="d0">function</data>
@@ -17938,7 +17966,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'config_dir']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the TemplateManager with a configuration directory.
+
+Args:
+    config_dir: Base configuration directory.</data>
     </node>
     <node id="src.intellicrack.core.template_manager.ensure_directories">
       <data key="d0">function</data>
@@ -18125,7 +18156,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'tools_dir']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ToolRegistry with a tools directory.
+
+Args:
+    tools_dir: Directory for tool installations.</data>
     </node>
     <node id="src.intellicrack.core.tools.tools_directory">
       <data key="d0">function</data>
@@ -18540,7 +18574,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the TransformPipeline instance.</data>
     </node>
     <node id="src.intellicrack.core.transform_pipeline.name">
       <data key="d0">function</data>
@@ -19882,7 +19916,15 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'message', 'config_key', 'expected_type', 'actual_value', 'error_code', 'details']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ConfigurationError with configuration details.
+
+Args:
+    message: Human-readable error description.
+    config_key: Configuration key that caused the error.
+    expected_type: Expected type or format.
+    actual_value: Actual value that was provided.
+    error_code: Optional numeric error code.
+    details: Optional dictionary with additional context.</data>
     </node>
     <node id="src.intellicrack.core.yara_scanner">
       <data key="d0">module</data>
@@ -19936,7 +19978,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'timeout']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the YaraScanner with a match timeout.
+
+Args:
+    timeout: Maximum seconds allowed per match operation before
+        a ``TimeoutError`` is raised by the YARA engine.</data>
     </node>
     <node id="src.intellicrack.core.yara_scanner.available">
       <data key="d0">function</data>
@@ -20724,7 +20770,12 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'read_fn', 'length']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the DataReader with a read function and data length.
+
+Args:
+    read_fn: A callable ``(offset, length) -&gt; bytes`` that returns
+        the requested byte slice from the underlying data source.
+    length: Total number of bytes available in the data source.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.data_reader.from_document">
       <data key="d0">function</data>
@@ -21115,7 +21166,14 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'message', 'line', 'column', 'file', 'offset']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatRuntimeError with location, message, and data offset.
+
+Args:
+    message: Human-readable error description.
+    line: Source line number where the error occurred.
+    column: Source column number where the error occurred.
+    file: Source file path where the error occurred.
+    offset: Byte offset in the binary data.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.evaluator">
       <data key="d0">module</data>
@@ -21251,7 +21309,12 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'data_reader', 'type_registry', 'pragma']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatEvaluator with data access and type information.
+
+Args:
+    data_reader: Byte-access wrapper over the binary data.
+    type_registry: Registry of all user-defined types.
+    pragma: Parsed pragma directives controlling evaluation behaviour.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.evaluator.get">
       <data key="d0">function</data>
@@ -22191,7 +22254,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'include_paths', 'std_lib_path']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatInterpreter with include search paths.
+
+Args:
+    include_paths: Additional directories to search for included files.
+    std_lib_path: Override path for the standard library directory.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.interpreter.execute">
       <data key="d0">function</data>
@@ -22307,7 +22374,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'source', 'file_path']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatLexer with source text and file path.
+
+Args:
+    source: The raw source text to tokenize.
+    file_path: Optional file path used in error messages.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.lexer.tokenize">
       <data key="d0">function</data>
@@ -22521,7 +22592,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'tokens', 'file_path']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatParser with a token stream.
+
+Args:
+    tokens: Flat token list produced by the lexer.
+    file_path: Source file path used for error location reporting.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.parser.parse">
       <data key="d0">function</data>
@@ -22984,7 +23059,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'pattern_dirs']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the PatternRegistry with directories to scan.
+
+Args:
+    pattern_dirs: Directories to scan for .hexpat files.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.pattern_registry.scan">
       <data key="d0">function</data>
@@ -23128,7 +23206,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'include_paths']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatPreprocessor with include search paths.
+
+Args:
+    include_paths: Directories to search for included files.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.preprocessor.process">
       <data key="d0">function</data>
@@ -23236,7 +23317,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'data_reader']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the StdLib with a data reader for binary access.
+
+Args:
+    data_reader: The DataReader wrapping the target binary.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.stdlib._unwrap">
       <data key="d0">function</data>
@@ -23771,7 +23855,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the TypeRegistry instance.</data>
     </node>
     <node id="src.intellicrack.core.hexpat.type_system.register_struct">
       <data key="d0">function</data>
@@ -23996,7 +24080,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'env_path']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the CredentialLoader with the given env file path.
+
+Args:
+    env_path: Path to the .env file. If None, searches standard locations.</data>
     </node>
     <node id="src.intellicrack.credentials.env_loader._load_env_file">
       <data key="d0">function</data>
@@ -24382,7 +24469,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'credential_store', 'callback_port']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the OAuthManager with credential storage and callback configuration.
+
+Args:
+    credential_store: Store for persisting OAuth tokens. If None, tokens are not persisted.
+    callback_port: Port for the local OAuth callback server.</data>
     </node>
     <node id="src.intellicrack.credentials.oauth.start">
       <data key="d0">function</data>
@@ -24727,7 +24818,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'fallback_loader']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the CredentialStore with an optional fallback loader.
+
+Args:
+    fallback_loader: CredentialLoader instance for env-file fallback. If None, creates a new one.</data>
     </node>
     <node id="src.intellicrack.credentials.store._check_keyring">
       <data key="d0">function</data>
@@ -25036,7 +25130,7 @@ Provides integration with Anthropic's Claude models including support for tool/f
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the AnthropicProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.anthropic.name">
       <data key="d0">function</data>
@@ -25463,7 +25557,7 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ToolCallBufferManager instance.</data>
     </node>
     <node id="src.intellicrack.providers.base.name">
       <data key="d0">function</data>
@@ -25842,7 +25936,12 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'registry', 'cache_ttl', 'timeout_per_provider']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ModelDiscovery orchestrator.
+
+Args:
+    registry: Provider registry containing registered providers.
+    cache_ttl: Cache time-to-live in seconds.
+    timeout_per_provider: Timeout in seconds for each provider's discovery request.</data>
     </node>
     <node id="src.intellicrack.providers.discovery.get">
       <data key="d0">function</data>
@@ -26131,7 +26230,7 @@ Provides integration with Google's Gemini models including support for tool/func
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the GoogleProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.google.name">
       <data key="d0">function</data>
@@ -26385,7 +26484,7 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the GrokProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.grok.name">
       <data key="d0">function</data>
@@ -26608,7 +26707,7 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HuggingFaceProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.huggingface.name">
       <data key="d0">function</data>
@@ -26838,7 +26937,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'model_cache']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the LocalTransformersProvider with optional cache and device preferences.
+
+Args:
+    model_cache: Optional model cache instance. Uses the global cache if None.
+    prefer_xpu: Whether to prefer Intel XPU acceleration over CPU when available.</data>
     </node>
     <node id="src.intellicrack.providers.local_transformers.name">
       <data key="d0">function</data>
@@ -27375,7 +27478,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'max_memory_bytes']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ModelCache with a memory limit.
+
+Args:
+    max_memory_bytes: Maximum memory in bytes allowed for cached models.</data>
     </node>
     <node id="src.intellicrack.providers.model_loader.max_memory_bytes">
       <data key="d0">function</data>
@@ -27499,7 +27605,7 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the OllamaProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.ollama.name">
       <data key="d0">function</data>
@@ -27806,7 +27912,7 @@ Provides integration with OpenAI's GPT models including support for tool/functio
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the OpenAIProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.openai.name">
       <data key="d0">function</data>
@@ -28028,7 +28134,7 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the OpenRouterProvider instance.</data>
     </node>
     <node id="src.intellicrack.providers.openrouter.name">
       <data key="d0">function</data>
@@ -28224,7 +28330,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'credential_loader']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ProviderRegistry with an optional credential loader.
+
+Args:
+    credential_loader: Optional credential loader for auto-connecting providers.</data>
     </node>
     <node id="src.intellicrack.providers.registry.register">
       <data key="d0">function</data>
@@ -29258,7 +29367,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'config']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SandboxBase with optional configuration.
+
+Args:
+    config: Optional sandbox configuration.</data>
     </node>
     <node id="src.intellicrack.sandbox.base.state">
       <data key="d0">function</data>
@@ -29568,7 +29680,11 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'default_config', 'max_instances']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SandboxManager with default configuration and instance limits.
+
+Args:
+    default_config: Default configuration for new sandboxes. If None, uses SandboxConfig defaults.
+    max_instances: Maximum number of concurrent sandbox instances allowed.</data>
     </node>
     <node id="src.intellicrack.sandbox.manager.state">
       <data key="d0">function</data>
@@ -30709,7 +30825,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'config']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the WindowsSandbox with the given configuration.
+
+Args:
+    config: Sandbox configuration for execution settings. If None, uses defaults.</data>
     </node>
     <node id="src.intellicrack.sandbox.windows.is_available">
       <data key="d0">function</data>
@@ -31108,7 +31227,12 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'config', 'orchestrator', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the MainWindow with the given configuration and orchestrator.
+
+Args:
+    config: Application configuration.
+    orchestrator: AI agent orchestrator.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.app.run">
       <data key="d0">function</data>
@@ -32160,7 +32284,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ChatPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.chat._setup_ui">
       <data key="d0">function</data>
@@ -32385,7 +32512,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'call', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ToolConfirmationDialog with the given tool call.
+
+Args:
+    call: The tool call to confirm.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.confirmation_dialog.approved">
       <data key="d0">function</data>
@@ -32551,7 +32682,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexPatSyntaxHighlighter with HexPat pattern language highlighting rules.
+
+Args:
+    parent: Parent QTextDocument to highlight.</data>
     </node>
     <node id="src.intellicrack.ui.highlighter._create_format">
       <data key="d0">function</data>
@@ -32638,7 +32772,12 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'panel', 'title', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the DetachedPanelWindow with the given panel and title.
+
+Args:
+    panel: The widget to display in the detached window.
+    title: Window title displayed in the title bar.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panel_dock.panel">
       <data key="d0">function</data>
@@ -32800,7 +32939,11 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'config', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the PreferencesDialog with application configuration.
+
+Args:
+    config: Application configuration instance.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.preferences._setup_ui">
       <data key="d0">function</data>
@@ -33034,7 +33177,14 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'models', 'current_model', 'provider_name', 'discovery', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ModelSelectionDialog with available models.
+
+Args:
+    models: List of available models to display.
+    current_model: Currently selected model identifier.
+    provider_name: Name of the provider these models belong to.
+    discovery: Optional model discovery service for filtering and recommendations.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.provider_config._load_env_file_vars">
       <data key="d0">function</data>
@@ -33926,7 +34076,11 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'sandbox_manager', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SandboxMonitorWidget with an optional sandbox manager.
+
+Args:
+    sandbox_manager: Sandbox manager instance for monitoring.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.sandbox_config.run">
       <data key="d0">function</data>
@@ -34174,7 +34328,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the NewSessionDialog.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.session_manager._setup_ui">
       <data key="d0">function</data>
@@ -34782,7 +34939,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ToolOutputPanel.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.tools._setup_ui">
       <data key="d0">function</data>
@@ -35750,7 +35910,11 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'tool_registry', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ToolStatusDialog.
+
+Args:
+    tool_registry: Optional registry of available analysis tools.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.tool_config.run">
       <data key="d0">function</data>
@@ -36149,7 +36313,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the XPUStatusDialog with device and memory status display.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.xpu_status._setup_ui">
       <data key="d0">function</data>
@@ -36382,7 +36549,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'version']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SplashScreen with the given version string.
+
+Args:
+    version: Application version string to display.</data>
     </node>
     <node id="src.intellicrack.ui.dialogs.splash_screen._load_splash_image">
       <data key="d0">function</data>
@@ -36789,7 +36959,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the AnalysisPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.analysis_panel._setup_ui">
       <data key="d0">function</data>
@@ -37092,7 +37265,11 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'coro', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the AsyncBridgeWorker with the given coroutine.
+
+Args:
+    coro: Coroutine to execute on the persistent event loop.
+    parent: Parent QObject.</data>
     </node>
     <node id="src.intellicrack.ui.panels.async_bridge.run">
       <data key="d0">function</data>
@@ -37134,7 +37311,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the BaseToolPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.base_panel._setup_ui">
       <data key="d0">function</data>
@@ -37353,7 +37533,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the CutterPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.cutter_panel._populate_toolbar">
       <data key="d0">function</data>
@@ -38075,7 +38258,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SegmentsTab with a table for segment display.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.cutter_tabs.refresh">
       <data key="d0">function</data>
@@ -38204,7 +38390,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the FridaPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.frida_panel._populate_toolbar">
       <data key="d0">function</data>
@@ -39174,7 +39363,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the GhidraPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.ghidra_panel._populate_toolbar">
       <data key="d0">function</data>
@@ -40399,7 +40591,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the CFGGraphView widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.graph_view.paint">
       <data key="d0">function</data>
@@ -40595,7 +40790,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexEditorWidget instance.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor_widget.refresh_colors">
       <data key="d0">function</data>
@@ -41468,7 +41666,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HxDPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hxd_panel._setup_ui">
       <data key="d0">function</data>
@@ -41784,7 +41985,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SandboxPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.sandbox_panel._populate_toolbar">
       <data key="d0">function</data>
@@ -42786,7 +42990,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ScriptManagerPanel.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.script_manager._setup_ui">
       <data key="d0">function</data>
@@ -43151,7 +43358,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the StackViewerPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.stack_viewer.set_bridge">
       <data key="d0">function</data>
@@ -43371,7 +43581,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the VNCWidget instance.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.vnc_widget.connected">
       <data key="d0">function</data>
@@ -43658,7 +43871,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the X64DbgPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.x64dbg_panel._populate_toolbar">
       <data key="d0">function</data>
@@ -44890,7 +45106,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the HexEditorPanel widget.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor.panel._populate_toolbar">
       <data key="d0">function</data>
@@ -45519,7 +45738,14 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'data_a', 'data_b', 'path_a', 'path_b', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the DiffWorker with two file buffers.
+
+Args:
+    data_a: First file contents.
+    data_b: Second file contents.
+    path_a: Display path for first file.
+    path_b: Display path for second file.
+    parent: Parent QObject.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._comparison.run">
       <data key="d0">function</data>
@@ -46131,7 +46357,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ProcessMemoryDialog.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._process_memory._on_list_regions">
       <data key="d0">function</data>
@@ -46237,7 +46466,16 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'operation', 'file_path', 'sandbox_type', 'dest_path', 'command_args', 'timeout', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SandboxWorker with operation parameters.
+
+Args:
+    operation: Either ``"save"`` or ``"test"``.
+    file_path: Path to the binary file.
+    sandbox_type: Sandbox backend (``"docker"``, ``"qemu"``, ``"windows_sandbox"``).
+    dest_path: Destination path inside the sandbox.
+    command_args: Command-line arguments for test execution.
+    timeout: Maximum wait time in seconds.
+    parent: Parent QObject.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._sandbox.run">
       <data key="d0">function</data>
@@ -46393,7 +46631,12 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'source', 'doc_api', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ScriptWorker with script source and document API.
+
+Args:
+    source: Python script source code to execute.
+    doc_api: Document API providing safe hex document access.
+    parent: Parent QObject.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._scripting._build_rules">
       <data key="d0">function</data>
@@ -46727,7 +46970,18 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'document', 'min_val', 'max_val', 'fmt', 'byte_width', 'alignment', 'max_results']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the NumericSearchWorker with numeric search parameters.
+
+Args:
+    document: Hex document to search within.
+    min_val: Minimum numeric value to match.
+    max_val: Maximum numeric value to match.
+    fmt: Struct format string for packing/unpacking.
+    byte_width: Width in bytes of the numeric type.
+    alignment: Byte alignment for scan positions.
+    max_results: Maximum number of results to return.
+    use_native: Whether to use native Rust search backend.
+    size: Size of the n...</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._search.run">
       <data key="d0">function</data>
@@ -47001,7 +47255,13 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'doc_data', 'db_type', 'db_path', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SignatureScanWorker with document data and database info.
+
+Args:
+    doc_data: Full document contents as bytes.
+    db_type: Database format (``"die"``, ``"clamav"``, ``"custom"``).
+    db_path: Path to the signature database file.
+    parent: Parent QObject.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._signatures.run">
       <data key="d0">function</data>
@@ -47189,7 +47449,12 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'document', 'entropy_block_size', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the StatisticsWorker with document and block size.
+
+Args:
+    document: Hex document to compute statistics for.
+    entropy_block_size: Block size in bytes for entropy calculation.
+    parent: Parent QObject.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._statistics.run">
       <data key="d0">function</data>
@@ -47831,7 +48096,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the _BlockSwapDialog.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._transforms.get_values">
       <data key="d0">function</data>
@@ -47951,7 +48219,13 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'current_chunk_kb', 'current_budget_mb', 'current_usage_mb', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the LargeFileSettingsDialog with current memory settings.
+
+Args:
+    current_chunk_kb: Current chunk size in kilobytes.
+    current_budget_mb: Current memory budget in megabytes.
+    current_usage_mb: Current memory usage in megabytes.
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.hex_editor._widgets.set_data">
       <data key="d0">function</data>
@@ -48204,7 +48478,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ProcessPanel.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._base.set_bridge">
       <data key="d0">function</data>
@@ -48353,7 +48630,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the MemoryTab.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._memory_tab.set_bridge">
       <data key="d0">function</data>
@@ -48536,7 +48816,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ModulesTab.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._modules_tab.set_bridge">
       <data key="d0">function</data>
@@ -48720,7 +49003,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ProcessTab.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._process_tab.set_bridge">
       <data key="d0">function</data>
@@ -49009,7 +49295,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the SystemTab.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._system_tab.set_bridge">
       <data key="d0">function</data>
@@ -49296,7 +49585,10 @@ Args:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ThreadsTab.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._threads_tab.set_bridge">
       <data key="d0">function</data>
@@ -49504,7 +49796,10 @@ Attributes:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'parent']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the TrackedRefreshWorker.
+
+Args:
+    parent: Parent widget.</data>
     </node>
     <node id="src.intellicrack.ui.panels.process_panel._workers.run">
       <data key="d0">function</data>
@@ -49546,7 +49841,7 @@ Handles loading custom fonts from the assets directory and provides font instanc
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the FontManager instance.</data>
     </node>
     <node id="src.intellicrack.ui.resources.font_manager.get_instance">
       <data key="d0">function</data>
@@ -49760,7 +50055,7 @@ icon files are not available.</data>
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the IconManager instance.</data>
     </node>
     <node id="src.intellicrack.ui.resources.icon_manager.get_instance">
       <data key="d0">function</data>
@@ -50058,7 +50353,10 @@ Returns:
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self', 'searched_paths']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the AssetsNotFoundError with the searched paths.
+
+Args:
+    searched_paths: List of paths that were searched.</data>
     </node>
     <node id="src.intellicrack.ui.resources.theme_manager">
       <data key="d0">module</data>
@@ -50082,7 +50380,7 @@ Manages theme loading, switching, and application-wide stylesheet management.</d
       <data key="d1">python</data>
       <data key="d3">__init__</data>
       <data key="d5">['self']</data>
-      <data key="d4" />
+      <data key="d4">Initialize the ThemeManager instance.</data>
     </node>
     <node id="src.intellicrack.ui.resources.theme_manager.get_instance">
       <data key="d0">function</data>

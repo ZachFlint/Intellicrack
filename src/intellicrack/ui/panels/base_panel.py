@@ -63,6 +63,11 @@ class AnalysisPanelBase(QWidget):
     tool_closed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the BaseToolPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.status_label: QLabel | None = None
         self._setup_ui()

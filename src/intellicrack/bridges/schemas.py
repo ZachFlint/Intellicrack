@@ -156,6 +156,13 @@ class ValidationError:
         location: str,
         severity: Literal["error", "warning"] = "error",
     ) -> None:
+        """Initialize the ValidationError with the given details.
+
+        Args:
+            message: Error description.
+            location: Where the error occurred (e.g., "func.param").
+            severity: Error severity level.
+        """
         self.message = message
         self.location = location
         self.severity = severity

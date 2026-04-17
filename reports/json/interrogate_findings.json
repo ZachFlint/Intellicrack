@@ -1,6 +1,6 @@
 {
   "tool": "interrogate",
-  "generated": "2026-04-15T03:35:31.345468+00:00",
+  "generated": "2026-04-17T05:37:00.051484+00:00",
   "total_findings": 137,
   "total_files": 32,
   "files": [
@@ -9,130 +9,130 @@
       "count": 18,
       "findings": [
         {
-          "line": 735,
+          "line": 748,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'",
-          "raw": "ui\\app.py:735: INT001 Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'"
+          "raw": "ui\\app.py:748: INT001 Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'"
         },
         {
-          "line": 745,
+          "line": 758,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'",
-          "raw": "ui\\app.py:745: INT001 Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'"
+          "raw": "ui\\app.py:758: INT001 Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'"
         },
         {
-          "line": 786,
+          "line": 799,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._refresh_system_status.fetch_status'",
-          "raw": "ui\\app.py:786: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'"
+          "raw": "ui\\app.py:799: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'"
         },
         {
-          "line": 942,
+          "line": 955,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'",
-          "raw": "ui\\app.py:942: INT001 Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'"
+          "raw": "ui\\app.py:955: INT001 Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'"
         },
         {
-          "line": 969,
+          "line": 982,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_user_message.process'",
-          "raw": "ui\\app.py:969: INT001 Missing docstring for 'MainWindow._on_user_message.process'"
+          "raw": "ui\\app.py:982: INT001 Missing docstring for 'MainWindow._on_user_message.process'"
         },
         {
-          "line": 1109,
+          "line": 1122,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._load_binary.load'",
-          "raw": "ui\\app.py:1109: INT001 Missing docstring for 'MainWindow._load_binary.load'"
+          "raw": "ui\\app.py:1122: INT001 Missing docstring for 'MainWindow._load_binary.load'"
         },
         {
-          "line": 1146,
+          "line": 1159,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_new_session.create_session'",
-          "raw": "ui\\app.py:1146: INT001 Missing docstring for 'MainWindow._on_new_session.create_session'"
+          "raw": "ui\\app.py:1159: INT001 Missing docstring for 'MainWindow._on_new_session.create_session'"
         },
         {
-          "line": 1161,
+          "line": 1174,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_load_session.load_session'",
-          "raw": "ui\\app.py:1161: INT001 Missing docstring for 'MainWindow._on_load_session.load_session'"
+          "raw": "ui\\app.py:1174: INT001 Missing docstring for 'MainWindow._on_load_session.load_session'"
         },
         {
-          "line": 1172,
+          "line": 1185,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_save_session.save_session'",
-          "raw": "ui\\app.py:1172: INT001 Missing docstring for 'MainWindow._on_save_session.save_session'"
+          "raw": "ui\\app.py:1185: INT001 Missing docstring for 'MainWindow._on_save_session.save_session'"
         },
         {
-          "line": 1360,
+          "line": 1373,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'",
-          "raw": "ui\\app.py:1360: INT001 Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'"
+          "raw": "ui\\app.py:1373: INT001 Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'"
         },
         {
-          "line": 1444,
+          "line": 1457,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'",
-          "raw": "ui\\app.py:1444: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'"
+          "raw": "ui\\app.py:1457: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'"
         },
         {
-          "line": 1533,
+          "line": 1546,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'",
-          "raw": "ui\\app.py:1533: INT001 Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'"
+          "raw": "ui\\app.py:1546: INT001 Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'"
         },
         {
-          "line": 1564,
+          "line": 1577,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_browse_models.fetch'",
-          "raw": "ui\\app.py:1564: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'"
+          "raw": "ui\\app.py:1577: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'"
         },
         {
-          "line": 1669,
+          "line": 1682,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'",
-          "raw": "ui\\app.py:1669: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'"
+          "raw": "ui\\app.py:1682: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'"
         },
         {
-          "line": 1675,
+          "line": 1688,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'",
-          "raw": "ui\\app.py:1675: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'"
+          "raw": "ui\\app.py:1688: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'"
         },
         {
-          "line": 1693,
+          "line": 1706,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'",
-          "raw": "ui\\app.py:1693: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'"
+          "raw": "ui\\app.py:1706: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'"
         },
         {
-          "line": 1964,
+          "line": 1977,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_process_attached._on_done'",
-          "raw": "ui\\app.py:1964: INT001 Missing docstring for 'MainWindow._on_process_attached._on_done'"
+          "raw": "ui\\app.py:1977: INT001 Missing docstring for 'MainWindow._on_process_attached._on_done'"
         },
         {
-          "line": 2096,
+          "line": 2109,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MainWindow._on_cancel.cancel'",
-          "raw": "ui\\app.py:2096: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'"
+          "raw": "ui\\app.py:2109: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'"
         }
       ]
     },
@@ -141,102 +141,102 @@
       "count": 14,
       "findings": [
         {
-          "line": 1899,
+          "line": 1916,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_sizeof'",
-          "raw": "core\\hexpat\\evaluator.py:1899: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_sizeof'"
-        },
-        {
-          "line": 1902,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_addressof'",
-          "raw": "core\\hexpat\\evaluator.py:1902: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_addressof'"
-        },
-        {
-          "line": 1905,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_typenameof'",
-          "raw": "core\\hexpat\\evaluator.py:1905: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_typenameof'"
-        },
-        {
-          "line": 1911,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_assert'",
-          "raw": "core\\hexpat\\evaluator.py:1911: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_assert'"
+          "raw": "core\\hexpat\\evaluator.py:1916: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_sizeof'"
         },
         {
           "line": 1919,
           "column": null,
           "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_print'",
-          "raw": "core\\hexpat\\evaluator.py:1919: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_print'"
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_addressof'",
+          "raw": "core\\hexpat\\evaluator.py:1919: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_addressof'"
         },
         {
           "line": 1922,
           "column": null,
           "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_format'",
-          "raw": "core\\hexpat\\evaluator.py:1922: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_format'"
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_typenameof'",
+          "raw": "core\\hexpat\\evaluator.py:1922: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_typenameof'"
         },
         {
-          "line": 1937,
+          "line": 1928,
+          "column": null,
+          "code": "INT001",
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_assert'",
+          "raw": "core\\hexpat\\evaluator.py:1928: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_assert'"
+        },
+        {
+          "line": 1936,
+          "column": null,
+          "code": "INT001",
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_print'",
+          "raw": "core\\hexpat\\evaluator.py:1936: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_print'"
+        },
+        {
+          "line": 1939,
+          "column": null,
+          "code": "INT001",
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_format'",
+          "raw": "core\\hexpat\\evaluator.py:1939: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_format'"
+        },
+        {
+          "line": 1954,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_unsigned'",
-          "raw": "core\\hexpat\\evaluator.py:1937: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_unsigned'"
+          "raw": "core\\hexpat\\evaluator.py:1954: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_unsigned'"
         },
         {
-          "line": 1947,
+          "line": 1964,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_signed'",
-          "raw": "core\\hexpat\\evaluator.py:1947: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_signed'"
+          "raw": "core\\hexpat\\evaluator.py:1964: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_signed'"
         },
         {
-          "line": 1957,
+          "line": 1974,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_string'",
-          "raw": "core\\hexpat\\evaluator.py:1957: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_string'"
+          "raw": "core\\hexpat\\evaluator.py:1974: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_read_string'"
         },
         {
-          "line": 1966,
+          "line": 1983,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_find_sequence'",
-          "raw": "core\\hexpat\\evaluator.py:1966: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_find_sequence'"
-        },
-        {
-          "line": 1976,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_min'",
-          "raw": "core\\hexpat\\evaluator.py:1976: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_min'"
-        },
-        {
-          "line": 1980,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_max'",
-          "raw": "core\\hexpat\\evaluator.py:1980: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_max'"
-        },
-        {
-          "line": 1984,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_abs'",
-          "raw": "core\\hexpat\\evaluator.py:1984: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_abs'"
+          "raw": "core\\hexpat\\evaluator.py:1983: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_find_sequence'"
         },
         {
           "line": 1993,
           "column": null,
           "code": "INT001",
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_min'",
+          "raw": "core\\hexpat\\evaluator.py:1993: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_min'"
+        },
+        {
+          "line": 1997,
+          "column": null,
+          "code": "INT001",
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_max'",
+          "raw": "core\\hexpat\\evaluator.py:1997: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_max'"
+        },
+        {
+          "line": 2001,
+          "column": null,
+          "code": "INT001",
+          "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_abs'",
+          "raw": "core\\hexpat\\evaluator.py:2001: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_abs'"
+        },
+        {
+          "line": 2010,
+          "column": null,
+          "code": "INT001",
           "message": "Missing docstring for 'HexPatEvaluator._build_builtins.builtin_strlen'",
-          "raw": "core\\hexpat\\evaluator.py:1993: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_strlen'"
+          "raw": "core\\hexpat\\evaluator.py:2010: INT001 Missing docstring for 'HexPatEvaluator._build_builtins.builtin_strlen'"
         }
       ]
     },
@@ -245,95 +245,95 @@
       "count": 13,
       "findings": [
         {
-          "line": 475,
+          "line": 480,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._refresh_privileges._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:475: INT001 Missing docstring for 'SystemTab._refresh_privileges._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:480: INT001 Missing docstring for 'SystemTab._refresh_privileges._on_success'"
         },
         {
-          "line": 518,
+          "line": 523,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._refresh_windows._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:518: INT001 Missing docstring for 'SystemTab._refresh_windows._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:523: INT001 Missing docstring for 'SystemTab._refresh_windows._on_success'"
         },
         {
-          "line": 542,
+          "line": 547,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._refresh_services._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:542: INT001 Missing docstring for 'SystemTab._refresh_services._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:547: INT001 Missing docstring for 'SystemTab._refresh_services._on_success'"
         },
         {
-          "line": 570,
+          "line": 575,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_read_peb._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:570: INT001 Missing docstring for 'SystemTab._on_read_peb._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:575: INT001 Missing docstring for 'SystemTab._on_read_peb._on_success'"
         },
         {
-          "line": 594,
+          "line": 599,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_read_teb._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:594: INT001 Missing docstring for 'SystemTab._on_read_teb._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:599: INT001 Missing docstring for 'SystemTab._on_read_teb._on_success'"
         },
         {
-          "line": 613,
+          "line": 618,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_pipe_connect._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:613: INT001 Missing docstring for 'SystemTab._on_pipe_connect._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:618: INT001 Missing docstring for 'SystemTab._on_pipe_connect._on_success'"
         },
         {
-          "line": 649,
+          "line": 654,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._refresh_mitigations._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:649: INT001 Missing docstring for 'SystemTab._refresh_mitigations._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:654: INT001 Missing docstring for 'SystemTab._refresh_mitigations._on_success'"
         },
         {
-          "line": 681,
+          "line": 686,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_reg_read._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:681: INT001 Missing docstring for 'SystemTab._on_reg_read._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:686: INT001 Missing docstring for 'SystemTab._on_reg_read._on_success'"
         },
         {
-          "line": 699,
+          "line": 704,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_reg_enum_keys._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:699: INT001 Missing docstring for 'SystemTab._on_reg_enum_keys._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:704: INT001 Missing docstring for 'SystemTab._on_reg_enum_keys._on_success'"
         },
         {
-          "line": 716,
+          "line": 721,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_reg_enum_values._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:716: INT001 Missing docstring for 'SystemTab._on_reg_enum_values._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:721: INT001 Missing docstring for 'SystemTab._on_reg_enum_values._on_success'"
         },
         {
-          "line": 730,
+          "line": 735,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_gui_resources._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:730: INT001 Missing docstring for 'SystemTab._on_gui_resources._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:735: INT001 Missing docstring for 'SystemTab._on_gui_resources._on_success'"
         },
         {
-          "line": 750,
+          "line": 755,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_job_info._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:750: INT001 Missing docstring for 'SystemTab._on_job_info._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:755: INT001 Missing docstring for 'SystemTab._on_job_info._on_success'"
         },
         {
-          "line": 771,
+          "line": 776,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SystemTab._on_raw_query._on_success'",
-          "raw": "ui\\panels\\process_panel\\_system_tab.py:771: INT001 Missing docstring for 'SystemTab._on_raw_query._on_success'"
+          "raw": "ui\\panels\\process_panel\\_system_tab.py:776: INT001 Missing docstring for 'SystemTab._on_raw_query._on_success'"
         }
       ]
     },
@@ -342,81 +342,81 @@
       "count": 11,
       "findings": [
         {
-          "line": 168,
+          "line": 173,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._build_system_tab._auto_slot'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:168: INT001 Missing docstring for 'ProcessTab._build_system_tab._auto_slot'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:173: INT001 Missing docstring for 'ProcessTab._build_system_tab._auto_slot'"
         },
         {
-          "line": 251,
+          "line": 256,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._build_tracked_tab._tracked_auto_slot'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:251: INT001 Missing docstring for 'ProcessTab._build_tracked_tab._tracked_auto_slot'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:256: INT001 Missing docstring for 'ProcessTab._build_tracked_tab._tracked_auto_slot'"
         },
         {
-          "line": 324,
+          "line": 329,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_refresh._on_success'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:324: INT001 Missing docstring for 'ProcessTab._on_refresh._on_success'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:329: INT001 Missing docstring for 'ProcessTab._on_refresh._on_success'"
         },
         {
-          "line": 331,
+          "line": 336,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_refresh._on_error'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:331: INT001 Missing docstring for 'ProcessTab._on_refresh._on_error'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:336: INT001 Missing docstring for 'ProcessTab._on_refresh._on_error'"
         },
         {
-          "line": 439,
+          "line": 444,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_attach._on_success'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:439: INT001 Missing docstring for 'ProcessTab._on_attach._on_success'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:444: INT001 Missing docstring for 'ProcessTab._on_attach._on_success'"
         },
         {
-          "line": 443,
+          "line": 448,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_attach._on_error'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:443: INT001 Missing docstring for 'ProcessTab._on_attach._on_error'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:448: INT001 Missing docstring for 'ProcessTab._on_attach._on_error'"
         },
         {
-          "line": 458,
+          "line": 463,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_detach._on_success'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:458: INT001 Missing docstring for 'ProcessTab._on_detach._on_success'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:463: INT001 Missing docstring for 'ProcessTab._on_detach._on_success'"
         },
         {
-          "line": 492,
+          "line": 497,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_terminate._on_success'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:492: INT001 Missing docstring for 'ProcessTab._on_terminate._on_success'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:497: INT001 Missing docstring for 'ProcessTab._on_terminate._on_success'"
         },
         {
-          "line": 518,
+          "line": 523,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._on_inject_dll._on_success'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:518: INT001 Missing docstring for 'ProcessTab._on_inject_dll._on_success'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:523: INT001 Missing docstring for 'ProcessTab._on_inject_dll._on_success'"
         },
         {
-          "line": 532,
+          "line": 537,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._load_process_info._on_info'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:532: INT001 Missing docstring for 'ProcessTab._load_process_info._on_info'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:537: INT001 Missing docstring for 'ProcessTab._load_process_info._on_info'"
         },
         {
-          "line": 549,
+          "line": 554,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProcessTab._load_process_info._on_env'",
-          "raw": "ui\\panels\\process_panel\\_process_tab.py:549: INT001 Missing docstring for 'ProcessTab._load_process_info._on_env'"
+          "raw": "ui\\panels\\process_panel\\_process_tab.py:554: INT001 Missing docstring for 'ProcessTab._load_process_info._on_env'"
         }
       ]
     },
@@ -425,60 +425,60 @@
       "count": 8,
       "findings": [
         {
-          "line": 866,
+          "line": 895,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'",
-          "raw": "ui\\provider_config.py:866: INT001 Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'"
+          "raw": "ui\\provider_config.py:895: INT001 Missing docstring for 'ProviderConfigDialog._load_credential_overview._load_store_credentials'"
         },
         {
-          "line": 1006,
+          "line": 1035,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderConfigDialog._load_providers._conn_tested_slot'",
-          "raw": "ui\\provider_config.py:1006: INT001 Missing docstring for 'ProviderConfigDialog._load_providers._conn_tested_slot'"
+          "raw": "ui\\provider_config.py:1035: INT001 Missing docstring for 'ProviderConfigDialog._load_providers._conn_tested_slot'"
         },
         {
-          "line": 1277,
+          "line": 1306,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'",
-          "raw": "ui\\provider_config.py:1277: INT001 Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'"
+          "raw": "ui\\provider_config.py:1306: INT001 Missing docstring for 'ProviderConfigDialog.discover_single_provider._discover'"
         },
         {
-          "line": 1316,
+          "line": 1345,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'",
-          "raw": "ui\\provider_config.py:1316: INT001 Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'"
+          "raw": "ui\\provider_config.py:1345: INT001 Missing docstring for 'ProviderConfigDialog.start_oauth_flow._run_oauth'"
         },
         {
-          "line": 1415,
+          "line": 1454,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderSettingsWidget._setup_ui._key_visibility_slot'",
-          "raw": "ui\\provider_config.py:1415: INT001 Missing docstring for 'ProviderSettingsWidget._setup_ui._key_visibility_slot'"
+          "raw": "ui\\provider_config.py:1454: INT001 Missing docstring for 'ProviderSettingsWidget._setup_ui._key_visibility_slot'"
         },
         {
-          "line": 2020,
+          "line": 2059,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderSettingsWidget._refresh_models._refresh_finished_slot'",
-          "raw": "ui\\provider_config.py:2020: INT001 Missing docstring for 'ProviderSettingsWidget._refresh_models._refresh_finished_slot'"
+          "raw": "ui\\provider_config.py:2059: INT001 Missing docstring for 'ProviderSettingsWidget._refresh_models._refresh_finished_slot'"
         },
         {
-          "line": 2097,
+          "line": 2136,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderSettingsWidget._test_connection._test_finished_slot'",
-          "raw": "ui\\provider_config.py:2097: INT001 Missing docstring for 'ProviderSettingsWidget._test_connection._test_finished_slot'"
+          "raw": "ui\\provider_config.py:2136: INT001 Missing docstring for 'ProviderSettingsWidget._test_connection._test_finished_slot'"
         },
         {
-          "line": 2328,
+          "line": 2367,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'",
-          "raw": "ui\\provider_config.py:2328: INT001 Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'"
+          "raw": "ui\\provider_config.py:2367: INT001 Missing docstring for 'ProviderSettingsWidget.get_openrouter_generation._fetch'"
         }
       ]
     },
@@ -487,53 +487,53 @@
       "count": 7,
       "findings": [
         {
-          "line": 369,
+          "line": 374,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._refresh_regions._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:369: INT001 Missing docstring for 'MemoryTab._refresh_regions._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:374: INT001 Missing docstring for 'MemoryTab._refresh_regions._on_success'"
         },
         {
-          "line": 407,
+          "line": 412,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._on_read._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:407: INT001 Missing docstring for 'MemoryTab._on_read._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:412: INT001 Missing docstring for 'MemoryTab._on_read._on_success'"
         },
         {
-          "line": 470,
+          "line": 475,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._on_write._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:470: INT001 Missing docstring for 'MemoryTab._on_write._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:475: INT001 Missing docstring for 'MemoryTab._on_write._on_success'"
         },
         {
-          "line": 483,
+          "line": 488,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._on_allocate._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:483: INT001 Missing docstring for 'MemoryTab._on_allocate._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:488: INT001 Missing docstring for 'MemoryTab._on_allocate._on_success'"
         },
         {
-          "line": 515,
+          "line": 520,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._on_free._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:515: INT001 Missing docstring for 'MemoryTab._on_free._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:520: INT001 Missing docstring for 'MemoryTab._on_free._on_success'"
         },
         {
-          "line": 548,
+          "line": 553,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._on_protect._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:548: INT001 Missing docstring for 'MemoryTab._on_protect._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:553: INT001 Missing docstring for 'MemoryTab._on_protect._on_success'"
         },
         {
-          "line": 569,
+          "line": 574,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'MemoryTab._on_search._on_success'",
-          "raw": "ui\\panels\\process_panel\\_memory_tab.py:569: INT001 Missing docstring for 'MemoryTab._on_search._on_success'"
+          "raw": "ui\\panels\\process_panel\\_memory_tab.py:574: INT001 Missing docstring for 'MemoryTab._on_search._on_success'"
         }
       ]
     },
@@ -542,53 +542,53 @@
       "count": 7,
       "findings": [
         {
-          "line": 283,
+          "line": 288,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._refresh_modules._on_success'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:283: INT001 Missing docstring for 'ModulesTab._refresh_modules._on_success'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:288: INT001 Missing docstring for 'ModulesTab._refresh_modules._on_success'"
         },
         {
-          "line": 336,
+          "line": 341,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._on_inject._on_success'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:336: INT001 Missing docstring for 'ModulesTab._on_inject._on_success'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:341: INT001 Missing docstring for 'ModulesTab._on_inject._on_success'"
         },
         {
-          "line": 343,
+          "line": 348,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._on_inject._on_error'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:343: INT001 Missing docstring for 'ModulesTab._on_inject._on_error'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:348: INT001 Missing docstring for 'ModulesTab._on_inject._on_error'"
         },
         {
-          "line": 357,
+          "line": 362,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._refresh_handles._on_success'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:357: INT001 Missing docstring for 'ModulesTab._refresh_handles._on_success'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:362: INT001 Missing docstring for 'ModulesTab._refresh_handles._on_success'"
         },
         {
-          "line": 387,
+          "line": 392,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._refresh_heaps._on_success'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:387: INT001 Missing docstring for 'ModulesTab._refresh_heaps._on_success'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:392: INT001 Missing docstring for 'ModulesTab._refresh_heaps._on_success'"
         },
         {
-          "line": 410,
+          "line": 415,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._refresh_com._on_success'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:410: INT001 Missing docstring for 'ModulesTab._refresh_com._on_success'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:415: INT001 Missing docstring for 'ModulesTab._refresh_com._on_success'"
         },
         {
-          "line": 431,
+          "line": 436,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ModulesTab._refresh_dotnet._on_success'",
-          "raw": "ui\\panels\\process_panel\\_modules_tab.py:431: INT001 Missing docstring for 'ModulesTab._refresh_dotnet._on_success'"
+          "raw": "ui\\panels\\process_panel\\_modules_tab.py:436: INT001 Missing docstring for 'ModulesTab._refresh_dotnet._on_success'"
         }
       ]
     },
@@ -597,46 +597,46 @@
       "count": 6,
       "findings": [
         {
-          "line": 345,
+          "line": 350,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ThreadsTab._refresh_threads._on_success'",
-          "raw": "ui\\panels\\process_panel\\_threads_tab.py:345: INT001 Missing docstring for 'ThreadsTab._refresh_threads._on_success'"
+          "raw": "ui\\panels\\process_panel\\_threads_tab.py:350: INT001 Missing docstring for 'ThreadsTab._refresh_threads._on_success'"
         },
         {
-          "line": 390,
+          "line": 395,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ThreadsTab._refresh_registers._on_success'",
-          "raw": "ui\\panels\\process_panel\\_threads_tab.py:390: INT001 Missing docstring for 'ThreadsTab._refresh_registers._on_success'"
+          "raw": "ui\\panels\\process_panel\\_threads_tab.py:395: INT001 Missing docstring for 'ThreadsTab._refresh_registers._on_success'"
         },
         {
-          "line": 443,
+          "line": 448,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ThreadsTab._on_stack_walk._on_success'",
-          "raw": "ui\\panels\\process_panel\\_threads_tab.py:443: INT001 Missing docstring for 'ThreadsTab._on_stack_walk._on_success'"
+          "raw": "ui\\panels\\process_panel\\_threads_tab.py:448: INT001 Missing docstring for 'ThreadsTab._on_stack_walk._on_success'"
         },
         {
-          "line": 476,
+          "line": 481,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ThreadsTab._on_seh_enumerate._on_success'",
-          "raw": "ui\\panels\\process_panel\\_threads_tab.py:476: INT001 Missing docstring for 'ThreadsTab._on_seh_enumerate._on_success'"
+          "raw": "ui\\panels\\process_panel\\_threads_tab.py:481: INT001 Missing docstring for 'ThreadsTab._on_seh_enumerate._on_success'"
         },
         {
-          "line": 506,
+          "line": 511,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ThreadsTab._on_fiber._on_success'",
-          "raw": "ui\\panels\\process_panel\\_threads_tab.py:506: INT001 Missing docstring for 'ThreadsTab._on_fiber._on_success'"
+          "raw": "ui\\panels\\process_panel\\_threads_tab.py:511: INT001 Missing docstring for 'ThreadsTab._on_fiber._on_success'"
         },
         {
-          "line": 528,
+          "line": 533,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ThreadsTab._on_tls._on_success'",
-          "raw": "ui\\panels\\process_panel\\_threads_tab.py:528: INT001 Missing docstring for 'ThreadsTab._on_tls._on_success'"
+          "raw": "ui\\panels\\process_panel\\_threads_tab.py:533: INT001 Missing docstring for 'ThreadsTab._on_tls._on_success'"
         }
       ]
     },
@@ -645,39 +645,39 @@
       "count": 5,
       "findings": [
         {
-          "line": 264,
+          "line": 269,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'CredentialStore._get_from_keyring._fetch'",
-          "raw": "credentials\\store.py:264: INT001 Missing docstring for 'CredentialStore._get_from_keyring._fetch'"
+          "raw": "credentials\\store.py:269: INT001 Missing docstring for 'CredentialStore._get_from_keyring._fetch'"
         },
         {
-          "line": 315,
+          "line": 320,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'CredentialStore._set_to_keyring._store'",
-          "raw": "credentials\\store.py:315: INT001 Missing docstring for 'CredentialStore._set_to_keyring._store'"
+          "raw": "credentials\\store.py:320: INT001 Missing docstring for 'CredentialStore._set_to_keyring._store'"
         },
         {
-          "line": 342,
+          "line": 347,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'CredentialStore._get_metadata._fetch'",
-          "raw": "credentials\\store.py:342: INT001 Missing docstring for 'CredentialStore._get_metadata._fetch'"
+          "raw": "credentials\\store.py:347: INT001 Missing docstring for 'CredentialStore._get_metadata._fetch'"
         },
         {
-          "line": 439,
+          "line": 444,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'CredentialStore.delete._delete'",
-          "raw": "credentials\\store.py:439: INT001 Missing docstring for 'CredentialStore.delete._delete'"
+          "raw": "credentials\\store.py:444: INT001 Missing docstring for 'CredentialStore.delete._delete'"
         },
         {
-          "line": 598,
+          "line": 603,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for '_CredentialStoreHolder'",
-          "raw": "credentials\\store.py:598: INT001 Missing docstring for '_CredentialStoreHolder'"
+          "raw": "credentials\\store.py:603: INT001 Missing docstring for '_CredentialStoreHolder'"
         }
       ]
     },
@@ -686,39 +686,39 @@
       "count": 5,
       "findings": [
         {
-          "line": 456,
+          "line": 461,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexEditorPanel._build_side_panels._on_log_toggled'",
-          "raw": "ui\\panels\\hex_editor\\panel.py:456: INT001 Missing docstring for 'HexEditorPanel._build_side_panels._on_log_toggled'"
+          "raw": "ui\\panels\\hex_editor\\panel.py:461: INT001 Missing docstring for 'HexEditorPanel._build_side_panels._on_log_toggled'"
         },
         {
-          "line": 459,
+          "line": 464,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexEditorPanel._build_side_panels._log_toggled_slot'",
-          "raw": "ui\\panels\\hex_editor\\panel.py:459: INT001 Missing docstring for 'HexEditorPanel._build_side_panels._log_toggled_slot'"
+          "raw": "ui\\panels\\hex_editor\\panel.py:464: INT001 Missing docstring for 'HexEditorPanel._build_side_panels._log_toggled_slot'"
         },
         {
-          "line": 815,
+          "line": 820,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexEditorPanel.set_state_holder.on_state_event'",
-          "raw": "ui\\panels\\hex_editor\\panel.py:815: INT001 Missing docstring for 'HexEditorPanel.set_state_holder.on_state_event'"
+          "raw": "ui\\panels\\hex_editor\\panel.py:820: INT001 Missing docstring for 'HexEditorPanel.set_state_holder.on_state_event'"
         },
         {
-          "line": 957,
+          "line": 962,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler'",
-          "raw": "ui\\panels\\hex_editor\\panel.py:957: INT001 Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler'"
+          "raw": "ui\\panels\\hex_editor\\panel.py:962: INT001 Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler'"
         },
         {
-          "line": 958,
+          "line": 963,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler._handler'",
-          "raw": "ui\\panels\\hex_editor\\panel.py:958: INT001 Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler._handler'"
+          "raw": "ui\\panels\\hex_editor\\panel.py:963: INT001 Missing docstring for 'HexEditorPanel._build_copy_as_menu._make_handler._handler'"
         }
       ]
     },
@@ -761,32 +761,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 378,
+          "line": 383,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'WindowsSandbox._generate_wsb_config._write_config'",
-          "raw": "sandbox\\windows.py:378: INT001 Missing docstring for 'WindowsSandbox._generate_wsb_config._write_config'"
+          "raw": "sandbox\\windows.py:383: INT001 Missing docstring for 'WindowsSandbox._generate_wsb_config._write_config'"
         },
         {
-          "line": 1198,
+          "line": 1203,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'WindowsSandbox.extract_dropped_files._create_zip'",
-          "raw": "sandbox\\windows.py:1198: INT001 Missing docstring for 'WindowsSandbox.extract_dropped_files._create_zip'"
+          "raw": "sandbox\\windows.py:1203: INT001 Missing docstring for 'WindowsSandbox.extract_dropped_files._create_zip'"
         },
         {
-          "line": 1281,
+          "line": 1286,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'WindowsSandbox.yara_scan._format_yara_match'",
-          "raw": "sandbox\\windows.py:1281: INT001 Missing docstring for 'WindowsSandbox.yara_scan._format_yara_match'"
+          "raw": "sandbox\\windows.py:1286: INT001 Missing docstring for 'WindowsSandbox.yara_scan._format_yara_match'"
         },
         {
-          "line": 1316,
+          "line": 1321,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'WindowsSandbox.yara_scan._extract_zips'",
-          "raw": "sandbox\\windows.py:1316: INT001 Missing docstring for 'WindowsSandbox.yara_scan._extract_zips'"
+          "raw": "sandbox\\windows.py:1321: INT001 Missing docstring for 'WindowsSandbox.yara_scan._extract_zips'"
         }
       ]
     },
@@ -802,18 +802,18 @@
           "raw": "bridges\\x64dbg.py:269: INT001 Missing docstring for '_extract_command_line_from_peb.ProcessBasicInformation'"
         },
         {
-          "line": 4786,
+          "line": 4787,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'",
-          "raw": "bridges\\x64dbg.py:4786: INT001 Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'"
+          "raw": "bridges\\x64dbg.py:4787: INT001 Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'"
         },
         {
-          "line": 4860,
+          "line": 4861,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'",
-          "raw": "bridges\\x64dbg.py:4860: INT001 Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'"
+          "raw": "bridges\\x64dbg.py:4861: INT001 Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'"
         }
       ]
     },
@@ -849,25 +849,25 @@
       "count": 3,
       "findings": [
         {
-          "line": 886,
+          "line": 918,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ToolSettingsWidget._check_status._status_slot'",
-          "raw": "ui\\tool_config.py:886: INT001 Missing docstring for 'ToolSettingsWidget._check_status._status_slot'"
+          "raw": "ui\\tool_config.py:918: INT001 Missing docstring for 'ToolSettingsWidget._check_status._status_slot'"
         },
         {
-          "line": 948,
+          "line": 980,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ToolSettingsWidget._install_tool._install_slot'",
-          "raw": "ui\\tool_config.py:948: INT001 Missing docstring for 'ToolSettingsWidget._install_tool._install_slot'"
+          "raw": "ui\\tool_config.py:980: INT001 Missing docstring for 'ToolSettingsWidget._install_tool._install_slot'"
         },
         {
-          "line": 1324,
+          "line": 1367,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ToolStatusDialog._refresh_status._tool_status_slot'",
-          "raw": "ui\\tool_config.py:1324: INT001 Missing docstring for 'ToolStatusDialog._refresh_status._tool_status_slot'"
+          "raw": "ui\\tool_config.py:1367: INT001 Missing docstring for 'ToolStatusDialog._refresh_status._tool_status_slot'"
         }
       ]
     },
@@ -876,25 +876,25 @@
       "count": 3,
       "findings": [
         {
-          "line": 1876,
+          "line": 1886,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'HexEditorWidget.contextMenuEvent._copy_as_slot'",
-          "raw": "ui\\panels\\hex_editor_widget.py:1876: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._copy_as_slot'"
-        },
-        {
-          "line": 1909,
-          "column": null,
-          "code": "INT001",
-          "message": "Missing docstring for 'HexEditorWidget.contextMenuEvent._mode_slot'",
-          "raw": "ui\\panels\\hex_editor_widget.py:1909: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._mode_slot'"
+          "raw": "ui\\panels\\hex_editor_widget.py:1886: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._copy_as_slot'"
         },
         {
           "line": 1919,
           "column": null,
           "code": "INT001",
+          "message": "Missing docstring for 'HexEditorWidget.contextMenuEvent._mode_slot'",
+          "raw": "ui\\panels\\hex_editor_widget.py:1919: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._mode_slot'"
+        },
+        {
+          "line": 1929,
+          "column": null,
+          "code": "INT001",
           "message": "Missing docstring for 'HexEditorWidget.contextMenuEvent._minimap_slot'",
-          "raw": "ui\\panels\\hex_editor_widget.py:1919: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._minimap_slot'"
+          "raw": "ui\\panels\\hex_editor_widget.py:1929: INT001 Missing docstring for 'HexEditorWidget.contextMenuEvent._minimap_slot'"
         }
       ]
     },
@@ -903,25 +903,25 @@
       "count": 3,
       "findings": [
         {
-          "line": 150,
+          "line": 155,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'EntropyGraphWidget.paintEvent.x_coord'",
-          "raw": "ui\\panels\\hex_editor\\_widgets.py:150: INT001 Missing docstring for 'EntropyGraphWidget.paintEvent.x_coord'"
+          "raw": "ui\\panels\\hex_editor\\_widgets.py:155: INT001 Missing docstring for 'EntropyGraphWidget.paintEvent.x_coord'"
         },
         {
-          "line": 153,
+          "line": 158,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'EntropyGraphWidget.paintEvent.y_coord'",
-          "raw": "ui\\panels\\hex_editor\\_widgets.py:153: INT001 Missing docstring for 'EntropyGraphWidget.paintEvent.y_coord'"
+          "raw": "ui\\panels\\hex_editor\\_widgets.py:158: INT001 Missing docstring for 'EntropyGraphWidget.paintEvent.y_coord'"
         },
         {
-          "line": 246,
+          "line": 256,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ByteDistributionWidget.paintEvent.bar_h'",
-          "raw": "ui\\panels\\hex_editor\\_widgets.py:246: INT001 Missing docstring for 'ByteDistributionWidget.paintEvent.bar_h'"
+          "raw": "ui\\panels\\hex_editor\\_widgets.py:256: INT001 Missing docstring for 'ByteDistributionWidget.paintEvent.bar_h'"
         }
       ]
     },
@@ -930,18 +930,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 54,
+          "line": 61,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'DataReader.from_document.read_fn'",
-          "raw": "core\\hexpat\\data_reader.py:54: INT001 Missing docstring for 'DataReader.from_document.read_fn'"
+          "raw": "core\\hexpat\\data_reader.py:61: INT001 Missing docstring for 'DataReader.from_document.read_fn'"
         },
         {
-          "line": 71,
+          "line": 78,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'DataReader.from_bytes.read_fn'",
-          "raw": "core\\hexpat\\data_reader.py:71: INT001 Missing docstring for 'DataReader.from_bytes.read_fn'"
+          "raw": "core\\hexpat\\data_reader.py:78: INT001 Missing docstring for 'DataReader.from_bytes.read_fn'"
         }
       ]
     },
@@ -950,18 +950,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 376,
+          "line": 382,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'OAuthCallbackServer.start.serve'",
-          "raw": "credentials\\oauth.py:376: INT001 Missing docstring for 'OAuthCallbackServer.start.serve'"
+          "raw": "credentials\\oauth.py:382: INT001 Missing docstring for 'OAuthCallbackServer.start.serve'"
         },
         {
-          "line": 935,
+          "line": 947,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for '_OAuthManagerHolder'",
-          "raw": "credentials\\oauth.py:935: INT001 Missing docstring for '_OAuthManagerHolder'"
+          "raw": "credentials\\oauth.py:947: INT001 Missing docstring for '_OAuthManagerHolder'"
         }
       ]
     },
@@ -990,18 +990,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 167,
+          "line": 172,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'X64DbgPanel._populate_toolbar._toggle_64bit_slot'",
-          "raw": "ui\\panels\\x64dbg_panel.py:167: INT001 Missing docstring for 'X64DbgPanel._populate_toolbar._toggle_64bit_slot'"
+          "raw": "ui\\panels\\x64dbg_panel.py:172: INT001 Missing docstring for 'X64DbgPanel._populate_toolbar._toggle_64bit_slot'"
         },
         {
-          "line": 1008,
+          "line": 1013,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'X64DbgPanel._try_embed_debugger_window._on_embedded'",
-          "raw": "ui\\panels\\x64dbg_panel.py:1008: INT001 Missing docstring for 'X64DbgPanel._try_embed_debugger_window._on_embedded'"
+          "raw": "ui\\panels\\x64dbg_panel.py:1013: INT001 Missing docstring for 'X64DbgPanel._try_embed_debugger_window._on_embedded'"
         }
       ]
     },
@@ -1043,11 +1043,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 486,
+          "line": 502,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ChatPanel.add_streaming_message.append_chunk'",
-          "raw": "ui\\chat.py:486: INT001 Missing docstring for 'ChatPanel.add_streaming_message.append_chunk'"
+          "raw": "ui\\chat.py:502: INT001 Missing docstring for 'ChatPanel.add_streaming_message.append_chunk'"
         }
       ]
     },
@@ -1056,11 +1056,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 609,
+          "line": 624,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SandboxConfigDialog._test_sandbox._test_finished_slot'",
-          "raw": "ui\\sandbox_config.py:609: INT001 Missing docstring for 'SandboxConfigDialog._test_sandbox._test_finished_slot'"
+          "raw": "ui\\sandbox_config.py:624: INT001 Missing docstring for 'SandboxConfigDialog._test_sandbox._test_finished_slot'"
         }
       ]
     },
@@ -1069,11 +1069,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 339,
+          "line": 346,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SessionManagerDialog._load_sessions_from_disk._sort_key'",
-          "raw": "ui\\session_manager.py:339: INT001 Missing docstring for 'SessionManagerDialog._load_sessions_from_disk._sort_key'"
+          "raw": "ui\\session_manager.py:346: INT001 Missing docstring for 'SessionManagerDialog._load_sessions_from_disk._sort_key'"
         }
       ]
     },
@@ -1082,11 +1082,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 1946,
+          "line": 1951,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'GhidraPanel._dispatch_func_menu_action._show_conventions'",
-          "raw": "ui\\panels\\ghidra_panel.py:1946: INT001 Missing docstring for 'GhidraPanel._dispatch_func_menu_action._show_conventions'"
+          "raw": "ui\\panels\\ghidra_panel.py:1951: INT001 Missing docstring for 'GhidraPanel._dispatch_func_menu_action._show_conventions'"
         }
       ]
     },
@@ -1095,11 +1095,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 261,
+          "line": 266,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SandboxPanel._create_content._vnc_status_slot'",
-          "raw": "ui\\panels\\sandbox_panel.py:261: INT001 Missing docstring for 'SandboxPanel._create_content._vnc_status_slot'"
+          "raw": "ui\\panels\\sandbox_panel.py:266: INT001 Missing docstring for 'SandboxPanel._create_content._vnc_status_slot'"
         }
       ]
     },
@@ -1108,11 +1108,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 804,
+          "line": 819,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ScriptManagerPanel._on_validate.reset_status'",
-          "raw": "ui\\panels\\script_manager.py:804: INT001 Missing docstring for 'ScriptManagerPanel._on_validate.reset_status'"
+          "raw": "ui\\panels\\script_manager.py:819: INT001 Missing docstring for 'ScriptManagerPanel._on_validate.reset_status'"
         }
       ]
     },
@@ -1121,11 +1121,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 469,
+          "line": 481,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'StackViewerPanel._setup_ui._auto_refresh_slot'",
-          "raw": "ui\\panels\\stack_viewer.py:469: INT001 Missing docstring for 'StackViewerPanel._setup_ui._auto_refresh_slot'"
+          "raw": "ui\\panels\\stack_viewer.py:481: INT001 Missing docstring for 'StackViewerPanel._setup_ui._auto_refresh_slot'"
         }
       ]
     },
@@ -1134,11 +1134,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 533,
+          "line": 552,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'ScriptWorker._execute._safe_print'",
-          "raw": "ui\\panels\\hex_editor\\_scripting.py:533: INT001 Missing docstring for 'ScriptWorker._execute._safe_print'"
+          "raw": "ui\\panels\\hex_editor\\_scripting.py:552: INT001 Missing docstring for 'ScriptWorker._execute._safe_print'"
         }
       ]
     },
@@ -1147,11 +1147,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 435,
+          "line": 462,
           "column": null,
           "code": "INT001",
           "message": "Missing docstring for 'SearchMixin._build_numeric_search_panel._range_toggled_slot'",
-          "raw": "ui\\panels\\hex_editor\\_search.py:435: INT001 Missing docstring for 'SearchMixin._build_numeric_search_panel._range_toggled_slot'"
+          "raw": "ui\\panels\\hex_editor\\_search.py:462: INT001 Missing docstring for 'SearchMixin._build_numeric_search_panel._range_toggled_slot'"
         }
       ]
     }

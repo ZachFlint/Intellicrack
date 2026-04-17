@@ -784,13 +784,17 @@ impl HexDocument {
 
     // --- Block Operations ---
 
-    fn fill_block(&mut self, offset: usize, length: usize, pattern: Vec<u8>) -> PyResult<()> {
+    fn fill_block(&mut self, offset: usize, length: usize, pattern: &[u8]) -> PyResult<()> {
         if pattern.is_empty() {
-            return Err(pyo3::exceptions::PyValueError::new_err("pattern cannot be empty"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "pattern cannot be empty",
+            ));
         }
         let doc_len = self.inner.document_size();
         if offset + length > doc_len {
-            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "block exceeds document size",
+            ));
         }
         let fill: Vec<u8> = pattern.iter().cycle().take(length).copied().collect();
         let old_data = self.inner.read(offset, length);
@@ -806,7 +810,9 @@ impl HexDocument {
     fn copy_block(&mut self, src_offset: usize, length: usize, dst_offset: usize) -> PyResult<()> {
         let doc_len = self.inner.document_size();
         if src_offset + length > doc_len || dst_offset + length > doc_len {
-            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "block exceeds document size",
+            ));
         }
         let data = self.inner.read(src_offset, length);
         let old_dst = self.inner.read(dst_offset, length);
@@ -822,7 +828,9 @@ impl HexDocument {
     fn move_block(&mut self, src_offset: usize, length: usize, dst_offset: usize) -> PyResult<()> {
         let doc_len = self.inner.document_size();
         if src_offset + length > doc_len || dst_offset + length > doc_len {
-            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "block exceeds document size",
+            ));
         }
         let data = self.inner.read(src_offset, length);
         let old_dst = self.inner.read(dst_offset, length);
@@ -846,7 +854,9 @@ impl HexDocument {
     ) -> PyResult<()> {
         let doc_len = self.inner.document_size();
         if offset_a + len_a > doc_len || offset_b + len_b > doc_len {
-            return Err(pyo3::exceptions::PyValueError::new_err("block exceeds document size"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "block exceeds document size",
+            ));
         }
         if (offset_a < offset_b + len_b) && (offset_b < offset_a + len_a) {
             return Err(pyo3::exceptions::PyValueError::new_err("blocks overlap"));
@@ -866,7 +876,9 @@ impl HexDocument {
 
     fn get_bit(&self, offset: usize, bit_index: u8) -> PyResult<bool> {
         if bit_index > 7 {
-            return Err(pyo3::exceptions::PyValueError::new_err("bit_index must be 0-7"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "bit_index must be 0-7",
+            ));
         }
         let byte = self
             .inner
@@ -877,7 +889,9 @@ impl HexDocument {
 
     fn set_bit(&mut self, offset: usize, bit_index: u8, value: bool) -> PyResult<()> {
         if bit_index > 7 {
-            return Err(pyo3::exceptions::PyValueError::new_err("bit_index must be 0-7"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "bit_index must be 0-7",
+            ));
         }
         let old_byte = self
             .inner
@@ -899,7 +913,9 @@ impl HexDocument {
 
     fn toggle_bit(&mut self, offset: usize, bit_index: u8) -> PyResult<bool> {
         if bit_index > 7 {
-            return Err(pyo3::exceptions::PyValueError::new_err("bit_index must be 0-7"));
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "bit_index must be 0-7",
+            ));
         }
         let old_byte = self
             .inner
@@ -918,7 +934,8 @@ impl HexDocument {
     // --- VA Mapping ---
 
     fn add_va_mapping(&mut self, file_offset: usize, virtual_address: u64, length: usize) {
-        self.va_mappings.push((file_offset, virtual_address, length));
+        self.va_mappings
+            .push((file_offset, virtual_address, length));
         self.va_mappings.sort_by_key(|m| m.0);
     }
 
@@ -948,7 +965,8 @@ impl HexDocument {
         for &(file_off, base_va, length) in &self.va_mappings {
             let end_va = base_va + length as u64;
             if va >= base_va && va < end_va {
-                return Some(file_off + (va - base_va) as usize);
+                let delta = usize::try_from(va - base_va).ok()?;
+                return Some(file_off + delta);
             }
         }
         None
@@ -965,7 +983,8 @@ impl HexDocument {
         max_results: usize,
     ) -> PyResult<PyObject> {
         let data = self.inner.read_all();
-        let matches = strings::extract_strings(&data, min_length, include_ascii, include_utf16, max_results);
+        let matches =
+            strings::extract_strings(&data, min_length, include_ascii, include_utf16, max_results);
 
         let list = PyList::empty(py);
         for m in &matches {

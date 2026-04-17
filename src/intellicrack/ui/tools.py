@@ -404,6 +404,12 @@ class CodeDisplay(QPlainTextEdit):
         language: str = "c",
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the CodeDisplay with syntax highlighting for the given language.
+
+        Args:
+            language: Programming language for syntax highlighting.
+            parent: Parent widget.
+        """
         super().__init__(parent=parent)
         self._language = language
         self._setup_ui()
@@ -487,6 +493,13 @@ class ToolTab(QFrame):
         language: str = "c",
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the ToolTab with a name and language for output display.
+
+        Args:
+            name: Tab name for identification and display.
+            language: Programming language for syntax highlighting.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._name = name
         self._language = language
@@ -588,6 +601,11 @@ class FunctionListPanel(QFrame):
     function_selected = pyqtSignal(str, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the FunctionListPanel.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._functions: list[tuple[str, int]] = []
         self._setup_ui()
@@ -675,6 +693,11 @@ class XRefPanel(QFrame):
     xref_selected = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the XRefPanel.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -772,6 +795,11 @@ class ToolOutputPanel(QFrame):
     hex_context_ready: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ToolOutputPanel.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.tabs: dict[str, ToolTab] = {}
         self.embedded_tools: dict[str, QWidget] = {}

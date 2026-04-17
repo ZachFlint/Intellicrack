@@ -79,6 +79,16 @@ class SearchWorker(QThread):
         max_results: int,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the SearchWorker with search parameters.
+
+        Args:
+            document: Hex document to search within.
+            mode: Search mode (``"hex"``, ``"text"``, ``"regex"``).
+            query: Search query string.
+            encoding: Text encoding for text-mode search.
+            max_results: Maximum number of results to return.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._document: Any = document
         self._mode: str = mode
@@ -173,6 +183,23 @@ class NumericSearchWorker(QThread):
         is_range: bool = False,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the NumericSearchWorker with numeric search parameters.
+
+        Args:
+            document: Hex document to search within.
+            min_val: Minimum numeric value to match.
+            max_val: Maximum numeric value to match.
+            fmt: Struct format string for packing/unpacking.
+            byte_width: Width in bytes of the numeric type.
+            alignment: Byte alignment for scan positions.
+            max_results: Maximum number of results to return.
+            use_native: Whether to use native Rust search backend.
+            size: Size of the numeric type in bytes.
+            signed: Whether to interpret values as signed.
+            big_endian: Whether to use big-endian byte order.
+            is_range: Whether to search for a range of values.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._document: Any = document
         self._min_val: float = min_val

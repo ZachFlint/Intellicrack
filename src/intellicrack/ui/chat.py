@@ -65,6 +65,12 @@ class MessageBubble(QFrame):
         message: Message,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the MessageBubble with the given message.
+
+        Args:
+            message: The message to display.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._message = message
         self._setup_ui()
@@ -222,6 +228,11 @@ class ChatInput(QFrame):
     message_submitted = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ChatInput widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -376,6 +387,11 @@ class ChatPanel(QFrame):
     message_submitted = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ChatPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._messages: list[Message] = []
         self._setup_ui()

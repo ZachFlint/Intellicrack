@@ -40,6 +40,11 @@ class ProviderRegistry:
         self,
         credential_loader: CredentialLoader | None = None,
     ) -> None:
+        """Initialize the ProviderRegistry with an optional credential loader.
+
+        Args:
+            credential_loader: Optional credential loader for auto-connecting providers.
+        """
         self._providers: dict[ProviderName, LLMProviderBase] = {}
         self._active_provider: ProviderName | None = None
         self._credential_loader = credential_loader

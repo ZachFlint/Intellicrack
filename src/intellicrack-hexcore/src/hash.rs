@@ -287,8 +287,14 @@ pub struct PeChecksumResult {
 
 /// Compute the PE file checksum using the standard Windows algorithm.
 ///
-/// Sums all 16-bit words with carry folding, skipping the CheckSum field,
+/// Sums all 16-bit words with carry folding, skipping the `CheckSum` field,
 /// then adds the file length.
+///
+/// # Panics
+///
+/// Panics are unreachable in practice; the file length is masked to 32 bits
+/// before conversion.
+#[must_use]
 pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
     let mut checksum: u32 = 0;
     let skip_start = checksum_offset;
@@ -300,25 +306,31 @@ pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
             i += 2;
             continue;
         }
-        let word = (data[i] as u32) | ((data[i + 1] as u32) << 8);
+        let word = u32::from(data[i]) | (u32::from(data[i + 1]) << 8);
         checksum += word;
         checksum = (checksum & 0xFFFF) + (checksum >> 16);
         i += 2;
     }
 
     if i < data.len() && !(i >= skip_start && i < skip_end) {
-        checksum += data[i] as u32;
+        checksum += u32::from(data[i]);
         checksum = (checksum & 0xFFFF) + (checksum >> 16);
     }
 
     checksum = (checksum & 0xFFFF) + (checksum >> 16);
-    checksum + data.len() as u32
+    let masked_len = data.len() & 0xFFFF_FFFF;
+    checksum + u32::try_from(masked_len).expect("length masked to u32 range")
 }
 
 /// Verify the PE checksum of a binary file.
 ///
-/// Locates the CheckSum field in the PE Optional Header and compares
+/// Locates the `CheckSum` field in the PE Optional Header and compares
 /// the stored value against the computed value.
+///
+/// # Errors
+///
+/// Returns `HashError::UnsupportedAlgorithm` if the data is not a valid
+/// PE file or the checksum offset is beyond file bounds.
 pub fn verify_pe_checksum(data: &[u8]) -> Result<PeChecksumResult, HashError> {
     if data.len() < 0x40 {
         return Err(HashError::UnsupportedAlgorithm(

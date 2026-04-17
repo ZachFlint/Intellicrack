@@ -40,7 +40,7 @@ fn decode_var_int(data: &[u8], pos: &mut usize) -> io::Result<u64> {
         }
         let byte = data[*pos];
         *pos += 1;
-        result += ((byte & 0x7F) as u64) << shift;
+        result += u64::from(byte & 0x7F) << shift;
         if byte & 0x80 != 0 {
             return Ok(result);
         }
@@ -57,15 +57,20 @@ fn decode_var_int(data: &[u8], pos: &mut usize) -> io::Result<u64> {
 
 /// Generate a BPS patch from source and target byte arrays.
 ///
-/// Uses SourceRead and TargetRead actions for a simple but correct patch.
+/// Uses `SourceRead` and `TargetRead` actions for a simple but correct patch.
 /// Footer contains source CRC32, target CRC32, and patch CRC32.
+///
+/// # Errors
+///
+/// Returns `io::Error` for API consistency. This function does not
+/// currently produce errors for valid inputs.
 pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
     let mut patch = Vec::new();
 
     patch.extend_from_slice(b"BPS1");
     patch.extend_from_slice(&encode_var_int(source.len() as u64));
     patch.extend_from_slice(&encode_var_int(target.len() as u64));
-    patch.extend_from_slice(&encode_var_int(0)); // metadata size
+    patch.extend_from_slice(&encode_var_int(0));
 
     let mut src_pos: usize = 0;
     let mut tgt_pos: usize = 0;
@@ -80,7 +85,6 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
         }
 
         if match_len > 0 {
-            // SourceRead: action = ((length-1) << 2) | 0
             patch.extend_from_slice(&encode_var_int(((match_len as u64) - 1) << 2));
             src_pos += match_len;
             tgt_pos += match_len;
@@ -90,13 +94,11 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
             break;
         }
 
-        // Find how many bytes differ
         let mut diff_len: usize = 0;
         while tgt_pos + diff_len < target.len() {
             if src_pos + diff_len < source.len()
                 && source[src_pos + diff_len] == target[tgt_pos + diff_len]
             {
-                // Check if we have a long enough match ahead to break
                 let mut ahead_match = 0;
                 while src_pos + diff_len + ahead_match < source.len()
                     && tgt_pos + diff_len + ahead_match < target.len()
@@ -116,7 +118,6 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
         }
 
         if diff_len > 0 {
-            // TargetRead: action = ((length-1) << 2) | 1
             patch.extend_from_slice(&encode_var_int((((diff_len as u64) - 1) << 2) | 1));
             patch.extend_from_slice(&target[tgt_pos..tgt_pos + diff_len]);
             src_pos += diff_len;
@@ -135,10 +136,12 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
     Ok(patch)
 }
 
-/// Apply a BPS patch to the source data, producing the target.
-///
-/// Validates the BPS1 header, source CRC32, target CRC32, and patch CRC32.
-pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
+struct BpsValidation {
+    footer_start: usize,
+    stored_target_crc: u32,
+}
+
+fn validate_bps_patch(patch: &[u8], source: &[u8]) -> io::Result<BpsValidation> {
     if patch.len() < 12 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
@@ -152,7 +155,6 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
         ));
     }
 
-    // Verify patch CRC32 (last 4 bytes cover everything before them)
     let patch_body = &patch[..patch.len() - 4];
     let stored_patch_crc = u32::from_le_bytes([
         patch[patch.len() - 4],
@@ -188,13 +190,34 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
         ));
     }
 
+    Ok(BpsValidation {
+        footer_start,
+        stored_target_crc,
+    })
+}
+
+/// Apply a BPS patch to the source data, producing the target.
+///
+/// Validates the BPS1 header, source CRC32, target CRC32, and patch CRC32.
+///
+/// # Errors
+///
+/// Returns `io::Error` if the patch is malformed, CRC32 validation fails,
+/// or the source data does not match the expected checksum.
+pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
+    let validation = validate_bps_patch(patch, source)?;
+    let footer_start = validation.footer_start;
+
     let mut pos: usize = 4;
     let _source_size = decode_var_int(patch, &mut pos)?;
     let target_size = decode_var_int(patch, &mut pos)?;
     let metadata_size = decode_var_int(patch, &mut pos)?;
-    pos += metadata_size as usize;
+    pos += usize::try_from(metadata_size)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "metadata size overflow"))?;
 
-    let mut target = vec![0u8; target_size as usize];
+    let target_len = usize::try_from(target_size)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "target size overflow"))?;
+    let mut target = vec![0u8; target_len];
     let mut output_offset: usize = 0;
     let mut source_rel_offset: i64 = 0;
     let mut target_rel_offset: i64 = 0;
@@ -202,11 +225,13 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
     while pos < footer_start {
         let action = decode_var_int(patch, &mut pos)?;
         let command = action & 3;
-        let length = (action >> 2) as usize + 1;
+        let length = usize::try_from(action >> 2)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "action length overflow"))?
+            .checked_add(1)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "action length overflow"))?;
 
         match command {
             0 => {
-                // SourceRead
                 for _ in 0..length {
                     if output_offset < target.len() && output_offset < source.len() {
                         target[output_offset] = source[output_offset];
@@ -215,7 +240,6 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
                 }
             }
             1 => {
-                // TargetRead
                 for _ in 0..length {
                     if pos < footer_start && output_offset < target.len() {
                         target[output_offset] = patch[pos];
@@ -225,13 +249,16 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
                 }
             }
             2 => {
-                // SourceCopy
                 let offset_data = decode_var_int(patch, &mut pos)?;
                 let negative = offset_data & 1 != 0;
-                let offset_val = (offset_data >> 1) as i64;
+                let offset_val = i64::try_from(offset_data >> 1).map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "source copy offset overflow")
+                })?;
                 source_rel_offset += if negative { -offset_val } else { offset_val };
                 for _ in 0..length {
-                    let src_idx = source_rel_offset as usize;
+                    let src_idx = usize::try_from(source_rel_offset).map_err(|_| {
+                        io::Error::new(io::ErrorKind::InvalidData, "source offset out of range")
+                    })?;
                     if src_idx < source.len() && output_offset < target.len() {
                         target[output_offset] = source[src_idx];
                     }
@@ -240,13 +267,16 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
                 }
             }
             3 => {
-                // TargetCopy
                 let offset_data = decode_var_int(patch, &mut pos)?;
                 let negative = offset_data & 1 != 0;
-                let offset_val = (offset_data >> 1) as i64;
+                let offset_val = i64::try_from(offset_data >> 1).map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "target copy offset overflow")
+                })?;
                 target_rel_offset += if negative { -offset_val } else { offset_val };
                 for _ in 0..length {
-                    let tgt_idx = target_rel_offset as usize;
+                    let tgt_idx = usize::try_from(target_rel_offset).map_err(|_| {
+                        io::Error::new(io::ErrorKind::InvalidData, "target offset out of range")
+                    })?;
                     if tgt_idx < target.len() && output_offset < target.len() {
                         target[output_offset] = target[tgt_idx];
                     }
@@ -258,7 +288,7 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
         }
     }
 
-    if crc32_compute(&target) != stored_target_crc {
+    if crc32_compute(&target) != validation.stored_target_crc {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "target CRC32 mismatch",
@@ -271,6 +301,11 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
 /// Generate a UPS patch from source and target byte arrays.
 ///
 /// Uses XOR-based difference records terminated by zero bytes.
+///
+/// # Errors
+///
+/// Returns `io::Error` for API consistency. This function does not
+/// currently produce errors for valid inputs.
 pub fn export_ups(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
     let mut patch = Vec::new();
     patch.extend_from_slice(b"UPS1");
@@ -282,8 +317,16 @@ pub fn export_ups(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
     let mut offset: usize = 0;
 
     while offset < max_len {
-        let src_byte = if offset < source.len() { source[offset] } else { 0 };
-        let tgt_byte = if offset < target.len() { target[offset] } else { 0 };
+        let src_byte = if offset < source.len() {
+            source[offset]
+        } else {
+            0
+        };
+        let tgt_byte = if offset < target.len() {
+            target[offset]
+        } else {
+            0
+        };
         let xor = src_byte ^ tgt_byte;
 
         if xor != 0 {
@@ -291,8 +334,16 @@ pub fn export_ups(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
             patch.extend_from_slice(&encode_var_int(rel_offset as u64));
 
             while offset < max_len {
-                let s = if offset < source.len() { source[offset] } else { 0 };
-                let t = if offset < target.len() { target[offset] } else { 0 };
+                let s = if offset < source.len() {
+                    source[offset]
+                } else {
+                    0
+                };
+                let t = if offset < target.len() {
+                    target[offset]
+                } else {
+                    0
+                };
                 let x = s ^ t;
                 patch.push(x);
                 offset += 1;
@@ -320,6 +371,11 @@ pub fn export_ups(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
 /// Apply a UPS patch to the source data, producing the target.
 ///
 /// Validates UPS1 header and all three CRC32 checksums.
+///
+/// # Errors
+///
+/// Returns `io::Error` if the patch is malformed, CRC32 validation fails,
+/// or the source data does not match the expected checksum.
 pub fn import_ups(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
     if patch.len() < 16 {
         return Err(io::Error::new(
@@ -334,7 +390,6 @@ pub fn import_ups(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
         ));
     }
 
-    // Verify patch CRC32
     let patch_body = &patch[..patch.len() - 4];
     let stored_patch_crc = u32::from_le_bytes([
         patch[patch.len() - 4],
@@ -374,14 +429,17 @@ pub fn import_ups(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
     let _source_size = decode_var_int(patch, &mut pos)?;
     let target_size = decode_var_int(patch, &mut pos)?;
 
+    let target_len = usize::try_from(target_size)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "target size overflow"))?;
     let mut target = source.to_vec();
-    target.resize(target_size as usize, 0);
+    target.resize(target_len, 0);
 
     let mut offset: usize = 0;
 
     while pos < footer_start {
         let rel_offset = decode_var_int(patch, &mut pos)?;
-        offset += rel_offset as usize;
+        offset += usize::try_from(rel_offset)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "offset overflow"))?;
 
         while pos < footer_start {
             let xor_byte = patch[pos];

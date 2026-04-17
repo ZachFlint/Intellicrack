@@ -91,10 +91,10 @@ codespell,src/intellicrack\bridges\process.py,9,,,SPELL,SPELL,'SEH' ==> 'SHE',,,
 codespell,src/intellicrack\bridges\process.py,469,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack\bridges\process.py,473,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack\bridges\process.py,664,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,755,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,2834,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,2838,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\process.py,2848,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,756,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,2835,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,2839,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,2849,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
 codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
 codespell,src/intellicrack-hexcore\_typos.toml,13,,,SPELL,SPELL,"'ue' ==> 'use, due'",,,,,,,,,,,ue,"use, due"
@@ -149,9 +149,9 @@ codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb
 codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,7,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,48,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,237,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,240,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,469,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,242,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,245,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,474,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
@@ -184,9 +184,9 @@ codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,
 codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
 codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-codespell,src/intellicrack\bridges\x64dbg.py,1278,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-codespell,src/intellicrack\bridges\x64dbg.py,2337,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
-codespell,src/intellicrack\bridges\x64dbg.py,3980,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\x64dbg.py,1279,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\x64dbg.py,2338,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
+codespell,src/intellicrack\bridges\x64dbg.py,3981,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
 codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"

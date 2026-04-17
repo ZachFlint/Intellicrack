@@ -140,6 +140,7 @@ class X64DbgStackSource:
     """
 
     def __init__(self) -> None:
+        """Initialize the X64DbgStackSource instance."""
         self._bridge: object | None = None
 
     def set_bridge(self, bridge: object) -> None:
@@ -211,6 +212,7 @@ class FridaStackSource:
     """
 
     def __init__(self) -> None:
+        """Initialize the FridaStackSource instance."""
         self._bridge: object | None = None
         self._cached_frames: list[StackFrame] = []
 
@@ -299,6 +301,11 @@ class StackFrameTable(QTableWidget):
     frame_double_clicked = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the StackFrameTable widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent=parent)
         self._setup_ui()
 
@@ -427,6 +434,11 @@ class StackViewerPanel(QWidget):
     address_navigate = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the StackViewerPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._sources: dict[str, X64DbgStackSource | FridaStackSource] = {}
         self._active_source: str | None = None

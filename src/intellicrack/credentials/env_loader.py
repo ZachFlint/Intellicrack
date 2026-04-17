@@ -149,6 +149,11 @@ class CredentialLoader:
     }
 
     def __init__(self, env_path: Path | None = None) -> None:
+        """Initialize the CredentialLoader with the given env file path.
+
+        Args:
+            env_path: Path to the .env file. If None, searches standard locations.
+        """
         if env_path is None:
             env_path = _find_env_file()
         self.env_path = env_path

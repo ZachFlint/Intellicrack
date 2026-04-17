@@ -9,6 +9,12 @@
           "version": "1.0.0",
           "rules": [
             {
+              "id": "unreachable",
+              "shortDescription": {
+                "text": "Right operand of \"or\" is never evaluated"
+              }
+            },
+            {
               "id": "no-any-return",
               "shortDescription": {
                 "text": "Returning Any from function declared to return \"HexDocument\""
@@ -21,9 +27,9 @@
               }
             },
             {
-              "id": "unreachable",
+              "id": "has-type",
               "shortDescription": {
-                "text": "Right operand of \"or\" is never evaluated"
+                "text": "Cannot determine type of \"_initialized\""
               }
             },
             {
@@ -39,21 +45,9 @@
               }
             },
             {
-              "id": "has-type",
-              "shortDescription": {
-                "text": "Cannot determine type of \"_initialized\""
-              }
-            },
-            {
-              "id": "attr-defined",
-              "shortDescription": {
-                "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-              }
-            },
-            {
               "id": "union-attr",
               "shortDescription": {
-                "text": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\""
+                "text": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\""
               }
             },
             {
@@ -81,6 +75,12 @@
               }
             },
             {
+              "id": "attr-defined",
+              "shortDescription": {
+                "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+              }
+            },
+            {
               "id": "name-defined",
               "shortDescription": {
                 "text": "Name \"cast\" is not defined"
@@ -95,7 +95,7 @@
             {
               "id": "no-redef",
               "shortDescription": {
-                "text": "Name \"data\" already defined on line 2251"
+                "text": "Name \"data\" already defined on line 2252"
               }
             },
             {
@@ -114,6 +114,27 @@
         }
       },
       "results": [
+        {
+          "ruleId": "unreachable",
+          "level": "error",
+          "message": {
+            "text": "Right operand of \"or\" is never evaluated"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1484,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
         {
           "ruleId": "no-any-return",
           "level": "error",
@@ -157,20 +178,83 @@
           ]
         },
         {
-          "ruleId": "unreachable",
+          "ruleId": "has-type",
           "level": "error",
           "message": {
-            "text": "Right operand of \"or\" is never evaluated"
+            "text": "Cannot determine type of \"_initialized\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uri": "src/intellicrack/core/process_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1467,
+                  "startLine": 149,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "arg-type",
+          "level": "error",
+          "message": {
+            "text": "Argument \"byteorder\" to \"from_bytes\" of \"int\" has incompatible type \"str\"; expected \"Literal['little', 'big']\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 159,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "arg-type",
+          "level": "error",
+          "message": {
+            "text": "Argument \"byteorder\" to \"from_bytes\" of \"int\" has incompatible type \"str\"; expected \"Literal['little', 'big']\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 174,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "arg-type",
+          "level": "error",
+          "message": {
+            "text": "Argument \"byteorder\" to \"from_bytes\" of \"int\" has incompatible type \"str\"; expected \"Literal['little', 'big']\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 566,
                   "startColumn": 1
                 }
               }
@@ -241,174 +325,6 @@
           ]
         },
         {
-          "ruleId": "has-type",
-          "level": "error",
-          "message": {
-            "text": "Cannot determine type of \"_initialized\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/process_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 148,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "arg-type",
-          "level": "error",
-          "message": {
-            "text": "Argument \"byteorder\" to \"from_bytes\" of \"int\" has incompatible type \"str\"; expected \"Literal['little', 'big']\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 154,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "arg-type",
-          "level": "error",
-          "message": {
-            "text": "Argument \"byteorder\" to \"from_bytes\" of \"int\" has incompatible type \"str\"; expected \"Literal['little', 'big']\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 169,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "arg-type",
-          "level": "error",
-          "message": {
-            "text": "Argument \"byteorder\" to \"from_bytes\" of \"int\" has incompatible type \"str\"; expected \"Literal['little', 'big']\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 561,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 256,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 270,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 280,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "union-attr",
-          "level": "error",
-          "message": {
-            "text": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 335,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "assignment",
           "level": "error",
           "message": {
@@ -443,7 +359,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 118,
+                  "startLine": 123,
                   "startColumn": 1
                 }
               }
@@ -514,27 +430,6 @@
           ]
         },
         {
-          "ruleId": "assignment",
-          "level": "error",
-          "message": {
-            "text": "Incompatible types in assignment (expression has type \"None\", variable has type Module)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/model_loader.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 27,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "no-any-return",
           "level": "error",
           "message": {
@@ -548,7 +443,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1020,
+                  "startLine": 1021,
                   "startColumn": 1
                 }
               }
@@ -590,7 +485,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 751,
+                  "startLine": 752,
                   "startColumn": 1
                 }
               }
@@ -611,7 +506,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 751,
+                  "startLine": 752,
                   "startColumn": 1
                 }
               }
@@ -632,7 +527,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 757,
+                  "startLine": 758,
                   "startColumn": 1
                 }
               }
@@ -653,7 +548,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 760,
+                  "startLine": 761,
                   "startColumn": 1
                 }
               }
@@ -674,7 +569,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 760,
+                  "startLine": 761,
                   "startColumn": 1
                 }
               }
@@ -695,7 +590,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1833,
+                  "startLine": 1834,
                   "startColumn": 1
                 }
               }
@@ -808,6 +703,279 @@
           ]
         },
         {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"None\", variable has type Module)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/model_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "name-defined",
+          "level": "error",
+          "message": {
+            "text": "Name \"cast\" is not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 451,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 451,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "name-defined",
+          "level": "error",
+          "message": {
+            "text": "Name \"cast\" is not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 481,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 481,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "name-defined",
+          "level": "error",
+          "message": {
+            "text": "Name \"cast\" is not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 498,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 498,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "name-defined",
+          "level": "error",
+          "message": {
+            "text": "Name \"cast\" is not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 572,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 572,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "name-defined",
+          "level": "error",
+          "message": {
+            "text": "Name \"cast\" is not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 589,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 589,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "name-defined",
+          "level": "error",
+          "message": {
+            "text": "Name \"cast\" is not defined"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 609,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 609,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "attr-defined",
           "level": "error",
           "message": {
@@ -874,17 +1042,17 @@
           "ruleId": "attr-defined",
           "level": "error",
           "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+            "text": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_providers/test_model_discovery.py",
+                  "uri": "tests/test_ui/test_icon_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 21,
+                  "startLine": 348,
                   "startColumn": 1
                 }
               }
@@ -895,17 +1063,122 @@
           "ruleId": "attr-defined",
           "level": "error",
           "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_providers/test_google_provider.py",
+                  "uri": "tests/test_ui/test_graph_view.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 22,
+                  "startLine": 256,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 270,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 280,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "union-attr",
+          "level": "error",
+          "message": {
+            "text": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 335,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[CFGGraphView]\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 99,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[PythonSyntaxHighlighter]\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 104,
                   "startColumn": 1
                 }
               }
@@ -1052,7 +1325,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 225,
+                  "startLine": 230,
                   "startColumn": 1
                 }
               }
@@ -1073,7 +1346,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 256,
+                  "startLine": 261,
                   "startColumn": 1
                 }
               }
@@ -1094,7 +1367,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 283,
+                  "startLine": 288,
                   "startColumn": 1
                 }
               }
@@ -1115,7 +1388,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 300,
+                  "startLine": 305,
                   "startColumn": 1
                 }
               }
@@ -1136,7 +1409,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 337,
+                  "startLine": 342,
                   "startColumn": 1
                 }
               }
@@ -1157,7 +1430,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 366,
+                  "startLine": 371,
                   "startColumn": 1
                 }
               }
@@ -1189,17 +1462,17 @@
           "ruleId": "assignment",
           "level": "error",
           "message": {
-            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[CFGGraphView]\")"
+            "text": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uri": "tests/test_bridges/test_x64dbg.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 99,
+                  "startLine": 190,
                   "startColumn": 1
                 }
               }
@@ -1207,20 +1480,20 @@
           ]
         },
         {
-          "ruleId": "assignment",
+          "ruleId": "func-returns-value",
           "level": "error",
           "message": {
-            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"type[PythonSyntaxHighlighter]\")"
+            "text": "\"appendPlainText\" of \"QPlainTextEdit\" does not return a value (it only ever returns None)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/ghidra_panel.py",
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 104,
+                  "startLine": 2502,
                   "startColumn": 1
                 }
               }
@@ -1228,20 +1501,83 @@
           ]
         },
         {
-          "ruleId": "name-defined",
+          "ruleId": "func-returns-value",
           "level": "error",
           "message": {
-            "text": "Name \"cast\" is not defined"
+            "text": "\"_refresh_state\" of \"X64DbgPanel\" does not return a value (it only ever returns None)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 451,
+                  "startLine": 2502,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-any-return",
+          "level": "error",
+          "message": {
+            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/template_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 322,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-any-return",
+          "level": "error",
+          "message": {
+            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/template_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 334,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "valid-type",
+          "level": "error",
+          "message": {
+            "text": "Function \"intellicrack.bridges.sandbox_bridge.SandboxBridge.list\" is not valid as a type"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/sandbox_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1577,
                   "startColumn": 1
                 }
               }
@@ -1252,248 +1588,17 @@
           "ruleId": "general",
           "level": "note",
           "message": {
-            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
+            "text": "Perhaps you need \"Callable[...]\" or a callback protocol?"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
+                  "uri": "src/intellicrack/bridges/sandbox_bridge.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 451,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"cast\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 481,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 481,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"cast\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 498,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 498,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"cast\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 572,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 572,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"cast\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 589,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 589,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"cast\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 609,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Did you forget to import it from \"typing\"? (Suggestion: \"from typing import cast\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 609,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_icon_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 348,
+                  "startLine": 1577,
                   "startColumn": 1
                 }
               }
@@ -1766,7 +1871,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1638,
+                  "startLine": 1677,
                   "startColumn": 1
                 }
               }
@@ -1787,7 +1892,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1673,
+                  "startLine": 1712,
                   "startColumn": 1
                 }
               }
@@ -1808,7 +1913,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1734,
+                  "startLine": 1773,
                   "startColumn": 1
                 }
               }
@@ -1829,112 +1934,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2347,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "assignment",
-          "level": "error",
-          "message": {
-            "text": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 190,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "func-returns-value",
-          "level": "error",
-          "message": {
-            "text": "\"appendPlainText\" of \"QPlainTextEdit\" does not return a value (it only ever returns None)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2497,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "func-returns-value",
-          "level": "error",
-          "message": {
-            "text": "\"_refresh_state\" of \"X64DbgPanel\" does not return a value (it only ever returns None)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/x64dbg_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2497,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "no-any-return",
-          "level": "error",
-          "message": {
-            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/template_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 317,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "no-any-return",
-          "level": "error",
-          "message": {
-            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/template_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 329,
+                  "startLine": 2386,
                   "startColumn": 1
                 }
               }
@@ -1945,17 +1945,17 @@
           "ruleId": "valid-type",
           "level": "error",
           "message": {
-            "text": "Function \"intellicrack.bridges.sandbox_bridge.SandboxBridge.list\" is not valid as a type"
+            "text": "Function \"r2pipe.open\" is not valid as a type"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/sandbox_bridge.py",
+                  "uri": "tests/test_bridges/test_cutter.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1576,
+                  "startLine": 121,
                   "startColumn": 1
                 }
               }
@@ -1972,11 +1972,74 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/sandbox_bridge.py",
+                  "uri": "tests/test_bridges/test_cutter.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1576,
+                  "startLine": 121,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "valid-type",
+          "level": "error",
+          "message": {
+            "text": "Function \"r2pipe.open\" is not valid as a type"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_cutter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 139,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "note",
+          "message": {
+            "text": "Perhaps you need \"Callable[...]\" or a callback protocol?"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_bridges/test_cutter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 139,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-redef",
+          "level": "error",
+          "message": {
+            "text": "Name \"data\" already defined on line 2252"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2258,
                   "startColumn": 1
                 }
               }
@@ -1998,90 +2061,6 @@
                 },
                 "region": {
                   "startLine": 249,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "valid-type",
-          "level": "error",
-          "message": {
-            "text": "Function \"r2pipe.open\" is not valid as a type"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_cutter.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 121,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Perhaps you need \"Callable[...]\" or a callback protocol?"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_cutter.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 121,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "valid-type",
-          "level": "error",
-          "message": {
-            "text": "Function \"r2pipe.open\" is not valid as a type"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_cutter.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 139,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "note",
-          "message": {
-            "text": "Perhaps you need \"Callable[...]\" or a callback protocol?"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_bridges/test_cutter.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 139,
                   "startColumn": 1
                 }
               }
@@ -2509,90 +2488,6 @@
           ]
         },
         {
-          "ruleId": "no-redef",
-          "level": "error",
-          "message": {
-            "text": "Name \"data\" already defined on line 2251"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2257,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "assignment",
-          "level": "error",
-          "message": {
-            "text": "Incompatible types in assignment (expression has type \"QComboBox | None\", base class \"TransformsMixin\" defined the type as \"QComboBox\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 224,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "assignment",
-          "level": "error",
-          "message": {
-            "text": "Incompatible types in assignment (expression has type \"QLineEdit | None\", base class \"TransformsMixin\" defined the type as \"QLineEdit\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 225,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "assignment",
-          "level": "error",
-          "message": {
-            "text": "Incompatible types in assignment (expression has type \"QSpinBox | None\", base class \"TransformsMixin\" defined the type as \"QSpinBox\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 226,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "no-any-return",
           "level": "error",
           "message": {
@@ -2677,6 +2572,111 @@
           ]
         },
         {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"QComboBox | None\", base class \"TransformsMixin\" defined the type as \"QComboBox\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 229,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"QLineEdit | None\", base class \"TransformsMixin\" defined the type as \"QLineEdit\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 230,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"QSpinBox | None\", base class \"TransformsMixin\" defined the type as \"QSpinBox\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 231,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_model_discovery.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_google_provider.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "attr-defined",
           "level": "error",
           "message": {
@@ -2740,27 +2740,6 @@
           ]
         },
         {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"DetachedPanelWindow\" has no attribute \"on_redock\"; maybe \"_on_redock\"?"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_panel_dock.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 91,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "assignment",
           "level": "error",
           "message": {
@@ -2816,7 +2795,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 353,
+                  "startLine": 366,
                   "startColumn": 1
                 }
               }
@@ -2837,7 +2816,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 805,
+                  "startLine": 818,
                   "startColumn": 1
                 }
               }
@@ -2901,6 +2880,27 @@
                 },
                 "region": {
                   "startLine": 149,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"DetachedPanelWindow\" has no attribute \"on_redock\"; maybe \"_on_redock\"?"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_panel_dock.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 91,
                   "startColumn": 1
                 }
               }
@@ -3689,7 +3689,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-15T03:35:25.235356+00:00"
+          "endTimeUtc": "2026-04-17T05:38:07.553155+00:00"
         }
       ]
     }

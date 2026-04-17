@@ -36,6 +36,11 @@ class AssetNotFoundError(FileNotFoundError):
     searched_paths: list[Path]
 
     def __init__(self, searched_paths: list[Path]) -> None:
+        """Initialize the AssetsNotFoundError with the searched paths.
+
+        Args:
+            searched_paths: List of paths that were searched.
+        """
         paths_str = ", ".join(str(p) for p in searched_paths)
         super().__init__(f"Assets directory not found. Searched: [{paths_str}]")
         self.searched_paths = searched_paths

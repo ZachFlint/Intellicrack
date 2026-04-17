@@ -138,6 +138,13 @@ class BasicBlockItem(QGraphicsRectItem):
         ops: list[dict[str, Any]],
         parent: QGraphicsItem | None = None,
     ) -> None:
+        """Initialize the BasicBlockItem with address and instructions.
+
+        Args:
+            block_address: Start address of the block.
+            ops: List of instruction dicts from r2 agj output.
+            parent: Parent graphics item.
+        """
         self.block_address = block_address
         self._ops = ops
         fm = FontManager.get_instance()
@@ -238,6 +245,14 @@ class EdgeItem(QGraphicsPathItem):
         edge_type: str = "unconditional",
         parent: QGraphicsItem | None = None,
     ) -> None:
+        """Initialize the EdgeItem between two basic blocks.
+
+        Args:
+            start: Source point at the bottom center of the source block.
+            end: Destination point at the top center of the target block.
+            edge_type: Branch type for coloring.
+            parent: Parent graphics item.
+        """
         super().__init__(parent)
         self.edge_type = edge_type
         colors = _get_graph_colors()
@@ -303,6 +318,11 @@ class CFGGraphScene(QGraphicsScene):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the CFGGraphScene instance.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.block_items: dict[int, BasicBlockItem] = {}
 
@@ -496,6 +516,11 @@ class CFGGraphView(QGraphicsView):
     block_clicked: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the CFGGraphView widget.
+
+        Args:
+            parent: Parent widget.
+        """
         scene = CFGGraphScene()
         super().__init__(scene, parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)

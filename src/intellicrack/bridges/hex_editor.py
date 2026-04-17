@@ -273,6 +273,7 @@ class HexEditorBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the HexEditorBridge instance."""
         super().__init__()
         self.document: Any | None = None
         self._cursor_offset: int = 0

@@ -62,6 +62,7 @@ class AnthropicProvider(LLMProviderBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the AnthropicProvider instance."""
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
         self._current_task: Task[Any] | None = None

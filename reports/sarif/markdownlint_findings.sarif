@@ -778,7 +778,7 @@
           "ruleId": "error",
           "level": "warning",
           "message": {
-            "text": "MD013/line-length Line length [Expected: 80; Actual: 226]"
+            "text": "MD013/line-length Line length [Expected: 80; Actual: 244]"
           },
           "locations": [
             {
@@ -799,7 +799,7 @@
           "ruleId": "error",
           "level": "warning",
           "message": {
-            "text": "MD013/line-length Line length [Expected: 80; Actual: 277]"
+            "text": "MD013/line-length Line length [Expected: 80; Actual: 94]"
           },
           "locations": [
             {
@@ -820,6 +820,48 @@
           "ruleId": "error",
           "level": "warning",
           "message": {
+            "text": "MD013/line-length Line length [Expected: 80; Actual: 226]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "CHANGELOG.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 87,
+                  "startColumn": 81
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "error",
+          "level": "warning",
+          "message": {
+            "text": "MD013/line-length Line length [Expected: 80; Actual: 277]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "CHANGELOG.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 92,
+                  "startColumn": 81
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "error",
+          "level": "warning",
+          "message": {
             "text": "MD013/line-length Line length [Expected: 80; Actual: 119]"
           },
           "locations": [
@@ -830,7 +872,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 85,
+                  "startLine": 93,
                   "startColumn": 81
                 }
               }
@@ -851,7 +893,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 86,
+                  "startLine": 94,
                   "startColumn": 81
                 }
               }
@@ -872,7 +914,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 88,
+                  "startLine": 96,
                   "startColumn": 81
                 }
               }
@@ -893,7 +935,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 90,
+                  "startLine": 98,
                   "startColumn": 81
                 }
               }
@@ -914,49 +956,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 98,
-                  "startColumn": 81
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "error",
-          "level": "warning",
-          "message": {
-            "text": "MD013/line-length Line length [Expected: 80; Actual: 244]"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "CHANGELOG.md",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 110,
-                  "startColumn": 81
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "error",
-          "level": "warning",
-          "message": {
-            "text": "MD013/line-length Line length [Expected: 80; Actual: 94]"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "CHANGELOG.md",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 115,
+                  "startLine": 106,
                   "startColumn": 81
                 }
               }
@@ -12329,7 +12329,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-15T03:37:02.850979+00:00"
+          "endTimeUtc": "2026-04-17T05:38:40.402365+00:00"
         }
       ]
     }

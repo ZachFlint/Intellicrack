@@ -97,6 +97,11 @@ class CredentialStore:
     METADATA_KEY: Final[str] = "_metadata"
 
     def __init__(self, fallback_loader: CredentialLoader | None = None) -> None:
+        """Initialize the CredentialStore with an optional fallback loader.
+
+        Args:
+            fallback_loader: CredentialLoader instance for env-file fallback. If None, creates a new one.
+        """
         self._fallback_loader = fallback_loader or get_credential_loader()
         self._lock = asyncio.Lock()
         self._keyring: ModuleType | None = None

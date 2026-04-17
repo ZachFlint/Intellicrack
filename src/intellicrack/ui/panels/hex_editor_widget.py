@@ -146,6 +146,11 @@ class EntropyMiniMap(QWidget):
     navigation_requested: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the EntropyMiniMap widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._entropy_values: list[float] = []
         self._total_size: int = 0
@@ -366,6 +371,11 @@ class HexEditorWidget(QAbstractScrollArea):
     about_to_modify: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the HexEditorWidget instance.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._document: Any | None = None
         self._bytes_per_row: int = _BYTES_PER_ROW

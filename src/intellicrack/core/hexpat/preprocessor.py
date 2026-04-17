@@ -75,6 +75,11 @@ class HexPatPreprocessor:
     """
 
     def __init__(self, include_paths: list[Path] | None = None) -> None:
+        """Initialize the HexPatPreprocessor with include search paths.
+
+        Args:
+            include_paths: Directories to search for included files.
+        """
         self._include_paths: list[Path] = list(include_paths) if include_paths else []
         self._defines: dict[str, str] = {}
         self._included_files: set[str] = set()

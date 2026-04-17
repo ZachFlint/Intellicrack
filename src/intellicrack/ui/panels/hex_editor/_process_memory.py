@@ -75,6 +75,11 @@ class ProcessMemoryDialog(QDialog):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ProcessMemoryDialog.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self.setWindowTitle("Open Process Memory")
         self.setMinimumWidth(500)

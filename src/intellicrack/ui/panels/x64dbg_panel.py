@@ -108,6 +108,11 @@ class X64DbgPanel(AnalysisPanelBase):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the X64DbgPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
         self.embedded_container: QWidget | None = None

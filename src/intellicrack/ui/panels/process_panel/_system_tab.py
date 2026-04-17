@@ -56,6 +56,11 @@ class SystemTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the SystemTab.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._bridge: ProcessBridge | None = None
         self._attached_pid: int | None = None

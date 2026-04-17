@@ -1,6 +1,6 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-04-15T03:37:02.850979+00:00",
+  "generated": "2026-04-17T05:38:40.402365+00:00",
   "total_findings": 586,
   "total_files": 16,
   "files": [
@@ -3445,64 +3445,64 @@
           "line": 79,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 226]",
-          "raw": "CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 226]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 244]",
+          "raw": "CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 244]"
         },
         {
           "line": 84,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 277]",
-          "raw": "CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 277]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
+          "raw": "CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
         },
         {
-          "line": 85,
+          "line": 87,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 226]",
+          "raw": "CHANGELOG.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 226]"
+        },
+        {
+          "line": 92,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 277]",
+          "raw": "CHANGELOG.md:92:81 error MD013/line-length Line length [Expected: 80; Actual: 277]"
+        },
+        {
+          "line": 93,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 119]",
-          "raw": "CHANGELOG.md:85:81 error MD013/line-length Line length [Expected: 80; Actual: 119]"
+          "raw": "CHANGELOG.md:93:81 error MD013/line-length Line length [Expected: 80; Actual: 119]"
         },
         {
-          "line": 86,
+          "line": 94,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 132]",
-          "raw": "CHANGELOG.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 132]"
+          "raw": "CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 132]"
         },
         {
-          "line": 88,
+          "line": 96,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 107]",
-          "raw": "CHANGELOG.md:88:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
-        },
-        {
-          "line": 90,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
-          "raw": "CHANGELOG.md:90:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+          "raw": "CHANGELOG.md:96:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
         },
         {
           "line": 98,
           "column": 81,
           "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 106,
+          "column": 81,
+          "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 117]",
-          "raw": "CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 117]"
-        },
-        {
-          "line": 110,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 244]",
-          "raw": "CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 244]"
-        },
-        {
-          "line": 115,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
-          "raw": "CHANGELOG.md:115:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
+          "raw": "CHANGELOG.md:106:81 error MD013/line-length Line length [Expected: 80; Actual: 117]"
         }
       ]
     },

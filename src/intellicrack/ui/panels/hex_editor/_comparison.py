@@ -55,6 +55,15 @@ class DiffWorker(QThread):
         path_b: str,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the DiffWorker with two file buffers.
+
+        Args:
+            data_a: First file contents.
+            data_b: Second file contents.
+            path_a: Display path for first file.
+            path_b: Display path for second file.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._data_a = data_a
         self._data_b = data_b

@@ -238,6 +238,7 @@ class ToolBridgeBase(ABC):
     """
 
     def __init__(self) -> None:
+        """Initialize the ToolBridgeBase instance."""
         self._state: BridgeState = BridgeState()
         self._capabilities: BridgeCapabilities = BridgeCapabilities()
         self._logger = get_logger(f"bridges.{self.__class__.__name__.lower()}").bind(bridge=self.__class__.__name__.lower())
@@ -317,6 +318,7 @@ class StaticAnalysisBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the StaticAnalysisBridge instance."""
         super().__init__()
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
@@ -490,6 +492,7 @@ class DynamicAnalysisBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the DynamicAnalysisBridge instance."""
         super().__init__()
         self._capabilities = BridgeCapabilities(
             supports_dynamic_analysis=True,
@@ -578,6 +581,7 @@ class DebuggerBridge(DynamicAnalysisBridge):
     """
 
     def __init__(self) -> None:
+        """Initialize the DebuggerBridge instance."""
         super().__init__()
         self._capabilities.supports_debugging = True
 
@@ -718,6 +722,7 @@ class InstrumentationBridge(DynamicAnalysisBridge):
     """
 
     def __init__(self) -> None:
+        """Initialize the InstrumentationBridge instance."""
         super().__init__()
         self._capabilities.supports_scripting = True
 
@@ -843,6 +848,7 @@ class BinaryOperationsBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the BinaryOperationsBridge instance."""
         super().__init__()
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,

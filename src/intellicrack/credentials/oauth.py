@@ -357,6 +357,12 @@ class OAuthCallbackServer:
     """
 
     def __init__(self, port: int = 8080, timeout: float = 300.0) -> None:
+        """Initialize the OAuthCallbackServer with the given port and timeout.
+
+        Args:
+            port: Port to listen on for OAuth callbacks.
+            timeout: Timeout in seconds to wait for the callback.
+        """
         self._port = port
         self._timeout = timeout
         self._server: socketserver.TCPServer | None = None
@@ -444,6 +450,12 @@ class OAuthManager:
         credential_store: CredentialStore | None = None,
         callback_port: int = DEFAULT_CALLBACK_PORT,
     ) -> None:
+        """Initialize the OAuthManager with credential storage and callback configuration.
+
+        Args:
+            credential_store: Store for persisting OAuth tokens. If None, tokens are not persisted.
+            callback_port: Port for the local OAuth callback server.
+        """
         self._credential_store = credential_store
         self._callback_port = callback_port
         self._pending_states: dict[str, OAuthState] = {}

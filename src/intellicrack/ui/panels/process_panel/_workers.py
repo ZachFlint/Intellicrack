@@ -40,6 +40,11 @@ class TrackedRefreshWorker(QThread):
     refresh_finished: pyqtSignal = pyqtSignal(list)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the TrackedRefreshWorker.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
 
     def run(self) -> None:

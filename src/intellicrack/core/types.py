@@ -1482,6 +1482,13 @@ class IntellicrackError(Exception):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the IntellicrackError with the given details.
+
+        Args:
+            message: Human-readable error description.
+            error_code: Optional numeric error code for programmatic handling.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message)
         self.message = message
         self.error_code = error_code
@@ -1518,6 +1525,16 @@ class ProviderError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the ProviderError with provider-specific details.
+
+        Args:
+            message: Human-readable error description.
+            provider_name: Name of the provider.
+            status_code: HTTP status code if applicable.
+            response_body: Raw response body for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, error_code, details)
         self.provider_name = provider_name
         self.status_code = status_code
@@ -1560,6 +1577,18 @@ class RateLimitError(ProviderError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the RateLimitError with rate-limiting details.
+
+        Args:
+            message: Human-readable error description.
+            retry_after: Seconds until retry is allowed.
+            limit_type: Type of rate limit hit.
+            provider_name: Name of the provider.
+            status_code: HTTP status code if applicable.
+            response_body: Raw response body for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, provider_name, status_code, response_body, error_code, details)
         self.retry_after = retry_after
         self.limit_type = limit_type
@@ -1597,6 +1626,18 @@ class ModelNotFoundError(ProviderError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the ModelNotFoundError with model details.
+
+        Args:
+            message: Human-readable error description.
+            model_name: Name of the model that was not found.
+            available_models: List of available model names.
+            provider_name: Name of the provider.
+            status_code: HTTP status code if applicable.
+            response_body: Raw response body for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, provider_name, status_code, response_body, error_code, details)
         self.model_name = model_name
         self.available_models = available_models or []
@@ -1632,6 +1673,16 @@ class ToolError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the ToolError with tool-specific details.
+
+        Args:
+            message: Human-readable error description.
+            tool_name: Name of the tool.
+            exit_code: Process exit code if applicable.
+            stderr: Standard error output for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, error_code, details)
         self.tool_name = tool_name
         self.exit_code = exit_code
@@ -1666,6 +1717,16 @@ class ToolNotFoundError(ToolError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the ToolNotFoundError with search details.
+
+        Args:
+            message: Human-readable error description.
+            tool_name: Name of the tool.
+            search_paths: Paths that were searched.
+            install_hint: Hint for how to install the tool.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, tool_name, None, None, error_code, details)
         self.search_paths = search_paths or []
         self.install_hint = install_hint
@@ -1703,6 +1764,18 @@ class InitializationError(ToolError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the InitializationError with initialization details.
+
+        Args:
+            message: Human-readable error description.
+            tool_name: Name of the tool.
+            config_path: Path to configuration that failed.
+            missing_dependency: Name of missing dependency.
+            exit_code: Process exit code if applicable.
+            stderr: Standard error output for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, tool_name, exit_code, stderr, error_code, details)
         self.config_path = config_path
         self.missing_dependency = missing_dependency
@@ -1744,6 +1817,19 @@ class AttachError(ToolError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the AttachError with process attachment details.
+
+        Args:
+            message: Human-readable error description.
+            tool_name: Name of the tool.
+            pid: Process ID that could not be attached.
+            process_name: Name of the process that could not be attached.
+            reason: Specific reason for attachment failure.
+            exit_code: Process exit code if applicable.
+            stderr: Standard error output for debugging.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, tool_name, exit_code, stderr, error_code, details)
         self.pid = pid
         self.process_name = process_name
@@ -1776,6 +1862,15 @@ class SandboxError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the SandboxError with sandbox-specific details.
+
+        Args:
+            message: Human-readable error description.
+            sandbox_type: Type of sandbox.
+            vm_state: Current VM state when error occurred.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, error_code, details)
         self.sandbox_type = sandbox_type
         self.vm_state = vm_state
@@ -1807,6 +1902,16 @@ class SandboxTimeoutError(SandboxError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the SandboxTimeoutError with timeout details.
+
+        Args:
+            message: Human-readable error description.
+            timeout_seconds: Timeout duration that was exceeded.
+            sandbox_type: Type of sandbox.
+            vm_state: Current VM state when error occurred.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, sandbox_type, vm_state, error_code, details)
         self.timeout_seconds = timeout_seconds
 
@@ -1841,6 +1946,16 @@ class ConfigurationError(IntellicrackError):
         error_code: int | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize the ConfigurationError with configuration details.
+
+        Args:
+            message: Human-readable error description.
+            config_key: Configuration key that caused the error.
+            expected_type: Expected type or format.
+            actual_value: Actual value that was provided.
+            error_code: Optional numeric error code.
+            details: Optional dictionary with additional context.
+        """
         super().__init__(message, error_code, details)
         self.config_key = config_key
         self.expected_type = expected_type

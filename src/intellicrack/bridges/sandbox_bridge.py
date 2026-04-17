@@ -92,6 +92,7 @@ class SandboxBridge(ToolBridgeBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the SandboxBridge instance."""
         super().__init__()
         self._manager: SandboxManager | None = None
         self._capabilities = BridgeCapabilities(

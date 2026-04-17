@@ -138,6 +138,11 @@ class GhidraPanel(AnalysisPanelBase):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the GhidraPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         self._bridge: GhidraBridge | None = None
         self._data_tabs: QTabWidget | None = None
         super().__init__(parent)

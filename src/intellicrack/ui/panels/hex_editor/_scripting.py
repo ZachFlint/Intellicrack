@@ -243,6 +243,11 @@ class _PythonSyntaxHighlighter(QSyntaxHighlighter):
     """
 
     def __init__(self, parent: QTextDocument) -> None:
+        """Initialize the _PythonSyntaxHighlighter with highlighting rules.
+
+        Args:
+            parent: The QTextDocument to highlight.
+        """
         super().__init__(parent)
         self._rules: list[tuple[str, QTextCharFormat]] = []
         self._build_rules()
@@ -320,6 +325,13 @@ class _DocAPI:
         hex_widget: object,
         file_path: str | None,
     ) -> None:
+        """Initialize the _DocAPI with document and widget references.
+
+        Args:
+            document: The backing hex document object.
+            hex_widget: The hex editor widget for cursor/selection access.
+            file_path: Path of the currently loaded file.
+        """
         self._doc = document
         self._widget = hex_widget
         self._file_path = file_path
@@ -504,6 +516,13 @@ class ScriptWorker(QThread):
         doc_api: _DocAPI,
         parent: QThread | None = None,
     ) -> None:
+        """Initialize the ScriptWorker with script source and document API.
+
+        Args:
+            source: Python script source code to execute.
+            doc_api: Document API providing safe hex document access.
+            parent: Parent QObject.
+        """
         super().__init__(parent)
         self._source = source
         self._doc_api = doc_api

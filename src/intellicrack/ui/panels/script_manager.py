@@ -306,6 +306,11 @@ class ScriptListWidget(QListWidget):
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ScriptListWidget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._scripts: dict[str, dict[str, str]] = {}
         self._current_filter: str | None = None
@@ -393,6 +398,11 @@ class ScriptEditor(QPlainTextEdit):
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ScriptEditor.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent=parent)
         self._setup_ui()
 
@@ -448,6 +458,11 @@ class ScriptManagerPanel(QWidget):
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ScriptManagerPanel.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._backend: ScriptManager | None = None
         self._validator: ScriptValidator | None = None

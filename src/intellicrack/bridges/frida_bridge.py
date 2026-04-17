@@ -1066,6 +1066,7 @@ class FridaBridge(InstrumentationBridge):
     """
 
     def __init__(self) -> None:
+        """Initialize the FridaBridge instance."""
         super().__init__()
         self._device: frida.core.Device | None = None
         self._session: frida.core.Session | None = None

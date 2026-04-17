@@ -57,6 +57,11 @@ class MemoryTab(QWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the MemoryTab.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._bridge: ProcessBridge | None = None
         self._setup_ui()

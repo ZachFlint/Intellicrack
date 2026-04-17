@@ -63,6 +63,7 @@ class GoogleProvider(LLMProviderBase):
     """
 
     def __init__(self) -> None:
+        """Initialize the GoogleProvider instance."""
         super().__init__()
         self.client: genai.Client | None = None
         self._current_task: asyncio.Task[object] | None = None

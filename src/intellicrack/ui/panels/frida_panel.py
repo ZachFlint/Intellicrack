@@ -105,6 +105,11 @@ class FridaPanel(AnalysisPanelBase):
     _frida_message_received: pyqtSignal = pyqtSignal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the FridaPanel widget.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._frida_message_received.connect(self._on_frida_message)
         self._bridge: FridaBridge | None = None

@@ -131,6 +131,12 @@ class AsyncWorker(QThread):
         coro: Coroutine[object, object, object],
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the AsyncWorker with the given coroutine.
+
+        Args:
+            coro: Coroutine to execute in a separate thread.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._coro: Coroutine[object, object, object] = coro
 
@@ -183,6 +189,13 @@ class MainWindow(QMainWindow):
         orchestrator: Orchestrator,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the MainWindow with the given configuration and orchestrator.
+
+        Args:
+            config: Application configuration.
+            orchestrator: AI agent orchestrator.
+            parent: Parent widget.
+        """
         super().__init__(parent)
         sys.excepthook = _unhandled_exception_hook
         self._config = config
