@@ -7,7 +7,7 @@
 
 Tests validate:
 - Bridge instantiation and capability reporting
-- Tool definition completeness for all 73 tool functions
+- Tool definition completeness for all 81 tool functions
 - String injection safety in generated Jython code (json.dumps usage)
 - Method existence and signatures for all bridge methods
 - Error handling when Ghidra is not connected
@@ -27,7 +27,7 @@ from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.core.types import ToolError, ToolName
 
 
-_EXPECTED_TOOL_COUNT: Final[int] = 73
+_EXPECTED_TOOL_COUNT: Final[int] = 81
 _TEST_ADDRESS: Final[int] = 0x401000
 _TEST_RADIUS: Final[int] = 0x100
 _MIN_DESCRIPTION_LEN: Final[int] = 5
@@ -186,6 +186,14 @@ def test_tool_definition_new_functions(bridge: GhidraBridge) -> None:
         "ghidra.manage_external_references",
         "ghidra.add_external_function",
         "ghidra.create_overlay_space",
+        "ghidra.add_bookmark",
+        "ghidra.remove_bookmark",
+        "ghidra.add_label",
+        "ghidra.remove_label",
+        "ghidra.add_thunk",
+        "ghidra.remove_thunk",
+        "ghidra.add_external_reference",
+        "ghidra.remove_external_reference",
     }
     assert new_functions.issubset(function_names), f"Missing: {new_functions - function_names}"
 
@@ -986,6 +994,86 @@ class TestNewMethodsRaiseWhenDisconnected:
         """
         with pytest.raises(ToolError, match="not connected"):
             await disconnected.create_overlay_space("test_overlay")
+
+    @pytest.mark.asyncio
+    async def test_add_bookmark_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify add_bookmark raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.add_bookmark(_TEST_ADDRESS, "Analysis", "note")
+
+    @pytest.mark.asyncio
+    async def test_remove_bookmark_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify remove_bookmark raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.remove_bookmark(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_add_label_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify add_label raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.add_label(_TEST_ADDRESS, "lbl")
+
+    @pytest.mark.asyncio
+    async def test_remove_label_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify remove_label raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.remove_label(_TEST_ADDRESS, "lbl")
+
+    @pytest.mark.asyncio
+    async def test_add_thunk_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify add_thunk raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.add_thunk(_TEST_ADDRESS, _TEST_ADDRESS + 0x100)
+
+    @pytest.mark.asyncio
+    async def test_remove_thunk_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify remove_thunk raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.remove_thunk(_TEST_ADDRESS)
+
+    @pytest.mark.asyncio
+    async def test_add_external_reference_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify add_external_reference raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.add_external_reference(_TEST_ADDRESS, "kernel32.dll", "LoadLibraryA")
+
+    @pytest.mark.asyncio
+    async def test_remove_external_reference_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify remove_external_reference raises when not connected.
+
+        Args:
+            disconnected: GhidraBridge fixture.
+        """
+        with pytest.raises(ToolError, match="not connected"):
+            await disconnected.remove_external_reference(_TEST_ADDRESS)
 
 
 def test_tool_definition_exact_count(bridge: GhidraBridge) -> None:
