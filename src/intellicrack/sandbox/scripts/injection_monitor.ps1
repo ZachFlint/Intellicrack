@@ -78,7 +78,7 @@ $allocEntryCap = 4096
 
 $script:moduleCache = @{}
 $script:moduleCacheStamp = @{}
-$script:virtualProtectByThread = @{}
+$script:virtualAllocByThread = @{}
 $script:targetPidFilter = $TargetPid
 $script:moduleCacheTtl = $moduleCacheTtlSeconds
 $script:allocTtl = $allocEntryTtlSeconds
@@ -182,14 +182,26 @@ try {
             if ($script:targetPidFilter -ne 0 -and $evtPid -ne $script:targetPidFilter) { return }
             if ($evtPid -le 4) { return }
 
-            $startAddr = [int64]$evt.StartAddr
+            $startAddr = 0L
+            foreach ($f in @('Win32StartAddr','StartAddr')) {
+                try {
+                    $val = $evt.PayloadByName($f)
+                    if ($null -ne $val) { $startAddr = [int64]$val; break }
+                } catch {}
+            }
             if ($startAddr -eq 0) { return }
 
             $resolution = Resolve-StartAddress -ProcId $evtPid -Address $startAddr
             if (-not $resolution.Suspicious -and $resolution.InModule) { return }
 
             $threadId = [int]$evt.ThreadID
-            $sourcePid = [int]$evt.ParentProcessID
+            $sourcePid = 0
+            foreach ($f in @('ParentProcessID','ParentPid','CreatorProcessID')) {
+                try {
+                    $val = $evt.PayloadByName($f)
+                    if ($null -ne $val) { $sourcePid = [int]$val; break }
+                } catch {}
+            }
             if ($sourcePid -eq 0) { $sourcePid = $evtPid }
 
             $sourceName = Get-ProcessNameSafe -ProcId $sourcePid
@@ -197,9 +209,9 @@ try {
 
             $apis = New-Object System.Collections.Generic.List[string]
             $apis.Add('CreateRemoteThread') | Out-Null
-            if ($script:virtualProtectByThread.ContainsKey($threadId)) {
-                $apis.Add('VirtualProtect') | Out-Null
-                $script:virtualProtectByThread.Remove($threadId) | Out-Null
+            if ($script:virtualAllocByThread.ContainsKey($threadId)) {
+                $apis.Add('VirtualAllocEx') | Out-Null
+                $script:virtualAllocByThread.Remove($threadId) | Out-Null
             }
 
             $injType = 'remote_thread'
@@ -208,14 +220,16 @@ try {
                 $apis.Add('LoadLibrary') | Out-Null
             } elseif (-not $resolution.InModule) {
                 $injType = 'shellcode_injection'
-                $apis.Add('VirtualAllocEx') | Out-Null
+                if (-not ($apis -contains 'VirtualAllocEx')) { $apis.Add('VirtualAllocEx') | Out-Null }
                 $apis.Add('WriteProcessMemory') | Out-Null
             }
+
+            $uniqueApis = $apis | Select-Object -Unique
 
             $ts = Get-Date -Format 'o'
             Write-InjectionRecord -Timestamp $ts -SourcePid $sourcePid -SourceName $sourceName `
                 -InjectedPid $evtPid -InjectedName $targetName `
-                -InjectionType $injType -ApiCalls ($apis -join ',')
+                -InjectionType $injType -ApiCalls ($uniqueApis -join ',')
         } catch {
             $null = $_
         }
@@ -227,13 +241,13 @@ try {
             $evtPid = [int]$evt.ProcessID
             if ($script:targetPidFilter -ne 0 -and $evtPid -ne $script:targetPidFilter) { return }
             $threadId = [int]$evt.ThreadID
-            $script:virtualProtectByThread[$threadId] = [DateTime]::UtcNow
-            if ($script:virtualProtectByThread.Count -gt $script:allocCap) {
+            $script:virtualAllocByThread[$threadId] = [DateTime]::UtcNow
+            if ($script:virtualAllocByThread.Count -gt $script:allocCap) {
                 $cutoff = [DateTime]::UtcNow.AddSeconds(-$script:allocTtl)
-                $stale = @($script:virtualProtectByThread.GetEnumerator() |
+                $stale = @($script:virtualAllocByThread.GetEnumerator() |
                     Where-Object { $_.Value -lt $cutoff } |
                     Select-Object -ExpandProperty Key)
-                foreach ($k in $stale) { $script:virtualProtectByThread.Remove($k) | Out-Null }
+                foreach ($k in $stale) { $script:virtualAllocByThread.Remove($k) | Out-Null }
             }
         } catch {
             $null = $_
@@ -244,8 +258,8 @@ try {
         param($evt)
         try {
             $threadId = [int]$evt.ThreadID
-            if ($script:virtualProtectByThread.ContainsKey($threadId)) {
-                $script:virtualProtectByThread.Remove($threadId) | Out-Null
+            if ($script:virtualAllocByThread.ContainsKey($threadId)) {
+                $script:virtualAllocByThread.Remove($threadId) | Out-Null
             }
         } catch {
             $null = $_

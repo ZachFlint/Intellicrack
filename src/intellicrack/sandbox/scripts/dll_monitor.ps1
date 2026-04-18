@@ -79,24 +79,52 @@ function Invoke-EtwDllMonitor {
     $realtime = $tesType::new($Session)
 
     $source = $realtime.Source
-    $kernelParser = New-Object Microsoft.Diagnostics.Tracing.Parsers.KernelTraceEventParser($source)
+    $dynamicParser = New-Object Microsoft.Diagnostics.Tracing.Parsers.DynamicTraceEventParser($source)
 
-    $handler = {
+    $imageLoadHandler = {
         param($evt)
         try {
+            $opcode = [int]$evt.Opcode
+            $id = [int]$evt.ID
+            if (-not ($id -eq 5 -or $opcode -eq 10 -or $opcode -eq 2)) { return }
+
             $ts = (Get-Date).ToString('o')
             $processId = [int]$evt.ProcessID
+
+            $imagePath = ''
+            foreach ($fieldName in @('ImageName','FileName','ImageFileName')) {
+                try {
+                    $val = $evt.PayloadByName($fieldName)
+                    if ($val) { $imagePath = [string]$val; break }
+                } catch {}
+            }
+            if (-not $imagePath) { return }
+
+            $imageBase = 0L
+            foreach ($fieldName in @('ImageBase','BaseAddr','ImageAddress')) {
+                try {
+                    $val = $evt.PayloadByName($fieldName)
+                    if ($null -ne $val) { $imageBase = [int64]$val; break }
+                } catch {}
+            }
+
+            $imageSize = 0L
+            foreach ($fieldName in @('ImageSize','ImageCheckSum','Size')) {
+                try {
+                    $val = $evt.PayloadByName($fieldName)
+                    if ($null -ne $val -and $fieldName -ne 'ImageCheckSum') { $imageSize = [int64]$val; break }
+                } catch {}
+            }
+
             $procName = try { (Get-Process -Id $processId -ErrorAction Stop).ProcessName } catch { 'unknown' }
-            $imagePath = [string]$evt.FileName
-            $baseAddr = '0x{0:X}' -f [int64]$evt.ImageBase
-            $imageSize = [long]$evt.ImageSize
+            $baseAddr = '0x{0:X}' -f $imageBase
             Write-DllRecord -Timestamp $ts -ProcessId $processId -ProcessName $procName -ImagePath $imagePath -BaseAddress $baseAddr -ImageSize $imageSize
         } catch {
             return
         }
     }
 
-    Register-ObjectEvent -InputObject $kernelParser -EventName 'ImageLoad' -Action $handler | Out-Null
+    $dynamicParser.add_All($imageLoadHandler)
 
     try {
         $source.Process() | Out-Null
