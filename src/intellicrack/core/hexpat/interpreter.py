@@ -9,10 +9,10 @@ Chains preprocessor -> lexer -> parser -> evaluator into a single execute() call
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.ast_nodes import ForStmt, FunctionDecl, MatchStmt, WhileStmt
 from intellicrack.core.hexpat.data_reader import DataReader
 from intellicrack.core.hexpat.errors import HexPatError
@@ -114,17 +114,7 @@ class HexPatInterpreter:
         type_registry = TypeRegistry()
 
         if offset > 0:
-            pragma = PragmaInfo(
-                endian=pragma.endian,
-                mime=pragma.mime,
-                magic=pragma.magic,
-                base_address=offset,
-                eval_depth=pragma.eval_depth,
-                array_limit=pragma.array_limit,
-                pattern_limit=pragma.pattern_limit,
-                author=pragma.author,
-                description=pragma.description,
-            )
+            pragma = dataclasses.replace(pragma, base_address=offset)
 
         evaluator = HexPatEvaluator(data_reader, type_registry, pragma)
 
@@ -187,17 +177,7 @@ class HexPatInterpreter:
         type_registry = TypeRegistry()
 
         if offset > 0:
-            pragma = PragmaInfo(
-                endian=pragma.endian,
-                mime=pragma.mime,
-                magic=pragma.magic,
-                base_address=offset,
-                eval_depth=pragma.eval_depth,
-                array_limit=pragma.array_limit,
-                pattern_limit=pragma.pattern_limit,
-                author=pragma.author,
-                description=pragma.description,
-            )
+            pragma = dataclasses.replace(pragma, base_address=offset)
 
         evaluator = HexPatEvaluator(data_reader, type_registry, pragma)
 
