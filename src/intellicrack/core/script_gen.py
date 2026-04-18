@@ -4,9 +4,19 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Script infrastructure for Intellicrack.
 
-This module provides data structures and utilities for AI-generated scripts.
-The actual script content is written dynamically by the AI based on analysis
-results - there are NO pre-built templates or generated scripts here.
+This module provides the stable Python API used by the application GUI layer
+(see ``main.py`` wiring) and by the tool/AI bridges to orchestrate AI-generated
+scripts. The actual script content is written dynamically by the AI based on
+analysis results - there are NO pre-built templates or generated scripts here.
+
+Integration pattern:
+    A single :class:`ScriptGenerator` instance is owned by the top-level
+    application shell and passed (or re-referenced by composition) into GUI
+    panels and bridge orchestrators that need to build AI prompts from
+    :class:`ScriptContext` state. :class:`ScriptManager` owns the on-disk
+    storage and in-memory cache of :class:`Script` objects, and
+    :class:`ScriptValidator` is used to validate script contents before
+    handing them to an external execution bridge.
 
 The AI creates scripts from scratch using:
 - Analysis results from analysis_aggregator
@@ -23,13 +33,14 @@ This module only provides:
 from __future__ import annotations
 
 import ast
+import re
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Final, Literal
 
 from ._subprocess import TimeoutExpired
 from .logging import get_logger
@@ -41,6 +52,8 @@ _logger = get_logger("core.script_gen")
 ScriptType = Literal["frida", "ghidra", "cutter", "python", "x64dbg"]
 
 _ApiRefGetter = Callable[[], dict[str, str]]
+
+_JAVA_CLASS_DECLARATION_RE: Final[re.Pattern[str]] = re.compile(r"\bclass\s+[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _empty_str_list() -> list[str]:
@@ -367,15 +380,24 @@ class ScriptValidator:
 
     @staticmethod
     def validate_javascript(content: str) -> tuple[bool, str | None]:
-        """Validate JavaScript syntax using node if available.
+        """Validate JavaScript syntax using the ``node`` runtime.
+
+        Writes the script to a temporary file and invokes ``node --check`` to
+        perform real syntax validation. A ``(True, None)`` return is only
+        produced when node actually reports a clean parse (exit code ``0``).
 
         Args:
             content: JavaScript script content.
 
         Returns:
-            tuple[bool, str | None]: Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: ``(True, None)`` when node confirms the
+            script parses cleanly. ``(False, <reason>)`` in every other case,
+            including node being unavailable, tempfile write failures,
+            subprocess timeouts, and actual syntax errors. The second element
+            is always populated when the first is ``False``.
         """
         _logger.debug("validate_javascript_start", content_length=len(content))
+        temp_path: str | None = None
         try:
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -386,50 +408,72 @@ class ScriptValidator:
                 f.write(content)
                 temp_path = f.name
             _logger.debug("temp_file_created", path=temp_path, suffix=".js")
+        except OSError as exc:
+            _logger.warning("tempfile_write_failed", language="javascript", error=str(exc))
+            return False, f"tempfile write failed: {exc}"
 
+        try:
             process_manager = ProcessManager.get_instance()
             cmd = ["node", "--check", temp_path]
             _logger.debug("subprocess_execute", command=cmd)
-            result = process_manager.run_tracked(
-                cmd,
-                name="node-syntax-check",
-                timeout=10,
-            )
+            try:
+                result = process_manager.run_tracked(
+                    cmd,
+                    name="node-syntax-check",
+                    timeout=10,
+                )
+            except FileNotFoundError:
+                _logger.warning("node_not_installed", language="javascript")
+                return False, "node not installed"
+            except TimeoutExpired:
+                _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
+                return False, "Validation timed out"
             _logger.debug("subprocess_completed", command=cmd, exit_code=result.returncode)
-
-            Path(temp_path).unlink(missing_ok=True)
-            _logger.debug("temp_file_cleaned", path=temp_path)
 
             if result.returncode == 0:
                 return True, None
-            return False, result.stderr.strip()
-
-        except FileNotFoundError:
-            _logger.debug("node_not_found", reason="node binary not available, skipping validation")
-            return True, None
-        except TimeoutExpired:
-            _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
-            return False, "Validation timed out"
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.debug("validation_exception", language="javascript", error=str(exc))
-            return True, None
+            stderr_text = (result.stderr or "").strip() or f"node exited with code {result.returncode}"
+            return False, stderr_text
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+            _logger.debug("temp_file_cleaned", path=temp_path)
 
     @staticmethod
     def validate_java(content: str) -> tuple[bool, str | None]:
-        """Validate Java/Ghidra script structure.
+        r"""Validate Java/Ghidra script structure.
+
+        Performs a lightweight structural check on a Ghidra Java script. An
+        explicit class declaration is detected with a regular expression
+        (``\bclass\s+<identifier>``) rather than a naive substring match so
+        that the word ``class`` appearing in strings or comments does not
+        produce false positives.
 
         Args:
             content: Java script content.
 
         Returns:
-            tuple[bool, str | None]: Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: ``(True, None)`` when the script contains
+            the required ``import`` statement, ``public`` modifier, an
+            explicit class declaration, and a ``void run(`` entry point with
+            balanced braces. ``(False, <reason>)`` otherwise.
         """
         _logger.debug("validate_java_start", content_length=len(content))
-        required_elements = ["import", "public", "void run("]
-        for element in required_elements:
-            if element not in content:
-                _logger.debug("validate_java_missing_element", element=element)
-                return False, f"Missing required element: {element}"
+
+        if "import" not in content:
+            _logger.debug("validate_java_missing_element", element="import")
+            return False, "Missing required element: import"
+
+        if "public" not in content:
+            _logger.debug("validate_java_missing_element", element="public")
+            return False, "Missing required element: public"
+
+        if _JAVA_CLASS_DECLARATION_RE.search(content) is None:
+            _logger.debug("validate_java_missing_element", element="class")
+            return False, "Missing required element: class declaration"
+
+        if "void run(" not in content:
+            _logger.debug("validate_java_missing_element", element="void run(")
+            return False, "Missing required element: void run("
 
         brace_count = content.count("{") - content.count("}")
         if brace_count != 0:
@@ -760,7 +804,23 @@ def get_x64dbg_reference() -> dict[str, str]:
 
 
 class ScriptGenerator:
-    """Generates AI prompts for dynamic script generation in Intellicrack."""
+    """Stable public entry point for building AI prompts that generate scripts.
+
+    ``ScriptGenerator`` is the API surface consumed by the Intellicrack
+    application shell (``main.py``) and by tool/AI bridges that need to turn
+    a :class:`ScriptContext` into a prompt string ready for a language model.
+    The class is intentionally thin: it owns no mutable state and every
+    ``generate_*`` helper dispatches to :meth:`prepare_ai_prompt` with a
+    fixed :class:`ScriptLanguage`. The separation keeps the language-specific
+    plumbing in one place while giving callers strongly typed, discoverable
+    method names.
+
+    The instance is designed to live for the lifetime of the application
+    shell; holding a reference avoids the "instance discarded immediately
+    after construction" anti-pattern and lets future refactors attach shared
+    dependencies (for example, API reference caches) without changing the
+    public surface.
+    """
 
     def __init__(self) -> None:
         """Initialize the ScriptGenerator instance."""
@@ -770,11 +830,18 @@ class ScriptGenerator:
         """Prepare a detailed prompt for AI script generation.
 
         Args:
-            context: Analysis context.
-            language: Target script language.
+            context: Analysis context describing the target binary and any
+                protections, strings, functions, or other artifacts discovered
+                by upstream analysis tools.
+            language: Target script language. Used to select both the textual
+                label embedded in the prompt and the API reference section
+                injected by :meth:`ScriptContext.to_prompt_context`.
 
         Returns:
-            str: Full prompt string including context and API references.
+            str: Full prompt string including analysis context, language
+            directive, and any language-specific API reference. The returned
+            text is stripped of leading and trailing whitespace so it can be
+            concatenated directly with other prompt fragments.
         """
         context_str = context.to_prompt_context(language)
 
@@ -792,3 +859,58 @@ The script must be production-ready and handle errors gracefully.
 Implement full logic based on the provided addresses and strategies.
 """
         return prompt.strip()
+
+    def generate_frida(self, context: ScriptContext) -> str:
+        """Build an AI prompt targeted at Frida (JavaScript) script generation.
+
+        Args:
+            context: Analysis context to embed in the prompt.
+
+        Returns:
+            str: Prompt text with the Frida/JavaScript API reference included.
+        """
+        return self.prepare_ai_prompt(context, ScriptLanguage.JAVASCRIPT)
+
+    def generate_ghidra(self, context: ScriptContext) -> str:
+        """Build an AI prompt targeted at Ghidra (Java) script generation.
+
+        Args:
+            context: Analysis context to embed in the prompt.
+
+        Returns:
+            str: Prompt text with the Ghidra Java API reference included.
+        """
+        return self.prepare_ai_prompt(context, ScriptLanguage.JAVA)
+
+    def generate_python(self, context: ScriptContext) -> str:
+        """Build an AI prompt targeted at generic Python script generation.
+
+        Args:
+            context: Analysis context to embed in the prompt.
+
+        Returns:
+            str: Prompt text for a Python script (no vendor API reference).
+        """
+        return self.prepare_ai_prompt(context, ScriptLanguage.PYTHON)
+
+    def generate_cutter(self, context: ScriptContext) -> str:
+        """Build an AI prompt targeted at Cutter/Rizin command script generation.
+
+        Args:
+            context: Analysis context to embed in the prompt.
+
+        Returns:
+            str: Prompt text with the Cutter/Rizin command reference included.
+        """
+        return self.prepare_ai_prompt(context, ScriptLanguage.R2_COMMANDS)
+
+    def generate_x64dbg(self, context: ScriptContext) -> str:
+        """Build an AI prompt targeted at x64dbg script generation.
+
+        Args:
+            context: Analysis context to embed in the prompt.
+
+        Returns:
+            str: Prompt text with the x64dbg command reference included.
+        """
+        return self.prepare_ai_prompt(context, ScriptLanguage.X64DBG_SCRIPT)
