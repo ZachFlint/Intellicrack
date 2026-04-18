@@ -30,11 +30,20 @@ if TYPE_CHECKING:
     from intellicrack.core.config import LogConfig
 
 
-_DEFAULT_LOG_DIR = Path("D:/Intellicrack/logs")
 _DEFAULT_LOG_FILE = "intellicrack.log"
 _CALL_INFO_DEPTH = 2
 _COLLECTION_TRUNCATE_SIZE = 10
 _STRING_TRUNCATE_SIZE = 200
+
+
+def _default_log_dir() -> Path:
+    """Return a portable default directory for log files.
+
+    Returns:
+        Path: ``Path.cwd() / "logs"`` as the portable default when no explicit
+            log directory is provided by the caller.
+    """
+    return Path.cwd() / "logs"
 
 
 class ColoredConsoleRenderer:
@@ -341,21 +350,30 @@ class _LoggerState:
 _logger_state = _LoggerState()
 
 
-def setup_logging(config: LogConfig) -> IntellicrackLogger:
+def setup_logging(
+    config: LogConfig,
+    log_dir: Path | None = None,
+) -> IntellicrackLogger:
     """Set up application logging from configuration.
 
     Args:
         config: LogConfig instance with logging settings.
+        log_dir: Optional directory for log files. When ``None`` the portable
+            default ``Path.cwd() / "logs"`` is used. Callers that have a loaded
+            ``Config`` instance should pass ``config.logs_directory`` here so
+            the logs land in the user-configured location.
 
     Returns:
         IntellicrackLogger: Configured IntellicrackLogger instance.
     """
-    log_dir = _DEFAULT_LOG_DIR
+    resolved_log_dir = log_dir if log_dir is not None else _default_log_dir()
+    if config.file_enabled:
+        resolved_log_dir.mkdir(parents=True, exist_ok=True)
 
     logger = IntellicrackLogger("intellicrack")
     logger.configure(
         level=config.level,
-        log_dir=log_dir,
+        log_dir=resolved_log_dir,
         file_enabled=config.file_enabled,
         console_enabled=config.console_enabled,
         max_file_size_mb=config.max_file_size_mb,
