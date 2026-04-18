@@ -1,13 +1,13 @@
 repos:
-  # Rust Quality Assurance (New Intellicrack Launcher)
+  # Rust Quality Assurance (intellicrack-hexcore crate)
   - repo: https://github.com/doublify/pre-commit-rust
     rev: eeee35a89e69d5772bdee97db1a6a898467b686e # pragma: allowlist secret
     hooks:
       - id: cargo-check
-        args: ['--manifest-path', 'intellicrack-launcher/Cargo.toml']
+        args: ['--manifest-path', 'src/intellicrack-hexcore/Cargo.toml']
         name: Rust cargo check
       - id: clippy
-        args: ['--manifest-path', 'intellicrack-launcher/Cargo.toml', '--', '-D', 'warnings']
+        args: ['--manifest-path', 'src/intellicrack-hexcore/Cargo.toml', '--all-targets', '--', '-W', 'clippy::all', '-W', 'clippy::pedantic']
         name: Rust clippy linting
   - repo: local
     hooks:
@@ -41,7 +41,7 @@ repos:
         stages: [pre-commit]
       - id: rust-fmt
         name: Rust code formatting (cargo fmt)
-        entry: cargo fmt --manifest-path intellicrack-launcher/Cargo.toml -- --check
+        entry: cargo fmt --manifest-path src/intellicrack-hexcore/Cargo.toml -- --check
         language: system
         types: [rust]
         pass_filenames: false

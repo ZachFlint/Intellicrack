@@ -76,6 +76,14 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Add docstrings and improve type safety in hexcore (`574fe2b`)
+Standardized documentation across the Python UI and core modules by adding missing docstrings to class constructors and methods. Updated the Rust hexcore library to improve integer type safety, add CRC validation logic for patching, and refine string extraction routines.
+* Update Python dependencies in pyproject.toml including pydantic, rich, and anthropic
+* Implement robust BPS/UPS patch validation and error handling in Rust
+* Add comprehensive docstrings to UI panels, bridges, and provider implementations
+* Synchronize knowledge graph visualization with recent architectural changes
+* Regenerate linting and security reports across multiple formats
+
 - Update knowledge graph and workspace configuration (`b59c83b`)
 Synchronize the Intellicrack knowledge graph with the current project structure and update environment configurations. This includes refreshing module mappings, updating file paths in GraphML metadata, and cleaning up stale worktree references.
 - Update `IntellicrackKnowledgeGraph.dot` and `.graphml` with current module relationships
@@ -114,14 +122,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
-- Add docstrings and improve type safety in hexcore (``)
-Standardized documentation across the Python UI and core modules by adding missing docstrings to class constructors and methods. Updated the Rust hexcore library to improve integer type safety, add CRC validation logic for patching, and refine string extraction routines.
-* Update Python dependencies in pyproject.toml including pydantic, rich, and anthropic
-* Implement robust BPS/UPS patch validation and error handling in Rust
-* Add comprehensive docstrings to UI panels, bridges, and provider implementations
-* Synchronize knowledge graph visualization with recent architectural changes
-* Regenerate linting and security reports across multiple formats
 
 
 ### Documentation
@@ -177,5 +177,23 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 - Fix docstring findings in tests/test_hexpat + test_scripts  (`09ee9c1`)
 
 - Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
+
+
+### Fixed
+
+- **hexcore:** Normalize-at-comparison case-insensitive search, strict ASCII encoder (`a1586b5`)
+Replace variant-generation case-insensitive search (which missed mixed-case
+inputs like "HeLLo") with normalize-at-comparison: decode each sliding window
+via encoding_rs and compare via str::to_lowercase. Reject non-ASCII input in
+the ASCII encoder instead of silently truncating. Move unused pattern-length
+locals out of the early-return branch in search_bytes and search_hex_with_wildcards.
+
+- Improve UTF-16LE string extraction and piece table safety (``)
+Refactored the UTF-16LE string extraction logic to correctly handle surrogate pairs and non-ASCII printable characters. Updated the piece table implementation to use more explicit panics with descriptive messages for invariant violations during deletion operations.
+- Support full Unicode range in UTF-16LE extraction instead of just ASCII
+- Add robust handling for dangling high/low surrogates in byte streams
+- Strengthen internal invariants in `piece_table.rs` with explicit error messages
+- Update project documentation and knowledge graph visualization
+- Add comprehensive test suite for UTF-16LE edge cases including emojis and Cyrillic script
 
 
