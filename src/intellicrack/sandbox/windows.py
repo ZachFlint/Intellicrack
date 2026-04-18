@@ -849,7 +849,7 @@ class WindowsSandbox(SandboxBase):
             "    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null\n"
             "}\n"
             "$logPath = Join-Path -Path $LogDir -ChildPath 'file_monitor.log'\n"
-            "$roots = @('C:\\Users\\WDAGUtilityAccount', 'C:\\ProgramData', 'C:\\Windows\\Temp')\n"
+            "$roots = @('C:\\Users\\WDAGUtilityAccount', 'C:\\ProgramData', 'C:\\Windows\\Temp', 'C:\\Windows\\System32', 'C:\\Windows\\SysWOW64', 'C:\\Users\\Public')\n"
             "$watchers = @()\n"
             "foreach ($root in $roots) {\n"
             "    if (-not (Test-Path -LiteralPath $root)) { continue }\n"
@@ -981,10 +981,11 @@ class WindowsSandbox(SandboxBase):
             '        $local = "$($c.LocalAddress):$($c.LocalPort)"\n'
             '        $remote = "$($c.RemoteAddress):$($c.RemotePort)"\n'
             "        $state = [string]$c.State\n"
+            '        $op = if ($state -eq "Listen") { "listen" } else { "connection" }\n'
             '        $key = "tcp|$local|$remote|$state|$pid"\n'
             "        if ($seen.ContainsKey($key)) { continue }\n"
             "        $seen[$key] = $true\n"
-            '        "$ts|$state|$local|$remote|$state|tcp|$sent|$recv|$pid|$name" |\n'
+            '        "$ts|$op|$local|$remote|$state|tcp|$sent|$recv|$pid|$name" |\n'
             "            Out-File -Append -FilePath $logPath -Encoding utf8\n"
             "    }\n"
             "    $udp = Get-NetUDPEndpoint -ErrorAction SilentlyContinue\n"
@@ -998,9 +999,10 @@ class WindowsSandbox(SandboxBase):
             '        $key = "udp|$local|$pid"\n'
             "        if ($seen.ContainsKey($key)) { continue }\n"
             "        $seen[$key] = $true\n"
-            '        "$ts|$state|$local|$remote|$state|udp|0|0|$pid|$name" |\n'
+            '        "$ts|bind|$local|$remote|$state|udp|0|0|$pid|$name" |\n'
             "            Out-File -Append -FilePath $logPath -Encoding utf8\n"
             "    }\n"
+            "    if ($seen.Count -gt 8192) { $seen.Clear() }\n"
             "    Start-Sleep -Seconds 2\n"
             "}\n"
         )

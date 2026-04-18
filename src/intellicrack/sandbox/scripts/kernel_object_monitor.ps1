@@ -297,7 +297,10 @@ function Invoke-MonitorSweep {
                 $knownObjects[$dedupKey] = $true
 
                 $procName = Get-ProcessNameById -ProcessId $ownerPid
-                $record = "$ts|$typeName|$objName|$ownerPid|$procName|created"
+                $safeType = ($typeName -replace '[\r\n|]', '_')
+                $safeName = ($objName -replace '[\r\n|]', '_')
+                $safeProc = ($procName -replace '[\r\n|]', '_')
+                $record = "$ts|$safeType|$safeName|$ownerPid|$safeProc|created"
 
                 try {
                     Add-Content -LiteralPath $logPath -Value $record -Encoding utf8

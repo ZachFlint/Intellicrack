@@ -1475,6 +1475,7 @@ function Send-Message($stream, $data) {
 
 $knownProcs = @{}
 $prevConnKeys = @{}
+$prevConnKeyCap = 8192
 
 while ($true) {
     if ($listener.Pending()) {
@@ -1566,6 +1567,10 @@ while ($true) {
             $prevConnKeys[$key] = $true
             "$ts|bind|$($ep.LocalAddress):$($ep.LocalPort)|0.0.0.0:0|Listen|udp|0|0|$owner|$pname" | Out-File -Append $netLog -Encoding utf8
         }
+    }
+
+    if ($prevConnKeys.Count -gt $prevConnKeyCap) {
+        $prevConnKeys.Clear()
     }
 
     Start-Sleep -Seconds 1
@@ -3017,6 +3022,23 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                 exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
                 if exit_code == 0:
                     techniques.append("registry_patch")
+
+            mac_octets = [f"{secrets.randbelow(256):02X}" for _ in range(5)]
+            mac_literal = "00-" + "-".join(mac_octets)
+            mac_ps_command = f"Set-NetAdapter -Name Ethernet -MacAddress '{mac_literal}' -Confirm:$false"
+            mac_exit_code, _, _ = await self._agent.send_command(
+                "powershell.exe",
+                [
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    mac_ps_command,
+                ],
+            )
+            if mac_exit_code == 0:
+                techniques.append("mac_address_randomize")
 
         applied["techniques"] = techniques
         applied["count"] = len(techniques)

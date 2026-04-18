@@ -156,6 +156,7 @@ class SandboxManager:
         qemu_config: QEMUConfig | None = None,
         *,
         auto_start: bool = True,
+        mark_busy: bool = False,
     ) -> SandboxInstance:
         """Create a new sandbox instance.
 
@@ -165,6 +166,10 @@ class SandboxManager:
             binary_path: Optional binary to associate.
             qemu_config: Optional QEMU-specific configuration.
             auto_start: Whether to start the sandbox immediately.
+            mark_busy: When true, the newly created instance is registered
+                with ``is_busy = True`` inside the manager lock, preventing
+                a concurrent caller from claiming it via
+                :meth:`_find_idle_instance` before the original caller can.
 
         Returns:
             SandboxInstance: Created sandbox instance.
@@ -200,6 +205,7 @@ class SandboxManager:
                 sandbox_type=sandbox_type,
                 binary_path=binary_path,
             )
+            instance.is_busy = mark_busy
 
             self._instances[instance.id] = instance
             _logger.info("sandbox_instance_created", instance_id=instance.id, sandbox_type=sandbox_type)
@@ -299,7 +305,13 @@ class SandboxManager:
         instance: SandboxInstance | None = None
 
         if reuse_instance:
-            instance = await self._find_idle_instance(sandbox_type)
+            async with self._lock:
+                candidate = await self._find_idle_instance(sandbox_type)
+                if candidate is not None:
+                    candidate.is_busy = True
+                    candidate.binary_path = binary_path
+                    candidate.touch()
+                    instance = candidate
 
         if instance is None:
             instance = await self.create(
@@ -308,12 +320,9 @@ class SandboxManager:
                 binary_path=binary_path,
                 auto_start=True,
                 qemu_config=qemu_config,
+                mark_busy=True,
             )
-        else:
-            instance.binary_path = binary_path
-
-        instance.touch()
-        instance.is_busy = True
+            instance.touch()
 
         try:
             report = await instance.sandbox.run_binary(
