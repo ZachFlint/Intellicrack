@@ -10,7 +10,9 @@ This module provides runtime instrumentation capabilities using Frida for functi
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
+import sys
 import tempfile
 import threading
 import time
@@ -107,6 +109,7 @@ _ERR_COMPILE_FAILED = "TypeScript compilation failed"
 _ERR_MONITOR_FAILED = "file monitoring failed"
 _ERR_PROBE_FAILED = "call probe operation failed"
 _ERR_INVALID_JSON_MESSAGE = "invalid JSON message"
+_ERR_INVALID_PROTECTION = "invalid memory protection flags"
 
 _VALID_NATIVE_TYPES: frozenset[str] = frozenset({
     "void",
@@ -142,6 +145,22 @@ _VALID_STRING_ENCODINGS: frozenset[str] = frozenset({"utf8", "ansi", "utf16"})
 _VALID_BACKTRACER_TYPES: frozenset[str] = frozenset({"accurate", "fuzzy"})
 _VALID_RESOLVER_TYPES: frozenset[str] = frozenset({"module", "objc", "swift"})
 _VALID_CODE_ARCHITECTURES: frozenset[str] = frozenset({"x86", "arm", "arm64", "thumb", "mips"})
+_VALID_PROTECTION_FLAGS: frozenset[str] = frozenset({
+    "---",
+    "r--",
+    "-w-",
+    "--x",
+    "rw-",
+    "r-x",
+    "-wx",
+    "rwx",
+})
+_VALID_SOCKET_FAMILIES: frozenset[str] = frozenset({"ipv4", "ipv6", "unix"})
+_SCAN_CONTEXT_BYTES: int = 16
+_PATCH_CODE_PROBE_SIZE: int = 4096
+_ASCII_PRINTABLE_MIN: int = 0x20
+_ASCII_PRINTABLE_MAX: int = 0x7E
+_ASCII_DEL: int = 0x7F
 _CODE_WRITER_MAP: dict[str, str] = {
     "x86": "X86Writer",
     "arm": "ArmWriter",
@@ -1593,9 +1612,12 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        self._validate_protection(protection)
+
         _logger.debug("memory_regions_enumerating", protection=protection)
+        escaped_protection = self._escape_js_string(protection)
         script_code = (
-            f"var ranges = Process.enumerateRanges('{protection}" + "');\n"
+            f"var ranges = Process.enumerateRanges('{escaped_protection}" + "');\n"
             "var result = ranges.map(function(r) {\n"
             "    return {\n"
             "        base: r.base.toString(),\n"
@@ -1695,26 +1717,90 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result:
             raise ToolError(_ERR_READ_FAILED)
 
-        matches: list[MemorySearchResult] = []
-        scan_data = result.get("data", [])
-        if isinstance(scan_data, list):
-            for raw_match in cast("list[object]", scan_data):
-                if not isinstance(raw_match, dict):
-                    continue
-                m = cast("dict[str, object]", raw_match)
-                addr_str = str(m.get("address", "0"))
-                addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-                matches.append(
-                    MemorySearchResult(
-                        address=addr,
-                        matched_bytes=hex_pattern,
-                        context_before="",
-                        context_after="",
-                    ),
-                )
+        matches = await self._build_scan_results(
+            scan_data=result.get("data", []),
+            hex_pattern=hex_pattern,
+            pattern_len=len(pattern),
+        )
 
         _logger.debug("memory_scan_completed", matches=len(matches))
         return matches
+
+    async def _build_scan_results(
+        self,
+        *,
+        scan_data: object,
+        hex_pattern: str,
+        pattern_len: int,
+    ) -> list[MemorySearchResult]:
+        """Build ``MemorySearchResult`` entries with base64 context windows.
+
+        Reads ``_SCAN_CONTEXT_BYTES`` bytes before and after each match and
+        base64-encodes them. Missing context from unreadable pages is returned
+        as an empty string.
+
+        Args:
+            scan_data: Raw match list from the Frida scan script.
+            hex_pattern: The space-separated hex representation of the pattern.
+            pattern_len: Length of the search pattern in bytes.
+
+        Returns:
+            list[MemorySearchResult]: Parsed matches with base64 context.
+        """
+        matches: list[MemorySearchResult] = []
+        if not isinstance(scan_data, list):
+            return matches
+        for raw_match in cast("list[object]", scan_data):
+            if not isinstance(raw_match, dict):
+                continue
+            m = cast("dict[str, object]", raw_match)
+            addr_str = str(m.get("address", "0"))
+            addr = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
+            context_before_b64 = await self._read_scan_context(
+                address=max(0, addr - _SCAN_CONTEXT_BYTES),
+                size=min(addr, _SCAN_CONTEXT_BYTES),
+                log_key="scan_context_before_read_failed",
+            )
+            context_after_b64 = await self._read_scan_context(
+                address=addr + pattern_len,
+                size=_SCAN_CONTEXT_BYTES,
+                log_key="scan_context_after_read_failed",
+            )
+            matches.append(
+                MemorySearchResult(
+                    address=addr,
+                    matched_bytes=hex_pattern,
+                    context_before=context_before_b64,
+                    context_after=context_after_b64,
+                ),
+            )
+        return matches
+
+    async def _read_scan_context(
+        self,
+        *,
+        address: int,
+        size: int,
+        log_key: str,
+    ) -> str:
+        """Read ``size`` bytes from ``address`` and return base64 or empty on failure.
+
+        Args:
+            address: Start address to read.
+            size: Number of bytes to read.
+            log_key: Structured-logging event name for failed reads.
+
+        Returns:
+            str: Base64-encoded bytes, or empty string if the read fails.
+        """
+        if size <= 0:
+            return ""
+        try:
+            data = await self.read_memory(address, size)
+        except ToolError:
+            _logger.debug(log_key, address=hex(address), size=size)
+            return ""
+        return base64.b64encode(data).decode("ascii")
 
     async def enumerate_modules(self) -> list[ModuleInfo]:
         """List all loaded modules in the process.
@@ -1786,10 +1872,11 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        escaped_module = self._escape_js_string(module_name)
         script_code = f"""
-        var mod = Process.findModuleByName('{module_name}');
+        var mod = Process.findModuleByName('{escaped_module}');
         if (!mod) {{
-            send({{ type: 'exports', data: [] }});
+            send({{ type: 'exports', moduleFound: false, data: [] }});
         }} else {{
             var exports = mod.enumerateExports();
             var result = exports.map(function(e) {{
@@ -1799,7 +1886,7 @@ class FridaBridge(InstrumentationBridge):
                     address: e.address.toString()
                 }};
             }});
-            send({{ type: 'exports', data: result }});
+            send({{ type: 'exports', moduleFound: true, data: result }});
         }}
         """
 
@@ -1807,6 +1894,12 @@ class FridaBridge(InstrumentationBridge):
 
         if "error" in result:
             raise ToolError(_ERR_EXPORT_NOT_FOUND)
+
+        if result.get("moduleFound") is False:
+            raise ToolError(
+                _ERR_MODULE_NOT_FOUND,
+                details={"module": module_name},
+            )
 
         exports: list[ExportInfo] = []
         export_data = result.get("data", [])
@@ -2300,10 +2393,11 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        escaped_module = self._escape_js_string(module_name)
         script_code = f"""
-        var mod = Process.findModuleByName('{module_name}');
+        var mod = Process.findModuleByName('{escaped_module}');
         if (!mod) {{
-            send({{ type: 'imports', data: [] }});
+            send({{ type: 'imports', moduleFound: false, data: [] }});
         }} else {{
             var imports = mod.enumerateImports();
             var result = imports.map(function(i) {{
@@ -2314,7 +2408,7 @@ class FridaBridge(InstrumentationBridge):
                     address: i.address ? i.address.toString() : '0'
                 }};
             }});
-            send({{ type: 'imports', data: result }});
+            send({{ type: 'imports', moduleFound: true, data: result }});
         }}
         """
 
@@ -2322,6 +2416,12 @@ class FridaBridge(InstrumentationBridge):
 
         if "error" in result:
             raise ToolError(_ERR_IMPORT_NOT_FOUND)
+
+        if result.get("moduleFound") is False:
+            raise ToolError(
+                _ERR_MODULE_NOT_FOUND,
+                details={"module": module_name},
+            )
 
         imports: list[ImportInfo] = []
         import_data = result.get("data", [])
@@ -2359,17 +2459,73 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
-        script_code = """
-        var threads = Process.enumerateThreads();
-        var result = threads.map(function(t) {
-            return {
-                id: t.id,
-                state: t.state,
-                pc: t.context.pc.toString()
-            };
-        });
-        send({ type: 'threads', data: result });
-        """
+        is_windows = sys.platform == "win32"
+        if is_windows:
+            script_code = """
+            var k32 = Process.findModuleByName('kernel32.dll');
+            var getPrio = null;
+            var openThread = null;
+            var closeHandle = null;
+            if (k32) {
+                try {
+                    getPrio = new NativeFunction(
+                        k32.getExportByName('GetThreadPriority'),
+                        'int',
+                        ['pointer']
+                    );
+                    openThread = new NativeFunction(
+                        k32.getExportByName('OpenThread'),
+                        'pointer',
+                        ['uint32', 'int', 'uint32']
+                    );
+                    closeHandle = new NativeFunction(
+                        k32.getExportByName('CloseHandle'),
+                        'int',
+                        ['pointer']
+                    );
+                } catch (e) {
+                    getPrio = null;
+                }
+            }
+            var THREAD_QUERY_LIMITED_INFORMATION = 0x0800;
+            var threads = Process.enumerateThreads();
+            var result = threads.map(function(t) {
+                var prio = 0;
+                if (getPrio && openThread && closeHandle) {
+                    try {
+                        var h = openThread(THREAD_QUERY_LIMITED_INFORMATION, 0, t.id);
+                        if (!h.isNull()) {
+                            prio = getPrio(h);
+                            closeHandle(h);
+                        }
+                    } catch (eInner) {
+                        prio = 0;
+                    }
+                }
+                return {
+                    id: t.id,
+                    state: t.state,
+                    pc: t.context.pc.toString(),
+                    currentPc: t.context.pc.toString(),
+                    priority: prio
+                };
+            });
+            send({ type: 'threads', data: result });
+            """
+        else:
+            script_code = """
+            var threads = Process.enumerateThreads();
+            var result = threads.map(function(t) {
+                return {
+                    id: t.id,
+                    state: t.state,
+                    pc: t.context.pc.toString(),
+                    currentPc: t.context.pc.toString(),
+                    priority: 0
+                };
+            });
+            send({ type: 'threads', data: result });
+            """
 
         result = await self._execute_script_and_wait(script_code)
 
@@ -2385,14 +2541,17 @@ class FridaBridge(InstrumentationBridge):
                 t = cast("dict[str, object]", raw_thread)
                 tid_val = t.get("id", 0)
                 state_val = t.get("state", "waiting")
-                pc_str = str(t.get("pc", "0"))
+                current_pc_val = t.get("currentPc", t.get("pc", "0"))
+                pc_str = str(current_pc_val)
                 pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
+                prio_val = t.get("priority", 0)
+                priority = int(prio_val) if isinstance(prio_val, (int, float)) else 0
                 threads.append(
                     ThreadInfo(
                         tid=int(tid_val) if isinstance(tid_val, (int, float)) else 0,
                         start_address=pc,
                         state=str(state_val) if state_val else "waiting",
-                        priority=0,
+                        priority=priority,
                     ),
                 )
 
@@ -2477,9 +2636,12 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        self._validate_protection(protection)
+
+        escaped_protection = self._escape_js_string(protection)
         script_code = f"""
         try {{
-            Memory.protect(ptr({address}), {size}, '{protection}');
+            Memory.protect(ptr({address}), {size}, '{escaped_protection}');
             send({{ type: 'protect', success: true }});
         }} catch (e) {{
             send({{ type: 'protect', success: false, error: e.message }});
@@ -2524,8 +2686,9 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        escaped_module = self._escape_js_string(module_name)
         script_code = f"""
-        var mod = Process.findModuleByName('{module_name}');
+        var mod = Process.findModuleByName('{escaped_module}');
         if (mod) {{
             send({{ type: 'base', address: mod.base.toString() }});
         }} else {{
@@ -2610,8 +2773,9 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        escaped_name = self._escape_js_string(name)
         script_code = f"""
-        var addrs = DebugSymbol.findFunctionsNamed('{name}');
+        var addrs = DebugSymbol.findFunctionsNamed('{escaped_name}');
         var result = addrs.map(function(a) {{
             var sym = DebugSymbol.fromAddress(a);
             return {{
@@ -2841,16 +3005,88 @@ class FridaBridge(InstrumentationBridge):
         return f"Module.getGlobalExportByName('{target}')"
 
     @staticmethod
+    def _validate_protection(protection: str) -> None:
+        """Validate that ``protection`` uses a supported Frida rwx triplet.
+
+        Args:
+            protection: Protection string such as ``'r-x'`` or ``'rwx'``.
+
+        Raises:
+            ToolError: If ``protection`` is not a member of
+                ``_VALID_PROTECTION_FLAGS``.
+        """
+        if protection not in _VALID_PROTECTION_FLAGS:
+            raise ToolError(
+                _ERR_INVALID_PROTECTION,
+                details={"reason": f"invalid protection flags: {protection}"},
+            )
+
+    @staticmethod
+    def _validate_socket_family(family: str) -> None:
+        """Validate that ``family`` is a supported Frida socket family.
+
+        Args:
+            family: Socket family identifier such as ``'ipv4'``.
+
+        Raises:
+            ToolError: If ``family`` is not a member of
+                ``_VALID_SOCKET_FAMILIES``.
+        """
+        if family not in _VALID_SOCKET_FAMILIES:
+            raise ToolError(
+                _ERR_SOCKET_FAILED,
+                details={"reason": f"invalid socket family: {family}"},
+            )
+
+    @staticmethod
     def _escape_js_string(value: str) -> str:
-        """Escape a Python string for safe embedding in JavaScript single-quoted literals.
+        """Escape a Python string for safe embedding in JavaScript string literals.
+
+        Escapes characters that are unsafe in single-quoted, double-quoted, and
+        template-literal JavaScript contexts. All non-ASCII and control characters
+        are converted to their four-digit hexadecimal unicode escapes so the
+        resulting literal is ASCII-only and cannot terminate or escape any
+        enclosing context.
 
         Args:
             value: The raw string to escape.
 
         Returns:
-            str: Escaped string safe for JS single-quote context.
+            str: Escaped string safe to embed inside JS string literals using
+            single quotes, double quotes, or backticks.
         """
-        return value.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r")
+        out: list[str] = []
+        for ch in value:
+            code = ord(ch)
+            if ch == "\\":
+                out.append("\\\\")
+            elif ch == "'":
+                out.append("\\'")
+            elif ch == '"':
+                out.append('\\"')
+            elif ch == "`":
+                out.append("\\`")
+            elif ch == "$":
+                out.append("\\$")
+            elif ch == "\n":
+                out.append("\\n")
+            elif ch == "\r":
+                out.append("\\r")
+            elif ch == "\t":
+                out.append("\\t")
+            elif ch == "\b":
+                out.append("\\b")
+            elif ch == "\f":
+                out.append("\\f")
+            elif ch == "\v":
+                out.append("\\v")
+            elif ch == "\0":
+                out.append("\\u0000")
+            elif code < _ASCII_PRINTABLE_MIN or code == _ASCII_DEL or code > _ASCII_PRINTABLE_MAX:
+                out.append("\\u" + format(code, "04x"))
+            else:
+                out.append(ch)
+        return "".join(out)
 
     def _parse_stalker_batch(self, tid: int, raw_events: list[object]) -> None:
         """Parse a batch of raw stalker events and accumulate them.
@@ -3912,7 +4148,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_RESOLVE_FAILED, details={"reason": f"invalid backtracer: {backtracer}"})
 
         bt_type = "Backtracer.ACCURATE" if backtracer == "accurate" else "Backtracer.FUZZY"
-        ctx_js = f"ptr({context_address})" if context_address is not None else "this.context"
+        ctx_js = f"ptr({context_address})" if context_address is not None else "NULL"
 
         script_code = f"""
         var bt = Thread.backtrace({ctx_js}, {bt_type});
@@ -4943,11 +5179,14 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        self._validate_protection(protection)
+
+        escaped_protection = self._escape_js_string(protection)
         script_code = f"""
         if (!Kernel.available) {{
             send({{ type: 'kernel_error', error: 'Kernel API not available' }});
         }} else {{
-            var ranges = Kernel.enumerateRanges('{protection}');
+            var ranges = Kernel.enumerateRanges('{escaped_protection}');
             var result = ranges.map(function(r) {{
                 return {{ base: r.base.toString(), size: r.size, protection: r.protection }};
             }});
@@ -5098,11 +5337,14 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        self._validate_protection(protection)
+
+        escaped_protection = self._escape_js_string(protection)
         script_code = f"""
         if (!Kernel.available) {{
             send({{ type: 'kernel_error', error: 'Kernel API not available' }});
         }} else {{
-            Kernel.protect(ptr({address}), {size}, '{protection}');
+            Kernel.protect(ptr({address}), {size}, '{escaped_protection}');
             send({{ type: 'kernel_protected', success: true }});
         }}
         """
@@ -5128,10 +5370,13 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        self._validate_socket_family(family)
+
+        escaped_family = self._escape_js_string(family)
         script_code = f"""
         try {{
             var listener = Socket.listen({{
-                family: '{family}',
+                family: '{escaped_family}',
                 port: {port}
             }});
             send({{ type: 'socket_listen', success: true, port: {port} }});
@@ -5177,11 +5422,14 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        self._validate_socket_family(family)
+
         escaped_host = self._escape_js_string(host)
+        escaped_family = self._escape_js_string(family)
         script_code = f"""
         try {{
             var conn = Socket.connect({{
-                family: '{family}',
+                family: '{escaped_family}',
                 host: '{escaped_host}',
                 port: {port}
             }});
@@ -5512,18 +5760,36 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_CODE_WRITER_FAILED, details={"reason": f"invalid architecture: {architecture}"})
 
         writer_class = _CODE_WRITER_MAP[architecture]
+        probe_insn_calls = "\n            ".join(f"wProbe.{insn}();" for insn in instructions)
         insn_calls = "\n            ".join(f"w.{insn}();" for insn in instructions)
 
         script_code = f"""
         try {{
-            var bytesWritten = 0;
-            Memory.patchCode(ptr({address}), 256, function(code) {{
-                var w = new {writer_class}(code, {{ pc: ptr({address}) }});
-                {insn_calls}
-                w.flush();
-                bytesWritten = w.offset;
-            }});
-            send({{ type: 'code_written', size: bytesWritten }});
+            var probeBuf = Memory.alloc({_PATCH_CODE_PROBE_SIZE});
+            var wProbe = new {writer_class}(probeBuf, {{ pc: ptr({address}) }});
+            {probe_insn_calls}
+            wProbe.flush();
+            var probedSize = wProbe.offset;
+            if (probedSize <= 0) {{
+                send({{
+                    type: 'code_write_error',
+                    error: 'probe produced no bytes'
+                }});
+            }} else if (probedSize > {_PATCH_CODE_PROBE_SIZE}) {{
+                send({{
+                    type: 'code_write_error',
+                    error: 'probe size ' + probedSize + ' exceeds probe buffer'
+                }});
+            }} else {{
+                var bytesWritten = 0;
+                Memory.patchCode(ptr({address}), probedSize, function(code) {{
+                    var w = new {writer_class}(code, {{ pc: ptr({address}) }});
+                    {insn_calls}
+                    w.flush();
+                    bytesWritten = w.offset;
+                }});
+                send({{ type: 'code_written', size: bytesWritten }});
+            }}
         }} catch (e) {{
             send({{ type: 'code_write_error', error: e.message }});
         }}
