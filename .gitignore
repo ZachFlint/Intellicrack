@@ -470,3 +470,4 @@ scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml
 # Auto-regenerated project structure artifacts (never tracked)
 IntellicrackStructure.hta
 IntellicrackStructure.txt
+reports/tests/_sandbox_*
