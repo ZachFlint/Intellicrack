@@ -1355,13 +1355,33 @@ class HexPatCodegen:
         """Generate conditional field definition dicts.
 
         For if/else constructs, emits the true-branch as a Conditional field.
-        If false_fields exist, emits a second Conditional with inverted op.
+        If false_fields exist, emits a second Conditional with an inverted
+        comparison so the two emitted Conditionals partition the space of the
+        original predicate.
+
+        The runtime Conditional primitive exposes only a single set of fields
+        per instruction and has no Else branch. It also does not provide a
+        dedicated "bit-mask-is-zero" comparison. As a result, the natural
+        inversion for a bit-mask predicate ``(field & mask) != 0`` would be
+        ``(field & mask) == 0``, which cannot be expressed with the current
+        primitive surface (there is no ``BitAndZero`` opcode and the
+        expression evaluator used by ``Computed`` fields does not parse the
+        ``&`` operator, so a helper temporary cannot be synthesised either).
+        Emitting ``field == 0`` as an inversion would silently mis-parse any
+        payload where additional unrelated bits of ``field`` are set, so the
+        compiler refuses to lower such an ``else`` branch and raises
+        ``HexPatError`` instead of fabricating incorrect semantics.
 
         Args:
             node: Conditional field AST node.
 
         Returns:
             list[dict[str, Any]]: One or two JSON conditional field definitions.
+
+        Raises:
+            HexPatError: If the condition is a bit-mask test (``field & mask``)
+                accompanied by an ``else`` branch, which cannot be expressed
+                correctly with the current primitive set.
         """
         condition_field = ""
         condition_value = 0
@@ -1408,6 +1428,18 @@ class HexPatCodegen:
         ]
 
         if node.false_fields:
+            if condition_op == "BitAnd":
+                msg = (
+                    f"cannot emit else-branch for bit-mask condition "
+                    f"'{condition_field} & {condition_value}': the runtime "
+                    f"Conditional primitive has no BitAndZero inverse and the "
+                    f"Computed expression parser does not support '&', so "
+                    f"'(field & mask) == 0' cannot be expressed; rewrite the "
+                    f"pattern without an else branch (use two separate ifs with "
+                    f"explicit equality tests against the expected masked values)"
+                )
+                raise HexPatError(msg)
+
             invert_map: dict[str, str] = {
                 "Eq": "Ne",
                 "Ne": "Eq",
@@ -1415,12 +1447,8 @@ class HexPatCodegen:
                 "Lt": "Ge",
                 "Ge": "Lt",
                 "Le": "Gt",
-                "BitAnd": "Eq",
             }
             inverted_op = invert_map.get(condition_op, "Ne")
-            inv_value = condition_value
-            if condition_op == "BitAnd":
-                inv_value = 0
 
             else_inner: list[dict[str, Any]] = []
             for f in node.false_fields:
@@ -1432,7 +1460,7 @@ class HexPatCodegen:
                     "type": "Conditional",
                     "params": {
                         "condition_field": condition_field,
-                        "condition_value": inv_value,
+                        "condition_value": condition_value,
                         "condition_op": inverted_op,
                         "fields": else_inner,
                     },
@@ -1480,14 +1508,31 @@ class HexPatCodegen:
     def _eval_const_expr(expr: ExprNode) -> int:
         """Evaluate a constant expression at compile time.
 
+        Only pure-constant integer expressions built from numeric literals,
+        the unary minus operator, and the arithmetic binary operators
+        (``+``, ``-``, ``*``, ``/``, ``%``) are supported. Runtime-evaluated
+        forms such as identifiers, ``sizeof``/``addressof``, the current
+        offset marker, shift operators, and bitwise operators are deferred
+        to the interpreter and therefore rejected here rather than being
+        silently folded to zero.
+
         Args:
             expr: Expression node to evaluate.
 
         Returns:
             int: Evaluated integer value.
+
+        Raises:
+            HexPatError: If the expression is not a supported compile-time
+                constant or if a division or modulo by zero is encountered.
         """
         if isinstance(expr, NumberLiteral):
             return expr.value
+        if isinstance(expr, UnaryExpr):
+            if expr.op == "-":
+                return -HexPatCodegen._eval_const_expr(expr.operand)
+            msg = f"unary operator '{expr.op}' is not a compile-time constant expression"
+            raise HexPatError(msg)
         if isinstance(expr, BinaryExpr):
             left = HexPatCodegen._eval_const_expr(expr.left)
             right = HexPatCodegen._eval_const_expr(expr.right)
@@ -1497,12 +1542,32 @@ class HexPatCodegen:
                 return left - right
             if expr.op == "*":
                 return left * right
-            if expr.op == "/" and right != 0:
+            if expr.op == "/":
+                if right == 0:
+                    msg = "division by zero in constant expression"
+                    raise HexPatError(msg)
                 return left // right
-            return left % right if expr.op == "%" and right != 0 else 0
-        if isinstance(expr, UnaryExpr) and expr.op == "-":
-            return -HexPatCodegen._eval_const_expr(expr.operand)
-        return 0
+            if expr.op == "%":
+                if right == 0:
+                    msg = "modulo by zero in constant expression"
+                    raise HexPatError(msg)
+                return left % right
+            msg = f"binary operator '{expr.op}' is not a compile-time constant expression"
+            raise HexPatError(msg)
+        if isinstance(expr, IdentifierExpr):
+            msg = f"identifier '{expr.name}' cannot be resolved at compile time; use a numeric literal"
+            raise HexPatError(msg)
+        if isinstance(expr, SizeofExpr):
+            msg = f"sizeof({expr.target}) is not a compile-time constant expression"
+            raise HexPatError(msg)
+        if isinstance(expr, AddressofExpr):
+            msg = f"addressof({expr.target}) is not a compile-time constant expression"
+            raise HexPatError(msg)
+        if isinstance(expr, DollarExpr):
+            msg = "current-offset marker '$' is not a compile-time constant expression"
+            raise HexPatError(msg)
+        msg = "string literal cannot be used where an integer constant is required"
+        raise HexPatError(msg)
 
 
 class HexPatCompiler:
