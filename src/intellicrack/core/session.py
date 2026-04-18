@@ -14,7 +14,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -24,15 +24,19 @@ from .types import (
     BinaryInfo,
     BridgeAnalysisSummary,
     ExportInfo,
+    FunctionInfo,
     ImportInfo,
     Message,
+    ParameterInfo,
     PatchInfo,
     ProviderName,
     SectionInfo,
+    StringInfo,
     ToolCall,
     ToolName,
     ToolResult,
     ToolState,
+    VariableInfo,
 )
 
 
@@ -283,6 +287,11 @@ class SessionStore:
     def save(self, session: Session) -> None:
         """Save a session to the database.
 
+        Persists the full session state inside a single SQLite transaction
+        initiated with ``BEGIN IMMEDIATE`` so that the tag rewrite and the
+        session upsert cannot be interleaved with a concurrent save (for
+        example, from the auto-save loop).
+
         Args:
             session: Session to save.
         """
@@ -292,38 +301,55 @@ class SessionStore:
             "messages": [self._serialize_message(m) for m in session.messages],
             "tool_states": {k.value: self._serialize_tool_state(v) for k, v in session.tool_states.items()},
             "patches": [self._serialize_patch(p) for p in session.patches],
+            "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
         }
 
-        with self._connection() as conn:
-            conn.execute(
-                """
+        conn = sqlite3.connect(str(self.db_path), isolation_level=None)
+        _logger.debug("db_connection_opened", db_path=str(self.db_path))
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                conn.execute(
+                    """
                 INSERT OR REPLACE INTO sessions
                 (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-                (
-                    session.id,
-                    session.name,
-                    session.created_at.isoformat(),
-                    session.updated_at.isoformat(),
-                    session.provider.value,
-                    session.model,
-                    session.active_binary_index,
-                    session.notes,
-                    json.dumps(session_data),
-                ),
-            )
-
-            conn.execute(
-                "DELETE FROM session_tags WHERE session_id = ?",
-                (session.id,),
-            )
-
-            for tag in session.tags:
-                conn.execute(
-                    "INSERT INTO session_tags (session_id, tag) VALUES (?, ?)",
-                    (session.id, tag),
+                    (
+                        session.id,
+                        session.name,
+                        session.created_at.isoformat(),
+                        session.updated_at.isoformat(),
+                        session.provider.value,
+                        session.model,
+                        session.active_binary_index,
+                        session.notes,
+                        json.dumps(session_data),
+                    ),
                 )
+
+                conn.execute(
+                    "DELETE FROM session_tags WHERE session_id = ?",
+                    (session.id,),
+                )
+
+                for tag in session.tags:
+                    conn.execute(
+                        "INSERT INTO session_tags (session_id, tag) VALUES (?, ?)",
+                        (session.id, tag),
+                    )
+                conn.execute("COMMIT")
+                _logger.debug("db_connection_committed", db_path=str(self.db_path))
+            except (sqlite3.Error, OSError):
+                try:
+                    conn.execute("ROLLBACK")
+                except sqlite3.Error:
+                    _logger.debug("rollback_noop", db_path=str(self.db_path), exc_info=True)
+                _logger.exception("db_connection_rollback", db_path=str(self.db_path))
+                raise
+        finally:
+            conn.close()
+            _logger.debug("db_connection_closed", db_path=str(self.db_path))
 
         _logger.debug("session_saved", session_id=session.id)
 
@@ -370,6 +396,7 @@ class SessionStore:
                 messages=[self._deserialize_message(m) for m in data.get("messages", [])],
                 tool_states={ToolName(k): self._deserialize_tool_state(v) for k, v in data.get("tool_states", {}).items()},
                 patches=[self._deserialize_patch(p) for p in data.get("patches", [])],
+                bridge_analyses={name: self._deserialize_bridge_analysis(value) for name, value in data.get("bridge_analyses", {}).items()},
             )
 
             _logger.debug("session_loaded", session_id=session_id)
@@ -481,6 +508,11 @@ class SessionStore:
     def cleanup_old(self, days: int = 30) -> int:
         """Delete sessions older than specified days.
 
+        The cutoff timestamp is precomputed in Python and compared directly
+        against the stored ISO-8601 ``updated_at`` column via lexicographic
+        ordering so SQLite's ``julianday`` does not need to parse
+        timezone-aware ISO strings.
+
         Args:
             days: Number of days to keep.
 
@@ -488,15 +520,12 @@ class SessionStore:
             int: Number of sessions deleted.
         """
         _logger.debug("session_cleanup_old_start", days=days)
-        cutoff = datetime.now(tz=UTC).isoformat()
+        cutoff = (datetime.now(tz=UTC) - timedelta(days=days)).isoformat()
 
         with self._connection() as conn:
             cursor = conn.execute(
-                """
-                DELETE FROM sessions
-                WHERE julianday(?) - julianday(updated_at) > ?
-            """,
-                (cutoff, days),
+                "DELETE FROM sessions WHERE updated_at < ?",
+                (cutoff,),
             )
 
             deleted = cursor.rowcount
@@ -687,6 +716,96 @@ class SessionStore:
             applied=data["applied"],
         )
 
+    @staticmethod
+    def _serialize_function(function: FunctionInfo) -> dict[str, Any]:
+        """Serialize FunctionInfo to dictionary.
+
+        Args:
+            function: FunctionInfo instance to serialize.
+
+        Returns:
+            dict[str, Any]: Dictionary representation of the function information.
+        """
+        return {
+            "name": function.name,
+            "address": function.address,
+            "size": function.size,
+            "calling_convention": function.calling_convention,
+            "return_type": function.return_type,
+            "parameters": [asdict(p) for p in function.parameters],
+            "local_variables": [asdict(v) for v in function.local_variables],
+            "decompiled_code": function.decompiled_code,
+            "disassembly": function.disassembly,
+        }
+
+    @staticmethod
+    def _deserialize_function(data: dict[str, Any]) -> FunctionInfo:
+        """Deserialize dictionary to FunctionInfo.
+
+        Args:
+            data: Dictionary containing serialized function data.
+
+        Returns:
+            FunctionInfo: Reconstructed FunctionInfo instance.
+        """
+        return FunctionInfo(
+            name=data["name"],
+            address=data["address"],
+            size=data["size"],
+            calling_convention=data["calling_convention"],
+            return_type=data["return_type"],
+            parameters=[ParameterInfo(**p) for p in data.get("parameters", [])],
+            local_variables=[VariableInfo(**v) for v in data.get("local_variables", [])],
+            decompiled_code=data.get("decompiled_code"),
+            disassembly=data.get("disassembly"),
+        )
+
+    @classmethod
+    def _serialize_bridge_analysis(cls, analysis: BridgeAnalysisSummary) -> dict[str, Any]:
+        """Serialize BridgeAnalysisSummary to dictionary.
+
+        Args:
+            analysis: BridgeAnalysisSummary instance to serialize.
+
+        Returns:
+            dict[str, Any]: Dictionary representation of the bridge analysis summary.
+        """
+        return {
+            "binary_name": analysis.binary_name,
+            "strings": [asdict(s) for s in analysis.strings],
+            "imports": [asdict(i) for i in analysis.imports],
+            "exports": [asdict(e) for e in analysis.exports],
+            "sections": [asdict(s) for s in analysis.sections],
+            "functions": [cls._serialize_function(f) for f in analysis.functions],
+            "format_info": analysis.format_info,
+            "architecture": analysis.architecture,
+            "source_bridges": list(analysis.source_bridges),
+            "analysis_notes": list(analysis.analysis_notes),
+        }
+
+    @classmethod
+    def _deserialize_bridge_analysis(cls, data: dict[str, Any]) -> BridgeAnalysisSummary:
+        """Deserialize dictionary to BridgeAnalysisSummary.
+
+        Args:
+            data: Dictionary containing serialized bridge analysis data.
+
+        Returns:
+            BridgeAnalysisSummary: Reconstructed BridgeAnalysisSummary instance.
+        """
+        return BridgeAnalysisSummary(
+            binary_name=data["binary_name"],
+            strings=[StringInfo(**s) for s in data.get("strings", [])],
+            imports=[ImportInfo(**i) for i in data.get("imports", [])],
+            exports=[ExportInfo(**e) for e in data.get("exports", [])],
+            sections=[SectionInfo(**s) for s in data.get("sections", [])],
+            functions=[cls._deserialize_function(f) for f in data.get("functions", [])],
+            format_info=data["format_info"],
+            architecture=data["architecture"],
+            source_bridges=list(data.get("source_bridges", [])),
+            analysis_notes=list(data.get("analysis_notes", [])),
+        )
+
     def export_to_json(self, session: Session, path: Path) -> None:
         """Export a session to a JSON file.
 
@@ -711,6 +830,7 @@ class SessionStore:
                 "messages": [self._serialize_message(m) for m in session.messages],
                 "tool_states": {k.value: self._serialize_tool_state(v) for k, v in session.tool_states.items()},
                 "patches": [self._serialize_patch(p) for p in session.patches],
+                "bridge_analyses": {name: self._serialize_bridge_analysis(analysis) for name, analysis in session.bridge_analyses.items()},
             },
         }
 
@@ -769,6 +889,9 @@ class SessionStore:
             messages=[self._deserialize_message(m) for m in session_data.get("messages", [])],
             tool_states=tool_states,
             patches=[self._deserialize_patch(p) for p in session_data.get("patches", [])],
+            bridge_analyses={
+                name: self._deserialize_bridge_analysis(value) for name, value in session_data.get("bridge_analyses", {}).items()
+            },
         )
 
         _logger.info("session_imported", session_id=session.id, path=str(path))
