@@ -9,6 +9,7 @@ This module provides a centralized registry for registering, connecting, and man
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING
 
 from intellicrack.core.logging import get_logger
@@ -234,12 +235,22 @@ class _RegistryHolder:
     instance: ProviderRegistry | None = None
 
 
+_registry_lock = threading.Lock()
+
+
 def get_provider_registry() -> ProviderRegistry:
     """Get the global provider registry instance.
+
+    Uses double-checked locking to ensure thread-safe lazy initialization of the
+    singleton instance. The first check avoids lock acquisition overhead on the
+    common path after initialization, while the inner check under the lock
+    guarantees that only one instance is ever created even under concurrent access.
 
     Returns:
         ProviderRegistry: The singleton ProviderRegistry instance.
     """
     if _RegistryHolder.instance is None:
-        _RegistryHolder.instance = ProviderRegistry()
+        with _registry_lock:
+            if _RegistryHolder.instance is None:
+                _RegistryHolder.instance = ProviderRegistry()
     return _RegistryHolder.instance
