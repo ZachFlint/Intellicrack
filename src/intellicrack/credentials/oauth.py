@@ -24,7 +24,7 @@ import webbrowser
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 import httpx
 
@@ -36,10 +36,19 @@ from intellicrack.credentials.store import CredentialSource, get_credential_stor
 if TYPE_CHECKING:
     from intellicrack.credentials.store import CredentialStore
 
+try:
+    import keyring.errors as _keyring_errors
+
+    _KeyringError: type[Exception] = _keyring_errors.KeyringError
+except ImportError:
+    _KeyringError = OSError
+
 _logger = get_logger("credentials.oauth")
 
 _GOOGLE_OAUTH_ENDPOINT: Final = "https://oauth2.googleapis.com/token"
 _HTTP_OK: Final = 200
+_HTTP_UNAUTHORIZED: Final = 401
+_HTTP_FORBIDDEN: Final = 403
 
 
 class OAuthError(IntellicrackError):
@@ -56,6 +65,10 @@ class OAuthAuthorizationError(OAuthError):
 
 class OAuthTokenError(OAuthError):
     """Token operation failed (exchange, refresh, etc.)."""
+
+
+class OAuthTokenRefreshError(OAuthTokenError):
+    """Token refresh failed due to an authentication error (401/403)."""
 
 
 class OAuthCallbackError(OAuthError):
@@ -276,13 +289,59 @@ OAUTH_CONFIGS: dict[OAuthProvider, OAuthConfig] = {
 }
 
 
-class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
-    """HTTP request handler for OAuth callbacks."""
+def generate_pkce_pair() -> tuple[str, str]:
+    """Generate a PKCE code verifier and its S256 code challenge.
 
-    callback_code: str | None = None
-    callback_state: str | None = None
-    callback_error: str | None = None
-    callback_event: threading.Event | None = None
+    This is the public entry point used by callers that need to drive the
+    PKCE extension (RFC 7636) outside of :class:`OAuthManager`, for example
+    when building an authorization URL from a test harness.
+
+    Returns:
+        tuple[str, str]: ``(code_verifier, code_challenge)``.
+    """
+    code_verifier = secrets.token_urlsafe(64)
+    digest = hashlib.sha256(code_verifier.encode()).digest()
+    code_challenge = base64.urlsafe_b64encode(digest).decode().rstrip("=")
+    return code_verifier, code_challenge
+
+
+def verify_pkce_pair(code_verifier: str, code_challenge: str) -> bool:
+    """Check that ``code_verifier`` hashes (S256) to ``code_challenge``.
+
+    Args:
+        code_verifier: The PKCE code verifier.
+        code_challenge: The PKCE code challenge to verify against.
+
+    Returns:
+        bool: True if the verifier matches the challenge.
+    """
+    digest = hashlib.sha256(code_verifier.encode()).digest()
+    recomputed = base64.urlsafe_b64encode(digest).decode().rstrip("=")
+    return secrets.compare_digest(recomputed, code_challenge)
+
+
+_callback_state_lock = threading.Lock()
+
+
+class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
+    """HTTP request handler for OAuth callbacks.
+
+    Uses class-level state protected by a module-level lock so concurrent
+    handler instances cannot corrupt the shared callback result.
+
+    Attributes:
+        callback_code: Authorization code received from the OAuth provider.
+        callback_state: State parameter echoed back by the provider.
+        callback_error: Error string if authorization failed.
+        callback_event: Event signalled once a callback has been recorded.
+        expected_state: State value the handler should accept (CSRF check).
+    """
+
+    callback_code: ClassVar[str | None] = None
+    callback_state: ClassVar[str | None] = None
+    callback_error: ClassVar[str | None] = None
+    callback_event: ClassVar[threading.Event | None] = None
+    expected_state: ClassVar[str | None] = None
 
     def do_GET(self) -> None:
         """Handle GET request from OAuth redirect."""
@@ -290,24 +349,33 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
 
-        if "error" in params:
-            OAuthCallbackHandler.callback_error = params["error"][0]
-            self._send_response(
-                400,
-                f"Authorization failed: {params['error'][0]}. You can close this window.",
-            )
-        elif "code" in params and "state" in params:
-            OAuthCallbackHandler.callback_code = params["code"][0]
-            OAuthCallbackHandler.callback_state = params["state"][0]
-            self._send_response(
-                200,
-                "Authorization successful! You can close this window.",
-            )
-        else:
-            self._send_response(400, "Invalid callback parameters.")
+        with _callback_state_lock:
+            if "error" in params:
+                OAuthCallbackHandler.callback_error = params["error"][0]
+                status = 400
+                message = f"Authorization failed: {params['error'][0]}. You can close this window."
+            elif "code" in params and "state" in params:
+                received_state = params["state"][0]
+                expected = OAuthCallbackHandler.expected_state
+                if expected is not None and not secrets.compare_digest(received_state, expected):
+                    OAuthCallbackHandler.callback_error = "state_mismatch"
+                    status = 400
+                    message = "State parameter mismatch. Possible CSRF attempt."
+                else:
+                    OAuthCallbackHandler.callback_code = params["code"][0]
+                    OAuthCallbackHandler.callback_state = received_state
+                    status = 200
+                    message = "Authorization successful! You can close this window."
+            else:
+                status = 400
+                message = "Invalid callback parameters."
 
-        if OAuthCallbackHandler.callback_event:
-            OAuthCallbackHandler.callback_event.set()
+            event = OAuthCallbackHandler.callback_event
+
+        self._send_response(status, message)
+
+        if event is not None:
+            event.set()
 
     def _send_response(self, status: int, message: str) -> None:
         """Send an HTML response.
@@ -350,38 +418,58 @@ class OAuthCallbackServer:
     """Local HTTP server for receiving OAuth callbacks.
 
     Runs in a background thread and waits for the OAuth redirect.
-
-    Args:
-        port: Port to listen on.
-        timeout: Timeout in seconds to wait for callback.
     """
 
-    def __init__(self, port: int = 8080, timeout: float = 300.0) -> None:
+    def __init__(
+        self,
+        port: int = 8080,
+        timeout: float = 300.0,
+        expected_state: str | None = None,
+    ) -> None:
         """Initialize the OAuthCallbackServer with the given port and timeout.
 
         Args:
             port: Port to listen on for OAuth callbacks.
             timeout: Timeout in seconds to wait for the callback.
+            expected_state: Optional state value for CSRF validation.
         """
         self._port = port
         self._timeout = timeout
+        self._expected_state = expected_state
         self._server: socketserver.TCPServer | None = None
         self._thread: threading.Thread | None = None
         self._event = threading.Event()
 
     def start(self) -> None:
-        """Start the callback server in a background thread."""
+        """Start the callback server in a background thread.
+
+        Raises:
+            OAuthCallbackError: If the local bind socket cannot be opened.
+        """
         OAuthCallbackHandler.callback_code = None
         OAuthCallbackHandler.callback_state = None
         OAuthCallbackHandler.callback_error = None
         OAuthCallbackHandler.callback_event = self._event
+        OAuthCallbackHandler.expected_state = self._expected_state
 
         socketserver.TCPServer.allow_reuse_address = True
-        self._server = socketserver.TCPServer(("127.0.0.1", self._port), OAuthCallbackHandler)
+        try:
+            self._server = socketserver.TCPServer(
+                ("127.0.0.1", self._port),
+                OAuthCallbackHandler,
+            )
+        except OSError as exc:
+            _logger.warning("oauth_callback_server_bind_failed", port=self._port, error=str(exc))
+            msg = f"Failed to bind OAuth callback server on port {self._port}: {exc}"
+            raise OAuthCallbackError(msg) from exc
+
+        server = self._server
 
         def serve() -> None:
-            if self._server:
-                self._server.handle_request()
+            try:
+                server.handle_request()
+            except OSError as serve_exc:
+                _logger.debug("oauth_callback_server_serve_error", error=str(serve_exc))
 
         self._thread = threading.Thread(target=serve, daemon=True)
         self._thread.start()
@@ -419,13 +507,26 @@ class OAuthCallbackServer:
         return code, state
 
     def stop(self) -> None:
-        """Stop the callback server."""
-        if self._server:
-            self._server.shutdown()
+        """Stop the callback server and release the bound socket.
+
+        The server thread uses ``handle_request`` (single-shot) rather than
+        ``serve_forever``; therefore ``shutdown`` is not called here — doing so
+        would block on ``__is_shut_down`` which is only set by ``serve_forever``.
+        We close the socket and wake any blocking ``handle_request`` call via
+        ``server_close``.
+        """
+        server = self._server
+        if server is not None:
+            try:
+                server.server_close()
+            except OSError as exc:
+                _logger.debug("oauth_callback_server_close_error", error=str(exc))
             self._server = None
-        if self._thread:
+        if self._thread is not None:
             self._thread.join(timeout=1.0)
             self._thread = None
+        OAuthCallbackHandler.callback_event = None
+        OAuthCallbackHandler.expected_state = None
         _logger.info("oauth_callback_server_stopped")
 
 
@@ -435,15 +536,11 @@ class OAuthManager:
     Handles authorization code flow with local callback server,
     token storage via CredentialStore, and automatic token refresh.
 
-    Args:
-        credential_store: Store for persisting tokens.
-        callback_port: Port for local callback server.
-
     Attributes:
         DEFAULT_CALLBACK_PORT: Default port for local callback server.
     """
 
-    DEFAULT_CALLBACK_PORT: Final[int] = 8080
+    DEFAULT_CALLBACK_PORT: ClassVar[int] = 8080
 
     def __init__(
         self,
@@ -460,6 +557,8 @@ class OAuthManager:
         self._callback_port = callback_port
         self._pending_states: dict[str, OAuthState] = {}
         self._lock = asyncio.Lock()
+        self._token_cache_lock = asyncio.Lock()
+        self._token_cache: dict[OAuthProvider, OAuthToken] = {}
         self._http_client: httpx.AsyncClient | None = None
 
     async def _get_http_client(self) -> httpx.AsyncClient:
@@ -494,10 +593,22 @@ class OAuthManager:
         Returns:
             tuple[str, str]: Tuple of (code_verifier, code_challenge).
         """
-        code_verifier = secrets.token_urlsafe(64)
-        digest = hashlib.sha256(code_verifier.encode()).digest()
-        code_challenge = base64.urlsafe_b64encode(digest).decode().rstrip("=")
-        return code_verifier, code_challenge
+        return generate_pkce_pair()
+
+    @staticmethod
+    def _verify_pkce_pair(code_verifier: str, code_challenge: str) -> bool:
+        """Verify that a PKCE code_verifier matches the given code_challenge.
+
+        Uses the S256 method specified in RFC 7636.
+
+        Args:
+            code_verifier: The PKCE code verifier.
+            code_challenge: The PKCE code challenge to verify against.
+
+        Returns:
+            bool: True if the verifier hashes to the challenge.
+        """
+        return verify_pkce_pair(code_verifier, code_challenge)
 
     def build_authorization_url(self, config: OAuthConfig) -> tuple[str, OAuthState]:
         """Build authorization URL for OAuth flow.
@@ -554,7 +665,7 @@ class OAuthManager:
         config: OAuthConfig,
         *,
         open_browser: bool = True,
-    ) -> str:
+    ) -> tuple[str, OAuthState]:
         """Start an OAuth authorization code flow.
 
         Generates authorization URL and optionally opens browser.
@@ -564,7 +675,7 @@ class OAuthManager:
             open_browser: Whether to open the browser automatically.
 
         Returns:
-            str: The authorization URL for the user.
+            tuple[str, OAuthState]: The authorization URL and its associated state object.
         """
         auth_url, oauth_state = self.build_authorization_url(config)
 
@@ -576,7 +687,7 @@ class OAuthManager:
         if open_browser:
             webbrowser.open(auth_url)
 
-        return auth_url
+        return auth_url, oauth_state
 
     async def handle_callback(
         self,
@@ -585,7 +696,9 @@ class OAuthManager:
     ) -> OAuthToken:
         """Handle the OAuth callback with authorization code.
 
-        Exchanges code for tokens and stores them.
+        Exchanges code for tokens and stores them. Validates the CSRF
+        state parameter and, when PKCE is enabled, ensures the code_verifier
+        bound to the pending state is present before exchanging the code.
 
         Args:
             code: Authorization code from callback.
@@ -595,7 +708,8 @@ class OAuthManager:
             OAuthToken: The obtained OAuth token.
 
         Raises:
-            OAuthCallbackError: If state is invalid or expired.
+            OAuthCallbackError: If state is invalid, expired, or PKCE
+                verifier is missing when required by the flow.
         """
         async with self._lock:
             oauth_state = self._pending_states.pop(state, None)
@@ -608,11 +722,18 @@ class OAuthManager:
             msg = "Authorization flow expired"
             raise OAuthCallbackError(msg)
 
+        if oauth_state.config.use_pkce and not oauth_state.code_verifier:
+            msg = "PKCE flow missing code_verifier"
+            raise OAuthCallbackError(msg)
+
         token = await self._exchange_code_for_token(
             oauth_state.config,
             code,
             oauth_state.code_verifier,
         )
+
+        async with self._token_cache_lock:
+            self._token_cache[oauth_state.provider] = token
 
         await self._store_token(oauth_state.provider, token)
         _logger.info("oauth_flow_completed", provider=oauth_state.provider.value)
@@ -660,18 +781,18 @@ class OAuthManager:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
-            token_data = response.json()
+            token_data: dict[str, Any] = response.json()
 
             expires_at: datetime | None = None
             if "expires_in" in token_data:
-                expires_at = datetime.now(UTC) + timedelta(seconds=token_data["expires_in"])
+                expires_at = datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
 
             token = OAuthToken(
                 access_token=token_data["access_token"],
                 refresh_token=token_data.get("refresh_token"),
                 token_type=token_data.get("token_type", "Bearer"),
                 expires_at=expires_at,
-                scopes=tuple(token_data.get("scope", "").split()),
+                scopes=tuple(str(token_data.get("scope", "")).split()),
                 id_token=token_data.get("id_token"),
             )
             _logger.debug(
@@ -720,6 +841,13 @@ class OAuthManager:
             )
             _logger.debug("oauth_token_store_success", provider=provider.value)
             _logger.info("oauth_token_stored", provider=provider.value)
+        except _KeyringError as exc:
+            _logger.warning(
+                "oauth_token_store_failed",
+                provider=provider.value,
+                error=str(exc),
+                reason="keyring_error",
+            )
         except (OSError, KeyError, ValueError) as exc:
             _logger.warning("oauth_token_store_failed", provider=provider.value, error=str(exc))
 
@@ -732,6 +860,11 @@ class OAuthManager:
         Returns:
             OAuthToken | None: OAuthToken or None if not found.
         """
+        async with self._token_cache_lock:
+            cached = self._token_cache.get(provider)
+        if cached is not None:
+            return cached
+
         if self._credential_store is None:
             return None
 
@@ -744,7 +877,17 @@ class OAuthManager:
 
             token_data = json.loads(creds.api_key)
             token = OAuthToken.from_dict(token_data)
+            async with self._token_cache_lock:
+                self._token_cache[provider] = token
             _logger.debug("oauth_token_load_success", provider=provider.value)
+        except _KeyringError as exc:
+            _logger.warning(
+                "oauth_token_load_failed",
+                provider=provider.value,
+                error=str(exc),
+                reason="keyring_error",
+            )
+            return None
         except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
             _logger.warning("oauth_token_load_failed", provider=provider.value, error=str(exc))
             return None
@@ -772,12 +915,16 @@ class OAuthManager:
         if token is None:
             return None
 
-        if (effective_config := config or OAUTH_CONFIGS.get(provider)) and token.is_expired and auto_refresh and token.refresh_token:
+        effective_config = config or OAUTH_CONFIGS.get(provider)
+        if effective_config and token.is_expired and auto_refresh and token.refresh_token:
             try:
                 token = await self.refresh_token(provider, effective_config)
+            except OAuthTokenRefreshError:
+                _logger.warning("token_refresh_auth_failed", provider=provider.value)
+                return None
             except OAuthTokenError:
                 _logger.warning("token_refresh_failed", provider=provider.value)
-                return None
+                return token if not token.is_expired else None
 
         return None if token.is_expired else token
 
@@ -788,6 +935,12 @@ class OAuthManager:
     ) -> OAuthToken:
         """Refresh an OAuth token.
 
+        A 401 or 403 response from the token endpoint indicates the refresh
+        token is no longer valid and is surfaced as an
+        :class:`OAuthTokenRefreshError`. Other HTTP errors raise a generic
+        :class:`OAuthTokenError` so callers can retry without dropping the
+        existing refresh token.
+
         Args:
             provider: The OAuth provider.
             config: OAuth configuration.
@@ -796,7 +949,8 @@ class OAuthManager:
             OAuthToken: The refreshed OAuthToken.
 
         Raises:
-            OAuthTokenError: If refresh fails.
+            OAuthTokenError: If refresh fails for a non-authentication reason.
+            OAuthTokenRefreshError: If the refresh token is rejected (401/403).
         """
         current_token = await self._load_token(provider)
         if current_token is None or current_token.refresh_token is None:
@@ -821,11 +975,11 @@ class OAuthManager:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
-            token_data = response.json()
+            token_data: dict[str, Any] = response.json()
 
             expires_at: datetime | None = None
             if "expires_in" in token_data:
-                expires_at = datetime.now(UTC) + timedelta(seconds=token_data["expires_in"])
+                expires_at = datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
 
             new_token = OAuthToken(
                 access_token=token_data["access_token"],
@@ -836,11 +990,22 @@ class OAuthManager:
                 id_token=token_data.get("id_token"),
             )
 
+            async with self._token_cache_lock:
+                self._token_cache[provider] = new_token
+
             await self._store_token(provider, new_token)
             _logger.info("oauth_token_refreshed", provider=provider.value)
         except httpx.HTTPStatusError as e:
-            _logger.warning("oauth_token_refresh_http_error", status_code=e.response.status_code, error=str(e))
-            msg = f"Token refresh failed: {e.response.status_code}"
+            status_code = e.response.status_code
+            _logger.warning(
+                "oauth_token_refresh_http_error",
+                status_code=status_code,
+                error=str(e),
+            )
+            if status_code in {_HTTP_UNAUTHORIZED, _HTTP_FORBIDDEN}:
+                msg = f"Refresh token rejected by provider ({status_code})"
+                raise OAuthTokenRefreshError(msg) from e
+            msg = f"Token refresh failed: HTTP {status_code}"
             raise OAuthTokenError(msg) from e
         except (OSError, ConnectionError, TimeoutError, httpx.RequestError) as e:
             _logger.warning("oauth_token_refresh_failed", error=str(e))
@@ -866,18 +1031,35 @@ class OAuthManager:
         if config and config.revoke_url:
             client = await self._get_http_client()
             try:
-                await client.post(
+                revoke_response = await client.post(
                     config.revoke_url,
                     data={"token": token.access_token},
                 )
+                revoke_response.raise_for_status()
                 _logger.info("oauth_token_revoked", provider=provider.value)
+            except httpx.HTTPStatusError as http_exc:
+                _logger.warning(
+                    "oauth_token_revocation_http_error",
+                    status_code=http_exc.response.status_code,
+                    error=str(http_exc),
+                )
             except (OSError, ConnectionError, TimeoutError, httpx.RequestError) as e:
                 _logger.warning("oauth_token_revocation_failed", error=str(e))
+
+        async with self._token_cache_lock:
+            self._token_cache.pop(provider, None)
 
         if self._credential_store:
             provider_name = _oauth_provider_to_name(provider)
             try:
                 await self._credential_store.delete(provider_name)
+            except _KeyringError as exc:
+                _logger.warning(
+                    "oauth_token_delete_failed",
+                    provider=provider.value,
+                    error=str(exc),
+                    reason="keyring_error",
+                )
             except (OSError, KeyError, ValueError) as exc:
                 _logger.warning("oauth_token_delete_failed", provider=provider.value, error=str(exc))
 
@@ -912,6 +1094,9 @@ class OAuthManager:
         """Run a complete authorization code flow.
 
         Opens browser, waits for callback, and exchanges code for tokens.
+        The local callback server is always shut down and its socket closed
+        in the ``finally`` block so the bind port is released even if the
+        user cancels or the callback times out.
 
         Args:
             config: OAuth configuration.
@@ -933,33 +1118,50 @@ class OAuthManager:
                 revoke_url=config.revoke_url,
             )
 
-        server = OAuthCallbackServer(port=self._callback_port)
+        auth_url, oauth_state = await self.start_authorization_flow(
+            callback_config,
+            open_browser=False,
+        )
+
+        server = OAuthCallbackServer(
+            port=self._callback_port,
+            expected_state=oauth_state.state,
+        )
         server.start()
 
         try:
-            await self.start_authorization_flow(callback_config, open_browser=True)
+            webbrowser.open(auth_url)
             code, state = server.wait_for_callback()
             return await self.handle_callback(code, state)
         finally:
             server.stop()
 
 
+_oauth_lock: threading.Lock = threading.Lock()
+
+
 class _OAuthManagerHolder:
-    instance: OAuthManager | None = None
+    """Module-level singleton holder for the shared OAuthManager."""
 
-
-_oauth_holder = _OAuthManagerHolder()
+    instance: ClassVar[OAuthManager | None] = None
 
 
 def get_oauth_manager() -> OAuthManager:
     """Get the global OAuth manager instance.
 
+    Uses double-checked locking so concurrent callers construct exactly one
+    :class:`OAuthManager`.
+
     Returns:
         OAuthManager: The singleton OAuthManager instance.
     """
-    if _oauth_holder.instance is None:
-        _oauth_holder.instance = OAuthManager(credential_store=get_credential_store())
-    return _oauth_holder.instance
+    if _OAuthManagerHolder.instance is None:
+        with _oauth_lock:
+            if _OAuthManagerHolder.instance is None:
+                _OAuthManagerHolder.instance = OAuthManager(
+                    credential_store=get_credential_store(),
+                )
+    return _OAuthManagerHolder.instance
 
 
 async def authorize_google(
