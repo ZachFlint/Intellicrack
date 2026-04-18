@@ -290,7 +290,7 @@ class Config:
         with path.open("rb") as f:
             data = tomllib.load(f)
 
-        config = cls._from_dict(data)
+        config = cls.from_dict(data)
         _logger.info(
             "config_loaded",
             path=str(path),
@@ -339,7 +339,7 @@ class Config:
         return tools_dir, logs_dir, data_dir, default_provider, confirmation_level
 
     @staticmethod
-    def _parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
+    def parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
         """Parse providers configuration section.
 
         Args:
@@ -368,7 +368,7 @@ class Config:
         return providers
 
     @staticmethod
-    def _parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
+    def parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
         """Parse tools configuration section.
 
         Args:
@@ -387,20 +387,48 @@ class Config:
 
             if tool_name in tools:
                 tool_base = tools[tool_name]
-                path_str = tool_data.get("path")
-                tool_path = Path(path_str) if path_str else tool_base.path
-                port_val = tool_data.get("port", tool_base.port)
+                path_raw = tool_data.get("path")
+                if path_raw is None:
+                    tool_path = tool_base.path
+                elif isinstance(path_raw, str):
+                    tool_path = Path(path_raw)
+                else:
+                    _logger.warning(
+                        "config_invalid_tool_path",
+                        tool=tool_name.value,
+                        field="path",
+                        value=repr(path_raw),
+                        fallback=str(tool_base.path) if tool_base.path is not None else None,
+                    )
+                    tool_path = tool_base.path
+
+                port_raw = tool_data.get("port", tool_base.port)
+                if port_raw is None:
+                    tool_port: int | None = None
+                else:
+                    try:
+                        tool_port = int(port_raw)
+                    except (ValueError, TypeError):
+                        _logger.warning(
+                            "config_invalid_tool_port",
+                            tool=tool_name.value,
+                            field="port",
+                            value=repr(port_raw),
+                            fallback=tool_base.port,
+                        )
+                        tool_port = tool_base.port
+
                 tools[tool_name] = ToolConfig(
                     enabled=tool_data.get("enabled", tool_base.enabled),
                     path=tool_path,
                     auto_install=tool_data.get("auto_install", tool_base.auto_install),
                     startup_timeout_seconds=tool_data.get("startup_timeout_seconds", tool_base.startup_timeout_seconds),
-                    port=int(port_val) if port_val is not None else None,
+                    port=tool_port,
                 )
         return tools
 
     @staticmethod
-    def _parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
+    def parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
         """Parse sandbox, UI, session, and log configuration sections.
 
         Args:
@@ -446,7 +474,7 @@ class Config:
         return sandbox, ui, session, log
 
     @classmethod
-    def _from_dict(cls, data: dict[str, Any]) -> Config:
+    def from_dict(cls, data: dict[str, Any]) -> Config:
         """Create Config from dictionary.
 
         Args:
@@ -457,9 +485,9 @@ class Config:
         """
         general = data.get("general", {})
         tools_dir, logs_dir, data_dir, default_provider, confirmation_level = cls._parse_general(general)
-        providers = cls._parse_providers(data.get("providers", {}))
-        tools = cls._parse_tools(data.get("tools", {}))
-        sandbox, ui, session, log = cls._parse_sub_configs(data)
+        providers = cls.parse_providers(data.get("providers", {}))
+        tools = cls.parse_tools(data.get("tools", {}))
+        sandbox, ui, session, log = cls.parse_sub_configs(data)
 
         return cls(
             tools_directory=tools_dir,
@@ -474,54 +502,6 @@ class Config:
             session=session,
             log=log,
         )
-
-    @staticmethod
-    def parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
-        """Parse providers configuration section.
-
-        Args:
-            providers_data: Dictionary with provider configuration values.
-
-        Returns:
-            dict[ProviderName, ProviderConfig]: Dictionary mapping provider names to their configurations.
-        """
-        return Config._parse_providers(providers_data)
-
-    @staticmethod
-    def parse_tools(tools_data: dict[str, Any]) -> dict[ToolName, ToolConfig]:
-        """Parse tools configuration section.
-
-        Args:
-            tools_data: Dictionary with tool configuration values.
-
-        Returns:
-            dict[ToolName, ToolConfig]: Dictionary mapping tool names to their configurations.
-        """
-        return Config._parse_tools(tools_data)
-
-    @staticmethod
-    def parse_sub_configs(data: dict[str, Any]) -> tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]:
-        """Parse sandbox, UI, session, and log configuration sections.
-
-        Args:
-            data: Full configuration dictionary.
-
-        Returns:
-            tuple[SandboxConfig, UIConfig, SessionConfig, LogConfig]: Tuple of (sandbox, ui, session, log) configurations.
-        """
-        return Config._parse_sub_configs(data)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Config:
-        """Create Config from dictionary.
-
-        Args:
-            data: Dictionary with configuration values.
-
-        Returns:
-            Config: Config instance with values from dict and defaults for missing.
-        """
-        return cls._from_dict(data)
 
     def save(self, path: Path) -> None:
         """Save configuration to TOML file.
