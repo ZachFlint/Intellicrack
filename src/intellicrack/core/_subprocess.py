@@ -14,17 +14,47 @@ companion .pyi type definition file.
 from __future__ import annotations
 
 import importlib
+import sys
 
 
 _sp = importlib.import_module("sub" + "process")
 
-CREATE_NEW_CONSOLE: int = _sp.CREATE_NEW_CONSOLE
-CREATE_NEW_PROCESS_GROUP: int = _sp.CREATE_NEW_PROCESS_GROUP
-CREATE_NO_WINDOW: int = _sp.CREATE_NO_WINDOW
+
+class _StartupInfoFallback:
+    """Non-Windows fallback for :class:`subprocess.STARTUPINFO`.
+
+    Provides the same public attribute surface as the Windows-only class so
+    cross-platform code can instantiate and configure a startup-info object
+    without conditional branches. The fallback object has no effect when
+    passed to :class:`subprocess.Popen` on non-Windows platforms because the
+    standard library ignores unknown ``startupinfo`` values there.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the fallback with default values mirroring Win32 ``STARTUPINFO``."""
+        self.dwFlags: int = 0
+        self.hStdInput: object | None = None
+        self.hStdOutput: object | None = None
+        self.hStdError: object | None = None
+        self.wShowWindow: int = 0
+        self.lpAttributeList: dict[str, object] = {}
+
+
+if sys.platform == "win32":
+    CREATE_NEW_CONSOLE: int = getattr(_sp, "CREATE_NEW_CONSOLE", 0)
+    CREATE_NEW_PROCESS_GROUP: int = getattr(_sp, "CREATE_NEW_PROCESS_GROUP", 0)
+    CREATE_NO_WINDOW: int = getattr(_sp, "CREATE_NO_WINDOW", 0)
+    STARTF_USESHOWWINDOW: int = getattr(_sp, "STARTF_USESHOWWINDOW", 0)
+    STARTUPINFO = _sp.STARTUPINFO
+else:
+    CREATE_NEW_CONSOLE = 0
+    CREATE_NEW_PROCESS_GROUP = 0
+    CREATE_NO_WINDOW = 0
+    STARTF_USESHOWWINDOW = 0
+    STARTUPINFO = _StartupInfoFallback
+
 DEVNULL = _sp.DEVNULL
 PIPE = _sp.PIPE
-STARTF_USESHOWWINDOW: int = _sp.STARTF_USESHOWWINDOW
-STARTUPINFO = _sp.STARTUPINFO
 CalledProcessError = _sp.CalledProcessError
 CompletedProcess = _sp.CompletedProcess
 Popen = _sp.Popen
