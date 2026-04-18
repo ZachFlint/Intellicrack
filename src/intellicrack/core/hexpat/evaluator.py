@@ -7,7 +7,11 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import (
+    TYPE_CHECKING,
+    Literal,
+    cast as _cast,
+)
 
 from intellicrack.core.hexpat.ast_nodes import (
     AddressOfExpr,
@@ -197,6 +201,30 @@ class EvalScope:
             dict[str, PatternValue]: The dictionary of variable bindings in this scope level.
         """
         return self._bindings
+
+
+def _extract_members_dict(
+    source: dict[str, Any],
+    key: str,
+    *,
+    pop: bool,
+) -> dict[str, PatternValue] | None:
+    """Extract a ``dict[str, PatternValue]`` entry from a parsed-field result.
+
+    Args:
+        source: The parsed-field result dictionary to read from.
+        key: The internal metadata key to look up.
+        pop: When True, remove the key after reading; when False, only read.
+
+    Returns:
+        dict[str, PatternValue] | None: The typed members dictionary, or None
+        when the key is absent or its value is not a dict.
+    """
+    raw: object = source.pop(key, None) if pop else source.get(key)
+    if not isinstance(raw, dict):
+        return None
+    typed: dict[object, object] = _cast("dict[object, object]", raw)
+    return {k_obj: v_obj for k_obj, v_obj in typed.items() if isinstance(k_obj, str) and isinstance(v_obj, PatternValue)}
 
 
 def _make_parsed_field(
@@ -668,9 +696,6 @@ class HexPatEvaluator:
             endianness=None,
         )
         if result is not None:
-            if node.at_offset is None:
-                field_size = int(result["size"])
-                self._offset = target_offset + field_size
             self._results.append(result)
             self._pattern_count += 1
             res_size = int(result["size"])
@@ -680,11 +705,17 @@ class HexPatEvaluator:
             bound_value: _PrimValue | FunctionDecl | BuiltinCallable = (
                 raw_value if isinstance(raw_value, (int, float, str, bool, bytes)) else None
             )
+            nested_members = _extract_members_dict(result, "_members", pop=True)
+            element_members = _extract_members_dict(result, "_element_members", pop=True)
             bound_val = PatternValue(
                 value=bound_value,
                 offset=int(result["offset"]),
                 size=res_size,
             )
+            if nested_members is not None:
+                bound_val.members.update(nested_members)
+            if element_members is not None:
+                bound_val.members.update(element_members)
             self._scope.define(node.name, bound_val)
 
     def _instantiate_type(
@@ -741,15 +772,90 @@ class HexPatEvaluator:
             return self._eval_array_type(type_node, var_name, offset, color, description, eff_endian)
 
         if isinstance(type_node, PointerType):
-            ptr_type = self._types.resolve_primitive("u64", eff_endian)
-            if ptr_type is None:
-                ptr_type = HexPatType("u64", self._pointer_size, signed=False, endian=eff_endian)
-            pv = self._read_primitive(ptr_type, offset)
-            raw = self._data.read(offset, self._pointer_size)
-            display = self._format_value(pv.value, ptr_type)
-            return _make_parsed_field(var_name, offset, self._pointer_size, raw, f"*{display}", [], color, description)
+            return self._instantiate_pointer_type(type_node, var_name, offset, color, description, eff_endian)
 
         return None
+
+    def _pointer_storage_primitive(
+        self,
+        type_node: PointerType,
+        eff_endian: str,
+    ) -> HexPatType:
+        """Resolve the primitive used to store a pointer's integer address.
+
+        Prefers an explicit ``storage_type`` attribute on the pointer node when
+        present. Otherwise, selects the unsigned primitive matching the pragma
+        ``pointer_size``: 1 -> u8, 2 -> u16, 4 -> u32, 8 -> u64.
+
+        Args:
+            type_node: The PointerType AST node being instantiated.
+            eff_endian: Effective endianness to apply to the storage primitive.
+
+        Returns:
+            HexPatType: The primitive HexPatType used to decode the pointer address.
+        """
+        storage: object = getattr(type_node, "storage_type", None)
+        if isinstance(storage, str):
+            prim = self._types.resolve_primitive(storage, eff_endian)
+            if prim is not None:
+                return prim
+        size_to_name: dict[int, str] = {1: "u8", 2: "u16", 4: "u32", 8: "u64"}
+        prim_name = size_to_name.get(self._pointer_size, "u64")
+        resolved = self._types.resolve_primitive(prim_name, eff_endian)
+        if resolved is not None:
+            return resolved
+        return HexPatType(prim_name, self._pointer_size, signed=False, endian=eff_endian)
+
+    def _instantiate_pointer_type(
+        self,
+        type_node: PointerType,
+        var_name: str,
+        offset: int,
+        color: str,
+        description: str,
+        eff_endian: str,
+    ) -> dict[str, Any] | None:
+        """Instantiate a pointer type, reading the address and dereferencing the pointee.
+
+        Reads the pointer storage integer at ``offset``, saves the current
+        ``$`` offset, recursively instantiates the pointee at the decoded
+        address as a single child, then restores ``$``.
+
+        Args:
+            type_node: The PointerType AST node to instantiate.
+            var_name: The variable name for the resulting field.
+            offset: Byte offset at which to read the pointer storage.
+            color: Hex colour string for UI highlighting.
+            description: Optional description annotation.
+            eff_endian: Effective endianness for the pointer storage read.
+
+        Returns:
+            dict[str, Any] | None: A parsed-field dictionary for the pointer, with one child
+            holding the dereferenced pointee, or None if no data could be read.
+        """
+        ptr_type = self._pointer_storage_primitive(type_node, eff_endian)
+        ptr_size = ptr_type.size if ptr_type.size > 0 else self._pointer_size
+        pv = self._read_primitive(ptr_type, offset)
+        raw = self._data.read(offset, ptr_size)
+        decoded = pv.value if isinstance(pv.value, int) else 0
+        display = self._format_value(pv.value, ptr_type)
+
+        saved_offset = self._offset
+        self._offset = decoded
+        try:
+            pointee_field = self._instantiate_type(
+                type_node.pointee,
+                f"*{var_name}",
+                decoded,
+                color,
+                "",
+                eff_endian,
+            )
+        finally:
+            self._offset = saved_offset
+
+        children: list[dict[str, Any]] = [pointee_field] if pointee_field is not None else []
+        return _make_parsed_field(var_name, offset, ptr_size, raw, f"*{display}", children, color, description)
 
     def _instantiate_named_type(
         self,
@@ -824,29 +930,41 @@ class HexPatEvaluator:
 
         saved_offset = self._offset
         saved_scope = self._scope
+        saved_depth = self._depth
         self._offset = offset
-        self._scope = EvalScope(parent=saved_scope)
+        struct_scope = EvalScope(parent=saved_scope)
+        self._scope = struct_scope
 
         children: list[dict[str, Any]] = []
+        members: dict[str, PatternValue] = {}
+        total_size = 0
+        raw: bytes = b""
 
-        if type_info.parent is not None:
-            parent_resolved = self._types.resolve(type_info.parent)
-            if isinstance(parent_resolved, StructTypeInfo):
-                parent_result = self._eval_struct_instance(parent_resolved.name, parent_resolved, "__parent__", self._offset, color, "")
-                children.extend(parent_result.get("children", []))
-                self._offset += int(parent_result["size"])
+        try:
+            if type_info.parent is not None:
+                parent_resolved = self._types.resolve(type_info.parent)
+                if isinstance(parent_resolved, StructTypeInfo):
+                    parent_result = self._eval_struct_instance(parent_resolved.name, parent_resolved, "__parent__", self._offset, color, "")
+                    children.extend(parent_result.get("children", []))
+                    self._offset += int(parent_result["size"])
+                    parent_members = _extract_members_dict(parent_result, "_members", pop=True)
+                    if parent_members is not None:
+                        members.update(parent_members)
 
-        for stmt in type_info.decl.body:
-            self._eval_stmt_collect(stmt, children)
+            for stmt in type_info.decl.body:
+                self._eval_stmt_collect(stmt, children)
 
-        total_size = self._offset - offset
-        raw = self._data.read(offset, max(total_size, 0))
+            total_size = self._offset - offset
+            raw = self._data.read(offset, max(total_size, 0))
+            members.update(struct_scope.bindings)
+        finally:
+            self._offset = saved_offset
+            self._scope = saved_scope
+            self._depth = saved_depth - 1
 
-        self._offset = saved_offset
-        self._scope = saved_scope
-        self._depth -= 1
-
-        return _make_parsed_field(var_name, offset, total_size, raw, name, children, color, description)
+        result = _make_parsed_field(var_name, offset, total_size, raw, name, children, color, description)
+        result["_members"] = members
+        return result
 
     def _eval_union_instance(
         self,
@@ -883,24 +1001,32 @@ class HexPatEvaluator:
 
         saved_offset = self._offset
         saved_scope = self._scope
-        self._scope = EvalScope(parent=saved_scope)
+        saved_depth = self._depth
+        union_scope = EvalScope(parent=saved_scope)
+        self._scope = union_scope
 
         children: list[dict[str, Any]] = []
+        members: dict[str, PatternValue] = {}
         max_size = 0
+        raw: bytes = b""
 
-        for stmt in type_info.decl.body:
-            self._offset = offset
-            self._eval_stmt_collect(stmt, children)
-            member_size = self._offset - offset
-            max_size = max(max_size, member_size)
+        try:
+            for stmt in type_info.decl.body:
+                self._offset = offset
+                self._eval_stmt_collect(stmt, children)
+                member_size = self._offset - offset
+                max_size = max(max_size, member_size)
 
-        raw = self._data.read(offset, max(max_size, 0))
+            raw = self._data.read(offset, max(max_size, 0))
+            members.update(union_scope.bindings)
+        finally:
+            self._offset = saved_offset
+            self._scope = saved_scope
+            self._depth = saved_depth - 1
 
-        self._offset = saved_offset
-        self._scope = saved_scope
-        self._depth -= 1
-
-        return _make_parsed_field(var_name, offset, max_size, raw, name, children, color, description)
+        result = _make_parsed_field(var_name, offset, max_size, raw, name, children, color, description)
+        result["_members"] = members
+        return result
 
     def _eval_enum_instance(
         self,
@@ -978,11 +1104,13 @@ class HexPatEvaluator:
         bf_byteorder: Literal["little", "big"] = "big" if self._default_endian == "big" else "little"
         int_value = int.from_bytes(raw, byteorder=bf_byteorder)
 
+        order = self._resolve_bitfield_order(type_info.decl.annotations)
         children: list[dict[str, Any]] = []
         bit_pos = 0
         for entry_name, width in bit_widths:
             mask = (1 << width) - 1
-            field_val = (int_value >> bit_pos) & mask
+            shift = (total_bits - bit_pos - width) if order == "left_to_right" else bit_pos
+            field_val = (int_value >> shift) & mask
             child_raw = field_val.to_bytes(max((width + 7) // 8, 1), byteorder=bf_byteorder)
             children.append(
                 _make_parsed_field(
@@ -999,6 +1127,29 @@ class HexPatEvaluator:
             bit_pos += width
 
         return _make_parsed_field(var_name, offset, total_bytes, raw, name, children, color, description)
+
+    def _resolve_bitfield_order(
+        self,
+        annotations: tuple[tuple[str, ExprNode | None], ...],
+    ) -> str:
+        """Resolve the effective bit ordering for a bitfield declaration.
+
+        Annotations matching ``bitfield_order`` override the pragma default.
+        Accepted values are ``"left_to_right"`` and ``"right_to_left"``.
+
+        Args:
+            annotations: Tuple of annotation name-value pairs on the bitfield declaration.
+
+        Returns:
+            str: The resolved ordering, either ``"left_to_right"`` or ``"right_to_left"``.
+        """
+        for ann_name, ann_expr in annotations:
+            if ann_name == "bitfield_order" and ann_expr is not None:
+                pv = self._eval_expr(ann_expr)
+                if isinstance(pv.value, str) and pv.value in {"left_to_right", "right_to_left"}:
+                    return pv.value
+        pragma_order = self._pragma.bitfield_order
+        return pragma_order if pragma_order in {"left_to_right", "right_to_left"} else "right_to_left"
 
     def _eval_array_type(
         self,
@@ -1026,6 +1177,7 @@ class HexPatEvaluator:
             HexPatRuntimeError: If the array limit is exceeded.
         """
         elements: list[dict[str, Any]] = []
+        element_members: dict[str, PatternValue] = {}
         current_offset = offset
         elem_index = 0
 
@@ -1047,6 +1199,7 @@ class HexPatEvaluator:
                 )
                 self._array_index_stack.pop()
                 if elem is not None:
+                    element_members[f"[{i}]"] = self._element_to_pattern_value(elem)
                     elements.append(elem)
                     current_offset += int(elem["size"])
                 elem_index += 1
@@ -1074,6 +1227,7 @@ class HexPatEvaluator:
                 self._array_index_stack.pop()
                 if elem is None:
                     break
+                element_members[f"[{i}]"] = self._element_to_pattern_value(elem)
                 elements.append(elem)
                 current_offset += int(elem["size"])
                 i += 1
@@ -1081,7 +1235,36 @@ class HexPatEvaluator:
 
         total_size = current_offset - offset
         raw = self._data.read(offset, max(total_size, 0))
-        return _make_parsed_field(var_name, offset, total_size, raw, f"[{len(elements)}]", elements, color, description)
+        result = _make_parsed_field(var_name, offset, total_size, raw, f"[{len(elements)}]", elements, color, description)
+        result["_element_members"] = element_members
+        return result
+
+    @staticmethod
+    def _element_to_pattern_value(elem: dict[str, Any]) -> PatternValue:
+        """Convert an array element result dict into a PatternValue for member access.
+
+        Args:
+            elem: The parsed-field dictionary produced by instantiating an array element.
+
+        Returns:
+            PatternValue: A PatternValue with primitive ``value``, nested members, and offset/size.
+        """
+        raw_value = elem.get("_value")
+        bound_value: _PrimValue | FunctionDecl | BuiltinCallable = (
+            raw_value if isinstance(raw_value, (int, float, str, bool, bytes)) else None
+        )
+        pv = PatternValue(
+            value=bound_value,
+            offset=int(elem["offset"]),
+            size=int(elem["size"]),
+        )
+        nested = _extract_members_dict(elem, "_members", pop=False)
+        if nested is not None:
+            pv.members.update(nested)
+        nested_elements = _extract_members_dict(elem, "_element_members", pop=False)
+        if nested_elements is not None:
+            pv.members.update(nested_elements)
+        return pv
 
     def _eval_field(
         self,
@@ -1126,6 +1309,10 @@ class HexPatEvaluator:
     ) -> dict[str, Any]:
         """Evaluate a pointer field declaration.
 
+        The pointer storage integer is read at ``target_offset``, and the
+        pointee is recursively instantiated at the decoded address as a
+        single child of this field.
+
         Args:
             node: The field declaration AST node.
             target_offset: Effective byte offset for this field.
@@ -1136,16 +1323,37 @@ class HexPatEvaluator:
         Returns:
             dict[str, Any]: A parsed-field dictionary for this pointer field.
         """
-        ptr_type = self._types.resolve_primitive("u64", eff_endian)
-        if ptr_type is None:
-            ptr_type = HexPatType("u64", self._pointer_size, signed=False, endian=eff_endian)
+        pointer_node = PointerType(
+            pointee=node.type_node,
+            line=node.line,
+            column=node.column,
+        )
+        ptr_type = self._pointer_storage_primitive(pointer_node, eff_endian)
+        ptr_size = ptr_type.size if ptr_type.size > 0 else self._pointer_size
         pv = self._read_primitive(ptr_type, target_offset)
-        raw = self._data.read(target_offset, self._pointer_size)
+        raw = self._data.read(target_offset, ptr_size)
+        decoded = pv.value if isinstance(pv.value, int) else 0
         display = f"*{self._format_value(pv.value, ptr_type)}"
-        result: dict[str, Any] = _make_parsed_field(node.name, target_offset, self._pointer_size, raw, display, [], color, description)
+
+        saved_offset = self._offset
+        self._offset = decoded
+        try:
+            pointee_field = self._instantiate_type(
+                node.type_node,
+                f"*{node.name}",
+                decoded,
+                color,
+                "",
+                eff_endian,
+            )
+        finally:
+            self._offset = saved_offset
+
+        children: list[dict[str, Any]] = [pointee_field] if pointee_field is not None else []
+        result: dict[str, Any] = _make_parsed_field(node.name, target_offset, ptr_size, raw, display, children, color, description)
         if node.at_offset is None:
-            self._offset = target_offset + self._pointer_size
-        bound = PatternValue(value=pv.value, type_info=ptr_type, offset=target_offset, size=self._pointer_size)
+            self._offset = target_offset + ptr_size
+        bound = PatternValue(value=pv.value, type_info=ptr_type, offset=target_offset, size=ptr_size)
         self._scope.define(node.name, bound)
         return result
 
@@ -1181,7 +1389,11 @@ class HexPatEvaluator:
             field_size = int(result["size"])
             if node.at_offset is None:
                 self._offset = target_offset + field_size
-            self._scope.define(node.name, PatternValue(value=None, offset=target_offset, size=field_size))
+            bound = PatternValue(value=None, offset=target_offset, size=field_size)
+            element_members = _extract_members_dict(result, "_element_members", pop=False)
+            if element_members is not None:
+                bound.members.update(element_members)
+            self._scope.define(node.name, bound)
         return result
 
     def _eval_plain_field(
@@ -1213,10 +1425,14 @@ class HexPatEvaluator:
             bound_value: _PrimValue | FunctionDecl | BuiltinCallable = (
                 raw_value if isinstance(raw_value, (int, float, str, bool, bytes)) else None
             )
-            self._scope.define(
-                node.name,
-                PatternValue(value=bound_value, offset=int(result["offset"]), size=field_size),
-            )
+            nested_members = _extract_members_dict(result, "_members", pop=True)
+            element_members = _extract_members_dict(result, "_element_members", pop=True)
+            bound = PatternValue(value=bound_value, offset=int(result["offset"]), size=field_size)
+            if nested_members is not None:
+                bound.members.update(nested_members)
+            if element_members is not None:
+                bound.members.update(element_members)
+            self._scope.define(node.name, bound)
         return result
 
     def _eval_stmt_collect(
@@ -1787,13 +2003,107 @@ class HexPatEvaluator:
     def _sizeof_struct(self, info: StructTypeInfo) -> int:
         """Compute the total byte size of a struct type.
 
+        Mirrors struct instantiation: includes parent size recursively,
+        fixed-size arrays (size * element_size), and the statically-visible
+        branch of conditional fields. Placement statements with ``at_offset``
+        do not advance the cursor. While-sized arrays contribute zero to the
+        static size (matching the caller contract returning 0 for variable
+        or unknown sizes).
+
         Args:
             info: The resolved struct type info.
 
         Returns:
-            int: The sum of all field sizes in bytes.
+            int: The total static byte size in bytes, or 0 when it cannot be
+            statically determined.
         """
-        return sum(self._sizeof_type_node(stmt.type_node) for stmt in info.decl.body if isinstance(stmt, FieldDecl))
+        total = 0
+        if info.parent is not None:
+            parent_resolved = self._types.resolve(info.parent)
+            if isinstance(parent_resolved, StructTypeInfo):
+                total += self._sizeof_struct(parent_resolved)
+        for stmt in info.decl.body:
+            total += self._sizeof_struct_stmt(stmt)
+        return total
+
+    def _sizeof_struct_stmt(self, stmt: StmtNode) -> int:
+        """Compute the static size contribution of a single struct body statement.
+
+        Args:
+            stmt: A statement node from the struct body.
+
+        Returns:
+            int: The byte size this statement contributes, or 0 if variable/unknown.
+        """
+        if isinstance(stmt, FieldDecl):
+            return self._sizeof_field_decl(stmt)
+        if isinstance(stmt, PlacementStmt):
+            return 0 if stmt.at_offset is not None else self._sizeof_placement_stmt(stmt)
+        if isinstance(stmt, ConditionalField):
+            return self._sizeof_conditional_field(stmt)
+        return 0
+
+    def _sizeof_field_decl(self, stmt: FieldDecl) -> int:
+        """Compute the static size of a FieldDecl, handling arrays and pointers.
+
+        Args:
+            stmt: The field declaration node.
+
+        Returns:
+            int: The size in bytes, or 0 if variable/unknown.
+        """
+        if stmt.is_pointer:
+            return self._pointer_size
+        element_size = self._sizeof_type_node(stmt.type_node)
+        if stmt.array_size is not None:
+            size_pv = self._eval_expr(stmt.array_size)
+            if isinstance(size_pv.value, int):
+                return element_size * size_pv.value
+            return 0
+        if stmt.while_condition is not None:
+            return 0
+        return element_size
+
+    def _sizeof_placement_stmt(self, stmt: PlacementStmt) -> int:
+        """Compute the static size contribution of a PlacementStmt.
+
+        Args:
+            stmt: The placement statement node.
+
+        Returns:
+            int: The size in bytes, or 0 if variable/unknown.
+        """
+        element_size = self._sizeof_type_node(stmt.type_node)
+        if stmt.array_size is not None:
+            size_pv = self._eval_expr(stmt.array_size)
+            if isinstance(size_pv.value, int):
+                return element_size * size_pv.value
+            return 0
+        if stmt.while_condition is not None:
+            return 0
+        return element_size
+
+    def _sizeof_conditional_field(self, stmt: ConditionalField) -> int:
+        """Compute the static size of a ConditionalField by evaluating the branch.
+
+        Evaluates the condition statically; selects the true branch when the
+        condition is truthy, else the false branch.
+
+        Args:
+            stmt: The conditional field node.
+
+        Returns:
+            int: The total byte size of the selected branch, or 0 when undetermined.
+        """
+        try:
+            cond = self._eval_expr(stmt.condition)
+        except (HexPatRuntimeError, HexPatTypeError):
+            return 0
+        branch = stmt.true_fields if _truthy(cond) else stmt.false_fields
+        total = 0
+        for inner in branch:
+            total += self._sizeof_struct_stmt(inner)
+        return total
 
     def _sizeof_union(self, info: UnionTypeInfo) -> int:
         """Compute the byte size of a union type (maximum field size).
@@ -1807,8 +2117,12 @@ class HexPatEvaluator:
         max_size = 0
         for stmt in info.decl.body:
             if isinstance(stmt, FieldDecl):
-                field_size = self._sizeof_type_node(stmt.type_node)
+                field_size = self._sizeof_field_decl(stmt)
                 max_size = max(max_size, field_size)
+            elif isinstance(stmt, PlacementStmt) and stmt.at_offset is None:
+                max_size = max(max_size, self._sizeof_placement_stmt(stmt))
+            elif isinstance(stmt, ConditionalField):
+                max_size = max(max_size, self._sizeof_conditional_field(stmt))
         return max_size
 
     def _sizeof_bitfield(self, info: BitfieldTypeInfo) -> int:
@@ -1830,6 +2144,11 @@ class HexPatEvaluator:
     def _eval_cast(self, node: CastExpr) -> PatternValue:
         """Evaluate a type cast expression.
 
+        Casts to a resolved primitive apply numeric coercion with masking or
+        float conversion. Casts to a named type resolving to an enum or
+        bitfield coerce the source to an integer using the backing primitive.
+        Casts to a struct/union target pass the source value through unchanged.
+
         Args:
             node: The cast expression AST node.
 
@@ -1839,7 +2158,44 @@ class HexPatEvaluator:
         value = self._eval_expr(node.expr)
         target_prim = self._resolve_type_node_to_primitive(node.target_type)
         if target_prim is None:
+            if isinstance(node.target_type, NamedType):
+                resolved = self._types.resolve(node.target_type.name)
+                if isinstance(resolved, EnumTypeInfo):
+                    return self._coerce_to_integer_primitive(value, resolved.backing_type, node.line, node.column)
+                if isinstance(resolved, BitfieldTypeInfo):
+                    total_bytes = self._sizeof_bitfield(resolved)
+                    bits = total_bytes * 8
+                    bf_prim = HexPatType(
+                        name=resolved.name,
+                        size=total_bytes if total_bytes > 0 else 1,
+                        signed=False,
+                        endian=self._default_endian,
+                    )
+                    coerced = self._coerce_to_integer_primitive(value, bf_prim, node.line, node.column)
+                    if isinstance(coerced.value, int) and bits > 0:
+                        coerced = PatternValue(value=coerced.value & ((1 << bits) - 1), type_info=bf_prim)
+                    return coerced
             return value
+        return self._cast_to_primitive(value, target_prim, node.line, node.column)
+
+    def _cast_to_primitive(
+        self,
+        value: PatternValue,
+        target_prim: HexPatType,
+        line: int,
+        column: int,
+    ) -> PatternValue:
+        """Coerce a PatternValue to a primitive target type.
+
+        Args:
+            value: The source PatternValue.
+            target_prim: The primitive HexPatType to coerce to.
+            line: Source line number for error reporting.
+            column: Source column number for error reporting.
+
+        Returns:
+            PatternValue: A new PatternValue with the coerced value.
+        """
         raw = value.value
         if target_prim.name in {"float", "double"}:
             if isinstance(raw, (int, float)) and not isinstance(raw, bool):
@@ -1851,23 +2207,63 @@ class HexPatEvaluator:
             )
         if target_prim.name == "bool":
             return PatternValue(value=bool(raw), type_info=target_prim)
+        return self._coerce_to_integer_primitive(value, target_prim, line, column)
+
+    @staticmethod
+    def _coerce_to_integer_primitive(
+        value: PatternValue,
+        target_prim: HexPatType,
+        line: int,
+        column: int,
+    ) -> PatternValue:
+        """Coerce a PatternValue to an integer-backed primitive.
+
+        Applies bit-width masking for sized unsigned primitives and
+        two's-complement wrapping for signed primitives. Float sources
+        are truncated toward zero; conversion failures (overflow, NaN,
+        infinity) raise a runtime error.
+
+        Args:
+            value: The source PatternValue.
+            target_prim: The primitive HexPatType whose size and signedness govern coercion.
+            line: Source line number for error reporting.
+            column: Source column number for error reporting.
+
+        Returns:
+            PatternValue: A new PatternValue holding an integer coerced to the target's width.
+
+        Raises:
+            HexPatRuntimeError: If a float value cannot be converted to an integer.
+        """
+        raw = value.value
         if isinstance(raw, bool):
             return PatternValue(value=int(raw), type_info=target_prim)
-        if isinstance(raw, (int, float)):
-            int_val = int(raw)
-            if target_prim.signed and target_prim.size > 0:
-                bits = target_prim.size * 8
-                max_signed = (1 << (bits - 1)) - 1
-                int_val &= (1 << bits) - 1
-                if int_val > max_signed:
-                    int_val -= 1 << bits
-            elif not target_prim.signed and target_prim.size > 0:
-                bits = target_prim.size * 8
-                int_val &= (1 << bits) - 1
-            return PatternValue(value=int_val, type_info=target_prim)
-        if isinstance(raw, str) and raw:
-            return PatternValue(value=ord(raw[0]), type_info=target_prim)
-        return PatternValue(value=raw, type_info=target_prim)
+        if isinstance(raw, float):
+            if math.isnan(raw) or math.isinf(raw):
+                msg = f"cannot convert non-finite float to integer type '{target_prim.name}'"
+                raise HexPatRuntimeError(msg, line, column)
+            try:
+                int_val = int(raw)
+            except (OverflowError, ValueError) as exc:
+                msg = f"cannot convert float to integer type '{target_prim.name}': {exc}"
+                raise HexPatRuntimeError(msg, line, column) from exc
+        elif isinstance(raw, int):
+            int_val = raw
+        elif isinstance(raw, str) and raw:
+            int_val = ord(raw[0])
+        else:
+            return PatternValue(value=raw, type_info=target_prim)
+
+        if target_prim.signed and target_prim.size > 0:
+            bits = target_prim.size * 8
+            max_signed = (1 << (bits - 1)) - 1
+            int_val &= (1 << bits) - 1
+            if int_val > max_signed:
+                int_val -= 1 << bits
+        elif not target_prim.signed and target_prim.size > 0:
+            bits = target_prim.size * 8
+            int_val &= (1 << bits) - 1
+        return PatternValue(value=int_val, type_info=target_prim)
 
     def _resolve_type_node_to_primitive(self, type_node: TypeNode) -> HexPatType | None:
         """Resolve a type node to a HexPatType primitive if possible.
