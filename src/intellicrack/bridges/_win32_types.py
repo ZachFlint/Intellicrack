@@ -129,6 +129,17 @@ CONTEXT_I386_FULL: Final[int] = CONTEXT_I386_CONTROL | CONTEXT_I386_INTEGER | CO
 CONTEXT_I386_ALL: Final[int] = CONTEXT_I386_FULL | CONTEXT_I386_FLOATING_POINT | CONTEXT_I386_DEBUG_REGISTERS
 
 # ---------------------------------------------------------------------------
+# PE / IMAGE_FILE_HEADER machine types (used by IsWow64Process2 and StackWalk64)
+# ---------------------------------------------------------------------------
+IMAGE_FILE_MACHINE_UNKNOWN: Final[int] = 0x0000
+IMAGE_FILE_MACHINE_I386: Final[int] = 0x014C
+IMAGE_FILE_MACHINE_AMD64: Final[int] = 0x8664
+IMAGE_FILE_MACHINE_ARM: Final[int] = 0x01C0
+IMAGE_FILE_MACHINE_ARM64: Final[int] = 0xAA64
+IMAGE_FILE_MACHINE_ARMNT: Final[int] = 0x01C4
+IMAGE_FILE_MACHINE_IA64: Final[int] = 0x0200
+
+# ---------------------------------------------------------------------------
 # SCM constants
 # ---------------------------------------------------------------------------
 SC_MANAGER_ENUMERATE_SERVICE: Final[int] = 0x0004
@@ -567,6 +578,17 @@ class CONTEXT32(ctypes.Structure):
         ("Esp", wintypes.DWORD),
         ("SegSs", wintypes.DWORD),
     ]
+
+
+WOW64_CONTEXT = CONTEXT32
+"""WOW64 thread context alias.
+
+The WOW64 subsystem exposes the same I386 CONTEXT layout under the name
+``WOW64_CONTEXT`` for use with ``Wow64GetThreadContext`` /
+``Wow64SetThreadContext`` against 32-bit threads hosted inside a 64-bit
+process. The layout is identical to :class:`CONTEXT32`, so aliasing keeps
+the Win32 types surface minimal while making call sites self-documenting.
+"""
 
 
 # ---------------------------------------------------------------------------

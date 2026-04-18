@@ -30,6 +30,13 @@ from intellicrack.bridges._win32_types import (
     HKEY_CLASSES_ROOT,
     HKEY_CURRENT_USER,
     HKEY_LOCAL_MACHINE,
+    IMAGE_FILE_MACHINE_AMD64,
+    IMAGE_FILE_MACHINE_ARM64,
+    IMAGE_FILE_MACHINE_I386,
+    IMAGE_FILE_MACHINE_UNKNOWN,
+    IO_COUNTERS,
+    JOBOBJECT_BASIC_LIMIT_INFORMATION,
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
     KEY_ENUMERATE_SUB_KEYS,
     KEY_QUERY_VALUE,
     KEY_READ,
@@ -88,6 +95,9 @@ from intellicrack.bridges._win32_types import (
     TOKEN_ADJUST_PRIVILEGES,
     TOKEN_PRIVILEGES,
     TOKEN_QUERY,
+    WOW64_CONTEXT,
+    JobObjectBasicLimitInformation,
+    JobObjectExtendedLimitInformation,
     ProcessASLRPolicy,
     ProcessBasicInformation,
     ProcessControlFlowGuardPolicy,
@@ -98,6 +108,7 @@ from intellicrack.bridges._win32_types import (
     ProcessSignaturePolicy,
     ProcessStrictHandleCheckPolicy,
     ProcessSystemCallDisablePolicy,
+    ProcessWow64Information,
     SystemExtendedHandleInformation,
     ThreadBasicInformation,
     ThreadQuerySetWin32StartAddress,
@@ -175,6 +186,17 @@ _REG_TYPE_DWORD = 4
 _REG_TYPE_QWORD = 11
 _REG_TYPE_SZ = 1
 _REG_TYPE_EXPAND_SZ = 2
+
+_SEARCH_CHUNK_SIZE = 0x100000
+_PE_DOS_SIGNATURE = 0x5A4D
+_PE_HEADER_OFFSET_FIELD = 0x3C
+_PE_SIGNATURE_SIZE = 4
+_PE_SIGNATURE = 0x00004550
+
+_JOB_QUERY_INFORMATION = 0x0004
+
+_PEB32_MIN_PARSE_LENGTH = 0x18
+_PEB_BEING_DEBUGGED_OFFSET = 2
 
 _ERR_ACCESS_HANDLE_OPEN = "token open failed"
 _ERR_PRIV_QUERY_FAILED = "GetTokenInformation failed"
@@ -333,15 +355,35 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
     ),
     ToolFunction(
         name="process.get_memory_map",
-        description="Get process memory map",
-        parameters=[],
+        description="Get process memory map; optionally resolve mapped-file names",
+        parameters=[
+            ToolParameter(
+                name="resolve_names",
+                type="boolean",
+                description="Resolve module/mapped-file names for MEM_MAPPED and MEM_IMAGE regions via GetMappedFileNameW",
+                required=False,
+                default=False,
+            ),
+        ],
         returns="List of MemoryRegion objects",
     ),
     ToolFunction(
         name="process.search_pattern",
-        description="Search for byte pattern in memory",
+        description="Search for byte pattern in memory with optional address bounds",
         parameters=[
-            ToolParameter(name="pattern", type="string", description="Hex pattern with wildcards", required=True),
+            ToolParameter(name="pattern", type="string", description="Hex pattern with wildcards (e.g. '48 8B ?? ??')", required=True),
+            ToolParameter(
+                name="start_address",
+                type="integer",
+                description="Optional inclusive lower bound of address range to scan",
+                required=False,
+            ),
+            ToolParameter(
+                name="end_address",
+                type="integer",
+                description="Optional inclusive upper bound of address range to scan",
+                required=False,
+            ),
         ],
         returns="List of matching addresses",
     ),
@@ -537,7 +579,7 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="pid", type="integer", description="Process ID (uses current if not specified)", required=False),
         ],
-        returns="Dict with clr_loaded, clr_version, runtime_dll fields",
+        returns="Dict with clr_loaded (bool), clr_version (str | None), runtime_dlls (list[str]) fields",
     ),
     ToolFunction(
         name="process.device_open",
@@ -888,6 +930,61 @@ class ProcessBridge(ToolBridgeBase):
     # Process listing and management
     # ------------------------------------------------------------------
 
+    async def list(
+        self,
+        filter_name: str | None = None,
+    ) -> list[ProcessInfo]:
+        """List all running processes (ToolRegistry dispatch alias).
+
+        Dispatch shim that maps the LLM-visible ``process.list`` tool
+        function onto :meth:`list_processes` so the orchestrator's
+        ``getattr(bridge, attr_name)`` lookup resolves the attribute
+        after the tool-name prefix is stripped.
+
+        Args:
+            filter_name: Optional name filter.
+
+        Returns:
+            list[ProcessInfo]: List of processes.
+        """
+        return await self.list_processes(filter_name)
+
+    async def list_detailed(
+        self,
+        filter_name: str | None = None,
+    ) -> list[dict[str, int | str | float]]:
+        """List processes with architecture, memory, and thread count.
+
+        Dispatch shim for the LLM-visible ``process.list_detailed`` tool
+        function. Delegates to :meth:`list_processes_detailed`.
+
+        Args:
+            filter_name: Optional name filter.
+
+        Returns:
+            list[dict[str, int | str | float]]: Process detail dicts.
+        """
+        return await self.list_processes_detailed(filter_name)
+
+    async def open(
+        self,
+        pid: int,
+        access: ProcessAccessRights = "all",
+    ) -> bool:
+        """Open a process handle (ToolRegistry dispatch alias).
+
+        Dispatch shim for the LLM-visible ``process.open`` tool function.
+        Delegates to :meth:`open_process`.
+
+        Args:
+            pid: Process ID.
+            access: Access rights required.
+
+        Returns:
+            bool: True if successful.
+        """
+        return await self.open_process(pid, access)
+
     async def list_processes(
         self,
         filter_name: str | None = None,
@@ -1027,11 +1124,19 @@ class ProcessBridge(ToolBridgeBase):
     async def detect_architecture(self, pid: int) -> str:
         """Detect whether a process is 32-bit or 64-bit.
 
+        Uses ``IsWow64Process2`` when available for accurate architecture
+        identification on modern Windows (distinguishes x86, x64, ARM, and
+        ARM64 native / emulated combinations). Falls back to parsing the
+        PE header Machine field of the main module when the Win32 call
+        reports ``IMAGE_FILE_MACHINE_UNKNOWN``, and finally to the legacy
+        ``IsWow64Process`` + pointer-size heuristic.
+
         Args:
             pid: Process ID.
 
         Returns:
-            str: One of 'x64', 'x86', or 'Unknown'.
+            str: Architecture string such as ``'x64'``, ``'x86'``,
+                ``'arm64'``, ``'arm'``, or ``'Unknown'``.
         """
         if self._kernel32 is None:
             return "Unknown"
@@ -1044,16 +1149,207 @@ class ProcessBridge(ToolBridgeBase):
                 return "Unknown"
 
         try:
-            is_wow64 = wintypes.BOOL(0)
-            if hasattr(self._kernel32, "IsWow64Process"):
-                self._kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
-                if is_wow64.value:
-                    return "x86"
+            arch = self._detect_arch_via_iswow64process2(handle)
+            if arch is not None and arch != "Unknown":
+                return arch
 
-            pointer_bits = struct.calcsize("P") * _BITS_PER_BYTE
-            return "x64" if pointer_bits == _POINTER_BITS_64 else "x86"
+            pe_arch = self._detect_arch_via_pe_header(pid)
+            if pe_arch is not None:
+                return pe_arch
+
+            return self._detect_arch_via_iswow64process(handle)
         finally:
             self._kernel32.CloseHandle(handle)
+
+    def _call_iswow64process2(self, handle: int) -> tuple[int, int] | None:
+        """Invoke the Win10+ ``IsWow64Process2`` API with prepared argtypes.
+
+        Shared helper for every caller that needs the
+        ``(process_machine, native_machine)`` pair. Returns ``None`` on
+        OSes that predate ``IsWow64Process2`` or if the call itself
+        fails so callers can branch into their legacy fallbacks without
+        each re-declaring the argtypes / restype block.
+
+        Args:
+            handle: Open process handle with at least
+                ``PROCESS_QUERY_LIMITED_INFORMATION`` access.
+
+        Returns:
+            tuple[int, int] | None: ``(process_machine, native_machine)``
+                as ``IMAGE_FILE_MACHINE_*`` values, or ``None`` on
+                failure / unavailability.
+        """
+        if self._kernel32 is None:
+            return None
+
+        is_wow64_process2 = getattr(self._kernel32, "IsWow64Process2", None)
+        if is_wow64_process2 is None:
+            return None
+
+        is_wow64_process2.argtypes = [
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.USHORT),
+            ctypes.POINTER(wintypes.USHORT),
+        ]
+        is_wow64_process2.restype = wintypes.BOOL
+
+        process_machine = wintypes.USHORT(0)
+        native_machine = wintypes.USHORT(0)
+        if not is_wow64_process2(
+            handle,
+            ctypes.byref(process_machine),
+            ctypes.byref(native_machine),
+        ):
+            return None
+
+        return process_machine.value, native_machine.value
+
+    def _detect_arch_via_iswow64process2(self, handle: int) -> str | None:
+        """Detect architecture using the Win10+ ``IsWow64Process2`` API.
+
+        Args:
+            handle: Open process handle with at least
+                ``PROCESS_QUERY_LIMITED_INFORMATION`` access.
+
+        Returns:
+            str | None: Architecture string, ``'Unknown'`` if the API
+                reports an unknown machine, or ``None`` if the API is not
+                available on this Windows build.
+        """
+        result = self._call_iswow64process2(handle)
+        if result is None:
+            return None
+
+        process_machine, native_machine = result
+        if process_machine == IMAGE_FILE_MACHINE_UNKNOWN:
+            native = self._machine_to_arch_string(native_machine)
+            if native == "Unknown":
+                return "Unknown"
+            return native
+
+        return self._machine_to_arch_string(process_machine)
+
+    @staticmethod
+    def _machine_to_arch_string(machine: int) -> str:
+        """Translate an ``IMAGE_FILE_MACHINE_*`` value to an arch string.
+
+        Args:
+            machine: Win32 ``IMAGE_FILE_MACHINE_*`` constant value.
+
+        Returns:
+            str: Architecture string like ``'x64'``, ``'x86'``,
+                ``'arm64'``, ``'arm'``, or ``'Unknown'``.
+        """
+        machine_map: dict[int, str] = {
+            IMAGE_FILE_MACHINE_I386: "x86",
+            IMAGE_FILE_MACHINE_AMD64: "x64",
+            IMAGE_FILE_MACHINE_ARM64: "arm64",
+        }
+        return machine_map.get(machine, "Unknown")
+
+    def _detect_arch_via_pe_header(self, pid: int) -> str | None:
+        """Detect architecture by parsing the PE header of the main module.
+
+        Reads the DOS header, PE signature, and COFF file header machine
+        field of the process's primary image. This fallback is used when
+        ``IsWow64Process2`` reports ``IMAGE_FILE_MACHINE_UNKNOWN`` or is
+        unavailable on the host OS.
+
+        Args:
+            pid: Process ID to inspect.
+
+        Returns:
+            str | None: Architecture string or ``None`` if the PE header
+                could not be located and parsed.
+        """
+        if self._kernel32 is None or self._psapi is None:
+            return None
+
+        access_rights = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
+        inherit_handle = False
+        read_handle = self._kernel32.OpenProcess(access_rights, inherit_handle, pid)
+        if not read_handle:
+            return None
+
+        try:
+            module_handle = wintypes.HMODULE()
+            bytes_needed = wintypes.DWORD(0)
+            if not self._psapi.EnumProcessModules(
+                read_handle,
+                ctypes.byref(module_handle),
+                ctypes.sizeof(wintypes.HMODULE),
+                ctypes.byref(bytes_needed),
+            ):
+                return None
+
+            base = ctypes.cast(module_handle, ctypes.c_void_p).value or 0
+            if base == 0:
+                return None
+
+            dos_header = ctypes.create_string_buffer(0x40)
+            bytes_read = ctypes.c_size_t()
+            if not self._kernel32.ReadProcessMemory(
+                read_handle,
+                ctypes.c_void_p(base),
+                dos_header,
+                0x40,
+                ctypes.byref(bytes_read),
+            ):
+                return None
+
+            dos_sig = struct.unpack_from("<H", dos_header.raw, 0)[0]
+            if dos_sig != _PE_DOS_SIGNATURE:
+                return None
+
+            pe_offset = struct.unpack_from("<I", dos_header.raw, _PE_HEADER_OFFSET_FIELD)[0]
+
+            header_buffer = ctypes.create_string_buffer(_PE_SIGNATURE_SIZE + 0x14)
+            if not self._kernel32.ReadProcessMemory(
+                read_handle,
+                ctypes.c_void_p(base + pe_offset),
+                header_buffer,
+                _PE_SIGNATURE_SIZE + 0x14,
+                ctypes.byref(bytes_read),
+            ):
+                return None
+
+            pe_sig = struct.unpack_from("<I", header_buffer.raw, 0)[0]
+            if pe_sig != _PE_SIGNATURE:
+                return None
+
+            machine = struct.unpack_from(
+                "<H",
+                header_buffer.raw,
+                _PE_SIGNATURE_SIZE,
+            )[0]
+            arch = self._machine_to_arch_string(machine)
+            return arch if arch != "Unknown" else None
+        finally:
+            self._kernel32.CloseHandle(read_handle)
+
+    def _detect_arch_via_iswow64process(self, handle: int) -> str:
+        """Legacy architecture detection via ``IsWow64Process``.
+
+        Args:
+            handle: Open process handle with
+                ``PROCESS_QUERY_(LIMITED_)INFORMATION`` access.
+
+        Returns:
+            str: ``'x86'`` if the target runs under WOW64, else the
+                architecture matching the host's pointer size, or
+                ``'Unknown'`` if the API is unavailable.
+        """
+        if self._kernel32 is None:
+            return "Unknown"
+
+        is_wow64 = wintypes.BOOL(0)
+        if hasattr(self._kernel32, "IsWow64Process"):
+            self._kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
+            if is_wow64.value:
+                return "x86"
+
+        pointer_bits = struct.calcsize("P") * _BITS_PER_BYTE
+        return "x64" if pointer_bits == _POINTER_BITS_64 else "x86"
 
     async def open_process(
         self,
@@ -1466,6 +1762,11 @@ class ProcessBridge(ToolBridgeBase):
     ) -> list[int]:
         """Search for byte pattern in memory.
 
+        Scans each readable memory region in chunks of
+        ``_SEARCH_CHUNK_SIZE`` bytes. Each subsequent chunk overlaps the
+        previous one by ``len(pattern) - 1`` bytes so matches that
+        straddle chunk boundaries are still detected.
+
         Args:
             pattern: Hex pattern with wildcards (e.g., "48 8B ?? ??").
             start_address: Optional start address.
@@ -1483,8 +1784,13 @@ class ProcessBridge(ToolBridgeBase):
             else:
                 pattern_bytes.append(int(part, 16))
 
+        pattern_len = len(pattern_bytes)
+        if pattern_len == 0:
+            return []
+
         regions = await self.get_memory_map()
         matches: list[int] = []
+        overlap = pattern_len - 1
 
         for region in regions:
             if "r" not in region.protection:
@@ -1494,19 +1800,115 @@ class ProcessBridge(ToolBridgeBase):
             if end_address and region.base_address > end_address:
                 continue
 
-            try:
-                chunk_size = min(region.size, 0x100000)
-                data = await self.read_memory(region.base_address, chunk_size)
+            scan_base = region.base_address
+            scan_end = region.base_address + region.size
+            if start_address is not None and start_address > scan_base:
+                scan_base = start_address
+            if end_address is not None and end_address < scan_end:
+                scan_end = end_address
 
-                for i in range(len(data) - len(pattern_bytes) + 1):
-                    match = not any(pb is not None and data[i + j] != pb for j, pb in enumerate(pattern_bytes))
-                    if match:
-                        matches.append(region.base_address + i)
-            except ToolError as e:
-                _logger.warning("pattern_search_failed", error=str(e))
+            scan_size = scan_end - scan_base
+            if scan_size < pattern_len:
                 continue
 
+            self._scan_region_pattern(
+                scan_base,
+                scan_size,
+                pattern_bytes,
+                overlap,
+                matches,
+            )
+
         return matches
+
+    def _scan_region_pattern(
+        self,
+        region_base: int,
+        region_size: int,
+        pattern_bytes: list[int | None],
+        overlap: int,
+        matches: list[int],
+    ) -> None:
+        """Chunk-scan a single region for a pattern, preserving overlap.
+
+        Args:
+            region_base: Base virtual address of the region to scan.
+            region_size: Size of the region in bytes.
+            pattern_bytes: Pattern byte list; ``None`` entries are
+                wildcards that match any byte value.
+            overlap: Number of bytes of overlap between adjacent chunks
+                (should be ``len(pattern_bytes) - 1``).
+            matches: Mutable list to which absolute match addresses are
+                appended.
+        """
+        pattern_len = len(pattern_bytes)
+        offset = 0
+
+        while offset < region_size:
+            chunk_size = min(_SEARCH_CHUNK_SIZE, region_size - offset)
+            if chunk_size < pattern_len:
+                break
+
+            try:
+                data_bytes = self._sync_read_memory(region_base + offset, chunk_size)
+            except ToolError as err:
+                _logger.debug(
+                    "pattern_search_region_read_failed",
+                    address=hex(region_base + offset),
+                    size=chunk_size,
+                    error=str(err),
+                )
+                break
+
+            limit = len(data_bytes) - pattern_len + 1
+            for i in range(limit):
+                match = not any(pb is not None and data_bytes[i + j] != pb for j, pb in enumerate(pattern_bytes))
+                if match:
+                    matches.append(region_base + offset + i)
+
+            if chunk_size < _SEARCH_CHUNK_SIZE:
+                break
+
+            offset += chunk_size - overlap
+
+    def _sync_read_memory(self, address: int, size: int) -> bytes:
+        """Read process memory synchronously via ``ReadProcessMemory``.
+
+        Mirror of the async :meth:`read_memory` coroutine used by
+        synchronous scan loops that cannot ``await`` inside a nested
+        per-chunk iteration. Performs the same handle / kernel32
+        availability validation and raises the same ``ToolError`` codes.
+
+        Args:
+            address: Virtual memory address to read from.
+            size: Number of bytes to read.
+
+        Returns:
+            bytes: The bytes actually read (may be shorter than ``size``
+                if the kernel returned a truncated read).
+
+        Raises:
+            ToolError: If no process is attached, kernel32 is not
+                available, or the underlying ``ReadProcessMemory`` call
+                fails.
+        """
+        if self._process_handle is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        buffer = ctypes.create_string_buffer(size)
+        bytes_read = ctypes.c_size_t()
+
+        if self._kernel32.ReadProcessMemory(
+            self._process_handle,
+            ctypes.c_void_p(address),
+            buffer,
+            size,
+            ctypes.byref(bytes_read),
+        ):
+            return buffer.raw[: bytes_read.value]
+        raise ToolError(_ERR_READ_FAILED)
 
     # ------------------------------------------------------------------
     # Module and thread enumeration
@@ -1625,6 +2027,11 @@ class ProcessBridge(ToolBridgeBase):
     def _query_thread_start_address(self, tid: int) -> int:
         """Query the Win32 start address of a thread via NtQueryInformationThread.
 
+        Logs a debug record including the negative NTSTATUS (converted to
+        its unsigned 32-bit form for readability) when the kernel call
+        fails, so diagnostic traces retain the actual error code instead
+        of silently degrading to a zero start address.
+
         Args:
             tid: Thread ID.
 
@@ -1637,6 +2044,11 @@ class ProcessBridge(ToolBridgeBase):
         inherit_handle = False
         handle = self._kernel32.OpenThread(THREAD_QUERY_INFORMATION, inherit_handle, tid)
         if not handle:
+            _logger.debug(
+                "thread_start_address_open_failed",
+                tid=tid,
+                error_code=ctypes.get_last_error(),
+            )
             return 0
 
         try:
@@ -1650,8 +2062,19 @@ class ProcessBridge(ToolBridgeBase):
             )
             if status >= 0:
                 return start_address.value or 0
-        except (OSError, ctypes.ArgumentError):
-            pass
+
+            _logger.debug(
+                "thread_start_address_nt_failed",
+                tid=tid,
+                ntstatus=f"0x{status & 0xFFFFFFFF:08X}",
+                raw_status=status,
+            )
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.debug(
+                "thread_start_address_query_exception",
+                tid=tid,
+                error=str(exc),
+            )
         finally:
             self._kernel32.CloseHandle(handle)
 
@@ -1659,6 +2082,14 @@ class ProcessBridge(ToolBridgeBase):
 
     def _query_thread_state(self, tid: int) -> str:
         """Query the execution state of a thread via NtQueryInformationThread.
+
+        Opens the thread with ``THREAD_QUERY_INFORMATION |
+        THREAD_SUSPEND_RESUME`` so the follow-up ``SuspendThread`` /
+        ``ResumeThread`` probe that derives the running-vs-suspended
+        state actually has the access rights required by Win32. The
+        probe applies a signed LONG cast to the ``SuspendThread`` return
+        value so the -1 error sentinel is detected instead of being
+        treated as a 32-bit unsigned count of 4294967295.
 
         Args:
             tid: Thread ID.
@@ -1670,7 +2101,11 @@ class ProcessBridge(ToolBridgeBase):
             return "unknown"
 
         inherit_handle = False
-        handle = self._kernel32.OpenThread(THREAD_QUERY_INFORMATION, inherit_handle, tid)
+        handle = self._kernel32.OpenThread(
+            THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME,
+            inherit_handle,
+            tid,
+        )
         if not handle:
             return "unknown"
 
@@ -1687,12 +2122,13 @@ class ProcessBridge(ToolBridgeBase):
                 if tbi.ExitStatus != _STILL_ACTIVE:
                     return "terminated"
 
-                suspend_count: int = self._kernel32.SuspendThread(handle)
-                if suspend_count >= 0:
+                raw_count: int = self._kernel32.SuspendThread(handle)
+                signed_count = ctypes.c_long(raw_count).value
+                if signed_count >= 0:
                     self._kernel32.ResumeThread(handle)
-                    if suspend_count > 0:
+                    if signed_count > 0:
                         return "suspended"
-                return "running"
+                    return "running"
         except (OSError, ctypes.ArgumentError):
             pass
         finally:
@@ -2260,14 +2696,27 @@ class ProcessBridge(ToolBridgeBase):
     async def read_peb(self, pid: int | None = None) -> dict[str, object]:
         """Read Process Environment Block fields.
 
+        Pointer-size aware: the native PEB is parsed using the *target*
+        process's bitness (detected via ``IsWow64Process2``), not the
+        host's. A 64-bit host debugging a 32-bit WOW64 target still gets
+        correct ``image_base_address`` / ``ldr_address`` /
+        ``process_parameters_address`` values because the parser is
+        told to use i386 offsets. When the target is running under
+        WOW64, ``NtQueryInformationProcess(ProcessWow64Information)``
+        is also queried to expose the 32-bit PEB address and a parallel
+        ``wow64_peb`` sub-dict.
+
         Args:
             pid: Process ID (uses current if not specified).
 
         Returns:
-            dict[str, object]: Dict with PEB field values.
+            dict[str, object]: Dict with PEB field values plus optional
+                WOW64 PEB information.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If the bridge is not initialised, the target
+                cannot be opened, the Nt query fails, or
+                ``ReadProcessMemory`` fails.
         """
         if self._ntdll is None:
             raise ToolError(_ERR_NTDLL_NA)
@@ -2322,25 +2771,143 @@ class ProcessBridge(ToolBridgeBase):
             ):
                 raise ToolError(_ERR_PEB_READ)
 
-            return self._parse_peb_fields(peb_data.raw, peb_address)
+            target_is_64bit = self._target_is_64bit(proc_handle)
+            result = self._parse_peb_fields(
+                peb_data.raw,
+                peb_address,
+                target_is_64bit=target_is_64bit,
+            )
+            wow64_info = self._read_wow64_peb(proc_handle)
+            if wow64_info is not None:
+                result["wow64_peb_address"] = wow64_info[0]
+                result["wow64_peb"] = wow64_info[1]
+            return result
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
 
+    def _target_is_64bit(self, proc_handle: int) -> bool:
+        """Determine whether the process bound to ``proc_handle`` is 64-bit.
+
+        Uses ``IsWow64Process2`` when available to distinguish
+        native-64-bit from WOW64-hosted-32-bit on modern Windows. Falls
+        back to the legacy ``IsWow64Process`` + host pointer-size
+        heuristic when the newer API is missing.
+
+        Args:
+            proc_handle: Open process handle with at least
+                ``PROCESS_QUERY_LIMITED_INFORMATION`` access.
+
+        Returns:
+            bool: ``True`` if the target process address space is
+                64-bit; ``False`` if the target is 32-bit (WOW64 or
+                native i386).
+        """
+        if self._kernel32 is None:
+            return struct.calcsize("P") == _PTR_SIZE_64
+
+        native_64bit_machines = {IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM64}
+        machines = self._call_iswow64process2(proc_handle)
+        if machines is not None:
+            process_machine, native_machine = machines
+            if process_machine == IMAGE_FILE_MACHINE_I386:
+                return False
+            if process_machine in native_64bit_machines:
+                return True
+            if process_machine == IMAGE_FILE_MACHINE_UNKNOWN:
+                return native_machine in native_64bit_machines
+
+        is_wow64 = wintypes.BOOL(0)
+        if hasattr(self._kernel32, "IsWow64Process") and self._kernel32.IsWow64Process(
+            proc_handle,
+            ctypes.byref(is_wow64),
+        ):
+            if is_wow64.value:
+                return False
+            return struct.calcsize("P") == _PTR_SIZE_64
+
+        return struct.calcsize("P") == _PTR_SIZE_64
+
+    def _read_wow64_peb(
+        self,
+        proc_handle: int,
+    ) -> tuple[int, dict[str, object]] | None:
+        """Read and parse the 32-bit WOW64 PEB if the target is WOW64.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`` rights.
+
+        Returns:
+            tuple[int, dict[str, object]] | None: ``(wow64_peb_address,
+                parsed_fields)`` when the target has a 32-bit PEB,
+                ``None`` otherwise (native 64-bit target or information
+                class unsupported).
+        """
+        if self._ntdll is None or self._kernel32 is None:
+            return None
+
+        wow64_peb_ptr = ctypes.c_void_p(0)
+        returned = wintypes.ULONG(0)
+        status: int = self._ntdll.NtQueryInformationProcess(
+            proc_handle,
+            ProcessWow64Information,
+            ctypes.byref(wow64_peb_ptr),
+            ctypes.sizeof(wow64_peb_ptr),
+            ctypes.byref(returned),
+        )
+
+        if status < 0:
+            _logger.debug(
+                "wow64_peb_query_failed",
+                ntstatus=f"0x{status & 0xFFFFFFFF:08X}",
+            )
+            return None
+
+        wow64_peb_address = wow64_peb_ptr.value or 0
+        if wow64_peb_address == 0:
+            return None
+
+        peb32 = ctypes.create_string_buffer(0x100)
+        bytes_read = ctypes.c_size_t()
+        if not self._kernel32.ReadProcessMemory(
+            proc_handle,
+            ctypes.c_void_p(wow64_peb_address),
+            peb32,
+            0x100,
+            ctypes.byref(bytes_read),
+        ):
+            _logger.debug(
+                "wow64_peb_read_failed",
+                address=hex(wow64_peb_address),
+            )
+            return None
+
+        return wow64_peb_address, self._parse_peb32_fields(
+            peb32.raw[: bytes_read.value],
+            wow64_peb_address,
+        )
+
     @staticmethod
-    def _parse_peb_fields(raw: bytes, peb_address: int) -> dict[str, object]:
+    def _parse_peb_fields(
+        raw: bytes,
+        peb_address: int,
+        *,
+        target_is_64bit: bool = True,
+    ) -> dict[str, object]:
         """Parse PEB fields from raw memory bytes.
 
         Args:
             raw: Raw PEB memory bytes.
             peb_address: PEB base address.
+            target_is_64bit: ``True`` when the inspected PEB belongs to
+                a 64-bit process (use 64-bit field offsets); ``False``
+                for i386 / WOW64 32-bit PEBs.
 
         Returns:
             dict[str, object]: Parsed PEB field values.
         """
-        ptr_size = struct.calcsize("P")
-
-        if ptr_size == _PTR_SIZE_64:
+        if target_is_64bit:
             image_base = struct.unpack_from("<Q", raw, 0x10)[0]
             ldr_address = struct.unpack_from("<Q", raw, 0x18)[0]
             process_params = struct.unpack_from("<Q", raw, 0x20)[0]
@@ -2358,8 +2925,51 @@ class ProcessBridge(ToolBridgeBase):
             "inherited_address_space": raw[0],
         }
 
+    @staticmethod
+    def _parse_peb32_fields(raw: bytes, peb_address: int) -> dict[str, object]:
+        """Parse the 32-bit PEB layout used inside WOW64.
+
+        Args:
+            raw: Raw i386 PEB memory bytes (at least ``0x18`` bytes).
+            peb_address: 32-bit PEB base address as returned by
+                ``ProcessWow64Information``.
+
+        Returns:
+            dict[str, object]: Parsed 32-bit PEB field values. Missing
+                fields are reported as zero when the buffer is short.
+        """
+        if len(raw) < _PEB32_MIN_PARSE_LENGTH:
+            return {
+                "peb_address": peb_address,
+                "image_base_address": 0,
+                "ldr_address": 0,
+                "process_parameters_address": 0,
+                "being_debugged": raw[_PEB_BEING_DEBUGGED_OFFSET] if len(raw) > _PEB_BEING_DEBUGGED_OFFSET else 0,
+                "inherited_address_space": raw[0] if raw else 0,
+            }
+
+        image_base = struct.unpack_from("<I", raw, 0x08)[0]
+        ldr_address = struct.unpack_from("<I", raw, 0x0C)[0]
+        process_params = struct.unpack_from("<I", raw, 0x10)[0]
+
+        return {
+            "peb_address": peb_address,
+            "image_base_address": image_base,
+            "ldr_address": ldr_address,
+            "process_parameters_address": process_params,
+            "being_debugged": raw[2],
+            "inherited_address_space": raw[0],
+        }
+
     async def read_teb(self, tid: int) -> dict[str, object]:
         """Read Thread Environment Block fields for a thread.
+
+        Raises ``ToolError`` when ``ReadProcessMemory`` fails rather than
+        returning a partially populated dictionary: downstream tooling
+        relies on a consistent success / error contract (the analogous
+        pattern A63/A64 use elsewhere in this bridge) and silent partial
+        results previously masked real access-rights or broken-target
+        failures.
 
         Args:
             tid: Thread ID.
@@ -2368,7 +2978,9 @@ class ProcessBridge(ToolBridgeBase):
             dict[str, object]: Dict with TEB field values.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If the bridge is not initialised, the thread
+                cannot be opened, ``NtQueryInformationThread`` fails, no
+                process is attached, or ``ReadProcessMemory`` fails.
         """
         if self._ntdll is None:
             raise ToolError(_ERR_NTDLL_NA)
@@ -2397,10 +3009,7 @@ class ProcessBridge(ToolBridgeBase):
             teb_address = tbi.TebBaseAddress or 0
 
             if self._process_handle is None:
-                return {
-                    "teb_address": teb_address,
-                    "exit_status": tbi.ExitStatus,
-                }
+                raise ToolError(_ERR_NOT_ATTACHED)
 
             teb_data = ctypes.create_string_buffer(0x100)
             bytes_read = ctypes.c_size_t()
@@ -2411,31 +3020,38 @@ class ProcessBridge(ToolBridgeBase):
                 0x100,
                 ctypes.byref(bytes_read),
             ):
-                return {
-                    "teb_address": teb_address,
-                    "exit_status": tbi.ExitStatus,
-                }
+                raise ToolError(_ERR_READ_FAILED)
 
-            result = self._parse_teb_fields(teb_data.raw, teb_address)
+            target_is_64bit = self._target_is_64bit(self._process_handle)
+            result = self._parse_teb_fields(
+                teb_data.raw,
+                teb_address,
+                target_is_64bit=target_is_64bit,
+            )
             result["exit_status"] = tbi.ExitStatus
             return result
         finally:
             self._kernel32.CloseHandle(thread_handle)
 
     @staticmethod
-    def _parse_teb_fields(raw: bytes, teb_address: int) -> dict[str, object]:
+    def _parse_teb_fields(
+        raw: bytes,
+        teb_address: int,
+        *,
+        target_is_64bit: bool = True,
+    ) -> dict[str, object]:
         """Parse TEB fields from raw memory bytes.
 
         Args:
             raw: Raw TEB memory bytes.
             teb_address: TEB base address.
+            target_is_64bit: ``True`` when the inspected TEB belongs to
+                a 64-bit thread; ``False`` for i386 / WOW64 32-bit TEBs.
 
         Returns:
             dict[str, object]: Parsed TEB field values.
         """
-        ptr_size = struct.calcsize("P")
-
-        if ptr_size == _PTR_SIZE_64:
+        if target_is_64bit:
             seh_frame = struct.unpack_from("<Q", raw, 0x00)[0]
             stack_base = struct.unpack_from("<Q", raw, 0x08)[0]
             stack_limit = struct.unpack_from("<Q", raw, 0x10)[0]
@@ -2719,6 +3335,14 @@ class ProcessBridge(ToolBridgeBase):
     async def stack_walk(self, tid: int) -> list[dict[str, object]]:
         """Walk the call stack of a thread using DbgHelp StackWalk64.
 
+        Chooses between the native AMD64 path and a WOW64-aware I386
+        path based on ``IsWow64Process2``. When the target is a 32-bit
+        process running inside a 64-bit host (``x86`` on ``x64`` /
+        ``arm64``), ``Wow64GetThreadContext`` is used to retrieve a
+        ``WOW64_CONTEXT`` and ``StackWalk64`` is invoked with
+        ``IMAGE_FILE_MACHINE_I386``. Native 64-bit targets keep the
+        existing ``CONTEXT64`` + ``IMAGE_FILE_MACHINE_AMD64`` path.
+
         Args:
             tid: Thread ID.
 
@@ -2726,7 +3350,9 @@ class ProcessBridge(ToolBridgeBase):
             list[dict[str, object]]: List of stack frame dicts.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If the bridge is not initialised, no process is
+                attached, the thread cannot be opened, or the
+                ``GetThreadContext`` call fails.
         """
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
@@ -2751,85 +3377,240 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 invade_process = True
                 self._dbghelp.SymInitialize(self._process_handle, None, invade_process)
-
-                ctx = CONTEXT64()
-                ctx.ContextFlags = CONTEXT_ALL
-                if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
-                    raise ToolError(_ERR_CONTEXT_GET_FAILED)
-
-                frame = STACKFRAME64()
-                ctypes.memset(ctypes.byref(frame), 0, ctypes.sizeof(frame))
-                frame.AddrPC.Offset = ctx.Rip
-                frame.AddrPC.Mode = 3
-                frame.AddrFrame.Offset = ctx.Rbp
-                frame.AddrFrame.Mode = 3
-                frame.AddrStack.Offset = ctx.Rsp
-                frame.AddrStack.Mode = 3
-
-                idx = 0
-                max_frames = 256
-                while idx < max_frames:
-                    if not self._dbghelp.StackWalk64(
-                        0x8664,
-                        self._process_handle,
-                        thread_handle,
-                        ctypes.byref(frame),
-                        ctypes.byref(ctx),
-                        None,
-                        None,
-                        None,
-                        None,
-                    ):
-                        break
-
-                    pc = frame.AddrPC.Offset
-                    if pc == 0:
-                        break
-
-                    sym_name = ""
-                    module_name = ""
-                    displacement = ctypes.c_ulonglong(0)
-
-                    sym = SYMBOL_INFO()
-                    sym.SizeOfStruct = ctypes.sizeof(SYMBOL_INFO) - 1024 + 2
-                    sym.MaxNameLen = 1024
-
-                    if self._dbghelp.SymFromAddr(
-                        self._process_handle,
-                        pc,
-                        ctypes.byref(displacement),
-                        ctypes.byref(sym),
-                    ):
-                        sym_name = sym.Name.decode("utf-8", errors="ignore")
-
-                    mod_info = ctypes.create_string_buffer(584)
-                    struct.pack_into("<I", mod_info, 0, 584)
-                    if self._dbghelp.SymGetModuleInfo64(
-                        self._process_handle,
-                        pc,
-                        mod_info,
-                    ):
-                        mod_raw: bytes = mod_info.raw[4:260]
-                        module_name = mod_raw.split(b"\x00", 1)[0].decode("utf-8", errors="ignore")
-
-                    frames.append({
-                        "index": idx,
-                        "address": pc,
-                        "return_address": frame.AddrReturn.Offset,
-                        "frame_pointer": frame.AddrFrame.Offset,
-                        "symbol_name": sym_name,
-                        "module_name": module_name,
-                        "displacement": displacement.value,
-                    })
-                    idx += 1
-
-                self._dbghelp.SymCleanup(self._process_handle)
+                try:
+                    is_wow64_target = self._target_is_wow64()
+                    frames = self._walk_stack_wow64(thread_handle) if is_wow64_target else self._walk_stack_native(thread_handle)
+                finally:
+                    self._dbghelp.SymCleanup(self._process_handle)
             finally:
                 self._kernel32.ResumeThread(thread_handle)
         finally:
             self._kernel32.CloseHandle(thread_handle)
 
         return frames
+
+    def _target_is_wow64(self) -> bool:
+        """Return True when the attached process runs under WOW64.
+
+        Uses ``IsWow64Process2`` when available so the decision works on
+        both x64-hosted and arm64-hosted Windows. Falls back to the
+        legacy ``IsWow64Process`` when the newer API is missing.
+
+        Returns:
+            bool: ``True`` when the attached process is a 32-bit x86
+                binary on a 64-bit host; ``False`` otherwise.
+        """
+        if self._kernel32 is None or self._process_handle is None:
+            return False
+
+        machines = self._call_iswow64process2(self._process_handle)
+        if machines is not None:
+            return machines[0] == IMAGE_FILE_MACHINE_I386
+
+        is_wow64 = wintypes.BOOL(0)
+        if hasattr(self._kernel32, "IsWow64Process"):
+            self._kernel32.IsWow64Process(self._process_handle, ctypes.byref(is_wow64))
+            return bool(is_wow64.value)
+
+        return False
+
+    def _walk_stack_native(self, thread_handle: int) -> list[dict[str, object]]:
+        """Walk a native AMD64 thread stack via ``StackWalk64``.
+
+        Args:
+            thread_handle: Suspended thread handle with
+                ``THREAD_GET_CONTEXT`` access.
+
+        Returns:
+            list[dict[str, object]]: Resolved stack frames.
+
+        Raises:
+            ToolError: If kernel32/dbghelp are not available, no process
+                is attached, or ``GetThreadContext`` fails.
+        """
+        if self._kernel32 is None or self._dbghelp is None or self._process_handle is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        ctx = CONTEXT64()
+        ctx.ContextFlags = CONTEXT_ALL
+        if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+
+        frame = STACKFRAME64()
+        ctypes.memset(ctypes.byref(frame), 0, ctypes.sizeof(frame))
+        frame.AddrPC.Offset = ctx.Rip
+        frame.AddrPC.Mode = 3
+        frame.AddrFrame.Offset = ctx.Rbp
+        frame.AddrFrame.Mode = 3
+        frame.AddrStack.Offset = ctx.Rsp
+        frame.AddrStack.Mode = 3
+
+        return self._iterate_stack_frames(
+            IMAGE_FILE_MACHINE_AMD64,
+            thread_handle,
+            frame,
+            ctypes.byref(ctx),
+        )
+
+    def _walk_stack_wow64(self, thread_handle: int) -> list[dict[str, object]]:
+        """Walk a WOW64 (32-bit on 64-bit) thread stack.
+
+        Uses ``Wow64GetThreadContext`` to fetch the I386 register state
+        visible from inside the WOW64 subsystem and invokes
+        ``StackWalk64`` with ``IMAGE_FILE_MACHINE_I386``.
+
+        Args:
+            thread_handle: Suspended thread handle with
+                ``THREAD_GET_CONTEXT`` access.
+
+        Returns:
+            list[dict[str, object]]: Resolved stack frames.
+
+        Raises:
+            ToolError: If kernel32/dbghelp are not available, no process
+                is attached, ``Wow64GetThreadContext`` is not exported,
+                or the context fetch fails.
+        """
+        if self._kernel32 is None or self._dbghelp is None or self._process_handle is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+        if wow64_get_ctx is None:
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+
+        wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        wow64_get_ctx.restype = wintypes.BOOL
+
+        ctx32 = WOW64_CONTEXT()
+        ctx32.ContextFlags = CONTEXT_I386_ALL
+        if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+
+        frame = STACKFRAME64()
+        ctypes.memset(ctypes.byref(frame), 0, ctypes.sizeof(frame))
+        frame.AddrPC.Offset = ctx32.Eip
+        frame.AddrPC.Mode = 3
+        frame.AddrFrame.Offset = ctx32.Ebp
+        frame.AddrFrame.Mode = 3
+        frame.AddrStack.Offset = ctx32.Esp
+        frame.AddrStack.Mode = 3
+
+        return self._iterate_stack_frames(
+            IMAGE_FILE_MACHINE_I386,
+            thread_handle,
+            frame,
+            ctypes.byref(ctx32),
+        )
+
+    def _iterate_stack_frames(
+        self,
+        machine_type: int,
+        thread_handle: int,
+        frame: STACKFRAME64,
+        context_ref: object,
+    ) -> list[dict[str, object]]:
+        """Iterate ``StackWalk64`` until unwind stops or max frames hit.
+
+        Args:
+            machine_type: ``IMAGE_FILE_MACHINE_*`` constant selecting the
+                native-vs-WOW64 code path.
+            thread_handle: Suspended thread handle being walked.
+            frame: Seeded ``STACKFRAME64`` describing the top frame.
+            context_ref: ``ctypes.byref`` reference to the context
+                structure appropriate for ``machine_type``.
+
+        Returns:
+            list[dict[str, object]]: Resolved stack frames with symbol
+                and module information where available.
+        """
+        if self._dbghelp is None or self._process_handle is None:
+            return []
+
+        frames: list[dict[str, object]] = []
+        max_frames = 256
+
+        for idx in range(max_frames):
+            if not self._dbghelp.StackWalk64(
+                machine_type,
+                self._process_handle,
+                thread_handle,
+                ctypes.byref(frame),
+                context_ref,
+                None,
+                None,
+                None,
+                None,
+            ):
+                break
+
+            pc = frame.AddrPC.Offset
+            if pc == 0:
+                break
+
+            sym_name = self._resolve_symbol(pc)
+            module_name = self._resolve_module(pc)
+
+            frames.append({
+                "index": idx,
+                "address": pc,
+                "return_address": frame.AddrReturn.Offset,
+                "frame_pointer": frame.AddrFrame.Offset,
+                "symbol_name": sym_name[0],
+                "module_name": module_name,
+                "displacement": sym_name[1],
+            })
+
+        return frames
+
+    def _resolve_symbol(self, pc: int) -> tuple[str, int]:
+        """Resolve a PC to a symbol name + displacement via ``SymFromAddr``.
+
+        Args:
+            pc: Program counter / instruction pointer to resolve.
+
+        Returns:
+            tuple[str, int]: ``(symbol_name, displacement_from_symbol)``.
+                ``symbol_name`` is the empty string when resolution fails.
+        """
+        if self._dbghelp is None or self._process_handle is None:
+            return "", 0
+
+        displacement = ctypes.c_ulonglong(0)
+        sym = SYMBOL_INFO()
+        sym.SizeOfStruct = ctypes.sizeof(SYMBOL_INFO) - 1024 + 2
+        sym.MaxNameLen = 1024
+
+        if self._dbghelp.SymFromAddr(
+            self._process_handle,
+            pc,
+            ctypes.byref(displacement),
+            ctypes.byref(sym),
+        ):
+            return sym.Name.decode("utf-8", errors="ignore"), displacement.value
+        return "", 0
+
+    def _resolve_module(self, pc: int) -> str:
+        """Resolve a PC to the owning module name via ``SymGetModuleInfo64``.
+
+        Args:
+            pc: Program counter / instruction pointer to resolve.
+
+        Returns:
+            str: Module name, or the empty string when resolution fails.
+        """
+        if self._dbghelp is None or self._process_handle is None:
+            return ""
+
+        mod_info = ctypes.create_string_buffer(584)
+        struct.pack_into("<I", mod_info, 0, 584)
+        if self._dbghelp.SymGetModuleInfo64(
+            self._process_handle,
+            pc,
+            mod_info,
+        ):
+            mod_raw: bytes = mod_info.raw[4:260]
+            return mod_raw.split(b"\x00", 1)[0].decode("utf-8", errors="ignore")
+        return ""
 
     # ------------------------------------------------------------------
     # SEH chain
@@ -3040,7 +3821,8 @@ class ProcessBridge(ToolBridgeBase):
             return {}
 
         raw = params_data.raw
-        env_ptr, env_size = self._extract_env_pointer(raw)
+        target_is_64bit = self._target_is_64bit(proc_handle)
+        env_ptr, env_size = self._extract_env_pointer(raw, target_is_64bit=target_is_64bit)
         if env_ptr == 0:
             return {}
 
@@ -3065,18 +3847,23 @@ class ProcessBridge(ToolBridgeBase):
         return env_vars
 
     @staticmethod
-    def _extract_env_pointer(raw: bytes) -> tuple[int, int]:
+    def _extract_env_pointer(
+        raw: bytes,
+        *,
+        target_is_64bit: bool = True,
+    ) -> tuple[int, int]:
         """Extract environment pointer and size from process parameters.
 
         Args:
             raw: Raw RTL_USER_PROCESS_PARAMETERS bytes.
+            target_is_64bit: ``True`` when the inspected structure
+                belongs to a 64-bit process; ``False`` for i386 /
+                WOW64 32-bit processes.
 
         Returns:
             tuple[int, int]: Environment block pointer and size.
         """
-        ptr_size = struct.calcsize("P")
-
-        if ptr_size == _PTR_SIZE_64:
+        if target_is_64bit:
             env_size = struct.unpack_from("<H", raw, 0x03F0 - 0x300)[0] if len(raw) > _ENV_SIZE_CHECK_OFFSET_64 else 0
             env_ptr = struct.unpack_from("<Q", raw, 0x80)[0]
         else:
@@ -3333,16 +4120,36 @@ class ProcessBridge(ToolBridgeBase):
     async def detect_dotnet(self, pid: int | None = None) -> dict[str, object]:
         """Detect .NET CLR presence and version in a process.
 
-        Checks for mscoree.dll/clr.dll/coreclr.dll in loaded modules.
+        Scans loaded modules for the canonical CLR runtime DLL set used
+        by each major .NET flavour at load time (both x86 WOW64 and x64
+        native paths). ``coreclr.dll`` and
+        ``System.Private.CoreLib.dll`` distinguish .NET Core / 5+ hosts,
+        ``clr.dll`` identifies .NET Framework 4.x, ``mscorwks.dll``
+        identifies the legacy 2.x/3.x CLR, and ``mscoree.dll`` without
+        any of the above indicates an early-stage .NET process where
+        only the shim DLL has been mapped so far.
 
         Args:
             pid: Process ID (uses current if not specified).
 
         Returns:
-            dict[str, object]: Dict with clr_loaded, clr_version, runtime_dll fields.
+            dict[str, object]: Dict with ``clr_loaded`` bool,
+                ``clr_version`` string or None, and ``runtime_dlls``
+                list of matched DLL basenames.
         """
         modules = await self.get_modules(pid)
-        clr_dlls = {"mscoree.dll", "clr.dll", "coreclr.dll", "clrjit.dll", "mscorwks.dll"}
+        clr_dlls = {
+            "mscoree.dll",
+            "clr.dll",
+            "coreclr.dll",
+            "clrjit.dll",
+            "mscorwks.dll",
+            "mscorjit.dll",
+            "mscorlib.dll",
+            "hostfxr.dll",
+            "hostpolicy.dll",
+            "system.private.corelib.dll",
+        }
 
         found_dlls: list[str] = [mod.name.lower() for mod in modules if mod.name.lower() in clr_dlls]
 
@@ -3350,7 +4157,7 @@ class ProcessBridge(ToolBridgeBase):
             return {"clr_loaded": False, "clr_version": None, "runtime_dlls": []}
 
         version = "unknown"
-        if "coreclr.dll" in found_dlls:
+        if "coreclr.dll" in found_dlls or "system.private.corelib.dll" in found_dlls:
             version = ".NET Core/5+"
         elif "clr.dll" in found_dlls:
             version = ".NET Framework 4.x"
@@ -3464,14 +4271,27 @@ class ProcessBridge(ToolBridgeBase):
     async def get_job_info(self, pid: int | None = None) -> dict[str, object]:
         """Query job object information for a process.
 
+        Reports whether the target is in a job object and, when Windows
+        exposes a handle to that job (e.g. the job was created with
+        ``OBJ_INHERIT`` or a name the caller can open), queries both
+        ``JobObjectBasicLimitInformation`` and
+        ``JobObjectExtendedLimitInformation`` via
+        ``QueryInformationJobObject`` to surface limit flags, memory
+        caps, affinity, priority class, active-process limit, and
+        per-process / per-job timing limits.
+
         Args:
             pid: Process ID (uses current if not specified).
 
         Returns:
-            dict[str, object]: Dict with job object limit information.
+            dict[str, object]: Dict with ``in_job`` and, when accessible,
+                ``basic_limits``, ``extended_limits``, and ``io_counters``
+                sub-dicts populated from the job object's information
+                classes.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If kernel32 is not available or the target
+                process cannot be opened.
         """
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
@@ -3496,12 +4316,201 @@ class ProcessBridge(ToolBridgeBase):
             is_in_job = wintypes.BOOL(0)
             self._kernel32.IsProcessInJob(proc_handle, None, ctypes.byref(is_in_job))
 
-            return {
-                "in_job": bool(is_in_job.value),
-            }
+            result: dict[str, object] = {"in_job": bool(is_in_job.value)}
+
+            if is_in_job.value:
+                result.update(self._query_job_details(proc_handle))
+
+            return result
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    def _query_job_details(self, proc_handle: int) -> dict[str, object]:
+        """Query basic/extended job limits for a process in a job object.
+
+        Attempts to obtain a queryable handle to the anonymous job the
+        target is assigned to. When the job cannot be re-opened (the
+        common case for anonymous jobs) the function returns the empty
+        dict so the caller still reports ``in_job=True`` without
+        speculative fields. When a handle is obtained,
+        ``JobObjectBasicLimitInformation`` and
+        ``JobObjectExtendedLimitInformation`` are queried and their
+        fields exposed as two sub-dicts.
+
+        Args:
+            proc_handle: Open process handle with at least
+                ``PROCESS_QUERY_INFORMATION`` rights.
+
+        Returns:
+            dict[str, object]: ``basic_limits``, ``extended_limits``, and
+                ``io_counters`` sub-dicts, or an empty dict if the job
+                cannot be opened or queried.
+        """
+        if self._kernel32 is None:
+            return {}
+
+        job_handle = self._acquire_queryable_job_handle(proc_handle)
+        if job_handle is None:
+            return {}
+
+        try:
+            return self._read_job_information(job_handle)
+        finally:
+            self._kernel32.CloseHandle(job_handle)
+
+    def _acquire_queryable_job_handle(self, proc_handle: int) -> int | None:
+        """Acquire a ``JOB_OBJECT_QUERY``-right handle to a process's job.
+
+        ``OpenJobObjectW`` requires the job's *name*, which anonymous
+        jobs (the overwhelmingly common case on modern Windows) do not
+        have. This best-effort path therefore returns ``None`` for
+        anonymous jobs so callers still surface ``in_job=True`` without
+        speculative fields. Named jobs with a well-known naming
+        convention can be supported in future by extending this helper
+        to take a name hint.
+
+        Args:
+            proc_handle: Open process handle for the target process.
+
+        Returns:
+            int | None: Job object handle on success, ``None`` otherwise.
+        """
+        del proc_handle
+        if self._kernel32 is None:
+            return None
+
+        open_job = getattr(self._kernel32, "OpenJobObjectW", None)
+        if open_job is None:
+            return None
+
+        open_job.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+        open_job.restype = wintypes.HANDLE
+
+        inherit_handle = False
+        handle: int = open_job(_JOB_QUERY_INFORMATION, inherit_handle, None) or 0
+        if handle:
+            return handle
+        return None
+
+    def _read_job_information(self, job_handle: int) -> dict[str, object]:
+        """Read basic + extended limit info from a job handle.
+
+        Args:
+            job_handle: Handle to a job object with ``JOB_OBJECT_QUERY``
+                access.
+
+        Returns:
+            dict[str, object]: Sub-dicts keyed ``basic_limits``,
+                ``extended_limits``, and ``io_counters``. Sub-dicts are
+                populated only for information classes that succeed;
+                ``QueryInformationJobObject`` failures are logged at
+                debug level and the corresponding key is omitted.
+        """
+        if self._kernel32 is None:
+            return {}
+
+        query = getattr(self._kernel32, "QueryInformationJobObject", None)
+        if query is None:
+            return {}
+
+        query.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+        query.restype = wintypes.BOOL
+
+        result: dict[str, object] = {}
+
+        basic = JOBOBJECT_BASIC_LIMIT_INFORMATION()
+        returned = wintypes.DWORD(0)
+        if query(
+            job_handle,
+            JobObjectBasicLimitInformation,
+            ctypes.byref(basic),
+            ctypes.sizeof(basic),
+            ctypes.byref(returned),
+        ):
+            result["basic_limits"] = self._basic_limit_to_dict(basic)
+
+        extended = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+        if query(
+            job_handle,
+            JobObjectExtendedLimitInformation,
+            ctypes.byref(extended),
+            ctypes.sizeof(extended),
+            ctypes.byref(returned),
+        ):
+            result["extended_limits"] = self._extended_limit_to_dict(extended)
+            result["io_counters"] = self._io_counters_to_dict(extended.IoInfo)
+
+        return result
+
+    @staticmethod
+    def _basic_limit_to_dict(basic: JOBOBJECT_BASIC_LIMIT_INFORMATION) -> dict[str, int]:
+        """Convert a ``JOBOBJECT_BASIC_LIMIT_INFORMATION`` to a dict.
+
+        Args:
+            basic: Populated basic limit information structure.
+
+        Returns:
+            dict[str, int]: Field-by-field copy of the structure.
+        """
+        return {
+            "per_process_user_time_limit": basic.PerProcessUserTimeLimit,
+            "per_job_user_time_limit": basic.PerJobUserTimeLimit,
+            "limit_flags": basic.LimitFlags,
+            "minimum_working_set_size": basic.MinimumWorkingSetSize,
+            "maximum_working_set_size": basic.MaximumWorkingSetSize,
+            "active_process_limit": basic.ActiveProcessLimit,
+            "affinity": basic.Affinity,
+            "priority_class": basic.PriorityClass,
+            "scheduling_class": basic.SchedulingClass,
+        }
+
+    @classmethod
+    def _extended_limit_to_dict(
+        cls,
+        extended: JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+    ) -> dict[str, object]:
+        """Convert a ``JOBOBJECT_EXTENDED_LIMIT_INFORMATION`` to a dict.
+
+        Args:
+            extended: Populated extended limit information structure.
+
+        Returns:
+            dict[str, object]: Nested dict with basic limits and
+                memory-limit fields.
+        """
+        return {
+            "basic_limits": cls._basic_limit_to_dict(extended.BasicLimitInformation),
+            "process_memory_limit": extended.ProcessMemoryLimit,
+            "job_memory_limit": extended.JobMemoryLimit,
+            "peak_process_memory_used": extended.PeakProcessMemoryUsed,
+            "peak_job_memory_used": extended.PeakJobMemoryUsed,
+        }
+
+    @staticmethod
+    def _io_counters_to_dict(io: IO_COUNTERS) -> dict[str, int]:
+        """Convert an ``IO_COUNTERS`` struct to a dict.
+
+        Args:
+            io: Populated ``IO_COUNTERS`` instance.
+
+        Returns:
+            dict[str, int]: I/O operation and transfer counters.
+        """
+        return {
+            "read_operation_count": io.ReadOperationCount,
+            "write_operation_count": io.WriteOperationCount,
+            "other_operation_count": io.OtherOperationCount,
+            "read_transfer_count": io.ReadTransferCount,
+            "write_transfer_count": io.WriteTransferCount,
+            "other_transfer_count": io.OtherTransferCount,
+        }
 
     # ------------------------------------------------------------------
     # GDI / User objects
