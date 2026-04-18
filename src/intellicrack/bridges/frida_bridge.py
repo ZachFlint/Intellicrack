@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import tempfile
 import threading
 import time
 import uuid
+from json import JSONDecodeError
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -101,6 +103,7 @@ _ERR_CODE_WRITER_FAILED = "code writing failed"
 _ERR_COMPILE_FAILED = "TypeScript compilation failed"
 _ERR_MONITOR_FAILED = "file monitoring failed"
 _ERR_PROBE_FAILED = "call probe operation failed"
+_ERR_INVALID_JSON_MESSAGE = "invalid JSON message"
 
 _VALID_NATIVE_TYPES: frozenset[str] = frozenset({
     "void",
@@ -1054,6 +1057,29 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
 ]
+
+
+def _write_typescript_tempfile(source: str) -> Path:
+    """Write TypeScript source to a temporary ``.ts`` file.
+
+    Creates a named temporary file with a ``.ts`` suffix that survives
+    the handle close so the Frida compiler can open it by path. The
+    caller is responsible for deleting the returned path.
+
+    Args:
+        source: TypeScript source code to persist.
+
+    Returns:
+        Path: Filesystem path to the temporary file.
+    """
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".ts",
+        delete=False,
+        encoding="utf-8",
+    ) as temp_file:
+        temp_file.write(source)
+        return Path(temp_file.name)
 
 
 class FridaBridge(InstrumentationBridge):
@@ -3209,13 +3235,17 @@ class FridaBridge(InstrumentationBridge):
             bool: True if the message was posted successfully.
 
         Raises:
-            ToolError: If the script is not found or message is invalid.
+            ToolError: If the script is not found or message is invalid JSON.
         """
         if script_id not in self._scripts:
             raise ToolError(_ERR_SCRIPT_NOT_FOUND)
 
         script = self._scripts[script_id]
-        parsed = json.loads(message)
+        try:
+            parsed = json.loads(message)
+        except (JSONDecodeError, TypeError) as e:
+            _logger.warning("post_message_invalid_json", script_id=script_id, error=str(e))
+            raise ToolError(_ERR_INVALID_JSON_MESSAGE) from e
         await asyncio.to_thread(script.post, parsed)
         _logger.debug("message_posted", script_id=script_id)
         return True
@@ -5439,8 +5469,13 @@ class FridaBridge(InstrumentationBridge):
     async def compile_typescript(source: str, project_root: str | None = None) -> str:
         """Compile TypeScript source to JavaScript using Frida compiler.
 
+        Accepts either a path to an existing entry file or raw TypeScript
+        source. When raw source is provided it is written to a temporary
+        ``.ts`` file so the compiler can resolve it as an entrypoint; the
+        temp file is removed on all exit paths.
+
         Args:
-            source: TypeScript source code or entry file path.
+            source: TypeScript source code or path to an entry file.
             project_root: Optional project root directory for imports.
 
         Returns:
@@ -5449,15 +5484,40 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If compilation fails.
         """
+        source_path = Path(source)
+        is_path: bool = await asyncio.to_thread(source_path.is_file)
+
+        temp_path: Path | None = None
         try:
-            compiler = frida.Compiler()
-            if project_root is not None:
-                compiled: str = await asyncio.to_thread(compiler.build, source, project_root=project_root)
+            if is_path:
+                entrypoint = str(source_path)
             else:
-                compiled = await asyncio.to_thread(compiler.build, source)
-        except Exception as e:
-            _logger.warning("typescript_compile_failed", error=str(e))
-            raise ToolError(_ERR_COMPILE_FAILED) from e
+                temp_path = await asyncio.to_thread(_write_typescript_tempfile, source)
+                entrypoint = str(temp_path)
+
+            try:
+                compiler = frida.Compiler()
+                if project_root is not None:
+                    compiled: str = await asyncio.to_thread(
+                        compiler.build,
+                        entrypoint,
+                        project_root=project_root,
+                    )
+                else:
+                    compiled = await asyncio.to_thread(compiler.build, entrypoint)
+            except Exception as e:
+                _logger.warning("typescript_compile_failed", error=str(e))
+                raise ToolError(_ERR_COMPILE_FAILED) from e
+        finally:
+            if temp_path is not None:
+                try:
+                    await asyncio.to_thread(temp_path.unlink)
+                except OSError as cleanup_error:
+                    _logger.debug(
+                        "typescript_tempfile_cleanup_failed",
+                        path=str(temp_path),
+                        error=str(cleanup_error),
+                    )
 
         _logger.info("typescript_compiled", output_size=len(compiled))
         return compiled
