@@ -51,69 +51,6 @@ _ERR_CALL_FAILED = "call failed"
 _ERR_MISSING_CAPABILITY = "missing capability"
 
 
-_TOOL_CAPABILITY_MAP: dict[str, str] = {
-    "decompile": "decompilation",
-    "disassemble": "static_analysis",
-    "disassemble_at": "static_analysis",
-    "get_xrefs_to": "static_analysis",
-    "get_xrefs_from": "static_analysis",
-    "get_call_graph": "static_analysis",
-    "execute_script": "scripting",
-    "script_load": "scripting",
-    "script_run": "scripting",
-    "script_cmd": "scripting",
-    "script_abort": "scripting",
-    "attach": "debugging",
-    "detach": "debugging",
-    "run": "debugging",
-    "pause": "debugging",
-    "stop": "debugging",
-    "step_into": "debugging",
-    "step_over": "debugging",
-    "step_out": "debugging",
-    "step_count": "debugging",
-    "run_to": "debugging",
-    "execute_til_return": "debugging",
-    "skip_instruction": "debugging",
-    "set_ip": "debugging",
-    "set_breakpoint": "debugging",
-    "remove_breakpoint": "debugging",
-    "get_breakpoints": "debugging",
-    "enable_breakpoint": "debugging",
-    "disable_breakpoint": "debugging",
-    "configure_breakpoint": "debugging",
-    "set_breakpoint_on_api": "debugging",
-    "set_logging_breakpoint": "debugging",
-    "set_dll_breakpoint": "debugging",
-    "set_watchpoint": "debugging",
-    "remove_watchpoint": "debugging",
-    "get_watchpoints": "debugging",
-    "trace_start": "debugging",
-    "trace_stop": "debugging",
-    "trace_into": "debugging",
-    "trace_over": "debugging",
-    "get_trace_record": "debugging",
-    "animate_start": "debugging",
-    "animate_stop": "debugging",
-    "patch_instruction": "patching",
-    "nop_range": "patching",
-    "patch_anti_debug": "patching",
-    "restore_patch": "patching",
-    "export_patches": "patching",
-    "get_patches": "patching",
-    "read_memory": "memory_access",
-    "write_memory": "memory_access",
-    "allocate_memory": "memory_access",
-    "free_memory": "memory_access",
-    "get_memory_regions": "memory_access",
-    "get_memory_map": "memory_access",
-    "scan_memory": "memory_access",
-    "dump_memory_to_file": "memory_access",
-    "read_peb": "memory_access",
-    "read_teb": "memory_access",
-}
-
-
 @dataclass
 class ToolStatus:
     """Status of a registered tool.
@@ -561,8 +498,10 @@ class ToolRegistry:
             )
             raise ToolError(_ERR_NOT_CALLABLE)
 
+        from intellicrack.bridges.base import TOOL_CAPABILITY_MAP
+
         caps = getattr(bridge, "capabilities", None)
-        required_capability = _TOOL_CAPABILITY_MAP.get(attr_name)
+        required_capability = TOOL_CAPABILITY_MAP.get(attr_name)
         if caps is not None and required_capability is not None:
             has_cap = caps.has_capability(required_capability)
             _logger.debug(

@@ -156,6 +156,7 @@ class GhidraBridge(StaticAnalysisBridge):
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_decompilation=True,
+            supports_patching=True,
             supports_scripting=True,
             supported_architectures=[
                 "x86",

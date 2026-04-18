@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    "TOOL_CAPABILITY_MAP",
     "BinaryOperationsBridge",
     "BridgeCapabilities",
     "BridgeState",
@@ -53,6 +54,107 @@ __all__ = [
     "ToolBridgeBase",
     "WatchpointInfo",
 ]
+
+
+TOOL_CAPABILITY_MAP: dict[str, str] = {
+    "decompile": "decompilation",
+    "disassemble": "static_analysis",
+    "disassemble_at": "static_analysis",
+    "disassemble_function": "static_analysis",
+    "disassemble_instruction": "static_analysis",
+    "get_xrefs_to": "static_analysis",
+    "get_xrefs_from": "static_analysis",
+    "get_call_graph": "static_analysis",
+    "get_call_tree": "static_analysis",
+    "get_callers": "static_analysis",
+    "get_basic_blocks": "static_analysis",
+    "get_pcode": "static_analysis",
+    "execute_script": "scripting",
+    "execute_script_with_params": "scripting",
+    "run_python_script": "scripting",
+    "script_load": "scripting",
+    "script_run": "scripting",
+    "script_cmd": "scripting",
+    "script_abort": "scripting",
+    "compile_typescript": "scripting",
+    "create_cmodule": "scripting",
+    "attach": "debugging",
+    "detach": "debugging",
+    "run": "debugging",
+    "pause": "debugging",
+    "stop": "debugging",
+    "step_into": "debugging",
+    "step_over": "debugging",
+    "step_out": "debugging",
+    "step_count": "debugging",
+    "run_to": "debugging",
+    "execute_til_return": "debugging",
+    "skip_instruction": "debugging",
+    "set_ip": "debugging",
+    "set_breakpoint": "debugging",
+    "remove_breakpoint": "debugging",
+    "get_breakpoints": "debugging",
+    "enable_breakpoint": "debugging",
+    "disable_breakpoint": "debugging",
+    "configure_breakpoint": "debugging",
+    "set_breakpoint_on_api": "debugging",
+    "set_logging_breakpoint": "debugging",
+    "set_dll_breakpoint": "debugging",
+    "set_watchpoint": "debugging",
+    "remove_watchpoint": "debugging",
+    "get_watchpoints": "debugging",
+    "trace_start": "debugging",
+    "trace_stop": "debugging",
+    "trace_into": "debugging",
+    "trace_over": "debugging",
+    "get_trace_record": "debugging",
+    "animate_start": "debugging",
+    "animate_stop": "debugging",
+    "patch_instruction": "patching",
+    "patch_code": "patching",
+    "nop_range": "patching",
+    "patch_anti_debug": "patching",
+    "restore_patch": "patching",
+    "export_patches": "patching",
+    "import_patches": "patching",
+    "export_patches_bps": "patching",
+    "import_patches_bps": "patching",
+    "export_patches_ups": "patching",
+    "import_patches_ups": "patching",
+    "get_patches": "patching",
+    "apply_patch": "patching",
+    "revert_patch": "patching",
+    "replace_function": "patching",
+    "write_code": "patching",
+    "write_bytes": "patching",
+    "read_memory": "memory_access",
+    "write_memory": "memory_access",
+    "allocate_memory": "memory_access",
+    "free_memory": "memory_access",
+    "protect_memory": "memory_access",
+    "get_memory_regions": "memory_access",
+    "get_memory_map": "memory_access",
+    "scan_memory": "memory_access",
+    "dump_memory_to_file": "memory_access",
+    "read_peb": "memory_access",
+    "read_teb": "memory_access",
+    "kernel_read": "memory_access",
+    "kernel_write": "memory_access",
+    "kernel_alloc": "memory_access",
+    "kernel_protect": "memory_access",
+}
+"""Mapping from bridge tool-function short names to required capability.
+
+Each key is the unqualified method/tool name exposed by a bridge (the
+``name`` field of its ``ToolFunction`` entries with the ``<bridge>.``
+prefix stripped). Each value is the capability name that would appear in
+``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry`` consults
+this mapping in ``execute_tool_call`` to raise ``ToolError`` when a
+bridge is asked to execute a tool whose required capability it does not
+advertise. The mapping lives in ``bridges.base`` so that bridge
+implementations and the registry share a single source of truth, and
+``intellicrack.core.tools`` imports it from here.
+"""
 
 
 @dataclass

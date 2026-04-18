@@ -332,6 +332,7 @@ class HexEditorBridge(ToolBridgeBase):
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_patching=True,
+            supports_scripting=True,
             supported_architectures=["x86", "x86_64", "arm", "arm64"],
             supported_formats=["pe", "elf", "macho", "raw"],
         )
