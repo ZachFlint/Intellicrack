@@ -67,8 +67,28 @@ _ACCEL_TEST_TIMEOUT = 5
 _PROCESS_COMMUNICATE_TIMEOUT = 30
 _SNAPSHOT_LINE_MIN_PARTS = 2
 _FILE_LOG_MIN_PARTS = 3
-_NETWORK_LOG_MIN_PARTS = 4
+_NETWORK_LOG_MIN_PARTS = 10
 _PROCESS_LOG_MIN_PARTS = 4
+_NETWORK_LOG_PROTOCOL_INDEX = 5
+_NETWORK_LOG_BYTES_SENT_INDEX = 6
+_NETWORK_LOG_BYTES_RECV_INDEX = 7
+_NETWORK_LOG_PID_INDEX = 8
+_NETWORK_LOG_PNAME_INDEX = 9
+_ADDR_PORT_PARTS = 2
+_SCREENSHOT_STABILITY_POLL_DELAY_S = 0.05
+_SCREENSHOT_STABILITY_MAX_POLLS = 100
+_SCREENSHOT_INITIAL_DELAY_S = 0.05
+_ERR_SCREENSHOT_NOT_STABLE = "PPM file did not stabilize before timeout"
+_ERR_SCREENSHOT_CONVERSION_FAILED = "PPM to PNG conversion failed"
+_MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
+    "api_trace.ps1",
+    "clipboard_monitor.ps1",
+    "dll_monitor.ps1",
+    "injection_monitor.ps1",
+    "kernel_object_monitor.ps1",
+    "resource_monitor.ps1",
+    "service_monitor.ps1",
+)
 _SERVICE_LOG_MIN_PARTS = 6
 _KERNEL_OBJ_LOG_MIN_PARTS = 6
 _DLL_LOG_MIN_PARTS = 6
@@ -241,6 +261,37 @@ class AcceleratorType(Enum):
 
 
 @dataclass
+class _MonitoringLogs:
+    """Aggregated monitoring log parse results.
+
+    Attributes:
+        file_changes: Parsed file-change records.
+        registry_changes: Parsed registry-change records.
+        network_activity: Parsed network activity records.
+        process_activity: Parsed process activity records.
+        api_calls: Parsed API call records.
+        service_changes: Parsed service change records.
+        kernel_objects: Parsed kernel-object activity records.
+        dll_loads: Parsed DLL-load event records.
+        injection_events: Parsed injection event records.
+        resource_samples: Parsed resource usage samples.
+        clipboard_events: Parsed clipboard event records.
+    """
+
+    file_changes: list[FileChange] = field(default_factory=list)
+    registry_changes: list[RegistryChange] = field(default_factory=list)
+    network_activity: list[NetworkActivity] = field(default_factory=list)
+    process_activity: list[ProcessActivity] = field(default_factory=list)
+    api_calls: list[ApiCall] = field(default_factory=list)
+    service_changes: list[ServiceChange] = field(default_factory=list)
+    kernel_objects: list[KernelObjectActivity] = field(default_factory=list)
+    dll_loads: list[DllLoadEvent] = field(default_factory=list)
+    injection_events: list[InjectionEvent] = field(default_factory=list)
+    resource_samples: list[ResourceSample] = field(default_factory=list)
+    clipboard_events: list[ClipboardEvent] = field(default_factory=list)
+
+
+@dataclass
 class QEMUConfig:
     """Configuration for QEMU sandbox.
 
@@ -256,6 +307,9 @@ class QEMUConfig:
         enable_acceleration: Whether to use hardware acceleration.
         snapshot_name: Snapshot to restore on start.
         shared_folder: Path to shared folder on host.
+        anti_evasion_profile: Anti-evasion profile applied at launch via
+            ``-smbios`` / ``-cpu`` command-line arguments. One of
+            ``default``, ``workstation``, or ``laptop``.
     """
 
     guest_os: GuestOS = GuestOS.WINDOWS
@@ -269,6 +323,7 @@ class QEMUConfig:
     enable_acceleration: bool = True
     snapshot_name: str | None = None
     shared_folder: Path | None = None
+    anti_evasion_profile: Literal["default", "workstation", "laptop"] = "default"
 
 
 @dataclass
@@ -801,6 +856,7 @@ class QEMUSandbox(SandboxBase):
             enable_acceleration=self._qemu_config.enable_acceleration,
             snapshot_name=self._qemu_config.snapshot_name,
             shared_folder=self._qemu_config.shared_folder,
+            anti_evasion_profile=self._qemu_config.anti_evasion_profile,
         )
         _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
 
@@ -997,8 +1053,42 @@ class QEMUSandbox(SandboxBase):
             _logger.warning("vm_status_query_failed", error=status.error)
             raise SandboxError(_ERR_VM_STATUS)
 
+    @staticmethod
+    def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:
+        """Return SMBIOS entries for the selected anti-evasion profile.
+
+        Args:
+            profile: Profile name (``default``, ``workstation``, or ``laptop``).
+
+        Returns:
+            list[dict[str, str]]: SMBIOS entries suitable for ``-smbios`` argv.
+        """
+        if profile == "workstation":
+            return [
+                {"type": "1", "manufacturer": "Dell Inc.", "product": "OptiPlex 7090", "serial": f"SVC{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": "Dell Inc.", "product": "0WN7Y6"},
+                {"type": "3", "manufacturer": "Dell Inc.", "chassis-type": "3"},
+            ]
+        if profile == "laptop":
+            return [
+                {"type": "1", "manufacturer": "Lenovo", "product": "ThinkPad T14 Gen 3", "serial": f"PF{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": "Lenovo", "product": "21AHS00000"},
+                {"type": "3", "manufacturer": "Lenovo", "chassis-type": "10"},
+            ]
+        return [
+            {"type": "1", "manufacturer": "HP", "product": "HP EliteDesk 800 G6", "serial": f"MXL{secrets.token_hex(5).upper()}"},
+            {"type": "2", "manufacturer": "HP", "product": "8767"},
+            {"type": "3", "manufacturer": "HP", "chassis-type": "3"},
+        ]
+
     async def _build_qemu_command(self) -> list[str]:
         """Build QEMU command line.
+
+        Adds ``-smbios`` entries and a masked ``-cpu`` string for
+        anti-evasion. The SMBIOS profile is sourced from
+        :class:`QEMUConfig.anti_evasion_profile`. The CPU argument includes
+        ``hv-vendor-id``, ``kvm=off`` and ``hypervisor=off`` to reduce
+        hypervisor detection via CPUID.
 
         Returns:
             list[str]: QEMU command as list of arguments.
@@ -1013,11 +1103,13 @@ class QEMUSandbox(SandboxBase):
         if self._qemu_config.image_path is None or not await asyncio.to_thread(self._qemu_config.image_path.exists):
             raise SandboxError(_ERR_NO_IMAGE)
 
+        cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
+
         cmd: list[str] = [
             str(self._qemu_path),
             *["-machine", f"q35,accel={self._accelerator.value}"],
             "-cpu",
-            "max",
+            cpu_arg,
             *["-smp", f"cores={self._qemu_config.cpu_cores}"],
             *["-m", str(self._qemu_config.memory_mb)],
             *[
@@ -1025,6 +1117,10 @@ class QEMUSandbox(SandboxBase):
                 f"file={self._qemu_config.image_path},format=qcow2,if=virtio",
             ],
         ]
+
+        for entry in self._anti_evasion_smbios_entries(self._qemu_config.anti_evasion_profile):
+            smbios_value = ",".join(f"{k}={v}" for k, v in entry.items())
+            cmd.extend(["-smbios", smbios_value])
 
         if self._qemu_config.display == "none":
             cmd.extend(["-display", "none"])
@@ -1094,6 +1190,7 @@ class QEMUSandbox(SandboxBase):
             enable_acceleration=self._qemu_config.enable_acceleration,
             snapshot_name=self._qemu_config.snapshot_name,
             shared_folder=self._shared_folder,
+            anti_evasion_profile=self._qemu_config.anti_evasion_profile,
         )
 
         return cmd
@@ -1279,8 +1376,222 @@ class QEMUSandbox(SandboxBase):
         self._temp_dir = None
         self._shared_folder = None
 
+    @staticmethod
+    def _windows_agent_script_content() -> str:
+        r"""Return the Windows guest agent PowerShell script body.
+
+        The script (1) maps ``Z:`` via ``net use`` with three 2-second
+        retries before any logging or file polling, (2) launches the seven
+        bundled monitor scripts from ``Z:\monitor\`` with ``-LogDir Z:\logs``,
+        (3) listens on ``127.0.0.1:4445`` for argv-style command requests
+        validated against a short allowlist (``powershell``, ``cmd``, any
+        ``.exe`` under ``Z:\``, ``System32`` or ``SysWOW64``), and
+        (4) emits process, file, and extended network telemetry in the
+        ten-field schema parsed by :meth:`_parse_network_log`.
+
+        Returns:
+            str: Full PowerShell script source (UTF-8).
+        """
+        return r"""$ErrorActionPreference = 'SilentlyContinue'
+
+$shareHost = '10.0.2.4'
+$shareName = 'qemu'
+$driveLetter = 'Z:'
+$shareMapped = $false
+for ($i = 0; $i -lt 3 -and -not $shareMapped; $i++) {
+    & net.exe use $driveLetter ('\\' + $shareHost + '\' + $shareName) /persistent:no 2>&1 | Out-Null
+    if (Test-Path $driveLetter) { $shareMapped = $true; break }
+    Start-Sleep -Seconds 2
+}
+
+$logDir = 'Z:\logs'
+$monitorDir = 'Z:\monitor'
+if ($shareMapped) {
+    if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+    if (-not (Test-Path $monitorDir)) { New-Item -ItemType Directory -Path $monitorDir -Force | Out-Null }
+}
+
+$fileLog = Join-Path $logDir 'file_changes.log'
+$netLog = Join-Path $logDir 'network_activity.log'
+$procLog = Join-Path $logDir 'process_activity.log'
+
+$monitorScripts = @(
+    'api_trace.ps1',
+    'clipboard_monitor.ps1',
+    'dll_monitor.ps1',
+    'injection_monitor.ps1',
+    'kernel_object_monitor.ps1',
+    'resource_monitor.ps1',
+    'service_monitor.ps1'
+)
+foreach ($scriptName in $monitorScripts) {
+    $scriptPath = Join-Path $monitorDir $scriptName
+    if (Test-Path $scriptPath) {
+        Start-Process -FilePath 'powershell.exe' `
+            -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptPath,'-LogDir',$logDir) `
+            -WindowStyle Hidden
+    }
+}
+
+$watcher = New-Object System.IO.FileSystemWatcher
+$watcher.Path = 'C:\'
+$watcher.IncludeSubdirectories = $true
+$watcher.EnableRaisingEvents = $true
+Register-ObjectEvent $watcher 'Created' -Action {
+    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    "$ts|created|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog -Encoding utf8
+} | Out-Null
+Register-ObjectEvent $watcher 'Changed' -Action {
+    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    "$ts|modified|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog -Encoding utf8
+} | Out-Null
+Register-ObjectEvent $watcher 'Deleted' -Action {
+    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    "$ts|deleted|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog -Encoding utf8
+} | Out-Null
+
+$allowedNames = @('powershell', 'powershell.exe', 'cmd', 'cmd.exe')
+$allowedRoots = @('Z:\', ($env:SystemRoot + '\System32\'), ($env:SystemRoot + '\SysWOW64\'))
+function Test-AllowedCommand($cmdValue) {
+    if ([string]::IsNullOrEmpty($cmdValue)) { return $false }
+    $lower = $cmdValue.ToLower()
+    if ($allowedNames -contains $lower) { return $true }
+    if (-not $lower.EndsWith('.exe')) { return $false }
+    foreach ($root in $allowedRoots) {
+        if ($lower.StartsWith($root.ToLower())) { return $true }
+    }
+    return $false
+}
+
+$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse('127.0.0.1'), 4445)
+$listener.Start()
+
+function Send-Message($stream, $data) {
+    $json = ConvertTo-Json $data -Compress
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
+    $stream.Write($bytes, 0, $bytes.Length)
+    $stream.Flush()
+}
+
+$knownProcs = @{}
+$prevConnKeys = @{}
+
+while ($true) {
+    if ($listener.Pending()) {
+        $client = $listener.AcceptTcpClient()
+        $stream = $client.GetStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        while ($client.Connected) {
+            try {
+                $line = $reader.ReadLine()
+                if ($null -eq $line) { break }
+                $request = ConvertFrom-Json $line
+                if ($request.type -eq 'execute') {
+                    $cmd = [string]$request.command
+                    $cmdArgs = @()
+                    if ($request.args) { $cmdArgs = @($request.args) }
+                    $output = ''
+                    $errorOutput = ''
+                    $exitCode = 0
+                    if (-not (Test-AllowedCommand $cmd)) {
+                        $errorOutput = "command not in allowlist: $cmd"
+                        $exitCode = -1
+                    } else {
+                        try {
+                            $output = & $cmd @cmdArgs 2>&1 | Out-String
+                            $exitCode = $LASTEXITCODE
+                            if ($null -eq $exitCode) { $exitCode = 0 }
+                        } catch {
+                            $errorOutput = $_.Exception.Message
+                            $exitCode = 1
+                        }
+                    }
+                    Send-Message $stream @{
+                        type = 'result'
+                        data = @{
+                            exit_code = $exitCode
+                            stdout = $output
+                            stderr = $errorOutput
+                        }
+                    }
+                }
+            } catch {
+                break
+            }
+        }
+        $client.Close()
+    }
+
+    $currentProcs = Get-Process | Select-Object Id, Name, Path
+    foreach ($proc in $currentProcs) {
+        if (-not $knownProcs.ContainsKey($proc.Id)) {
+            $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+            "$ts|created|$($proc.Id)|$($proc.Name)|$($proc.Path)" | Out-File -Append $procLog -Encoding utf8
+            $knownProcs[$proc.Id] = $proc.Name
+        }
+    }
+    $currentIds = $currentProcs | ForEach-Object { $_.Id }
+    $terminated = $knownProcs.Keys | Where-Object { $_ -notin $currentIds }
+    foreach ($id in $terminated) {
+        $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        "$ts|terminated|$id|$($knownProcs[$id])" | Out-File -Append $procLog -Encoding utf8
+        $knownProcs.Remove($id)
+    }
+
+    $procNameByPid = @{}
+    foreach ($p in $currentProcs) { $procNameByPid[$p.Id] = $p.Name }
+
+    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+
+    $tcpConns = Get-NetTCPConnection -ErrorAction SilentlyContinue
+    foreach ($conn in $tcpConns) {
+        $state = [string]$conn.State
+        $owner = $conn.OwningProcess
+        $pname = ''
+        if ($owner -and $procNameByPid.ContainsKey($owner)) { $pname = $procNameByPid[$owner] }
+        $key = "tcp|$($conn.LocalAddress):$($conn.LocalPort)|$($conn.RemoteAddress):$($conn.RemotePort)|$state"
+        if (-not $prevConnKeys.ContainsKey($key)) {
+            $prevConnKeys[$key] = $true
+            "$ts|connection|$($conn.LocalAddress):$($conn.LocalPort)|$($conn.RemoteAddress):$($conn.RemotePort)|$state|tcp|0|0|$owner|$pname" | Out-File -Append $netLog -Encoding utf8
+        }
+    }
+
+    $udpEndpoints = Get-NetUDPEndpoint -ErrorAction SilentlyContinue
+    foreach ($ep in $udpEndpoints) {
+        $owner = $ep.OwningProcess
+        $pname = ''
+        if ($owner -and $procNameByPid.ContainsKey($owner)) { $pname = $procNameByPid[$owner] }
+        $key = "udp|$($ep.LocalAddress):$($ep.LocalPort)"
+        if (-not $prevConnKeys.ContainsKey($key)) {
+            $prevConnKeys[$key] = $true
+            "$ts|bind|$($ep.LocalAddress):$($ep.LocalPort)|0.0.0.0:0|Listen|udp|0|0|$owner|$pname" | Out-File -Append $netLog -Encoding utf8
+        }
+    }
+
+    Start-Sleep -Seconds 1
+}
+"""
+
+    @staticmethod
+    def _bundled_scripts_dir() -> Path:
+        """Return the on-disk directory that contains bundled monitor PS1 scripts.
+
+        Returns:
+            Path: Absolute path to the bundled ``scripts`` directory. The
+            path is resolved from this module's location and is therefore
+            safe to compute synchronously even from async callers.
+        """
+        return Path(__file__).resolve().parent / "scripts"
+
     async def _create_guest_agent_script(self) -> None:
-        """Create guest agent monitoring scripts.
+        r"""Create guest agent scripts and stage bundled monitor scripts.
+
+        On Windows, writes ``agent.ps1`` and ``start_agent.cmd`` into the
+        host-side shared folder's ``monitor`` subdirectory. The Windows
+        agent maps ``Z:`` on first tick, copies the seven bundled PS1
+        monitor scripts into ``Z:\monitor\``, and launches each with
+        ``-LogDir Z:\logs``. On Linux, writes the existing Python agent
+        and its startup shell script.
 
         Raises:
             ValueError: If an unsupported guest OS is configured.
@@ -1292,116 +1603,22 @@ class QEMUSandbox(SandboxBase):
 
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             agent_script = monitor_dir / "agent.ps1"
-            agent_content = r"""
-$port = 4445
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $port)
-$listener.Start()
-
-function Send-Message($stream, $data) {
-    $json = ConvertTo-Json $data -Compress
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
-    $stream.Write($bytes, 0, $bytes.Length)
-}
-
-$logDir = "Z:\logs"
-$fileLog = "$logDir\file_changes.log"
-$regLog = "$logDir\registry_changes.log"
-$netLog = "$logDir\network_activity.log"
-$procLog = "$logDir\process_activity.log"
-
-$watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = "C:\"
-$watcher.IncludeSubdirectories = $true
-$watcher.EnableRaisingEvents = $true
-
-Register-ObjectEvent $watcher "Created" -Action {
-    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$ts|created|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog
-}
-Register-ObjectEvent $watcher "Changed" -Action {
-    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$ts|modified|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog
-}
-Register-ObjectEvent $watcher "Deleted" -Action {
-    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$ts|deleted|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog
-}
-
-$knownProcs = @{}
-
-while ($true) {
-    if ($listener.Pending()) {
-        $client = $listener.AcceptTcpClient()
-        $stream = $client.GetStream()
-        $reader = New-Object System.IO.StreamReader($stream)
-
-        while ($client.Connected) {
-            try {
-                $line = $reader.ReadLine()
-                if ($null -eq $line) { break }
-
-                $request = ConvertFrom-Json $line
-
-                if ($request.type -eq "execute") {
-                    $output = ""
-                    $exitCode = 0
-                    try {
-                        $output = Invoke-Expression $request.command 2>&1
-                        $exitCode = $LASTEXITCODE
-                    } catch {
-                        $output = $_.Exception.Message
-                        $exitCode = 1
-                    }
-
-                    Send-Message $stream @{
-                        type = "result"
-                        data = @{
-                            exit_code = $exitCode
-                            stdout = ($output | Out-String)
-                            stderr = ""
-                        }
-                    }
-                }
-            } catch {
-                break
-            }
-        }
-
-        $client.Close()
-    }
-
-    $currentProcs = Get-Process | Select-Object Id, Name, Path
-    foreach ($proc in $currentProcs) {
-        if (-not $knownProcs.ContainsKey($proc.Id)) {
-            $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            "$ts|created|$($proc.Id)|$($proc.Name)|$($proc.Path)" | Out-File -Append $procLog
-            $knownProcs[$proc.Id] = $proc.Name
-        }
-    }
-
-    $currentIds = $currentProcs | ForEach-Object { $_.Id }
-    $terminated = $knownProcs.Keys | Where-Object { $_ -notin $currentIds }
-    foreach ($id in $terminated) {
-        $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        "$ts|terminated|$id|$($knownProcs[$id])" | Out-File -Append $procLog
-        $knownProcs.Remove($id)
-    }
-
-    $connections = Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue
-    foreach ($conn in $connections) {
-        $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        "$ts|tcp|$($conn.LocalAddress):$($conn.LocalPort)|$($conn.RemoteAddress):$($conn.RemotePort)" | Out-File -Append $netLog
-    }
-
-    Start-Sleep -Seconds 1
-}
-"""
+            agent_content = self._windows_agent_script_content()
             await asyncio.to_thread(agent_script.write_text, agent_content, encoding="utf-8")
 
+            scripts_src = await asyncio.to_thread(self._bundled_scripts_dir)
+            for script_name in _MONITOR_SCRIPT_NAMES:
+                src = scripts_src / script_name
+                dst = monitor_dir / script_name
+                if await asyncio.to_thread(src.exists):
+                    await asyncio.to_thread(shutil.copy2, src, dst)
+                else:
+                    _logger.warning("monitor_script_missing", script=script_name, path=str(src))
+
             startup_script = monitor_dir / "start_agent.cmd"
-            startup_content = """@echo off
-powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "Z:\\monitor\\agent.ps1"
-"""
+            startup_content = (
+                '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "Z:\\monitor\\agent.ps1"\r\n'
+            )
         elif self._qemu_config.guest_os == GuestOS.LINUX:
             agent_script = monitor_dir / "agent.py"
             agent_content = '''#!/usr/bin/env python3
@@ -1905,17 +2122,10 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             exit_code = -1
         duration = time.time() - start_time
 
-        file_changes: list[FileChange] = []
-        registry_changes: list[RegistryChange] = []
-        network_activity: list[NetworkActivity] = []
-        process_activity: list[ProcessActivity] = []
-
+        logs = _MonitoringLogs()
         if monitor:
             await asyncio.sleep(2)
-            file_changes = await self._parse_file_log()
-            registry_changes = await self._parse_registry_log()
-            network_activity = await self._parse_network_log()
-            process_activity = await self._parse_process_log()
+            logs = await self._collect_monitoring_logs()
 
         return ExecutionReport(
             result=result,
@@ -1923,10 +2133,40 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             stdout=stdout,
             stderr=stderr,
             duration_seconds=duration,
-            file_changes=file_changes,
-            registry_changes=registry_changes,
-            network_activity=network_activity,
-            process_activity=process_activity,
+            file_changes=logs.file_changes,
+            registry_changes=logs.registry_changes,
+            network_activity=logs.network_activity,
+            process_activity=logs.process_activity,
+            api_calls=logs.api_calls,
+            service_changes=logs.service_changes,
+            kernel_objects=logs.kernel_objects,
+            dll_loads=logs.dll_loads,
+            injection_events=logs.injection_events,
+            resource_samples=logs.resource_samples,
+            clipboard_events=logs.clipboard_events,
+        )
+
+    async def _collect_monitoring_logs(self) -> _MonitoringLogs:
+        """Parse every monitor log file into a :class:`_MonitoringLogs` aggregate.
+
+        Returns:
+            _MonitoringLogs: All monitor-log parse results collected from
+            the shared ``logs`` folder. Each field is populated from the
+            matching ``_parse_*`` method and defaults to an empty list
+            when the corresponding log file is absent.
+        """
+        return _MonitoringLogs(
+            file_changes=await self._parse_file_log(),
+            registry_changes=await self._parse_registry_log(),
+            network_activity=await self._parse_network_log(),
+            process_activity=await self._parse_process_log(),
+            api_calls=await self._parse_api_trace_log(),
+            service_changes=await self._parse_service_log(),
+            kernel_objects=await self._parse_kernel_object_log(),
+            dll_loads=await self._parse_dll_log(),
+            injection_events=await self._parse_injection_log(),
+            resource_samples=await self._parse_resource_log(),
+            clipboard_events=await self._parse_clipboard_log(),
         )
 
     async def _parse_file_log(self) -> list[FileChange]:
@@ -1996,11 +2236,68 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         return changes
 
-    async def _parse_network_log(self) -> list[NetworkActivity]:
-        """Parse network monitoring log.
+    @staticmethod
+    def _coerce_network_protocol(raw: str) -> Literal["tcp", "udp", "icmp", "other"]:
+        """Map a raw protocol string to the ``NetworkActivity`` literal.
+
+        Args:
+            raw: Protocol token from the guest log (case-insensitive).
 
         Returns:
-            list[NetworkActivity]: List of network activity detected during execution.
+            Literal[``tcp``, ``udp``, ``icmp``, ``other``]: Normalized protocol.
+        """
+        value = raw.strip().lower()
+        if value == "tcp":
+            return "tcp"
+        if value == "udp":
+            return "udp"
+        return "icmp" if value == "icmp" else "other"
+
+    @staticmethod
+    def _coerce_network_direction(state: str) -> Literal["inbound", "outbound"]:
+        """Derive connection direction from the state token.
+
+        ``Listen`` and ``Bound`` indicate an inbound listener; all other
+        states (``Established``, ``TimeWait``, etc.) are treated as
+        outbound for reporting purposes.
+
+        Args:
+            state: State token from the guest log.
+
+        Returns:
+            Literal[``inbound``, ``outbound``]: Derived direction.
+        """
+        normalized = state.strip().lower()
+        return "inbound" if normalized in {"listen", "bound"} else "outbound"
+
+    @staticmethod
+    def _split_address(addr_port: str) -> tuple[str, int]:
+        """Split an ``address:port`` token into its components.
+
+        Args:
+            addr_port: Combined ``address:port`` string.
+
+        Returns:
+            tuple[str, int]: Address and integer port (``0`` if missing).
+        """
+        parts = addr_port.rsplit(":", 1)
+        if len(parts) != _ADDR_PORT_PARTS:
+            return (addr_port, 0)
+        return (parts[0], int(parts[1]) if parts[1].isdigit() else 0)
+
+    async def _parse_network_log(self) -> list[NetworkActivity]:
+        """Parse network monitoring log with the 10-field schema.
+
+        Expected line format::
+
+            timestamp|operation|local_addr:port|remote_addr:port|state|protocol|bytes_sent|bytes_received|pid|process_name
+
+        ``operation`` is preserved for diagnostics but not surfaced in the
+        :class:`NetworkActivity` TypedDict. ``direction`` is derived from
+        ``state`` via :meth:`_coerce_network_direction`.
+
+        Returns:
+            list[NetworkActivity]: Parsed network activity samples.
         """
         if self._shared_folder is None:
             return []
@@ -2014,23 +2311,28 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
             for line in raw_text.splitlines():
                 parts = line.split("|")
-                if len(parts) >= _NETWORK_LOG_MIN_PARTS:
-                    local_parts = parts[2].rsplit(":", 1)
-                    remote_parts = parts[3].rsplit(":", 1)
-
-                    activities.append(
-                        NetworkActivity(
-                            protocol="tcp",
-                            direction="outbound",
-                            local_address=local_parts[0] if local_parts else "",
-                            local_port=int(local_parts[1]) if len(local_parts) > 1 and local_parts[1].isdigit() else 0,
-                            remote_address=remote_parts[0] if remote_parts else "",
-                            remote_port=int(remote_parts[1]) if len(remote_parts) > 1 and remote_parts[1].isdigit() else 0,
-                            timestamp=parts[0],
-                            bytes_sent=0,
-                            bytes_received=0,
-                        ),
-                    )
+                if len(parts) < _NETWORK_LOG_MIN_PARTS:
+                    continue
+                local_addr, local_port = self._split_address(parts[2])
+                remote_addr, remote_port = self._split_address(parts[3])
+                state_token = parts[4]
+                protocol = self._coerce_network_protocol(parts[_NETWORK_LOG_PROTOCOL_INDEX])
+                direction = self._coerce_network_direction(state_token)
+                bytes_sent_raw = parts[_NETWORK_LOG_BYTES_SENT_INDEX]
+                bytes_recv_raw = parts[_NETWORK_LOG_BYTES_RECV_INDEX]
+                activities.append(
+                    NetworkActivity(
+                        protocol=protocol,
+                        direction=direction,
+                        local_address=local_addr,
+                        local_port=local_port,
+                        remote_address=remote_addr,
+                        remote_port=remote_port,
+                        timestamp=parts[0],
+                        bytes_sent=int(bytes_sent_raw) if bytes_sent_raw.isdigit() else 0,
+                        bytes_received=int(bytes_recv_raw) if bytes_recv_raw.isdigit() else 0,
+                    ),
+                )
         except (OSError, ValueError) as e:
             _logger.warning("network_log_parse_failed", extra={"error": str(e)})
 
@@ -2527,8 +2829,44 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         _logger.info("pcap_capture_stopped", capture_id=capture_id, path=str(pcap_path))
         return pcap_path
 
+    @staticmethod
+    async def _wait_for_ppm_stable(ppm_path: Path) -> None:
+        """Wait until a PPM file size stops changing between polls.
+
+        Polls ``ppm_path.stat().st_size`` twice per iteration with a short
+        delay between reads. The file is considered stable when two
+        consecutive size reads are equal and non-zero.
+
+        Args:
+            ppm_path: Path to the PPM file produced by QEMU ``screendump``.
+
+        Raises:
+            SandboxError: If the PPM file never stabilizes before the poll
+                budget is exhausted.
+        """
+        await asyncio.sleep(_SCREENSHOT_INITIAL_DELAY_S)
+        previous_size = -1
+        for _ in range(_SCREENSHOT_STABILITY_MAX_POLLS):
+            try:
+                current_size = await asyncio.to_thread(lambda: ppm_path.stat().st_size)
+            except FileNotFoundError:
+                await asyncio.sleep(_SCREENSHOT_STABILITY_POLL_DELAY_S)
+                continue
+            if current_size > 0 and current_size == previous_size:
+                return
+            previous_size = current_size
+            await asyncio.sleep(_SCREENSHOT_STABILITY_POLL_DELAY_S)
+        raise SandboxError(_ERR_SCREENSHOT_NOT_STABLE)
+
     async def capture_screenshot(self, output_path: Path | None = None) -> Path:
         """Capture a screenshot of the sandbox display.
+
+        Performs a QMP ``screendump`` to a PPM file in the shared folder,
+        polls the file size for stability (two consecutive ``stat`` reads
+        equal with at least :data:`_SCREENSHOT_STABILITY_POLL_DELAY_S`
+        delay between them), then converts to PNG. A conversion failure is
+        reported as :class:`SandboxError` rather than silently returning a
+        partial PPM.
 
         Args:
             output_path: Optional path to save the screenshot.
@@ -2537,7 +2875,8 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             Path: Path to the saved screenshot file.
 
         Raises:
-            SandboxError: If screenshot cannot be captured.
+            SandboxError: If the screenshot cannot be captured, stabilized,
+                or converted.
         """
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
@@ -2557,16 +2896,17 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             _logger.warning("screenshot_failed", error=result.error)
             raise SandboxError(_ERR_SCREENSHOT_FAILED)
 
-        await asyncio.sleep(0.5)
+        await self._wait_for_ppm_stable(ppm_path)
 
-        final_path: Path = ppm_path
         png_path = ppm_path.with_suffix(".png")
         try:
             await asyncio.to_thread(_ppm_p6_to_png, ppm_path, png_path)
-            await asyncio.to_thread(ppm_path.unlink, missing_ok=True)
-            final_path = png_path
         except (OSError, ValueError) as exc:
-            _logger.debug("ppm_to_png_conversion_failed", error=str(exc))
+            _logger.warning("ppm_to_png_conversion_failed", error=str(exc))
+            raise SandboxError(_ERR_SCREENSHOT_CONVERSION_FAILED) from exc
+
+        await asyncio.to_thread(ppm_path.unlink, missing_ok=True)
+        final_path: Path = png_path
 
         if output_path is not None:
             await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
@@ -2578,16 +2918,22 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         return final_path
 
     async def apply_anti_evasion(self, profile: str = "default") -> dict[str, Any]:
-        """Apply anti-evasion techniques to make the sandbox less detectable.
+        """Apply guest-side anti-evasion registry patches.
+
+        SMBIOS and CPUID masking are applied at VM launch through
+        :meth:`_build_qemu_command`, so this method only performs guest-side
+        registry patches that require the guest agent. The ``profile``
+        argument is retained for reporting consistency; the actual SMBIOS
+        profile is sourced from :class:`QEMUConfig.anti_evasion_profile`.
 
         Args:
-            profile: Anti-evasion profile name.
+            profile: Anti-evasion profile name reported in the result payload.
 
         Returns:
             dict[str, Any]: Dictionary describing applied techniques.
 
         Raises:
-            SandboxError: If anti-evasion cannot be applied.
+            SandboxError: If the sandbox is not running or QMP is disconnected.
         """
         if self.state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -2598,59 +2944,79 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         applied: dict[str, Any] = {"profile": profile, "techniques": []}
         techniques: list[str] = []
 
-        smbios_entries: list[dict[str, str]]
-        if profile == "workstation":
-            smbios_entries = [
-                {"type": "1", "manufacturer": "Dell Inc.", "product": "OptiPlex 7090", "serial": f"SVC{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "Dell Inc.", "product": "0WN7Y6"},
-                {"type": "3", "manufacturer": "Dell Inc.", "chassis-type": "3"},
-            ]
-        elif profile == "laptop":
-            smbios_entries = [
-                {"type": "1", "manufacturer": "Lenovo", "product": "ThinkPad T14 Gen 3", "serial": f"PF{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "Lenovo", "product": "21AHS00000"},
-                {"type": "3", "manufacturer": "Lenovo", "chassis-type": "10"},
-            ]
-        else:
-            smbios_entries = [
-                {"type": "1", "manufacturer": "HP", "product": "HP EliteDesk 800 G6", "serial": f"MXL{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "HP", "product": "8767"},
-                {"type": "3", "manufacturer": "HP", "chassis-type": "3"},
-            ]
-
-        for entry in smbios_entries:
-            smbios_args = ",".join(f"{k}={v}" for k, v in entry.items())
-            result = await self._qmp.execute_command({
-                "execute": "human-monitor-command",
-                "arguments": {"command-line": f"smbios -e {smbios_args}"},
-            })
-            if result.success:
-                techniques.append(f"smbios_type_{entry['type']}")
-
-        cpuid_result = await self._qmp.execute_command({
-            "execute": "human-monitor-command",
-            "arguments": {"command-line": "cpu-add model=host,hv-vendor-id=AuthenticAMD"},
-        })
-        if cpuid_result.success:
-            techniques.append("cpuid_hypervisor_mask")
+        techniques.extend(
+            f"smbios_type_{entry['type']}_launch_arg" for entry in self._anti_evasion_smbios_entries(self._qemu_config.anti_evasion_profile)
+        )
+        techniques.append("cpuid_hypervisor_mask_launch_arg")
 
         if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
-            registry_commands = [
-                'reg add "HKLM\\HARDWARE\\DESCRIPTION\\System\\BIOS" /v SystemManufacturer /t REG_SZ /d "HP" /f',
-                'reg add "HKLM\\HARDWARE\\DESCRIPTION\\System\\BIOS" /v SystemProductName /t REG_SZ /d "HP EliteDesk 800 G6" /f',
-                f'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion" /v ProductId /t REG_SZ /d "{secrets.token_hex(8).upper()}" /f',
-                'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum" /v 0 /t REG_SZ /d "WDC WD10EZEX-00BBHA0" /f',
+            product_id = secrets.token_hex(8).upper()
+            sep = "\\"
+            bios_key = sep.join(["HKLM", "HARDWARE", "DESCRIPTION", "System", "BIOS"])
+            current_version_key = sep.join(["HKLM", "SOFTWARE", "Microsoft", "Windows", "CurrentVersion"])
+            disk_enum_key = sep.join(["HKLM", "SYSTEM", "CurrentControlSet", "Services", "Disk", "Enum"])
+            registry_commands: list[tuple[str, list[str]]] = [
+                (
+                    "reg.exe",
+                    [
+                        "add",
+                        bios_key,
+                        "/v",
+                        "SystemManufacturer",
+                        "/t",
+                        "REG_SZ",
+                        "/d",
+                        "HP",
+                        "/f",
+                    ],
+                ),
+                (
+                    "reg.exe",
+                    [
+                        "add",
+                        bios_key,
+                        "/v",
+                        "SystemProductName",
+                        "/t",
+                        "REG_SZ",
+                        "/d",
+                        "HP EliteDesk 800 G6",
+                        "/f",
+                    ],
+                ),
+                (
+                    "reg.exe",
+                    [
+                        "add",
+                        current_version_key,
+                        "/v",
+                        "ProductId",
+                        "/t",
+                        "REG_SZ",
+                        "/d",
+                        product_id,
+                        "/f",
+                    ],
+                ),
+                (
+                    "reg.exe",
+                    [
+                        "add",
+                        disk_enum_key,
+                        "/v",
+                        "0",
+                        "/t",
+                        "REG_SZ",
+                        "/d",
+                        "WDC WD10EZEX-00BBHA0",
+                        "/f",
+                    ],
+                ),
             ]
-            for cmd in registry_commands:
-                exit_code, _, _ = await self._agent.send_command(cmd)
+            for cmd_name, cmd_args in registry_commands:
+                exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
                 if exit_code == 0:
                     techniques.append("registry_patch")
-
-            mac_octets = ", ".join(str(secrets.randbelow(256)) for _ in range(5))
-            mac_cmd = f"powershell -Command \"Set-NetAdapter -Name Ethernet -MacAddress ('00-{{0:02X}}-{{1:02X}}-{{2:02X}}-{{3:02X}}-{{4:02X}}' -f {mac_octets})\""
-            exit_code, _, _ = await self._agent.send_command(mac_cmd)
-            if exit_code == 0:
-                techniques.append("mac_address_randomize")
 
         applied["techniques"] = techniques
         applied["count"] = len(techniques)
@@ -2814,7 +3180,7 @@ rule SuspiciousStrings {
         $s5 = "WriteProcessMemory"
         $s6 = "NtUnmapViewOfSection"
         $s7 = "WScript.Shell"
-        $s8 = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+        $s8 = /HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run/
     condition:
         any of them
 }
