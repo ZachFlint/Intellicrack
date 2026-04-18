@@ -532,6 +532,19 @@ impl HexDocument {
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
+    fn export_patches_cod(&self) -> PyResult<Vec<u8>> {
+        let ops = self.undo_mgr.get_overwrite_patches();
+        let records = patch_export::extract_patches_from_overwrites(&ops);
+        Ok(patch_export::export_cod(&records))
+    }
+
+    fn export_patches_json(&self) -> PyResult<String> {
+        let ops = self.undo_mgr.get_overwrite_patches();
+        let records = patch_export::extract_patches_from_overwrites(&ops);
+        patch_export::export_patches_json(&records)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+
     fn import_patches_ips(&mut self, data: &[u8]) -> PyResult<usize> {
         let records = patch_export::import_ips(data)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
