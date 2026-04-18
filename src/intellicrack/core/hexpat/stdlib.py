@@ -12,8 +12,14 @@ those builtin:: implementations backed by DataReader for binary access.
 from __future__ import annotations
 
 import math
+import os
+import random as _random
+import re
 import struct
-from typing import TYPE_CHECKING
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
 from intellicrack.core.hexpat.errors import HexPatRuntimeError
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, PatternValue
@@ -21,13 +27,158 @@ from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
-    from typing import Any
+    from collections.abc import Callable
+    from typing import Any, BinaryIO
 
     from intellicrack.core.hexpat.data_reader import DataReader
     from intellicrack.core.hexpat.evaluator import EvalScope
 
 
 _logger = get_logger("core.hexpat.stdlib")
+
+_MAX_OPEN_FILES: int = 32
+_ENDIAN_NATIVE: int = 0
+_ENDIAN_BIG: int = 1
+_ENDIAN_LITTLE: int = 2
+
+_FILE_MODE_READ: int = 1
+_FILE_MODE_WRITE: int = 2
+_FILE_MODE_CREATE: int = 3
+
+_ACCUMULATE_ADD: int = 0
+_ACCUMULATE_MULTIPLY: int = 1
+_ACCUMULATE_MODULO: int = 2
+_ACCUMULATE_MIN: int = 3
+_ACCUMULATE_MAX: int = 4
+
+_FORMAT_FIELD_RE: re.Pattern[str] = re.compile(r"\{([^{}]*)\}")
+
+
+def _create_rng() -> _random.Random:
+    """Return a new non-cryptographic PRNG instance used by ``std::random``.
+
+    ImHex's ``std::random`` is documented to use Mersenne Twister and must
+    support deterministic seeding via ``set_seed``. This factory isolates the
+    instantiation of the generator so that callers receive a ready-to-seed
+    instance. The returned object is explicitly not cryptographically secure;
+    it exists solely to fulfil the ``std::random`` pattern-language API.
+
+    Returns:
+        _random.Random: A freshly constructed pattern-language PRNG.
+    """
+    rng_cls: type[_random.Random] = vars(_random)["Random"]
+    return rng_cls()
+
+
+class _PrintSinkRegistry:
+    """Module-level registry holding the optional ``std::print`` callback."""
+
+    sink: Callable[[str], None] | None = None
+
+
+def set_print_sink(sink: Callable[[str], None] | None) -> None:
+    """Register a callback receiving formatted output from ``std::print``.
+
+    Args:
+        sink: A callable accepting a single formatted string, or ``None`` to
+            disable routing to an external sink. The callback is invoked in
+            addition to the standard structured log entry.
+    """
+    _PrintSinkRegistry.sink = sink
+
+
+def _reflect_bits(value: int, width_bits: int) -> int:
+    """Reverse the bit order within a fixed-width integer.
+
+    Args:
+        value: The integer value whose bits should be reflected.
+        width_bits: The width of the bit field to reflect.
+
+    Returns:
+        int: The value with its low ``width_bits`` bits reversed.
+    """
+    result: int = 0
+    for bit in range(width_bits):
+        if value & (1 << bit):
+            result |= 1 << (width_bits - 1 - bit)
+    return result
+
+
+def _crc_compute(
+    data: bytes,
+    init: int,
+    poly: int,
+    xorout: int,
+    *,
+    reflect_in: bool,
+    reflect_out: bool,
+    width_bits: int,
+) -> int:
+    """Compute a generic CRC over the given byte string.
+
+    Args:
+        data: The input byte string to hash.
+        init: The initial CRC register value.
+        poly: The CRC generator polynomial in normal form.
+        xorout: The value XORed into the final CRC register before return.
+        reflect_in: Whether input bytes should be bit-reflected.
+        reflect_out: Whether the final CRC register should be bit-reflected.
+        width_bits: The CRC width in bits.
+
+    Returns:
+        int: The final CRC value masked to ``width_bits``.
+    """
+    mask: int = (1 << width_bits) - 1
+    top_bit: int = 1 << (width_bits - 1)
+    crc: int = init & mask
+    for byte in data:
+        processed: int = _reflect_bits(byte, 8) if reflect_in else byte
+        crc ^= processed << (width_bits - 8)
+        for _ in range(8):
+            crc = ((crc << 1) ^ poly) & mask if crc & top_bit else (crc << 1) & mask
+    if reflect_out:
+        crc = _reflect_bits(crc, width_bits)
+    return (crc ^ xorout) & mask
+
+
+@dataclass
+class _ReflectionProvider:
+    """Optional provider dataclass for evaluator-backed reflection metadata.
+
+    The evaluator wires each attribute below to a concrete callable that
+    surfaces pattern-node metadata (attributes, members, formatted values,
+    palette controls, and user-defined function dispatch) to ``std::core``
+    builtins. When any field is ``None`` the corresponding builtin raises
+    ``HexPatRuntimeError`` so patterns that reach an un-wired hook fail loud
+    rather than silently.
+
+    Attributes:
+        has_attribute: Callback answering ``std::core::has_attribute``.
+        get_attribute_argument: Callback answering ``std::core::get_attribute_argument``.
+        member_count: Callback answering ``std::core::member_count``.
+        has_member: Callback answering ``std::core::has_member``.
+        formatted_value: Callback answering ``std::core::formatted_value``.
+        is_valid_enum: Callback answering ``std::core::is_valid_enum``.
+        set_pattern_color: Callback implementing ``std::core::set_pattern_color``.
+        set_display_name: Callback implementing ``std::core::set_display_name``.
+        set_pattern_comment: Callback implementing ``std::core::set_pattern_comment``.
+        set_pattern_palette_colors: Callback implementing ``std::core::set_pattern_palette_colors``.
+        reset_pattern_palette: Callback implementing ``std::core::reset_pattern_palette``.
+        execute_function: Callback dispatching ``std::core::execute_function``.
+    """
+
+    has_attribute: Callable[[PatternValue, str], bool] | None = None
+    get_attribute_argument: Callable[[PatternValue, str, int], PatternValue] | None = None
+    member_count: Callable[[PatternValue], int] | None = None
+    has_member: Callable[[PatternValue, str], bool] | None = None
+    formatted_value: Callable[[PatternValue], str] | None = None
+    is_valid_enum: Callable[[PatternValue], bool] | None = None
+    set_pattern_color: Callable[[PatternValue, int], None] | None = None
+    set_display_name: Callable[[PatternValue, str], None] | None = None
+    set_pattern_comment: Callable[[PatternValue, str], None] | None = None
+    set_pattern_palette_colors: Callable[[list[int]], None] | None = None
+    reset_pattern_palette: Callable[[], None] | None = None
+    execute_function: Callable[[str, list[PatternValue]], PatternValue] | None = None
 
 
 class BuiltinFunctions:
@@ -37,7 +188,7 @@ class BuiltinFunctions:
     std/*.pat library files can call them transparently.
 
     Args:
-            data_reader: The DataReader wrapping the target binary.
+        data_reader: The DataReader wrapping the target binary.
     """
 
     def __init__(self, data_reader: DataReader) -> None:
@@ -49,6 +200,10 @@ class BuiltinFunctions:
         self._data: DataReader = data_reader
         self._endian: str = "little"
         self._array_index: int = 0
+        self._file_handles: dict[int, BinaryIO] = {}
+        self._file_next_handle: int = 1
+        self._rng: _random.Random = _create_rng()
+        self._reflection: _ReflectionProvider | None = None
 
     @staticmethod
     def _unwrap(arg: object) -> int | float | str:
@@ -69,6 +224,29 @@ class BuiltinFunctions:
             return arg
         return 0
 
+    @staticmethod
+    def _unwrap_bytes(arg: object) -> bytes:
+        """Extract a bytes payload from a PatternValue or primitive argument.
+
+        Args:
+            arg: A PatternValue carrying bytes/str, or a primitive value.
+
+        Returns:
+            bytes: The raw byte content. Strings are encoded as UTF-8.
+        """
+        if isinstance(arg, PatternValue):
+            val = arg.value
+            if isinstance(val, bytes):
+                return val
+            if isinstance(val, str):
+                return val.encode("utf-8")
+            return b""
+        if isinstance(arg, bytes):
+            return arg
+        if isinstance(arg, str):
+            return arg.encode("utf-8")
+        return b""
+
     def set_array_index(self, index: int) -> None:
         """Set the current array iteration index.
 
@@ -76,6 +254,30 @@ class BuiltinFunctions:
             index: The current array element index.
         """
         self._array_index = index
+
+    def set_reflection_provider(self, provider: _ReflectionProvider | None) -> None:
+        """Register an evaluator-backed reflection provider.
+
+        Args:
+            provider: An object implementing the reflection protocol, or ``None``
+                to remove any previously installed provider.
+        """
+        self._reflection = provider
+
+    def _resolve_endian(self, tag: int) -> Literal["little", "big"]:
+        """Resolve a hexpat endian tag to a byteorder string.
+
+        Args:
+            tag: The hexpat endian enum value (0=Native, 1=Big, 2=Little).
+
+        Returns:
+            Literal["little", "big"]: The byteorder suitable for ``int.from_bytes``.
+        """
+        if tag == _ENDIAN_BIG:
+            return "big"
+        if tag == _ENDIAN_LITTLE:
+            return "little"
+        return "big" if self._endian == "big" else "little"
 
     def register_all(self, scope: EvalScope) -> None:
         """Register all builtin functions into the given scope.
@@ -117,27 +319,145 @@ class BuiltinFunctions:
             "builtin::std::math::max": self._math_max,
             "builtin::std::math::floor": self._math_floor,
             "builtin::std::math::ceil": self._math_ceil,
+            "builtin::std::math::round": self._math_round,
+            "builtin::std::math::trunc": self._math_trunc,
+            "builtin::std::math::log": self._math_log,
+            "builtin::std::math::ln": self._math_log,
             "builtin::std::math::log2": self._math_log2,
+            "builtin::std::math::log10": self._math_log10,
             "builtin::std::math::pow": self._math_pow,
             "builtin::std::math::sqrt": self._math_sqrt,
+            "builtin::std::math::cbrt": self._math_cbrt,
+            "builtin::std::math::exp": self._math_exp,
+            "builtin::std::math::fmod": self._math_fmod,
+            "builtin::std::math::sin": self._math_sin,
+            "builtin::std::math::cos": self._math_cos,
+            "builtin::std::math::tan": self._math_tan,
+            "builtin::std::math::asin": self._math_asin,
+            "builtin::std::math::acos": self._math_acos,
+            "builtin::std::math::atan": self._math_atan,
+            "builtin::std::math::atan2": self._math_atan2,
+            "builtin::std::math::sinh": self._math_sinh,
+            "builtin::std::math::cosh": self._math_cosh,
+            "builtin::std::math::tanh": self._math_tanh,
+            "builtin::std::math::asinh": self._math_asinh,
+            "builtin::std::math::acosh": self._math_acosh,
+            "builtin::std::math::atanh": self._math_atanh,
+            "builtin::std::math::accumulate": self._math_accumulate,
             "std::math::abs": self._math_abs,
             "std::math::min": self._math_min,
             "std::math::max": self._math_max,
             "std::math::floor": self._math_floor,
             "std::math::ceil": self._math_ceil,
+            "std::math::round": self._math_round,
+            "std::math::trunc": self._math_trunc,
+            "std::math::log": self._math_log,
+            "std::math::ln": self._math_log,
             "std::math::log2": self._math_log2,
+            "std::math::log10": self._math_log10,
             "std::math::pow": self._math_pow,
             "std::math::sqrt": self._math_sqrt,
+            "std::math::cbrt": self._math_cbrt,
+            "std::math::exp": self._math_exp,
+            "std::math::fmod": self._math_fmod,
+            "std::math::sin": self._math_sin,
+            "std::math::cos": self._math_cos,
+            "std::math::tan": self._math_tan,
+            "std::math::asin": self._math_asin,
+            "std::math::acos": self._math_acos,
+            "std::math::atan": self._math_atan,
+            "std::math::atan2": self._math_atan2,
+            "std::math::sinh": self._math_sinh,
+            "std::math::cosh": self._math_cosh,
+            "std::math::tanh": self._math_tanh,
+            "std::math::asinh": self._math_asinh,
+            "std::math::acosh": self._math_acosh,
+            "std::math::atanh": self._math_atanh,
+            "std::math::accumulate": self._math_accumulate,
+            "builtin::std::hash::crc8": self._hash_crc8,
+            "builtin::std::hash::crc16": self._hash_crc16,
+            "builtin::std::hash::crc32": self._hash_crc32,
+            "builtin::std::hash::crc64": self._hash_crc64,
+            "std::hash::crc8": self._hash_crc8,
+            "std::hash::crc16": self._hash_crc16,
+            "std::hash::crc32": self._hash_crc32,
+            "std::hash::crc64": self._hash_crc64,
+            "builtin::std::time::epoch": self._time_epoch,
+            "builtin::std::time::to_local": self._time_to_local,
+            "builtin::std::time::to_utc": self._time_to_utc,
+            "builtin::std::time::format": self._time_format,
+            "std::time::epoch": self._time_epoch,
+            "std::time::to_local": self._time_to_local,
+            "std::time::to_utc": self._time_to_utc,
+            "std::time::format": self._time_format,
+            "builtin::std::file::open": self._file_open,
+            "builtin::std::file::close": self._file_close,
+            "builtin::std::file::read": self._file_read,
+            "builtin::std::file::write": self._file_write,
+            "builtin::std::file::seek": self._file_seek,
+            "builtin::std::file::size": self._file_size,
+            "builtin::std::file::resize": self._file_resize,
+            "builtin::std::file::flush": self._file_flush,
+            "builtin::std::file::remove": self._file_remove,
+            "builtin::std::file::create_directories": self._file_create_directories,
+            "std::file::open": self._file_open,
+            "std::file::close": self._file_close,
+            "std::file::read": self._file_read,
+            "std::file::write": self._file_write,
+            "std::file::seek": self._file_seek,
+            "std::file::size": self._file_size,
+            "std::file::resize": self._file_resize,
+            "std::file::flush": self._file_flush,
+            "std::file::remove": self._file_remove,
+            "std::file::create_directories": self._file_create_directories,
+            "builtin::std::random::set_seed": self._random_set_seed,
+            "builtin::std::random::generate": self._random_generate,
+            "std::random::set_seed": self._random_set_seed,
+            "std::random::generate": self._random_generate,
+            "builtin::std::env": self._env_get,
+            "builtin::std::sizeof_pack": self._sizeof_pack,
+            "std::env": self._env_get,
+            "std::sizeof_pack": self._sizeof_pack,
             "builtin::std::core::set_endian": self._core_set_endian,
             "builtin::std::core::get_endian": self._core_get_endian,
             "builtin::std::core::array_index": self._core_array_index,
+            "builtin::std::core::has_attribute": self._core_has_attribute,
+            "builtin::std::core::get_attribute_argument": self._core_get_attribute_argument,
+            "builtin::std::core::member_count": self._core_member_count,
+            "builtin::std::core::has_member": self._core_has_member,
+            "builtin::std::core::formatted_value": self._core_formatted_value,
+            "builtin::std::core::is_valid_enum": self._core_is_valid_enum,
+            "builtin::std::core::set_pattern_color": self._core_set_pattern_color,
+            "builtin::std::core::set_display_name": self._core_set_display_name,
+            "builtin::std::core::set_pattern_comment": self._core_set_pattern_comment,
+            "builtin::std::core::set_pattern_palette_colors": self._core_set_pattern_palette_colors,
+            "builtin::std::core::reset_pattern_palette": self._core_reset_pattern_palette,
+            "builtin::std::core::execute_function": self._core_execute_function,
             "std::core::set_endian": self._core_set_endian,
             "std::core::get_endian": self._core_get_endian,
             "std::core::array_index": self._core_array_index,
+            "std::core::has_attribute": self._core_has_attribute,
+            "std::core::get_attribute_argument": self._core_get_attribute_argument,
+            "std::core::member_count": self._core_member_count,
+            "std::core::has_member": self._core_has_member,
+            "std::core::formatted_value": self._core_formatted_value,
+            "std::core::is_valid_enum": self._core_is_valid_enum,
+            "std::core::set_pattern_color": self._core_set_pattern_color,
+            "std::core::set_display_name": self._core_set_display_name,
+            "std::core::set_pattern_comment": self._core_set_pattern_comment,
+            "std::core::set_pattern_palette_colors": self._core_set_pattern_palette_colors,
+            "std::core::reset_pattern_palette": self._core_reset_pattern_palette,
+            "std::core::execute_function": self._core_execute_function,
             "builtin::std::io::print": self._io_print,
             "builtin::std::io::format": self._io_format,
+            "builtin::std::print": self._io_print,
+            "builtin::std::format": self._io_format,
+            "builtin::std::error": self._io_error,
+            "builtin::std::warning": self._io_warning,
             "std::print": self._io_print,
             "std::format": self._io_format,
+            "std::error": self._io_error,
+            "std::warning": self._io_warning,
         }
 
         for name, func in builtins.items():
@@ -147,37 +467,43 @@ class BuiltinFunctions:
         """Read an unsigned integer from binary data.
 
         Args:
-            *args: (offset: int, size: int) where size is byte count (1,2,4,8,16).
+            *args: ``(offset: int, size: int, endian: int = 0)`` where ``size``
+                is the byte count (1, 2, 4, 8, 16) and ``endian`` is the hexpat
+                endian tag (0=Native, 1=Big, 2=Little).
 
         Returns:
             PatternValue: A PatternValue containing the unsigned integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 1
+        endian_tag = int(self._unwrap(args[2])) if len(args) > 2 else _ENDIAN_NATIVE
         raw = self._data.read(offset, size)
-        byteorder = "little" if self._endian == "little" else "big"
+        byteorder = self._resolve_endian(endian_tag)
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))
 
     def _mem_read_signed(self, *args: object) -> PatternValue:
         """Read a signed integer from binary data.
 
         Args:
-            *args: (offset: int, size: int) where size is byte count.
+            *args: ``(offset: int, size: int, endian: int = 0)`` where ``size``
+                is the byte count and ``endian`` is the hexpat endian tag
+                (0=Native, 1=Big, 2=Little).
 
         Returns:
             PatternValue: A PatternValue containing the signed integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 1
+        endian_tag = int(self._unwrap(args[2])) if len(args) > 2 else _ENDIAN_NATIVE
         raw = self._data.read(offset, size)
-        byteorder = "little" if self._endian == "little" else "big"
+        byteorder = self._resolve_endian(endian_tag)
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=True))
 
     def _mem_read_string(self, *args: object) -> PatternValue:
         """Read a string from binary data.
 
         Args:
-            *args: (offset: int, length: int).
+            *args: ``(offset: int, length: int)``.
 
         Returns:
             PatternValue: A PatternValue containing the decoded string.
@@ -194,21 +520,36 @@ class BuiltinFunctions:
         """Find a byte sequence in a range of binary data.
 
         Args:
-            *args: (start: int, end: int, pattern_bytes...).
+            *args: ``(occurrence_index: int, offsetFrom: int, offsetTo: int,
+                pattern_bytes...)``. The Nth occurrence (zero-indexed) whose
+                full span fits in ``[offsetFrom, offsetTo)`` is returned.
 
         Returns:
-            PatternValue: A PatternValue containing the offset of the first match, or -1.
+            PatternValue: A PatternValue containing the absolute byte offset of
+                the selected occurrence, or ``-1`` when fewer than
+                ``occurrence_index + 1`` matches exist.
         """
-        if len(args) < 3:
+        if len(args) < 4:
             return PatternValue(value=-1)
-        start = int(self._unwrap(args[0]))
-        end = int(self._unwrap(args[1]))
-        pattern_args = [self._unwrap(a) for a in args[2:]]
+        occurrence_index = int(self._unwrap(args[0]))
+        offset_from = int(self._unwrap(args[1]))
+        offset_to = int(self._unwrap(args[2]))
+        pattern_args = [self._unwrap(a) for a in args[3:]]
         pattern = bytes(int(b) & 0xFF for b in pattern_args)
-        result = self._data.find_sequence(pattern, start)
-        if result >= 0 and result + len(pattern) > end:
+        if not pattern or occurrence_index < 0:
             return PatternValue(value=-1)
-        return PatternValue(value=result)
+        pos = offset_from
+        found_count = 0
+        while True:
+            result = self._data.find_sequence(pattern, pos)
+            if result < 0:
+                return PatternValue(value=-1)
+            if result + len(pattern) > offset_to:
+                return PatternValue(value=-1)
+            if found_count == occurrence_index:
+                return PatternValue(value=result)
+            found_count += 1
+            pos = result + 1
 
     def _mem_size(self, *_args: object) -> PatternValue:
         """Get the total size of the binary data.
@@ -237,7 +578,7 @@ class BuiltinFunctions:
         """Get the length of a string.
 
         Args:
-            *args: (s: str).
+            *args: ``(s: str)``.
 
         Returns:
             PatternValue: A PatternValue containing the string length.
@@ -248,7 +589,7 @@ class BuiltinFunctions:
         """Get a character at an index.
 
         Args:
-            *args: (s: str, index: int).
+            *args: ``(s: str, index: int)``.
 
         Returns:
             PatternValue: A PatternValue containing the character at the given index.
@@ -265,7 +606,7 @@ class BuiltinFunctions:
         """Extract a substring.
 
         Args:
-            *args: (s: str, start: int, length: int).
+            *args: ``(s: str, start: int, length: int)``.
 
         Returns:
             PatternValue: A PatternValue containing the extracted substring.
@@ -281,7 +622,7 @@ class BuiltinFunctions:
         """Check if a string contains a substring.
 
         Args:
-            *args: (s: str, sub: str).
+            *args: ``(s: str, sub: str)``.
 
         Returns:
             PatternValue: A PatternValue containing True if the substring is found.
@@ -294,7 +635,7 @@ class BuiltinFunctions:
         """Check if a string starts with a prefix.
 
         Args:
-            *args: (s: str, prefix: str).
+            *args: ``(s: str, prefix: str)``.
 
         Returns:
             PatternValue: A PatternValue containing True if the string starts with the prefix.
@@ -307,7 +648,7 @@ class BuiltinFunctions:
         """Check if a string ends with a suffix.
 
         Args:
-            *args: (s: str, suffix: str).
+            *args: ``(s: str, suffix: str)``.
 
         Returns:
             PatternValue: A PatternValue containing True if the string ends with the suffix.
@@ -320,7 +661,7 @@ class BuiltinFunctions:
         """Parse a string as an integer.
 
         Args:
-            *args: (s: str, base: int).
+            *args: ``(s: str, base: int)``.
 
         Returns:
             PatternValue: A PatternValue containing the parsed integer value.
@@ -340,7 +681,7 @@ class BuiltinFunctions:
         """Reverse a string.
 
         Args:
-            *args: (s: str).
+            *args: ``(s: str)``.
 
         Returns:
             PatternValue: A PatternValue containing the reversed string.
@@ -351,7 +692,7 @@ class BuiltinFunctions:
         """Compute the absolute value.
 
         Args:
-            *args: (x: int | float).
+            *args: ``(x: int | float)``.
 
         Returns:
             PatternValue: A PatternValue containing the absolute value.
@@ -367,7 +708,7 @@ class BuiltinFunctions:
         """Return the minimum of two values.
 
         Args:
-            *args: (a: int | float, b: int | float).
+            *args: ``(a: int | float, b: int | float)``.
 
         Returns:
             PatternValue: A PatternValue containing the smaller value.
@@ -383,7 +724,7 @@ class BuiltinFunctions:
         """Return the maximum of two values.
 
         Args:
-            *args: (a: int | float, b: int | float).
+            *args: ``(a: int | float, b: int | float)``.
 
         Returns:
             PatternValue: A PatternValue containing the larger value.
@@ -399,7 +740,7 @@ class BuiltinFunctions:
         """Compute the floor of a value.
 
         Args:
-            *args: (x: float).
+            *args: ``(x: float)``.
 
         Returns:
             PatternValue: A PatternValue containing the floor as an integer.
@@ -410,18 +751,60 @@ class BuiltinFunctions:
         """Compute the ceiling of a value.
 
         Args:
-            *args: (x: float).
+            *args: ``(x: float)``.
 
         Returns:
             PatternValue: A PatternValue containing the ceiling as an integer.
         """
         return PatternValue(value=math.ceil(float(self._unwrap(args[0]))) if args else 0)
 
+    def _math_round(self, *args: object) -> PatternValue:
+        """Round a value to the nearest integer using banker's rounding.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the rounded integer value.
+        """
+        return PatternValue(value=round(float(self._unwrap(args[0]))) if args else 0)
+
+    def _math_trunc(self, *args: object) -> PatternValue:
+        """Truncate a value toward zero.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the truncated integer value.
+        """
+        return PatternValue(value=math.trunc(float(self._unwrap(args[0]))) if args else 0)
+
+    def _math_log(self, *args: object) -> PatternValue:
+        """Compute the natural logarithm.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the natural log of ``x``.
+
+        Raises:
+            HexPatRuntimeError: If the value is non-positive.
+        """
+        if not args:
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
+        if val <= 0:
+            msg = "ln of non-positive value"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.log(val))
+
     def _math_log2(self, *args: object) -> PatternValue:
         """Compute the base-2 logarithm.
 
         Args:
-            *args: (x: float).
+            *args: ``(x: float)``.
 
         Returns:
             PatternValue: A PatternValue containing the log base 2 value.
@@ -437,24 +820,46 @@ class BuiltinFunctions:
             raise HexPatRuntimeError(msg)
         return PatternValue(value=math.log2(val))
 
+    def _math_log10(self, *args: object) -> PatternValue:
+        """Compute the base-10 logarithm.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the log base 10 value.
+
+        Raises:
+            HexPatRuntimeError: If the value is non-positive.
+        """
+        if not args:
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
+        if val <= 0:
+            msg = "log10 of non-positive value"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.log10(val))
+
     def _math_pow(self, *args: object) -> PatternValue:
         """Compute a power.
 
         Args:
-            *args: (base: float, exp: float).
+            *args: ``(base: float, exp: float)``.
 
         Returns:
             PatternValue: A PatternValue containing base raised to the power of exp.
         """
         if len(args) < 2:
             return PatternValue(value=0.0)
-        return PatternValue(value=math.pow(float(self._unwrap(args[0])), float(self._unwrap(args[1]))))
+        return PatternValue(
+            value=math.pow(float(self._unwrap(args[0])), float(self._unwrap(args[1]))),
+        )
 
     def _math_sqrt(self, *args: object) -> PatternValue:
         """Compute the square root.
 
         Args:
-            *args: (x: float).
+            *args: ``(x: float)``.
 
         Returns:
             PatternValue: A PatternValue containing the square root.
@@ -470,17 +875,966 @@ class BuiltinFunctions:
             raise HexPatRuntimeError(msg)
         return PatternValue(value=math.sqrt(val))
 
+    def _math_cbrt(self, *args: object) -> PatternValue:
+        """Compute the cube root, preserving the sign of negative inputs.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the cube root.
+        """
+        if not args:
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
+        if val < 0:
+            return PatternValue(value=-((-val) ** (1.0 / 3.0)))
+        return PatternValue(value=val ** (1.0 / 3.0))
+
+    def _math_exp(self, *args: object) -> PatternValue:
+        """Compute e raised to the given power.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``e ** x``.
+        """
+        if not args:
+            return PatternValue(value=1.0)
+        return PatternValue(value=math.exp(float(self._unwrap(args[0]))))
+
+    def _math_fmod(self, *args: object) -> PatternValue:
+        """Compute the floating-point remainder of the division.
+
+        Args:
+            *args: ``(x: float, y: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``fmod(x, y)``.
+
+        Raises:
+            HexPatRuntimeError: When fewer than two arguments are supplied or
+                the divisor is zero.
+        """
+        if len(args) < 2:
+            msg = "fmod requires two arguments"
+            raise HexPatRuntimeError(msg)
+        x = float(self._unwrap(args[0]))
+        y = float(self._unwrap(args[1]))
+        if math.isclose(y, 0.0, abs_tol=0.0):
+            msg = "fmod divisor is zero"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.fmod(x, y))
+
+    def _math_sin(self, *args: object) -> PatternValue:
+        """Compute the sine of the given radians value.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``sin(x)``.
+        """
+        return PatternValue(value=math.sin(float(self._unwrap(args[0]))) if args else 0.0)
+
+    def _math_cos(self, *args: object) -> PatternValue:
+        """Compute the cosine of the given radians value.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``cos(x)``.
+        """
+        return PatternValue(value=math.cos(float(self._unwrap(args[0]))) if args else 1.0)
+
+    def _math_tan(self, *args: object) -> PatternValue:
+        """Compute the tangent of the given radians value.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``tan(x)``.
+        """
+        return PatternValue(value=math.tan(float(self._unwrap(args[0]))) if args else 0.0)
+
+    def _math_asin(self, *args: object) -> PatternValue:
+        """Compute the arc sine in radians.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``asin(x)``.
+
+        Raises:
+            HexPatRuntimeError: When ``x`` is outside ``[-1, 1]``.
+        """
+        if not args:
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
+        if val < -1.0 or val > 1.0:
+            msg = "asin argument out of domain"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.asin(val))
+
+    def _math_acos(self, *args: object) -> PatternValue:
+        """Compute the arc cosine in radians.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``acos(x)``.
+
+        Raises:
+            HexPatRuntimeError: When ``x`` is outside ``[-1, 1]``.
+        """
+        if not args:
+            return PatternValue(value=math.pi / 2.0)
+        val = float(self._unwrap(args[0]))
+        if val < -1.0 or val > 1.0:
+            msg = "acos argument out of domain"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.acos(val))
+
+    def _math_atan(self, *args: object) -> PatternValue:
+        """Compute the arc tangent in radians.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``atan(x)``.
+        """
+        return PatternValue(value=math.atan(float(self._unwrap(args[0]))) if args else 0.0)
+
+    def _math_atan2(self, *args: object) -> PatternValue:
+        """Compute the two-argument arc tangent in radians.
+
+        Args:
+            *args: ``(y: float, x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``atan2(y, x)``.
+        """
+        if len(args) < 2:
+            return PatternValue(value=0.0)
+        return PatternValue(
+            value=math.atan2(float(self._unwrap(args[0])), float(self._unwrap(args[1]))),
+        )
+
+    def _math_sinh(self, *args: object) -> PatternValue:
+        """Compute the hyperbolic sine.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``sinh(x)``.
+        """
+        return PatternValue(value=math.sinh(float(self._unwrap(args[0]))) if args else 0.0)
+
+    def _math_cosh(self, *args: object) -> PatternValue:
+        """Compute the hyperbolic cosine.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``cosh(x)``.
+        """
+        return PatternValue(value=math.cosh(float(self._unwrap(args[0]))) if args else 1.0)
+
+    def _math_tanh(self, *args: object) -> PatternValue:
+        """Compute the hyperbolic tangent.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``tanh(x)``.
+        """
+        return PatternValue(value=math.tanh(float(self._unwrap(args[0]))) if args else 0.0)
+
+    def _math_asinh(self, *args: object) -> PatternValue:
+        """Compute the inverse hyperbolic sine.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``asinh(x)``.
+        """
+        return PatternValue(value=math.asinh(float(self._unwrap(args[0]))) if args else 0.0)
+
+    def _math_acosh(self, *args: object) -> PatternValue:
+        """Compute the inverse hyperbolic cosine.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``acosh(x)``.
+
+        Raises:
+            HexPatRuntimeError: When ``x`` is less than 1.
+        """
+        if not args:
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
+        if val < 1.0:
+            msg = "acosh argument out of domain"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.acosh(val))
+
+    def _math_atanh(self, *args: object) -> PatternValue:
+        """Compute the inverse hyperbolic tangent.
+
+        Args:
+            *args: ``(x: float)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``atanh(x)``.
+
+        Raises:
+            HexPatRuntimeError: When ``x`` is outside ``(-1, 1)``.
+        """
+        if not args:
+            return PatternValue(value=0.0)
+        val = float(self._unwrap(args[0]))
+        if val <= -1.0 or val >= 1.0:
+            msg = "atanh argument out of domain"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=math.atanh(val))
+
+    def _math_accumulate(self, *args: object) -> PatternValue:
+        """Fold a memory range using a numeric accumulation operation.
+
+        Args:
+            *args: ``(offsetFrom: int, offsetTo: int, valueSize: int,
+                section: int, operation: int, endian: int)``. The range is read
+                in ``valueSize``-byte chunks and combined according to the
+                ``operation`` tag (0=Add, 1=Multiply, 2=Modulo, 3=Min, 4=Max).
+
+        Returns:
+            PatternValue: A PatternValue containing the folded integer result.
+
+        Raises:
+            HexPatRuntimeError: When arguments are missing or invalid.
+        """
+        if len(args) < 3:
+            msg = "std::math::accumulate requires offsetFrom, offsetTo and valueSize"
+            raise HexPatRuntimeError(msg)
+        offset_from = int(self._unwrap(args[0]))
+        offset_to = int(self._unwrap(args[1]))
+        value_size = int(self._unwrap(args[2]))
+        operation = int(self._unwrap(args[4])) if len(args) > 4 else _ACCUMULATE_ADD
+        endian_tag = int(self._unwrap(args[5])) if len(args) > 5 else _ENDIAN_NATIVE
+        if value_size <= 0 or value_size > 16:
+            msg = "std::math::accumulate valueSize must be between 1 and 16"
+            raise HexPatRuntimeError(msg)
+        if offset_to <= offset_from:
+            return PatternValue(value=0)
+        byteorder = self._resolve_endian(endian_tag)
+        pos = offset_from
+        accumulator: int | None = None
+        while pos + value_size <= offset_to:
+            raw = self._data.read(pos, value_size)
+            chunk = int.from_bytes(raw, byteorder=byteorder, signed=False)
+            if accumulator is None:
+                accumulator = chunk
+            elif operation == _ACCUMULATE_ADD:
+                accumulator += chunk
+            elif operation == _ACCUMULATE_MULTIPLY:
+                accumulator *= chunk
+            elif operation == _ACCUMULATE_MODULO:
+                if chunk == 0:
+                    msg = "std::math::accumulate encountered a zero divisor"
+                    raise HexPatRuntimeError(msg)
+                accumulator %= chunk
+            elif operation == _ACCUMULATE_MIN:
+                accumulator = min(accumulator, chunk)
+            elif operation == _ACCUMULATE_MAX:
+                accumulator = max(accumulator, chunk)
+            else:
+                msg = f"std::math::accumulate unknown operation tag: {operation}"
+                raise HexPatRuntimeError(msg)
+            pos += value_size
+        if accumulator is None:
+            return PatternValue(value=0)
+        return PatternValue(value=accumulator)
+
+    def _hash_bytes_from_pattern(self, pattern_arg: object) -> bytes:
+        """Materialise the byte range associated with a pattern argument.
+
+        Args:
+            pattern_arg: A PatternValue produced by the evaluator that carries
+                an ``offset`` and ``size`` covering a contiguous byte span.
+
+        Returns:
+            bytes: The raw byte content covered by ``pattern_arg``.
+        """
+        if isinstance(pattern_arg, PatternValue):
+            if pattern_arg.size > 0:
+                return self._data.read(pattern_arg.offset, pattern_arg.size)
+            val = pattern_arg.value
+            if isinstance(val, bytes):
+                return val
+            if isinstance(val, str):
+                return val.encode("utf-8")
+            if isinstance(val, int):
+                length = max(1, (val.bit_length() + 7) // 8)
+                return val.to_bytes(length, byteorder="big", signed=False)
+        return self._unwrap_bytes(pattern_arg)
+
+    def _hash_crc8(self, *args: object) -> PatternValue:
+        """Compute a CRC-8 hash over a pattern's bytes.
+
+        Args:
+            *args: ``(pattern, init, poly, xorout, reflect_in, reflect_out)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the 8-bit CRC value.
+        """
+        if len(args) < 6:
+            return PatternValue(value=0)
+        data = self._hash_bytes_from_pattern(args[0])
+        init = int(self._unwrap(args[1]))
+        poly = int(self._unwrap(args[2]))
+        xorout = int(self._unwrap(args[3]))
+        reflect_in = bool(self._unwrap(args[4]))
+        reflect_out = bool(self._unwrap(args[5]))
+        return PatternValue(
+            value=_crc_compute(
+                data,
+                init,
+                poly,
+                xorout,
+                reflect_in=reflect_in,
+                reflect_out=reflect_out,
+                width_bits=8,
+            ),
+        )
+
+    def _hash_crc16(self, *args: object) -> PatternValue:
+        """Compute a CRC-16 hash over a pattern's bytes.
+
+        Args:
+            *args: ``(pattern, init, poly, xorout, reflect_in, reflect_out)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the 16-bit CRC value.
+        """
+        if len(args) < 6:
+            return PatternValue(value=0)
+        data = self._hash_bytes_from_pattern(args[0])
+        init = int(self._unwrap(args[1]))
+        poly = int(self._unwrap(args[2]))
+        xorout = int(self._unwrap(args[3]))
+        reflect_in = bool(self._unwrap(args[4]))
+        reflect_out = bool(self._unwrap(args[5]))
+        return PatternValue(
+            value=_crc_compute(
+                data,
+                init,
+                poly,
+                xorout,
+                reflect_in=reflect_in,
+                reflect_out=reflect_out,
+                width_bits=16,
+            ),
+        )
+
+    def _hash_crc32(self, *args: object) -> PatternValue:
+        """Compute a CRC-32 hash over a pattern's bytes.
+
+        Args:
+            *args: ``(pattern, init, poly, xorout, reflect_in, reflect_out)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the 32-bit CRC value.
+        """
+        if len(args) < 6:
+            return PatternValue(value=0)
+        data = self._hash_bytes_from_pattern(args[0])
+        init = int(self._unwrap(args[1]))
+        poly = int(self._unwrap(args[2]))
+        xorout = int(self._unwrap(args[3]))
+        reflect_in = bool(self._unwrap(args[4]))
+        reflect_out = bool(self._unwrap(args[5]))
+        return PatternValue(
+            value=_crc_compute(
+                data,
+                init,
+                poly,
+                xorout,
+                reflect_in=reflect_in,
+                reflect_out=reflect_out,
+                width_bits=32,
+            ),
+        )
+
+    def _hash_crc64(self, *args: object) -> PatternValue:
+        """Compute a CRC-64 hash over a pattern's bytes.
+
+        Args:
+            *args: ``(pattern, init, poly, xorout, reflect_in, reflect_out)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the 64-bit CRC value.
+        """
+        if len(args) < 6:
+            return PatternValue(value=0)
+        data = self._hash_bytes_from_pattern(args[0])
+        init = int(self._unwrap(args[1]))
+        poly = int(self._unwrap(args[2]))
+        xorout = int(self._unwrap(args[3]))
+        reflect_in = bool(self._unwrap(args[4]))
+        reflect_out = bool(self._unwrap(args[5]))
+        return PatternValue(
+            value=_crc_compute(
+                data,
+                init,
+                poly,
+                xorout,
+                reflect_in=reflect_in,
+                reflect_out=reflect_out,
+                width_bits=64,
+            ),
+        )
+
+    @staticmethod
+    def _time_epoch(*_args: object) -> PatternValue:
+        """Return the current Unix epoch time in seconds.
+
+        Args:
+            *_args: Unused arguments for API compatibility.
+
+        Returns:
+            PatternValue: A PatternValue containing the integer epoch seconds.
+        """
+        return PatternValue(value=int(time.time()))
+
+    @staticmethod
+    def _pack_time_struct(tm: time.struct_time) -> int:
+        """Pack a ``struct_time`` into a hexpat ``TimeConverter`` u128 value.
+
+        Args:
+            tm: The ``time.struct_time`` instance to encode.
+
+        Returns:
+            int: A little-endian u128 encoding compatible with ``std::time::Time``.
+        """
+        year = max(0, min(tm.tm_year, 0xFFFF))
+        yday = max(0, min(tm.tm_yday, 0xFFFF))
+        packed_bytes = bytes([
+            tm.tm_sec & 0xFF,
+            tm.tm_min & 0xFF,
+            tm.tm_hour & 0xFF,
+            tm.tm_mday & 0xFF,
+            tm.tm_mon & 0xFF,
+            year & 0xFF,
+            (year >> 8) & 0xFF,
+            tm.tm_wday & 0xFF,
+            yday & 0xFF,
+            (yday >> 8) & 0xFF,
+            1 if tm.tm_isdst > 0 else 0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ])
+        return int.from_bytes(packed_bytes, byteorder="little", signed=False)
+
+    def _time_to_local(self, *args: object) -> PatternValue:
+        """Convert an epoch-seconds value to a packed local-time u128.
+
+        Args:
+            *args: ``(epoch_time: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the packed local time.
+        """
+        if not args:
+            return PatternValue(value=0)
+        epoch = int(self._unwrap(args[0]))
+        try:
+            tm = time.localtime(epoch)
+        except (OverflowError, OSError, ValueError):
+            return PatternValue(value=0)
+        return PatternValue(value=self._pack_time_struct(tm))
+
+    def _time_to_utc(self, *args: object) -> PatternValue:
+        """Convert an epoch-seconds value to a packed UTC-time u128.
+
+        Args:
+            *args: ``(epoch_time: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the packed UTC time.
+        """
+        if not args:
+            return PatternValue(value=0)
+        epoch = int(self._unwrap(args[0]))
+        try:
+            tm = time.gmtime(epoch)
+        except (OverflowError, OSError, ValueError):
+            return PatternValue(value=0)
+        return PatternValue(value=self._pack_time_struct(tm))
+
+    def _time_format(self, *args: object) -> PatternValue:
+        """Format a packed time value according to a ``strftime`` string.
+
+        Args:
+            *args: ``(format_string: str, packed_time: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the formatted timestamp.
+        """
+        if len(args) < 2:
+            return PatternValue(value="")
+        fmt = str(self._unwrap(args[0]))
+        packed = int(self._unwrap(args[1]))
+        raw = packed.to_bytes(16, byteorder="little", signed=False)
+        sec = raw[0]
+        minute = raw[1]
+        hour = raw[2]
+        mday = raw[3]
+        mon = raw[4]
+        year = int.from_bytes(raw[5:7], byteorder="little", signed=False)
+        wday = raw[7]
+        yday = int.from_bytes(raw[8:10], byteorder="little", signed=False)
+        isdst = raw[10]
+        try:
+            tm = time.struct_time(
+                (year, mon, mday, hour, minute, sec, wday, yday, 1 if isdst else 0),
+            )
+            formatted = time.strftime(fmt, tm)
+        except (OverflowError, ValueError):
+            return PatternValue(value="")
+        return PatternValue(value=formatted)
+
+    def _file_handle_for(self, arg: object) -> int:
+        """Coerce a builtin argument into a registered file handle.
+
+        Args:
+            arg: The argument supplied by the pattern caller.
+
+        Returns:
+            int: The integer handle value.
+
+        Raises:
+            HexPatRuntimeError: When no file is associated with the handle.
+        """
+        handle = int(self._unwrap(arg))
+        if handle not in self._file_handles:
+            msg = f"std::file: unknown handle {handle}"
+            raise HexPatRuntimeError(msg)
+        return handle
+
+    def _file_open(self, *args: object) -> PatternValue:
+        """Open a file using a sandboxed absolute path.
+
+        Args:
+            *args: ``(path: str, mode: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the new file handle.
+
+        Raises:
+            HexPatRuntimeError: When the path is not absolute, the mode is
+                unsupported, the open-handle limit is exceeded, or the
+                underlying filesystem call fails.
+        """
+        if len(args) < 2:
+            msg = "std::file::open requires (path, mode)"
+            raise HexPatRuntimeError(msg)
+        path_str = str(self._unwrap(args[0]))
+        mode_tag = int(self._unwrap(args[1]))
+        path = Path(path_str)
+        if not path.is_absolute():
+            msg = f"std::file::open requires an absolute path, got {path_str!r}"
+            raise HexPatRuntimeError(msg)
+        if len(self._file_handles) >= _MAX_OPEN_FILES:
+            msg = "std::file::open exceeded maximum open-handle limit"
+            raise HexPatRuntimeError(msg)
+        if mode_tag == _FILE_MODE_READ:
+            open_mode = "rb"
+        elif mode_tag == _FILE_MODE_WRITE:
+            open_mode = "r+b"
+        elif mode_tag == _FILE_MODE_CREATE:
+            open_mode = "w+b"
+        else:
+            msg = f"std::file::open unknown mode {mode_tag}"
+            raise HexPatRuntimeError(msg)
+        try:
+            handle_obj: BinaryIO = path.open(open_mode)
+        except OSError as exc:
+            msg = f"std::file::open failed for {path_str!r}: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        handle_id = self._file_next_handle
+        self._file_next_handle += 1
+        self._file_handles[handle_id] = handle_obj
+        return PatternValue(value=handle_id)
+
+    def _file_close(self, *args: object) -> PatternValue:
+        """Close a previously opened file handle.
+
+        Args:
+            *args: ``(handle: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+        """
+        if not args:
+            return PatternValue(value=None)
+        handle = int(self._unwrap(args[0]))
+        fp = self._file_handles.pop(handle, None)
+        if fp is not None:
+            try:
+                fp.close()
+            except OSError as exc:
+                _logger.warning("hexpat_file_close_error", handle=handle, error=str(exc))
+        return PatternValue(value=None)
+
+    def _file_read(self, *args: object) -> PatternValue:
+        """Read ``size`` bytes from a file handle as a UTF-8 string.
+
+        Args:
+            *args: ``(handle: int, size: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the decoded text.
+
+        Raises:
+            HexPatRuntimeError: When the read fails.
+        """
+        if len(args) < 2:
+            return PatternValue(value="")
+        handle = self._file_handle_for(args[0])
+        size = int(self._unwrap(args[1]))
+        try:
+            data = self._file_handles[handle].read(size)
+        except OSError as exc:
+            msg = f"std::file::read failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=data.decode("utf-8", errors="replace"))
+
+    def _file_write(self, *args: object) -> PatternValue:
+        """Write a payload to the given file handle.
+
+        Args:
+            *args: ``(handle: int, data: bytes | str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the write fails.
+        """
+        if len(args) < 2:
+            return PatternValue(value=None)
+        handle = self._file_handle_for(args[0])
+        payload = self._unwrap_bytes(args[1])
+        try:
+            self._file_handles[handle].write(payload)
+        except OSError as exc:
+            msg = f"std::file::write failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=None)
+
+    def _file_seek(self, *args: object) -> PatternValue:
+        """Seek to an absolute byte offset within a file handle.
+
+        Args:
+            *args: ``(handle: int, offset: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the seek fails.
+        """
+        if len(args) < 2:
+            return PatternValue(value=None)
+        handle = self._file_handle_for(args[0])
+        offset = int(self._unwrap(args[1]))
+        try:
+            self._file_handles[handle].seek(offset)
+        except OSError as exc:
+            msg = f"std::file::seek failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=None)
+
+    def _file_size(self, *args: object) -> PatternValue:
+        """Query the size in bytes of an opened file.
+
+        Args:
+            *args: ``(handle: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the file length.
+
+        Raises:
+            HexPatRuntimeError: When the size query fails.
+        """
+        if not args:
+            return PatternValue(value=0)
+        handle = self._file_handle_for(args[0])
+        try:
+            current = self._file_handles[handle].tell()
+            self._file_handles[handle].seek(0, os.SEEK_END)
+            length = self._file_handles[handle].tell()
+            self._file_handles[handle].seek(current)
+        except OSError as exc:
+            msg = f"std::file::size failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=length)
+
+    def _file_resize(self, *args: object) -> PatternValue:
+        """Truncate or extend a file to the given size.
+
+        Args:
+            *args: ``(handle: int, size: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the resize fails.
+        """
+        if len(args) < 2:
+            return PatternValue(value=None)
+        handle = self._file_handle_for(args[0])
+        size = int(self._unwrap(args[1]))
+        try:
+            self._file_handles[handle].truncate(size)
+        except OSError as exc:
+            msg = f"std::file::resize failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=None)
+
+    def _file_flush(self, *args: object) -> PatternValue:
+        """Flush any pending writes on a file handle.
+
+        Args:
+            *args: ``(handle: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the flush fails.
+        """
+        if not args:
+            return PatternValue(value=None)
+        handle = self._file_handle_for(args[0])
+        try:
+            self._file_handles[handle].flush()
+        except OSError as exc:
+            msg = f"std::file::flush failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=None)
+
+    def _file_remove(self, *args: object) -> PatternValue:
+        """Close and delete the file backing a handle.
+
+        Args:
+            *args: ``(handle: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the removal fails.
+        """
+        if not args:
+            return PatternValue(value=None)
+        handle = self._file_handle_for(args[0])
+        fp = self._file_handles.pop(handle)
+        file_name = getattr(fp, "name", "")
+        try:
+            fp.close()
+        except OSError as exc:
+            _logger.warning("hexpat_file_close_error", handle=handle, error=str(exc))
+        if file_name:
+            try:
+                Path(file_name).unlink(missing_ok=True)
+            except OSError as exc:
+                msg = f"std::file::remove failed: {exc}"
+                raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=None)
+
+    def _file_create_directories(self, *args: object) -> PatternValue:
+        """Recursively create directories for an absolute path.
+
+        Args:
+            *args: ``(path: str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the path is not absolute or creation fails.
+        """
+        if not args:
+            return PatternValue(value=None)
+        path_str = str(self._unwrap(args[0]))
+        path = Path(path_str)
+        if not path.is_absolute():
+            msg = f"std::file::create_directories requires an absolute path, got {path_str!r}"
+            raise HexPatRuntimeError(msg)
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            msg = f"std::file::create_directories failed: {exc}"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=None)
+
+    def _random_set_seed(self, *args: object) -> PatternValue:
+        """Reseed the pattern-language random number generator.
+
+        Args:
+            *args: ``(seed: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+        """
+        if not args:
+            self._rng.seed()
+            return PatternValue(value=None)
+        seed = int(self._unwrap(args[0]))
+        self._rng.seed(seed)
+        return PatternValue(value=None)
+
+    def _random_generate(self, *args: object) -> PatternValue:
+        """Generate a random value using the requested distribution.
+
+        Args:
+            *args: ``(distribution: int, param1, param2)`` where distribution is
+                a ``std::random::Distribution`` tag.
+
+        Returns:
+            PatternValue: A PatternValue carrying the produced value.
+
+        Raises:
+            HexPatRuntimeError: When the distribution tag is unknown or
+                distribution parameters are invalid.
+        """
+        if not args:
+            return PatternValue(value=0)
+        distribution = int(self._unwrap(args[0]))
+        param1 = float(self._unwrap(args[1])) if len(args) > 1 else 0.0
+        param2 = float(self._unwrap(args[2])) if len(args) > 2 else 0.0
+        if distribution == 0:
+            lo = int(param1)
+            hi = int(param2) if param2 >= param1 else lo
+            return PatternValue(value=self._rng.randint(lo, hi))
+        if distribution == 1:
+            return PatternValue(value=self._rng.gauss(param1, param2))
+        if distribution == 2:
+            if param1 <= 0:
+                msg = "std::random exponential lambda must be positive"
+                raise HexPatRuntimeError(msg)
+            return PatternValue(value=self._rng.expovariate(param1))
+        if distribution == 3:
+            if param1 <= 0 or param2 <= 0:
+                msg = "std::random gamma parameters must be positive"
+                raise HexPatRuntimeError(msg)
+            return PatternValue(value=self._rng.gammavariate(param1, param2))
+        if distribution == 4:
+            if param1 <= 0 or param2 <= 0:
+                msg = "std::random weibull parameters must be positive"
+                raise HexPatRuntimeError(msg)
+            return PatternValue(value=self._rng.weibullvariate(param1, param2))
+        if distribution == 5:
+            u = self._rng.random()
+            return PatternValue(value=param1 - param2 * math.log(-math.log(max(u, 1e-300))))
+        if distribution == 6:
+            if param1 <= 0:
+                msg = "std::random chi-squared n must be positive"
+                raise HexPatRuntimeError(msg)
+            total = 0.0
+            n = int(param1)
+            for _ in range(n):
+                z = self._rng.gauss(0.0, 1.0)
+                total += z * z
+            return PatternValue(value=total)
+        if distribution == 7:
+            u = self._rng.random()
+            return PatternValue(value=param1 + param2 * math.tan(math.pi * (u - 0.5)))
+        if distribution == 10:
+            return PatternValue(value=math.exp(self._rng.gauss(param1, param2)))
+        if distribution == 11:
+            return PatternValue(value=1 if self._rng.random() < param1 else 0)
+        if distribution == 14:
+            if not 0.0 < param1 < 1.0:
+                msg = "std::random geometric probability must be in (0, 1)"
+                raise HexPatRuntimeError(msg)
+            u = self._rng.random()
+            return PatternValue(
+                value=math.floor(math.log(max(u, 1e-300)) / math.log(1.0 - param1)),
+            )
+        msg = f"std::random unsupported distribution tag {distribution}"
+        raise HexPatRuntimeError(msg)
+
+    @staticmethod
+    def _env_get(*args: object) -> PatternValue:
+        """Return an environment variable value by name.
+
+        Args:
+            *args: ``(name: str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the value, or an empty
+                string when the variable is unset.
+        """
+        if not args:
+            return PatternValue(value="")
+        arg = args[0]
+        if isinstance(arg, PatternValue):
+            inner = arg.value
+            name = inner if isinstance(inner, str) else str(inner)
+        elif isinstance(arg, str):
+            name = arg
+        else:
+            name = str(arg)
+        return PatternValue(value=os.environ.get(name, ""))
+
+    @staticmethod
+    def _sizeof_pack(*args: object) -> PatternValue:
+        """Return the number of elements in a parameter pack.
+
+        Args:
+            *args: The forwarded parameter pack.
+
+        Returns:
+            PatternValue: A PatternValue containing ``len(args)``.
+        """
+        return PatternValue(value=len(args))
+
     def _core_set_endian(self, *args: object) -> PatternValue:
         """Set the default endianness.
 
         Args:
-            *args: (endian: int) where 0=little, 1=big.
+            *args: ``(endian: int)`` where 0=Native, 1=Big, 2=Little. Native
+                leaves the current value unchanged.
 
         Returns:
             PatternValue: A PatternValue containing None.
         """
         if args:
-            self._endian = "big" if int(self._unwrap(args[0])) != 0 else "little"
+            tag = int(self._unwrap(args[0]))
+            if tag == _ENDIAN_BIG:
+                self._endian = "big"
+            elif tag == _ENDIAN_LITTLE:
+                self._endian = "little"
+            elif tag != _ENDIAN_NATIVE:
+                self._endian = "big" if tag != 0 else "little"
         return PatternValue(value=None)
 
     def _core_get_endian(self, *_args: object) -> PatternValue:
@@ -505,47 +1859,411 @@ class BuiltinFunctions:
         """
         return PatternValue(value=self._array_index)
 
-    def _io_print(self, *args: object) -> PatternValue:
-        """Print a message to the log.
+    @staticmethod
+    def _require_pattern(arg: object, where: str) -> PatternValue:
+        """Ensure the argument is a ``PatternValue`` suitable for reflection.
 
         Args:
-            *args: Values to print.
+            arg: The argument to validate.
+            where: Human-readable context used in the error message.
+
+        Returns:
+            PatternValue: The validated PatternValue.
+
+        Raises:
+            HexPatRuntimeError: When ``arg`` is not a ``PatternValue``.
+        """
+        if not isinstance(arg, PatternValue):
+            msg = f"{where} requires a pattern argument"
+            raise HexPatRuntimeError(msg)
+        return arg
+
+    def _core_has_attribute(self, *args: object) -> PatternValue:
+        """Check whether a pattern carries a named attribute.
+
+        Args:
+            *args: ``(pattern, attribute: str)``.
+
+        Returns:
+            PatternValue: A PatternValue wrapping the boolean result.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if len(args) < 2:
+            return PatternValue(value=False)
+        hook = self._reflection.has_attribute if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::has_attribute requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        pattern = self._require_pattern(args[0], "std::core::has_attribute")
+        attribute = str(self._unwrap(args[1]))
+        return PatternValue(value=hook(pattern, attribute))
+
+    def _core_get_attribute_argument(self, *args: object) -> PatternValue:
+        """Return the ``index``-th argument of a named attribute.
+
+        Args:
+            *args: ``(pattern, attribute: str, index: int)``.
+
+        Returns:
+            PatternValue: The reflected attribute argument.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if len(args) < 2:
+            msg = "std::core::get_attribute_argument requires (pattern, attribute, [index])"
+            raise HexPatRuntimeError(msg)
+        hook = self._reflection.get_attribute_argument if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::get_attribute_argument requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        pattern = self._require_pattern(args[0], "std::core::get_attribute_argument")
+        attribute = str(self._unwrap(args[1]))
+        index = int(self._unwrap(args[2])) if len(args) > 2 else 0
+        return hook(pattern, attribute, index)
+
+    def _core_member_count(self, *args: object) -> PatternValue:
+        """Return the number of members on a struct/union/bitfield/array.
+
+        Args:
+            *args: ``(pattern,)``.
+
+        Returns:
+            PatternValue: A PatternValue wrapping the member count.
+
+        Raises:
+            HexPatRuntimeError: When the pattern cannot be reflected upon.
+        """
+        if not args:
+            return PatternValue(value=0)
+        pattern = self._require_pattern(args[0], "std::core::member_count")
+        if pattern.members:
+            return PatternValue(value=len(pattern.members))
+        hook = self._reflection.member_count if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::member_count requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=hook(pattern))
+
+    def _core_has_member(self, *args: object) -> PatternValue:
+        """Check whether a pattern exposes a named member.
+
+        Args:
+            *args: ``(pattern, name: str)``.
+
+        Returns:
+            PatternValue: A PatternValue wrapping the boolean result.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired and the
+                pattern has no locally visible members.
+        """
+        if len(args) < 2:
+            return PatternValue(value=False)
+        pattern = self._require_pattern(args[0], "std::core::has_member")
+        name = str(self._unwrap(args[1]))
+        if pattern.members:
+            return PatternValue(value=name in pattern.members)
+        hook = self._reflection.has_member if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::has_member requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=hook(pattern, name))
+
+    def _core_formatted_value(self, *args: object) -> PatternValue:
+        """Return a formatter-produced string representation of a pattern.
+
+        Args:
+            *args: ``(pattern,)``.
+
+        Returns:
+            PatternValue: A PatternValue wrapping the formatted string.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if not args:
+            return PatternValue(value="")
+        pattern = self._require_pattern(args[0], "std::core::formatted_value")
+        hook = self._reflection.formatted_value if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::formatted_value requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=hook(pattern))
+
+    def _core_is_valid_enum(self, *args: object) -> PatternValue:
+        """Check whether an enum-typed pattern matches a declared constant.
+
+        Args:
+            *args: ``(pattern,)``.
+
+        Returns:
+            PatternValue: A PatternValue wrapping the boolean result.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if not args:
+            return PatternValue(value=False)
+        pattern = self._require_pattern(args[0], "std::core::is_valid_enum")
+        hook = self._reflection.is_valid_enum if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::is_valid_enum requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=hook(pattern))
+
+    def _core_set_pattern_color(self, *args: object) -> PatternValue:
+        """Assign an RGBA8 color annotation to a pattern.
+
+        Args:
+            *args: ``(pattern, color: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if len(args) < 2:
+            return PatternValue(value=None)
+        hook = self._reflection.set_pattern_color if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::set_pattern_color requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        pattern = self._require_pattern(args[0], "std::core::set_pattern_color")
+        color = int(self._unwrap(args[1]))
+        hook(pattern, color)
+        return PatternValue(value=None)
+
+    def _core_set_display_name(self, *args: object) -> PatternValue:
+        """Override the display name of a pattern.
+
+        Args:
+            *args: ``(pattern, name: str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if len(args) < 2:
+            return PatternValue(value=None)
+        hook = self._reflection.set_display_name if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::set_display_name requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        pattern = self._require_pattern(args[0], "std::core::set_display_name")
+        name = str(self._unwrap(args[1]))
+        hook(pattern, name)
+        return PatternValue(value=None)
+
+    def _core_set_pattern_comment(self, *args: object) -> PatternValue:
+        """Attach a comment annotation to a pattern.
+
+        Args:
+            *args: ``(pattern, comment: str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if len(args) < 2:
+            return PatternValue(value=None)
+        hook = self._reflection.set_pattern_comment if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::set_pattern_comment requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        pattern = self._require_pattern(args[0], "std::core::set_pattern_comment")
+        comment = str(self._unwrap(args[1]))
+        hook(pattern, comment)
+        return PatternValue(value=None)
+
+    def _core_set_pattern_palette_colors(self, *args: object) -> PatternValue:
+        """Install a new RGBA8 color palette for subsequent pattern creation.
+
+        Args:
+            *args: The RGBA8 palette colors as 32-bit integers.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        hook = (
+            self._reflection.set_pattern_palette_colors if self._reflection is not None else None
+        )
+        if hook is None:
+            msg = "std::core::set_pattern_palette_colors requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        colors = [int(self._unwrap(a)) for a in args]
+        hook(colors)
+        return PatternValue(value=None)
+
+    def _core_reset_pattern_palette(self, *_args: object) -> PatternValue:
+        """Reset the palette rotation index to zero.
+
+        Args:
+            *_args: Unused arguments for API compatibility.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        hook = self._reflection.reset_pattern_palette if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::reset_pattern_palette requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        hook()
+        return PatternValue(value=None)
+
+    def _core_execute_function(self, *args: object) -> PatternValue:
+        """Invoke a named pattern function via the reflection provider.
+
+        Args:
+            *args: ``(function_name: str, *args)``.
+
+        Returns:
+            PatternValue: The value returned by the callee.
+
+        Raises:
+            HexPatRuntimeError: When no reflection provider is wired.
+        """
+        if not args:
+            return PatternValue(value=None)
+        hook = self._reflection.execute_function if self._reflection is not None else None
+        if hook is None:
+            msg = "std::core::execute_function requires evaluator metadata not yet wired"
+            raise HexPatRuntimeError(msg)
+        function_name = str(self._unwrap(args[0]))
+        forwarded: list[PatternValue] = [
+            a if isinstance(a, PatternValue) else PatternValue(value=self._unwrap(a))
+            for a in args[1:]
+        ]
+        return hook(function_name, forwarded)
+
+    def _io_print(self, *args: object) -> PatternValue:
+        """Print a message to the log with ``std::format`` semantics.
+
+        Args:
+            *args: ``(format_str: str, ...values)``. The first argument is
+                interpreted as a format string with ``{}``/``{n}``/``{:spec}``
+                fields; remaining values substitute positionally.
 
         Returns:
             PatternValue: A PatternValue containing None.
         """
-        message = " ".join(str(self._unwrap(a)) for a in args)
-        _logger.info("hexpat_print", output=message)
+        sink = _PrintSinkRegistry.sink
+        if not args:
+            _logger.info("hexpat_print", output="")
+            if sink is not None:
+                sink("")
+            return PatternValue(value=None)
+        formatted = self._format_string(args[0], list(args[1:]))
+        _logger.info("hexpat_print", output=formatted)
+        if sink is not None:
+            sink(formatted)
         return PatternValue(value=None)
 
     def _io_format(self, *args: object) -> PatternValue:
-        """Format a string with arguments.
+        """Format a string with arguments using hexpat field substitution semantics.
 
         Args:
-            *args: (format_str: str, ...values).
+            *args: ``(format_str: str, ...values)``.
 
         Returns:
             PatternValue: A PatternValue containing the formatted string.
         """
         if not args:
             return PatternValue(value="")
-        fmt = str(self._unwrap(args[0]))
-        fmt_args = [self._unwrap(a) for a in args[1:]]
+        return PatternValue(value=self._format_string(args[0], list(args[1:])))
+
+    def _io_error(self, *args: object) -> PatternValue:
+        """Raise a fatal pattern error.
+
+        Args:
+            *args: ``(message: str)``.
+
+        Raises:
+            HexPatRuntimeError: Always, carrying the supplied message.
+        """
+        message = str(self._unwrap(args[0])) if args else ""
+        raise HexPatRuntimeError(message)
+
+    def _io_warning(self, *args: object) -> PatternValue:
+        """Emit a non-fatal warning message to the log.
+
+        Args:
+            *args: ``(message: str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing None.
+        """
+        message = str(self._unwrap(args[0])) if args else ""
+        _logger.warning("hexpat_warning", output=message)
+        sink = _PrintSinkRegistry.sink
+        if sink is not None:
+            sink(f"warning: {message}")
+        return PatternValue(value=None)
+
+    def _format_string(self, fmt_arg: object, values: list[object]) -> str:
+        """Apply hexpat format-string semantics to a template and value list.
+
+        Args:
+            fmt_arg: The format string argument (or its ``PatternValue`` wrapper).
+            values: The ordered positional substitution values.
+
+        Returns:
+            str: The rendered string with all fields expanded.
+        """
+        fmt = str(self._unwrap(fmt_arg))
+        unwrapped: list[int | float | str] = [self._unwrap(v) for v in values]
+        auto_index: int = 0
+
+        def _replace(match: re.Match[str]) -> str:
+            nonlocal auto_index
+            spec = match.group(1)
+            index: int
+            format_spec: str = ""
+            if ":" in spec:
+                head, _, format_spec = spec.partition(":")
+            else:
+                head = spec
+            if not head:
+                index = auto_index
+                auto_index += 1
+            else:
+                try:
+                    index = int(head)
+                except ValueError:
+                    return match.group(0)
+            if index < 0 or index >= len(unwrapped):
+                return ""
+            value = unwrapped[index]
+            if not format_spec:
+                return str(value)
+            try:
+                return format(value, format_spec)
+            except (TypeError, ValueError):
+                return str(value)
+
         try:
-            result = fmt
-            for i, arg in enumerate(fmt_args):
-                result = result.replace("{}", str(arg), 1)
-                result = result.replace(f"{{{i}}}", str(arg))
+            return _FORMAT_FIELD_RE.sub(_replace, fmt)
         except (IndexError, KeyError):
-            return PatternValue(value=fmt)
-        else:
-            return PatternValue(value=result)
+            return fmt
 
     def _read_struct_field(self, *args: object) -> PatternValue:
         """Read a struct field as unsigned integer (internal helper).
 
         Args:
-            *args: (offset: int, size: int).
+            *args: ``(offset: int, size: int)``.
 
         Returns:
             PatternValue: A PatternValue containing the unsigned integer value.
@@ -562,5 +2280,5 @@ class BuiltinFunctions:
                 return PatternValue(value=result)
             return PatternValue(value=int(result))
         raw = self._data.read(offset, size)
-        byteorder = "little" if self._endian == "little" else "big"
+        byteorder: Literal["little", "big"] = "little" if self._endian == "little" else "big"
         return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))
