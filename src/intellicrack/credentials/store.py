@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -30,9 +31,26 @@ _logger = get_logger("credentials.store")
 
 try:
     import keyring as _keyring_module
+    import keyring.errors as _keyring_errors_module
 except ImportError:
     _logger.debug("keyring_import_failed", exc_info=True)
     _keyring_module = None
+    _keyring_errors_module = None
+
+
+class _KeyringFallbackError(Exception):
+    """Sentinel exception used when keyring.errors is unavailable.
+
+    This class is never raised. It exists only to provide a concrete
+    exception type for the ``except`` tuples when the optional ``keyring``
+    dependency is missing, keeping the code paths type-consistent.
+    """
+
+
+if _keyring_errors_module is not None:
+    _KeyringError: type[BaseException] = _keyring_errors_module.KeyringError
+else:
+    _KeyringError = _KeyringFallbackError
 
 
 class CredentialStoreError(IntellicrackError):
@@ -133,8 +151,8 @@ class CredentialStore:
                 self._keyring = _keyring_module
                 self._keyring_available = True
                 _logger.info("keyring_backend_available", backend=_keyring_module.get_keyring().__class__.__name__)
-        except (OSError, RuntimeError, KeyError, ValueError) as e:
-            _logger.warning("keyring_unavailable", error=str(e))
+        except (OSError, RuntimeError, KeyError, ValueError, _KeyringError) as e:
+            _logger.warning("keyring_unavailable", error=str(e), exc_info=True)
             return False
         else:
             if self._keyring_available:
@@ -197,7 +215,7 @@ class CredentialStore:
                 project_id=parsed.get("project_id"),
             )
         except (json.JSONDecodeError, TypeError, KeyError) as e:
-            _logger.warning("credential_deserialize_failed", error=str(e))
+            _logger.warning("credential_deserialize_failed", error=str(e), exc_info=True)
             msg = f"Failed to deserialize credentials: {e}"
             raise CredentialStoreError(msg) from e
 
@@ -241,7 +259,7 @@ class CredentialStore:
                 source=CredentialSource(parsed["source"]),
             )
         except (json.JSONDecodeError, TypeError, KeyError, ValueError):
-            _logger.debug("metadata_deserialize_fallback", provider=provider.value)
+            _logger.debug("metadata_deserialize_fallback", provider=provider.value, exc_info=True)
             now = datetime.now(UTC)
             return StoredCredential(
                 provider=provider,
@@ -273,8 +291,8 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_credentials(data) if data else None
-        except (OSError, KeyError, ValueError, CredentialStoreError) as e:
-            _logger.warning("keyring_get_failed", provider=provider.value, error=str(e))
+        except (OSError, KeyError, ValueError, _KeyringError, CredentialStoreError) as e:
+            _logger.warning("keyring_get_failed", provider=provider.value, error=str(e), exc_info=True)
             return None
 
     async def _set_to_keyring(
@@ -324,8 +342,8 @@ class CredentialStore:
         try:
             await asyncio.to_thread(_store)
             _logger.info("credentials_stored", provider=provider.value, store="keyring")
-        except (OSError, KeyError, ValueError) as e:
-            _logger.warning("credential_store_failed", provider=provider.value, error=str(e))
+        except (OSError, KeyError, ValueError, _KeyringError) as e:
+            _logger.warning("credential_store_failed", provider=provider.value, error=str(e), exc_info=True)
             msg = f"Failed to store credentials: {e}"
             raise CredentialStoreError(msg) from e
 
@@ -351,9 +369,31 @@ class CredentialStore:
         try:
             data = await asyncio.to_thread(_fetch)
             return self._deserialize_metadata(data, provider) if data else None
-        except (OSError, KeyError, ValueError):
-            _logger.debug("metadata_get_failed", provider=provider.value)
+        except (OSError, KeyError, ValueError, _KeyringError):
+            _logger.debug("metadata_get_failed", provider=provider.value, exc_info=True)
             return None
+
+    async def _get_unlocked(self, provider: ProviderName) -> ProviderCredentials | None:
+        """Get credentials without acquiring ``self._lock``.
+
+        This private helper performs the actual keyring read and env
+        fallback. It is used internally by methods that already hold
+        ``self._lock`` (such as :meth:`list_providers`) to avoid re-entrant
+        lock acquisition which would deadlock ``asyncio.Lock``.
+
+        Args:
+            provider: The provider to get credentials for.
+
+        Returns:
+            ProviderCredentials | None: ProviderCredentials if found, None otherwise.
+        """
+        if self.keyring_available:
+            creds = await self._get_from_keyring(provider)
+            if creds is not None and creds.api_key:
+                return creds
+
+        _logger.debug("credential_fallback_to_env", provider=provider.value)
+        return await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
 
     async def get(self, provider: ProviderName) -> ProviderCredentials | None:
         """Get credentials for a provider.
@@ -367,13 +407,7 @@ class CredentialStore:
             ProviderCredentials | None: ProviderCredentials if found, None otherwise.
         """
         async with self._lock:
-            if self.keyring_available:
-                creds = await self._get_from_keyring(provider)
-                if creds is not None and creds.api_key:
-                    return creds
-
-            _logger.debug("credential_fallback_to_env", provider=provider.value)
-            return await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
+            return await self._get_unlocked(provider)
 
     async def get_or_raise(self, provider: ProviderName) -> ProviderCredentials:
         """Get credentials for a provider, raising if not found.
@@ -444,13 +478,13 @@ class CredentialStore:
         def _delete() -> bool:
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
-            except (OSError, KeyError, ValueError):
-                _logger.debug("keyring_delete_credential_failed", provider=provider.value)
+            except (OSError, KeyError, ValueError, _KeyringError):
+                _logger.debug("keyring_delete_credential_failed", provider=provider.value, exc_info=True)
                 return False
             try:
                 keyring.delete_password(self.SERVICE_NAME, metadata_key)
-            except (OSError, KeyError, ValueError):
-                _logger.debug("keyring_delete_metadata_failed", provider=provider.value)
+            except (OSError, KeyError, ValueError, _KeyringError):
+                _logger.debug("keyring_delete_metadata_failed", provider=provider.value, exc_info=True)
             return True
 
         async with self._lock:
@@ -469,7 +503,7 @@ class CredentialStore:
 
         async with self._lock:
             for provider in ProviderName:
-                creds = await self.get(provider)
+                creds = await self._get_unlocked(provider)
                 if creds is not None and creds.api_key:
                     metadata = await self._get_metadata(provider)
                     if metadata:
@@ -535,7 +569,7 @@ class CredentialStore:
                     )
                     results[provider] = True
                     _logger.info("credentials_migrated", provider=provider.value, source="env", destination="keyring")
-                except (OSError, KeyError, ValueError, CredentialStoreError) as exc:
+                except (OSError, KeyError, ValueError, _KeyringError, CredentialStoreError) as exc:
                     _logger.warning("credential_migration_failed", provider=provider.value, error=str(exc), exc_info=True)
                     results[provider] = False
 
@@ -600,7 +634,16 @@ class CredentialStore:
         return None
 
 
+_store_lock = threading.Lock()
+
+
 class _CredentialStoreHolder:
+    """Holder for the module-level singleton credential store instance.
+
+    Attributes:
+        instance: The shared CredentialStore instance or ``None`` before init.
+    """
+
     instance: CredentialStore | None = None
 
 
@@ -610,11 +653,17 @@ _store_holder = _CredentialStoreHolder()
 def get_credential_store() -> CredentialStore:
     """Get the global credential store instance.
 
+    Uses double-checked locking with a module-level :class:`threading.Lock`
+    so concurrent callers from multiple threads cannot observe a partially
+    constructed instance or race to create duplicates.
+
     Returns:
         CredentialStore: The singleton CredentialStore instance.
     """
     if _store_holder.instance is None:
-        _store_holder.instance = CredentialStore()
+        with _store_lock:
+            if _store_holder.instance is None:
+                _store_holder.instance = CredentialStore()
     return _store_holder.instance
 
 
