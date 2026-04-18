@@ -68,6 +68,9 @@ _ERR_PROCESS_NOT_FOUND = "process not found"
 _ERR_ATTACH_FAILED = "failed to attach to process"
 _ERR_NOT_ATTACHED = "not attached to a process"
 _ERR_NO_SESSION = "no active session"
+_ERR_RESUME_FAILED = "failed to resume process"
+_ERR_DETACH_FAILED = "failed to detach from process"
+_ERR_UNKNOWN_CANCELLABLE = "unknown cancellable token"
 _ERR_READ_FAILED = "memory read failed"
 _ERR_WRITE_FAILED = "memory write failed"
 _ERR_ALLOC_FAILED = "memory allocation failed"
@@ -1274,11 +1277,15 @@ class FridaBridge(InstrumentationBridge):
         else:
             return True
 
-    async def attach(self, pid: int) -> None:
+    async def attach(self, pid: int, *, cancellable_id: str | None = None) -> None:
         """Attach to a running process.
 
         Args:
             pid: Process ID to attach to.
+            cancellable_id: Optional cancellation token identifier returned by
+                :meth:`create_cancellable`. When supplied, the token is passed
+                through to the underlying Frida call so callers can abort the
+                attach with :meth:`cancel`.
 
         Raises:
             ToolError: If attachment fails.
@@ -1290,10 +1297,14 @@ class FridaBridge(InstrumentationBridge):
         if device is None:
             raise ToolError(_ERR_DEVICE_FAILED)
 
+        cancellable = self._resolve_cancellable(cancellable_id)
+
         try:
             self._session = await asyncio.to_thread(
-                device.attach,
+                self._attach_with_cancellable,
+                device,
                 pid,
+                cancellable,
             )
             self._pid = pid
             self.state.connected = True
@@ -1359,12 +1370,18 @@ class FridaBridge(InstrumentationBridge):
         self,
         path: Path,
         args: Sequence[str] | None = None,
+        *,
+        cancellable_id: str | None = None,
     ) -> int:
         """Spawn a new process with Frida instrumentation.
 
         Args:
             path: Path to executable.
             args: Command line arguments.
+            cancellable_id: Optional cancellation token identifier returned by
+                :meth:`create_cancellable`. When supplied, the token is passed
+                through to the underlying Frida spawn and attach calls so the
+                caller can abort the operation via :meth:`cancel`.
 
         Returns:
             int: PID of spawned process.
@@ -1379,15 +1396,19 @@ class FridaBridge(InstrumentationBridge):
         if device is None:
             raise ToolError(_ERR_DEVICE_FAILED)
 
+        cancellable = self._resolve_cancellable(cancellable_id)
+
         spawn_argv: list[str | bytes] = [str(path)]
         if args:
             spawn_argv.extend(args)
 
         try:
             pid: int = await asyncio.to_thread(
-                device.spawn,
+                self._spawn_with_cancellable,
+                device,
                 str(path),
-                argv=spawn_argv,
+                spawn_argv,
+                cancellable,
             )
         except Exception as e:
             _logger.warning("frida_spawn_failed", path=str(path), error=str(e))
@@ -1395,8 +1416,10 @@ class FridaBridge(InstrumentationBridge):
 
         try:
             self._session = await asyncio.to_thread(
-                device.attach,
+                self._attach_with_cancellable,
+                device,
                 pid,
+                cancellable,
             )
             self._pid = pid
             self._spawned_pid = pid
@@ -1443,7 +1466,7 @@ class FridaBridge(InstrumentationBridge):
             _logger.info("process_resumed", pid=self._pid)
         except Exception as e:
             _logger.warning("frida_resume_failed", pid=self._pid, error=str(e))
-            raise ToolError(_ERR_NOT_ATTACHED) from e
+            raise ToolError(_ERR_RESUME_FAILED) from e
 
     async def detach(self, *, kill_spawned: bool = True) -> None:
         """Detach from the current process.
@@ -1486,7 +1509,7 @@ class FridaBridge(InstrumentationBridge):
             _logger.info("process_detached", bridge="frida")
         except Exception as e:
             _logger.warning("frida_detach_failed", error=str(e))
-            raise ToolError(_ERR_NOT_ATTACHED) from e
+            raise ToolError(_ERR_DETACH_FAILED) from e
 
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read memory from the target process.
@@ -1854,26 +1877,17 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_HOOK_FAILED) from e
 
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Collect hook-registration messages from the Frida script.
-
-            Appends each inbound message to the local buffer so the hook
-            address can be extracted, and also forwards the message to the
-            bridge-wide dispatcher so external subscribers receive it.
-
-            Args:
-                message: Message payload emitted by the hook script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
 
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("hook_attach_timeout", target=target)
+            raise ToolError(_ERR_HOOK_FAILED) from e
 
         address: int | None = None
         for msg in messages:
@@ -1885,6 +1899,16 @@ class FridaBridge(InstrumentationBridge):
                         addr_val = payload_dict.get("address", "0")
                         if isinstance(addr_val, str):
                             address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
+            elif msg["type"] == "error":
+                await asyncio.to_thread(script.unload)
+                description = msg.get("description", "")
+                _logger.warning("hook_attach_failed", target=target, description=description)
+                raise ToolError(_ERR_HOOK_FAILED, details={"reason": str(description)})
+
+        if address is None:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("hook_attach_no_ack", target=target)
+            raise ToolError(_ERR_HOOK_FAILED)
 
         self._scripts[hook_id] = script
 
@@ -2102,12 +2126,18 @@ class FridaBridge(InstrumentationBridge):
         self,
         script_code: str,
         max_wait: float = 5.0,
+        *,
+        cancellable_id: str | None = None,
     ) -> dict[str, Any]:
         """Execute a script and wait for result.
 
         Args:
             script_code: JavaScript code to execute.
             max_wait: Maximum seconds to wait for a response.
+            cancellable_id: Optional cancellation token identifier returned by
+                :meth:`create_cancellable`. When supplied, the token is
+                forwarded to ``Session.create_script`` so the compilation
+                step can be aborted via :meth:`cancel`.
 
         Returns:
             dict[str, Any]: Script result as dictionary.
@@ -2118,11 +2148,14 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        cancellable = self._resolve_cancellable(cancellable_id)
+
         result: dict[str, Any] = {}
         event = asyncio.Event()
+        loop = asyncio.get_running_loop()
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Capture the first response message and release the waiter.
+            """Capture the first send/error response and release the waiter.
 
             Args:
                 message: Message payload emitted by the Frida script.
@@ -2136,9 +2169,16 @@ class FridaBridge(InstrumentationBridge):
                         result["data"] = list(data)
             elif message["type"] == "error":
                 result["error"] = message["description"]
-            event.set()
+            else:
+                return
+            loop.call_soon_threadsafe(event.set)
 
-        script = await asyncio.to_thread(self._session.create_script, script_code)
+        script = await asyncio.to_thread(
+            self._create_script_with_cancellable,
+            self._session,
+            script_code,
+            cancellable,
+        )
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
 
@@ -2151,6 +2191,51 @@ class FridaBridge(InstrumentationBridge):
         await asyncio.to_thread(script.unload)
 
         return result
+
+    @staticmethod
+    def _make_payload_waiter(
+        messages: list[ScriptMessage],
+        dispatch: Callable[[dict[str, object]], None],
+    ) -> tuple[
+        Callable[[ScriptMessage, bytes | None], None],
+        asyncio.Event,
+    ]:
+        """Build a Frida ``on_message`` callback that wakes on send/error only.
+
+        The returned callback buffers every message and forwards it to the
+        provided dispatcher, but only releases the event when a ``send`` or
+        ``error`` payload is observed. This lets callers await the first real
+        script response without relying on a fixed sleep.
+
+        Args:
+            messages: Mutable buffer that will receive every message for
+                later inspection.
+            dispatch: Bridge-wide dispatcher invoked for each message so
+                external subscribers still observe the traffic.
+
+        Returns:
+            tuple[Callable[[ScriptMessage, bytes | None], None], asyncio.Event]:
+                Pair of the ``on_message`` callback and the event set when a
+                ``send`` or ``error`` message arrives.
+        """
+        event = asyncio.Event()
+        loop = asyncio.get_running_loop()
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Buffer messages and release the waiter on send/error payloads.
+
+            Args:
+                message: Message payload emitted by the Frida script.
+                data: Optional binary payload attached to the message.
+            """
+            del data
+            messages.append(message)
+            dispatch(dict(cast("dict[str, object]", message)))
+            msg_type = message["type"]
+            if msg_type in {"send", "error"}:
+                loop.call_soon_threadsafe(event.set)
+
+        return on_message, event
 
     async def _unload_script(self, script_id: str) -> None:
         """Unload a script.
@@ -2341,25 +2426,16 @@ class FridaBridge(InstrumentationBridge):
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer allocation messages for address extraction.
-
-            Appends each message to the local buffer so the caller can scan
-            for the allocation address, and forwards it to the bridge-wide
-            dispatcher so external subscribers also receive it.
-
-            Args:
-                message: Message payload emitted by the allocation script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("allocate_memory_timeout", size=size)
+            raise ToolError(_ERR_ALLOC_FAILED) from e
 
         addr: int = 0
         for msg in messages:
@@ -2683,21 +2759,16 @@ class FridaBridge(InstrumentationBridge):
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer replacement messages for address extraction.
-
-            Args:
-                message: Message payload emitted by the replacement script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("replace_function_timeout", target=target)
+            raise ToolError(_ERR_REPLACE_FAILED) from e
 
         address: int | None = None
         for msg in messages:
@@ -2894,13 +2965,18 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_STALKER_FAILED) from e
 
         captured_tid = effective_tid
+        started_event = asyncio.Event()
+        load_loop = asyncio.get_running_loop()
+        start_status: dict[str, object] = {}
 
         def on_stalker_message(message: ScriptMessage, data: bytes | None) -> None:
             """Parse Stalker batch payloads and forward messages downstream.
 
             When a ``stalker_batch`` message arrives, the nested event list
             is decoded and stored against the followed thread identifier.
-            All messages are also forwarded to the bridge-wide dispatcher.
+            The waiter is released once ``stalker_started`` or any ``error``
+            message is observed. All messages are forwarded to the bridge
+            dispatcher.
 
             Args:
                 message: Message payload emitted by the Stalker script.
@@ -2911,11 +2987,17 @@ class FridaBridge(InstrumentationBridge):
                 payload = message.get("payload", {})
                 if isinstance(payload, dict):
                     payload_dict = cast("dict[str, object]", payload)
-                    msg_type = payload_dict.get("type")
-                    if msg_type == "stalker_batch":
+                    inner_type = payload_dict.get("type")
+                    if inner_type == "stalker_batch":
                         raw_evts = payload_dict.get("events")
                         if isinstance(raw_evts, list):
                             self._parse_stalker_batch(captured_tid, cast("list[object]", raw_evts))
+                    elif inner_type == "stalker_started":
+                        start_status["started"] = True
+                        load_loop.call_soon_threadsafe(started_event.set)
+            elif message["type"] == "error":
+                start_status["error"] = message["description"]
+                load_loop.call_soon_threadsafe(started_event.set)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_stalker_message)
@@ -2924,6 +3006,27 @@ class FridaBridge(InstrumentationBridge):
         except Exception as e:
             _logger.warning("stalker_load_failed", thread_id=effective_tid, error=str(e))
             raise ToolError(_ERR_STALKER_FAILED) from e
+
+        try:
+            await asyncio.wait_for(started_event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("stalker_start_timeout", thread_id=effective_tid)
+            raise ToolError(_ERR_STALKER_FAILED) from e
+
+        if "error" in start_status:
+            await asyncio.to_thread(script.unload)
+            _logger.warning(
+                "stalker_start_failed",
+                thread_id=effective_tid,
+                description=start_status.get("error", ""),
+            )
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(start_status.get("error", ""))})
+
+        if not start_status.get("started"):
+            await asyncio.to_thread(script.unload)
+            _logger.warning("stalker_not_started", thread_id=effective_tid)
+            raise ToolError(_ERR_STALKER_FAILED)
 
         self._scripts[script_id] = script
         self._stalker_scripts[effective_tid] = script_id
@@ -3152,13 +3255,13 @@ class FridaBridge(InstrumentationBridge):
         _logger.debug("crashes_queried", count=len(result))
         return result
 
-    async def enumerate_devices(self) -> list[FridaDeviceInfo]:
+    @staticmethod
+    async def enumerate_devices() -> list[FridaDeviceInfo]:
         """List all available Frida devices.
 
         Returns:
             list[FridaDeviceInfo]: List of device information.
         """
-        _ = self.state
         devices = await asyncio.to_thread(frida.enumerate_devices)
         _logger.debug("devices_enumerated", count=len(devices))
         return [
@@ -3337,6 +3440,98 @@ class FridaBridge(InstrumentationBridge):
         _logger.info("operation_cancelled", cancellable_id=cancellable_id)
         return True
 
+    def _resolve_cancellable(self, cancellable_id: str | None) -> frida.Cancellable | None:
+        """Look up a cancellation token by identifier.
+
+        Args:
+            cancellable_id: Identifier returned from :meth:`create_cancellable`,
+                or ``None`` if no token is requested.
+
+        Returns:
+            frida.Cancellable | None: The registered token, or ``None`` when
+                no identifier was supplied.
+
+        Raises:
+            ToolError: If ``cancellable_id`` is provided but unknown.
+        """
+        if cancellable_id is None:
+            return None
+        cancellable = self._cancellables.get(cancellable_id)
+        if cancellable is None:
+            raise ToolError(
+                _ERR_UNKNOWN_CANCELLABLE,
+                details={"cancellable_id": cancellable_id},
+            )
+        return cancellable
+
+    @staticmethod
+    def _attach_with_cancellable(
+        device: frida.core.Device,
+        pid: int,
+        cancellable: frida.Cancellable | None,
+    ) -> frida.core.Session:
+        """Invoke ``Device.attach`` honoring an optional cancellation token.
+
+        Args:
+            device: Frida device to attach through.
+            pid: Target process identifier.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to Frida when provided.
+
+        Returns:
+            frida.core.Session: The attached Frida session.
+        """
+        attach_fn = cast("Callable[..., frida.core.Session]", device.attach)
+        if cancellable is not None:
+            return attach_fn(pid, cancellable=cancellable)
+        return attach_fn(pid)
+
+    @staticmethod
+    def _spawn_with_cancellable(
+        device: frida.core.Device,
+        program: str,
+        argv: Sequence[str | bytes],
+        cancellable: frida.Cancellable | None,
+    ) -> int:
+        """Invoke ``Device.spawn`` honoring an optional cancellation token.
+
+        Args:
+            device: Frida device to spawn on.
+            program: Path to the executable.
+            argv: Argument vector for the spawned process.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to Frida when provided.
+
+        Returns:
+            int: PID of the spawned process.
+        """
+        spawn_fn = cast("Callable[..., int]", device.spawn)
+        if cancellable is not None:
+            return spawn_fn(program, argv=list(argv), cancellable=cancellable)
+        return spawn_fn(program, argv=list(argv))
+
+    @staticmethod
+    def _create_script_with_cancellable(
+        session: frida.core.Session,
+        source: str,
+        cancellable: frida.Cancellable | None,
+    ) -> frida.core.Script:
+        """Invoke ``Session.create_script`` honoring an optional cancellation token.
+
+        Args:
+            session: Frida session that will own the script.
+            source: JavaScript source to compile.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to Frida when provided.
+
+        Returns:
+            frida.core.Script: The created Frida script.
+        """
+        create_fn = cast("Callable[..., frida.core.Script]", session.create_script)
+        if cancellable is not None:
+            return create_fn(source, cancellable=cancellable)
+        return create_fn(source)
+
     async def patch_code(self, address: int, hex_data: str) -> bool:
         """Patch code at an address using Memory.patchCode with instruction cache flush.
 
@@ -3410,21 +3605,16 @@ class FridaBridge(InstrumentationBridge):
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer string-allocation messages for address extraction.
-
-            Args:
-                message: Message payload emitted by the allocation script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("allocate_string_timeout", encoding=encoding)
+            raise ToolError(_ERR_STRING_ALLOC_FAILED) from e
 
         addr: int = 0
         for msg in messages:
@@ -4318,8 +4508,6 @@ class FridaBridge(InstrumentationBridge):
         hook_id = str(uuid.uuid4())[:8]
         escaped_cls = self._escape_js_string(class_name)
         escaped_method = self._escape_js_string(method_name)
-        on_enter_code = on_enter or "console.log('[ObjC] ' + args[0] + ' ' + args[1]);"
-        on_leave_code = on_leave or ""
 
         script_code = f"""
         if (!ObjC.available) {{
@@ -4329,10 +4517,10 @@ class FridaBridge(InstrumentationBridge):
             var impl = cls['{escaped_method}'].implementation;
             Interceptor.attach(impl, {{
                 onEnter: function(args) {{
-                    {on_enter_code}
+                    {on_enter or "console.log('[ObjC] ' + args[0] + ' ' + args[1]);"}
                 }},
                 onLeave: function(retval) {{
-                    {on_leave_code}
+                    {on_leave or ""}
                 }}
             }});
             send({{ type: 'objc_hooked', address: impl.toString() }});
@@ -4341,21 +4529,16 @@ class FridaBridge(InstrumentationBridge):
 
         script = await asyncio.to_thread(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer script messages for post-load inspection.
-
-            Args:
-                message: Message payload emitted by the Frida script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("objc_hook_timeout", class_name=class_name, method=method_name)
+            raise ToolError(_ERR_HOOK_FAILED) from e
 
         address: int | None = None
         for msg in messages:
@@ -4543,8 +4726,6 @@ class FridaBridge(InstrumentationBridge):
         hook_id = str(uuid.uuid4())[:8]
         escaped_cls = self._escape_js_string(class_name)
         escaped_method = self._escape_js_string(method_name)
-        on_enter_code = on_enter or "console.log('[Java] ' + this.toString());"
-        on_leave_code = on_leave or ""
 
         if overloads:
             overload_args = ", ".join(f"'{self._escape_js_string(o)}'" for o in overloads)
@@ -4558,11 +4739,15 @@ class FridaBridge(InstrumentationBridge):
         }} else {{
             Java.perform(function() {{
                 var cls = Java.use('{escaped_cls}');
-                cls['{escaped_method}']{overload_js}.implementation = function() {{
+                var target = cls['{escaped_method}']{overload_js};
+                var original = target.implementation;
+                target.implementation = function() {{
                     var args = arguments;
-                    {on_enter_code}
-                    var retval = this['{escaped_method}'].apply(this, args);
-                    {on_leave_code}
+                    {on_enter or "console.log('[Java] ' + this.toString());"}
+                    var retval = original
+                        ? original.apply(this, args)
+                        : this['{escaped_method}'].apply(this, args);
+                    {on_leave or ""}
                     return retval;
                 }};
                 send({{ type: 'java_hooked', className: '{escaped_cls}', method: '{escaped_method}' }});
@@ -4572,21 +4757,16 @@ class FridaBridge(InstrumentationBridge):
 
         script = await asyncio.to_thread(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer script messages for post-load inspection.
-
-            Args:
-                message: Message payload emitted by the Frida script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("java_hook_timeout", class_name=class_name, method=method_name)
+            raise ToolError(_ERR_HOOK_FAILED) from e
 
         for msg in messages:
             if msg["type"] == "send":
@@ -4672,21 +4852,16 @@ class FridaBridge(InstrumentationBridge):
         script_id = str(uuid.uuid4())[:8]
         script = await asyncio.to_thread(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer script messages for post-load inspection.
-
-            Args:
-                message: Message payload emitted by the Frida script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("cmodule_load_timeout")
+            raise ToolError(_ERR_CMODULE_FAILED) from e
 
         for msg in messages:
             if msg["type"] == "send":
@@ -5223,33 +5398,37 @@ class FridaBridge(InstrumentationBridge):
         script_id = str(uuid.uuid4())[:8]
         script = await asyncio.to_thread(self._session.create_script, script_code)
         messages: list[ScriptMessage] = []
-
-        def on_message(message: ScriptMessage, data: bytes | None) -> None:
-            """Buffer script messages for post-load inspection.
-
-            Args:
-                message: Message payload emitted by the Frida script.
-                data: Optional binary payload attached to the message.
-            """
-            del data
-            messages.append(message)
-            self._dispatch_message(dict(cast("dict[str, object]", message)))
+        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
 
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
-        await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(event.wait(), timeout=5.0)
+        except TimeoutError as e:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("sqlite_open_timeout", path=path)
+            raise ToolError(_ERR_SQLITE_FAILED) from e
 
+        opened = False
         for msg in messages:
             if msg["type"] == "send":
                 payload = msg.get("payload", {})
                 if isinstance(payload, dict):
                     payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "sqlite_error":
+                    inner_type = payload_dict.get("type")
+                    if inner_type == "sqlite_error":
                         await asyncio.to_thread(script.unload)
-                        raise ToolError(_ERR_SQLITE_FAILED)
+                        raise ToolError(_ERR_SQLITE_FAILED, details={"reason": str(payload_dict.get("error", ""))})
+                    if inner_type == "sqlite_opened":
+                        opened = True
             elif msg["type"] == "error":
                 await asyncio.to_thread(script.unload)
                 raise ToolError(_ERR_SQLITE_FAILED)
+
+        if not opened:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("sqlite_open_no_ack", path=path)
+            raise ToolError(_ERR_SQLITE_FAILED)
 
         self._scripts[script_id] = script
         _logger.info("sqlite_database_opened", path=path, script_id=script_id)
