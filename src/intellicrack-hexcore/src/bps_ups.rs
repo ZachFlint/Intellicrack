@@ -55,9 +55,125 @@ fn decode_var_int(data: &[u8], pos: &mut usize) -> io::Result<u64> {
     }
 }
 
+const BPS_MATCH_WINDOW: usize = 4;
+const BPS_MIN_COPY_LEN: usize = 4;
+
+fn build_hash_index(data: &[u8]) -> std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>> {
+    let mut index: std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>> =
+        std::collections::HashMap::new();
+    if data.len() < BPS_MATCH_WINDOW {
+        return index;
+    }
+    for i in 0..=data.len() - BPS_MATCH_WINDOW {
+        index_target_window(&mut index, data, i);
+    }
+    index
+}
+
+fn extend_match(a: &[u8], a_start: usize, b: &[u8], b_start: usize, max_len: usize) -> usize {
+    let mut len = 0usize;
+    while len < max_len
+        && a_start + len < a.len()
+        && b_start + len < b.len()
+        && a[a_start + len] == b[b_start + len]
+    {
+        len += 1;
+    }
+    len
+}
+
+fn encode_rel_offset(rel_offset: i64) -> u64 {
+    let negative = rel_offset < 0;
+    let abs_val = rel_offset.unsigned_abs();
+    (abs_val << 1) | u64::from(negative)
+}
+
+fn var_int_len(val: u64) -> usize {
+    let mut v = val;
+    let mut len = 0usize;
+    loop {
+        len += 1;
+        v >>= 7;
+        if v == 0 {
+            break;
+        }
+        v -= 1;
+    }
+    len
+}
+
+fn find_best_match(
+    haystack: &[u8],
+    needle: &[u8],
+    needle_pos: usize,
+    index: &std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>>,
+    haystack_limit: usize,
+) -> Option<(usize, usize)> {
+    if needle_pos + BPS_MATCH_WINDOW > needle.len() {
+        return None;
+    }
+    let key: [u8; BPS_MATCH_WINDOW] = [
+        needle[needle_pos],
+        needle[needle_pos + 1],
+        needle[needle_pos + 2],
+        needle[needle_pos + 3],
+    ];
+    let candidates = index.get(&key)?;
+    let mut best_len = 0usize;
+    let mut best_off = 0usize;
+    let max_len = needle.len() - needle_pos;
+    for &cand in candidates.iter().rev() {
+        if cand >= haystack_limit {
+            continue;
+        }
+        let cand_max = haystack_limit.saturating_sub(cand);
+        let cap = max_len.min(cand_max);
+        if cap <= best_len {
+            continue;
+        }
+        let m = extend_match(haystack, cand, needle, needle_pos, cap);
+        if m > best_len {
+            best_len = m;
+            best_off = cand;
+            if best_len == max_len {
+                break;
+            }
+        }
+    }
+    if best_len >= BPS_MIN_COPY_LEN {
+        Some((best_off, best_len))
+    } else {
+        None
+    }
+}
+
+fn flush_target_read(patch: &mut Vec<u8>, buf: &mut Vec<u8>) {
+    if buf.is_empty() {
+        return;
+    }
+    let diff_len = buf.len() as u64;
+    patch.extend_from_slice(&encode_var_int(((diff_len - 1) << 2) | 1));
+    patch.extend_from_slice(buf);
+    buf.clear();
+}
+
+fn index_target_window(
+    index: &mut std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>>,
+    data: &[u8],
+    pos: usize,
+) {
+    if pos + BPS_MATCH_WINDOW > data.len() {
+        return;
+    }
+    let key: [u8; BPS_MATCH_WINDOW] = [data[pos], data[pos + 1], data[pos + 2], data[pos + 3]];
+    index.entry(key).or_default().push(pos);
+}
+
 /// Generate a BPS patch from source and target byte arrays.
 ///
-/// Uses `SourceRead` and `TargetRead` actions for a simple but correct patch.
+/// Emits `SourceRead`, `TargetRead`, `SourceCopy`, and `TargetCopy` actions to
+/// produce a compact patch. Uses a 4-byte rolling hash index over both the
+/// source buffer and the already-written target buffer to discover matches.
 /// Footer contains source CRC32, target CRC32, and patch CRC32.
 ///
 /// # Errors
@@ -72,58 +188,103 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
     patch.extend_from_slice(&encode_var_int(target.len() as u64));
     patch.extend_from_slice(&encode_var_int(0));
 
-    let mut src_pos: usize = 0;
+    let source_index = build_hash_index(source);
+    let mut target_index: std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>> =
+        std::collections::HashMap::new();
+
     let mut tgt_pos: usize = 0;
+    let mut source_rel_offset: i64 = 0;
+    let mut target_rel_offset: i64 = 0;
+    let mut pending_target_read: Vec<u8> = Vec::new();
 
     while tgt_pos < target.len() {
-        let mut match_len: usize = 0;
-        while src_pos + match_len < source.len()
-            && tgt_pos + match_len < target.len()
-            && source[src_pos + match_len] == target[tgt_pos + match_len]
-        {
-            match_len += 1;
+        let mut source_read_len = 0usize;
+        if tgt_pos < source.len() {
+            source_read_len =
+                extend_match(source, tgt_pos, target, tgt_pos, target.len() - tgt_pos);
         }
 
-        if match_len > 0 {
-            patch.extend_from_slice(&encode_var_int(((match_len as u64) - 1) << 2));
-            src_pos += match_len;
-            tgt_pos += match_len;
+        let source_copy_candidate =
+            find_best_match(source, target, tgt_pos, &source_index, source.len());
+        let target_copy_candidate =
+            find_best_match(target, target, tgt_pos, &target_index, tgt_pos);
+
+        #[derive(Clone, Copy)]
+        enum ChoiceKind {
+            SourceRead,
+            SourceCopy,
+            TargetCopy,
         }
 
-        if tgt_pos >= target.len() {
-            break;
+        let mut choices: Vec<(i64, ChoiceKind, usize, usize)> = Vec::new();
+
+        if source_read_len >= BPS_MIN_COPY_LEN {
+            let cmd_cost = var_int_len(((source_read_len as u64) - 1) << 2);
+            let score = source_read_len as i64 - cmd_cost as i64;
+            choices.push((score, ChoiceKind::SourceRead, source_read_len, 0));
         }
 
-        let mut diff_len: usize = 0;
-        while tgt_pos + diff_len < target.len() {
-            if src_pos + diff_len < source.len()
-                && source[src_pos + diff_len] == target[tgt_pos + diff_len]
-            {
-                let mut ahead_match = 0;
-                while src_pos + diff_len + ahead_match < source.len()
-                    && tgt_pos + diff_len + ahead_match < target.len()
-                    && source[src_pos + diff_len + ahead_match]
-                        == target[tgt_pos + diff_len + ahead_match]
-                {
-                    ahead_match += 1;
-                }
-                if ahead_match >= 4 {
-                    break;
-                }
+        if let Some((offset, len)) = source_copy_candidate {
+            let delta = offset as i64 - source_rel_offset;
+            let enc = encode_rel_offset(delta);
+            let cmd_cost = var_int_len((((len as u64) - 1) << 2) | 2) + var_int_len(enc);
+            let score = len as i64 - cmd_cost as i64;
+            choices.push((score, ChoiceKind::SourceCopy, len, offset));
+        }
+
+        if let Some((offset, len)) = target_copy_candidate {
+            let delta = offset as i64 - target_rel_offset;
+            let enc = encode_rel_offset(delta);
+            let cmd_cost = var_int_len((((len as u64) - 1) << 2) | 3) + var_int_len(enc);
+            let score = len as i64 - cmd_cost as i64;
+            choices.push((score, ChoiceKind::TargetCopy, len, offset));
+        }
+
+        let (best_kind, best_len, best_offset) = choices
+            .into_iter()
+            .max_by_key(|&(score, _, _, _)| score)
+            .map_or(
+                (ChoiceKind::SourceRead, 0usize, 0usize),
+                |(_, kind, len, off)| (kind, len, off),
+            );
+
+        if best_len == 0 {
+            pending_target_read.push(target[tgt_pos]);
+            index_target_window(&mut target_index, target, tgt_pos);
+            tgt_pos += 1;
+            continue;
+        }
+
+        flush_target_read(&mut patch, &mut pending_target_read);
+
+        match best_kind {
+            ChoiceKind::SourceRead => {
+                patch.extend_from_slice(&encode_var_int(((best_len as u64) - 1) << 2));
             }
-            diff_len += 1;
-            if diff_len >= 256 {
-                break;
+            ChoiceKind::SourceCopy => {
+                let new_rel = best_offset as i64;
+                let delta = new_rel - source_rel_offset;
+                source_rel_offset = new_rel + best_len as i64;
+                patch.extend_from_slice(&encode_var_int((((best_len as u64) - 1) << 2) | 2));
+                patch.extend_from_slice(&encode_var_int(encode_rel_offset(delta)));
+            }
+            ChoiceKind::TargetCopy => {
+                let new_rel = best_offset as i64;
+                let delta = new_rel - target_rel_offset;
+                target_rel_offset = new_rel + best_len as i64;
+                patch.extend_from_slice(&encode_var_int((((best_len as u64) - 1) << 2) | 3));
+                patch.extend_from_slice(&encode_var_int(encode_rel_offset(delta)));
             }
         }
 
-        if diff_len > 0 {
-            patch.extend_from_slice(&encode_var_int((((diff_len as u64) - 1) << 2) | 1));
-            patch.extend_from_slice(&target[tgt_pos..tgt_pos + diff_len]);
-            src_pos += diff_len;
-            tgt_pos += diff_len;
+        for i in 0..best_len {
+            index_target_window(&mut target_index, target, tgt_pos + i);
         }
+
+        tgt_pos += best_len;
     }
+
+    flush_target_read(&mut patch, &mut pending_target_read);
 
     let source_crc = crc32_compute(source);
     let target_crc = crc32_compute(target);
@@ -232,20 +393,44 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
 
         match command {
             0 => {
+                if output_offset.saturating_add(length) > target.len()
+                    || output_offset.saturating_add(length) > source.len()
+                {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS SourceRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    ));
+                }
                 for _ in 0..length {
-                    if output_offset < target.len() && output_offset < source.len() {
-                        target[output_offset] = source[output_offset];
-                    }
+                    target[output_offset] = source[output_offset];
                     output_offset += 1;
                 }
             }
             1 => {
+                if pos >= footer_start {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS TargetRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    ));
+                }
+                if pos.saturating_add(length) > footer_start
+                    || output_offset.saturating_add(length) > target.len()
+                {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS TargetRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    ));
+                }
                 for _ in 0..length {
-                    if pos < footer_start && output_offset < target.len() {
-                        target[output_offset] = patch[pos];
-                        pos += 1;
-                        output_offset += 1;
-                    }
+                    target[output_offset] = patch[pos];
+                    pos += 1;
+                    output_offset += 1;
                 }
             }
             2 => {
@@ -255,16 +440,42 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
                     io::Error::new(io::ErrorKind::InvalidData, "source copy offset overflow")
                 })?;
                 source_rel_offset += if negative { -offset_val } else { offset_val };
-                for _ in 0..length {
-                    let src_idx = usize::try_from(source_rel_offset).map_err(|_| {
-                        io::Error::new(io::ErrorKind::InvalidData, "source offset out of range")
+                let end_src = source_rel_offset
+                    .checked_add(i64::try_from(length).map_err(|_| {
+                        io::Error::new(io::ErrorKind::InvalidData, "source copy length overflow")
+                    })?)
+                    .ok_or_else(|| {
+                        io::Error::new(io::ErrorKind::InvalidData, "source copy end overflow")
                     })?;
-                    if src_idx < source.len() && output_offset < target.len() {
-                        target[output_offset] = source[src_idx];
-                    }
-                    source_rel_offset += 1;
+                let src_start = usize::try_from(source_rel_offset).map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    )
+                })?;
+                let src_end = usize::try_from(end_src).map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    )
+                })?;
+                if src_end > source.len() || output_offset.saturating_add(length) > target.len() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    ));
+                }
+                for &src_byte in &source[src_start..src_end] {
+                    target[output_offset] = src_byte;
                     output_offset += 1;
                 }
+                source_rel_offset = end_src;
             }
             3 => {
                 let offset_data = decode_var_int(patch, &mut pos)?;
@@ -273,13 +484,33 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
                     io::Error::new(io::ErrorKind::InvalidData, "target copy offset overflow")
                 })?;
                 target_rel_offset += if negative { -offset_val } else { offset_val };
+                let tgt_start = usize::try_from(target_rel_offset).map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    )
+                })?;
+                if tgt_start >= output_offset || output_offset.saturating_add(length) > target.len()
+                {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                        ),
+                    ));
+                }
                 for _ in 0..length {
                     let tgt_idx = usize::try_from(target_rel_offset).map_err(|_| {
-                        io::Error::new(io::ErrorKind::InvalidData, "target offset out of range")
+                        io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            format!(
+                                "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                            ),
+                        )
                     })?;
-                    if tgt_idx < target.len() && output_offset < target.len() {
-                        target[output_offset] = target[tgt_idx];
-                    }
+                    target[output_offset] = target[tgt_idx];
                     target_rel_offset += 1;
                     output_offset += 1;
                 }
@@ -496,5 +727,167 @@ mod tests {
         let patch = export_ups(source, target).unwrap();
         let result = import_ups(&patch, source).unwrap();
         assert_eq!(&result, target);
+    }
+
+    fn patch_contains_command(patch: &[u8], cmd_nibble: u64) -> bool {
+        let footer_start = patch.len() - 12;
+        let mut pos: usize = 4;
+        let _src = decode_var_int(patch, &mut pos).unwrap();
+        let _tgt = decode_var_int(patch, &mut pos).unwrap();
+        let metadata_size = decode_var_int(patch, &mut pos).unwrap();
+        pos += metadata_size as usize;
+
+        while pos < footer_start {
+            let action = decode_var_int(patch, &mut pos).unwrap();
+            let command = action & 3;
+            let length = ((action >> 2) as usize) + 1;
+            if command == cmd_nibble {
+                return true;
+            }
+            match command {
+                0 => {}
+                1 => pos += length,
+                2 | 3 => {
+                    let _off = decode_var_int(patch, &mut pos).unwrap();
+                }
+                _ => unreachable!(),
+            }
+        }
+        false
+    }
+
+    #[test]
+    fn test_bps_source_copy_roundtrip() {
+        let pattern: Vec<u8> = (0u8..64).collect();
+        let mut source: Vec<u8> = vec![0xAAu8; 128];
+        source.extend_from_slice(&pattern);
+        source.extend(vec![0xBBu8; 128]);
+
+        let mut target: Vec<u8> = vec![0xCCu8; 64];
+        target.extend_from_slice(&pattern);
+        target.extend(vec![0xDDu8; 64]);
+
+        let patch = export_bps(&source, &target).unwrap();
+        assert!(
+            patch_contains_command(&patch, 2),
+            "patch must emit at least one SourceCopy command"
+        );
+        let decoded = import_bps(&patch, &source).unwrap();
+        assert_eq!(decoded, target);
+    }
+
+    #[test]
+    fn test_bps_target_copy_roundtrip() {
+        let pattern: Vec<u8> = (0u8..64).collect();
+        let source: Vec<u8> = vec![0u8; 256];
+
+        let mut target: Vec<u8> = Vec::new();
+        target.extend_from_slice(&pattern);
+        target.extend(vec![0xEEu8; 64]);
+        target.extend_from_slice(&pattern);
+        target.extend(vec![0xFFu8; 64]);
+
+        let patch = export_bps(&source, &target).unwrap();
+        assert!(
+            patch_contains_command(&patch, 3),
+            "patch must emit at least one TargetCopy command"
+        );
+        let decoded = import_bps(&patch, &source).unwrap();
+        assert_eq!(decoded, target);
+    }
+
+    #[test]
+    fn test_bps_import_source_read_oob_fails_loud() {
+        let source = b"abcd".to_vec();
+        let mut body = Vec::new();
+        body.extend_from_slice(b"BPS1");
+        body.extend_from_slice(&encode_var_int(source.len() as u64));
+        body.extend_from_slice(&encode_var_int(32));
+        body.extend_from_slice(&encode_var_int(0));
+
+        let length: u64 = 32;
+        let action: u64 = (length - 1) << 2;
+        body.extend_from_slice(&encode_var_int(action));
+
+        let target_expected = vec![0u8; 32];
+        let source_crc = crc32_compute(&source);
+        let target_crc = crc32_compute(&target_expected);
+        body.extend_from_slice(&source_crc.to_le_bytes());
+        body.extend_from_slice(&target_crc.to_le_bytes());
+
+        let patch_crc = crc32_compute(&body);
+        body.extend_from_slice(&patch_crc.to_le_bytes());
+
+        let err = import_bps(&body, &source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        let msg = err.to_string();
+        assert!(
+            msg.contains("SourceRead") && msg.contains("OOB"),
+            "expected SourceRead OOB error, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_bps_import_source_copy_oob_fails_loud() {
+        let source = b"abcd".to_vec();
+        let mut body = Vec::new();
+        body.extend_from_slice(b"BPS1");
+        body.extend_from_slice(&encode_var_int(source.len() as u64));
+        body.extend_from_slice(&encode_var_int(16));
+        body.extend_from_slice(&encode_var_int(0));
+
+        let length: u64 = 16;
+        let action: u64 = ((length - 1) << 2) | 2;
+        body.extend_from_slice(&encode_var_int(action));
+        body.extend_from_slice(&encode_var_int(encode_rel_offset(0)));
+
+        let target_expected = vec![0u8; 16];
+        let source_crc = crc32_compute(&source);
+        let target_crc = crc32_compute(&target_expected);
+        body.extend_from_slice(&source_crc.to_le_bytes());
+        body.extend_from_slice(&target_crc.to_le_bytes());
+
+        let patch_crc = crc32_compute(&body);
+        body.extend_from_slice(&patch_crc.to_le_bytes());
+
+        let err = import_bps(&body, &source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        let msg = err.to_string();
+        assert!(
+            msg.contains("SourceCopy") && msg.contains("OOB"),
+            "expected SourceCopy OOB error, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_bps_import_target_copy_oob_fails_loud() {
+        let source = vec![0u8; 16];
+        let mut body = Vec::new();
+        body.extend_from_slice(b"BPS1");
+        body.extend_from_slice(&encode_var_int(source.len() as u64));
+        body.extend_from_slice(&encode_var_int(16));
+        body.extend_from_slice(&encode_var_int(0));
+
+        let length: u64 = 8;
+        let action: u64 = ((length - 1) << 2) | 3;
+        body.extend_from_slice(&encode_var_int(action));
+        body.extend_from_slice(&encode_var_int(encode_rel_offset(0)));
+
+        let target_expected = vec![0u8; 16];
+        let source_crc = crc32_compute(&source);
+        let target_crc = crc32_compute(&target_expected);
+        body.extend_from_slice(&source_crc.to_le_bytes());
+        body.extend_from_slice(&target_crc.to_le_bytes());
+
+        let patch_crc = crc32_compute(&body);
+        body.extend_from_slice(&patch_crc.to_le_bytes());
+
+        let err = import_bps(&body, &source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        let msg = err.to_string();
+        assert!(
+            msg.contains("TargetCopy") && msg.contains("OOB"),
+            "expected TargetCopy OOB error, got: {msg}"
+        );
     }
 }
