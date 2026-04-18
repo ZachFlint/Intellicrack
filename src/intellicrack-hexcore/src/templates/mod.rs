@@ -101,6 +101,10 @@ pub enum FieldType {
         expression: String,
         display_type: Box<FieldType>,
     },
+    EndiannessSwitch {
+        peek_offset: usize,
+        big_value: u8,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -297,7 +301,8 @@ pub fn field_size(ft: &FieldType) -> usize {
         | FieldType::Union { .. }
         | FieldType::Conditional { .. }
         | FieldType::StructRef(_)
-        | FieldType::Computed { .. } => 0,
+        | FieldType::Computed { .. }
+        | FieldType::EndiannessSwitch { .. } => 0,
     }
 }
 
@@ -448,6 +453,10 @@ fn format_composite_value(ft: &FieldType, raw: &[u8]) -> String {
         }
         FieldType::StructRef(name) => format!("struct {name}"),
         FieldType::Computed { expression, .. } => format!("= {expression}"),
+        FieldType::EndiannessSwitch {
+            peek_offset,
+            big_value,
+        } => format!("endianness_switch(peek+{peek_offset}=={big_value:#04X})"),
         _ => String::new(),
     }
 }
@@ -498,6 +507,7 @@ pub fn field_type_name(ft: &FieldType) -> &'static str {
         FieldType::Conditional { .. } => "conditional",
         FieldType::StructRef(_) => "struct_ref",
         FieldType::Computed { .. } => "computed",
+        FieldType::EndiannessSwitch { .. } => "endianness_switch",
     }
 }
 

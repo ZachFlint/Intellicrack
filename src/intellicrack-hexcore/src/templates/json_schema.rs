@@ -70,12 +70,10 @@ fn validate_field_type(ft: &super::FieldType) -> Result<(), TemplateError> {
             }
             validate_field_type(pointer_type)?;
         }
-        super::FieldType::StructRef(name) => {
-            if name.is_empty() {
-                return Err(TemplateError::InvalidFieldReference(
-                    "StructRef name cannot be empty".to_string(),
-                ));
-            }
+        super::FieldType::StructRef(name) if name.is_empty() => {
+            return Err(TemplateError::InvalidFieldReference(
+                "StructRef name cannot be empty".to_string(),
+            ));
         }
         super::FieldType::Array { element_type, .. } => {
             validate_field_type(element_type)?;

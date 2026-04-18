@@ -10,6 +10,7 @@ const MAX_DEPTH: usize = 16;
 pub struct TemplateEvaluator<'a> {
     data: &'a [u8],
     current_offset: usize,
+    base_offset: usize,
     default_endian: Endianness,
     parsed_values: HashMap<String, i64>,
     registry: &'a TemplateRegistry,
@@ -27,6 +28,7 @@ impl<'a> TemplateEvaluator<'a> {
         Self {
             data,
             current_offset: base_offset,
+            base_offset,
             default_endian,
             parsed_values: HashMap::new(),
             registry,
@@ -104,6 +106,11 @@ impl<'a> TemplateEvaluator<'a> {
                 expression,
                 display_type,
             } => self.eval_computed(&field.name, expression, display_type, field),
+
+            FieldType::EndiannessSwitch {
+                peek_offset,
+                big_value,
+            } => self.eval_endianness_switch(&field.name, *peek_offset, *big_value, field),
 
             _ => {
                 let size = field_size(&field.field_type);
@@ -298,7 +305,9 @@ impl<'a> TemplateEvaluator<'a> {
             .ok_or_else(|| TemplateError::NotFound(template_name.to_string()))?;
 
         let saved_endian = self.default_endian;
+        let saved_base = self.base_offset;
         self.default_endian = template.default_endianness;
+        self.base_offset = self.current_offset;
         self.depth += 1;
 
         let start_offset = self.current_offset;
@@ -307,6 +316,7 @@ impl<'a> TemplateEvaluator<'a> {
 
         self.depth -= 1;
         self.default_endian = saved_endian;
+        self.base_offset = saved_base;
 
         let size = end_offset - start_offset;
         let raw = if start_offset + size <= self.data.len() {
@@ -357,13 +367,16 @@ impl<'a> TemplateEvaluator<'a> {
             if let Some(template) = self.registry.get(target_template) {
                 let saved_offset = self.current_offset;
                 let saved_endian = self.default_endian;
+                let saved_base = self.base_offset;
                 self.current_offset = ptr_value;
                 self.default_endian = template.default_endianness;
+                self.base_offset = ptr_value;
                 self.depth += 1;
                 let result = self.evaluate_fields(&template.fields);
                 self.depth -= 1;
                 self.current_offset = saved_offset;
                 self.default_endian = saved_endian;
+                self.base_offset = saved_base;
                 result.unwrap_or_default()
             } else {
                 Vec::new()
@@ -575,6 +588,50 @@ impl<'a> TemplateEvaluator<'a> {
                 field.description,
                 super::field_type_name(display_type)
             ),
+        }])
+    }
+
+    fn eval_endianness_switch(
+        &mut self,
+        name: &str,
+        peek_offset: usize,
+        big_value: u8,
+        field: &FieldDefinition,
+    ) -> Result<Vec<ParsedField>, TemplateError> {
+        let peek_abs = self.base_offset.saturating_add(peek_offset);
+        if peek_abs >= self.data.len() {
+            return Err(TemplateError::InsufficientData {
+                offset: peek_abs,
+                needed: 1,
+                available: self.data.len().saturating_sub(peek_abs),
+            });
+        }
+
+        let peek_byte = self.data[peek_abs];
+        self.default_endian = if peek_byte == big_value {
+            Endianness::Big
+        } else {
+            Endianness::Little
+        };
+
+        let endian_label = match self.default_endian {
+            Endianness::Little => "little",
+            Endianness::Big => "big",
+        };
+        let display = format!(
+            "{endian_label} (peek[base+{peek_offset}]=0x{peek_byte:02X}, big_value=0x{big_value:02X})"
+        );
+
+        Ok(vec![ParsedField {
+            name: name.to_string(),
+            offset: peek_abs,
+            size: 0,
+            raw_bytes: vec![peek_byte],
+            display_value: display,
+            children: Vec::new(),
+            color: field.color.clone(),
+            validation_passed: None,
+            description: field.description.clone(),
         }])
     }
 }
