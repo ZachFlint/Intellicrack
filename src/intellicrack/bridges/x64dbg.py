@@ -15,8 +15,9 @@ import os
 import struct
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypeGuard, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
+from intellicrack.bridges._win32_types import CMD_LINE_OFFSET_32
 from intellicrack.bridges.base import (
     BridgeCapabilities,
     BridgeState,
@@ -267,7 +268,7 @@ def _extract_command_line_from_peb(handle: int) -> str | None:
         return None
 
     class ProcessBasicInformation(ctypes.Structure):
-        _fields_ = [
+        _fields_: ClassVar = [
             ("Reserved1", ctypes.c_void_p),
             ("PebBaseAddress", ctypes.c_void_p),
             ("Reserved2", ctypes.c_void_p * 2),
@@ -331,7 +332,7 @@ def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: in
     if not _IS_WIN32:
         return None
 
-    cmd_offset = CMD_LINE_OFFSET_64 if ptr_size == POINTER_SIZE_64 else PE_MAGIC_OFFSET
+    cmd_offset = CMD_LINE_OFFSET_64 if ptr_size == POINTER_SIZE_64 else CMD_LINE_OFFSET_32
     ustr_size = UNICODE_STRING_SIZE_64 if ptr_size == POINTER_SIZE_64 else UNICODE_STRING_SIZE_32
     ustr_bytes = _read_process_memory_block(handle, params_addr + cmd_offset, ustr_size)
 
@@ -2453,6 +2454,8 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_READ,
             WIN_NO_INHERIT_HANDLE,
@@ -2507,6 +2510,8 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_WRITE | WIN_PROCESS_VM_OPERATION,
             WIN_NO_INHERIT_HANDLE,
@@ -2575,6 +2580,8 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_OPERATION,
             WIN_NO_INHERIT_HANDLE,
@@ -2673,7 +2680,7 @@ class X64DbgBridge(DebuggerBridge):
             regions together with their protection flags.
             """
 
-            _fields_ = [
+            _fields_: ClassVar = [
                 ("BaseAddress", ctypes.c_void_p),
                 ("AllocationBase", ctypes.c_void_p),
                 ("AllocationProtect", wintypes.DWORD),
@@ -3009,7 +3016,7 @@ class X64DbgBridge(DebuggerBridge):
             a toolhelp snapshot.
             """
 
-            _fields_ = [
+            _fields_: ClassVar = [
                 ("dwSize", wintypes.DWORD),
                 ("cntUsage", wintypes.DWORD),
                 ("th32ThreadID", wintypes.DWORD),
@@ -3019,6 +3026,8 @@ class X64DbgBridge(DebuggerBridge):
                 ("dwFlags", wintypes.DWORD),
             ]
 
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
         snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
         if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
             error_code = ctypes.get_last_error()
@@ -3085,7 +3094,7 @@ class X64DbgBridge(DebuggerBridge):
             attached process via a toolhelp snapshot.
             """
 
-            _fields_ = [
+            _fields_: ClassVar = [
                 ("dwSize", wintypes.DWORD),
                 ("th32ModuleID", wintypes.DWORD),
                 ("th32ProcessID", wintypes.DWORD),
@@ -3098,6 +3107,8 @@ class X64DbgBridge(DebuggerBridge):
                 ("szExePath", ctypes.c_wchar * 260),
             ]
 
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
         snapshot = kernel32.CreateToolhelp32Snapshot(
             TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
             self._attached_pid,
@@ -4687,7 +4698,7 @@ class X64DbgBridge(DebuggerBridge):
                         reference into ``LookupPrivilegeNameW``.
                         """
 
-                        _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+                        _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
 
                     luid = LUID(luid_low, luid_high)
                     if advapi32.LookupPrivilegeNameW(None, ctypes.byref(luid), name_buf, ctypes.byref(name_len)):
@@ -4733,7 +4744,7 @@ class X64DbgBridge(DebuggerBridge):
                 ``AdjustTokenPrivileges``.
                 """
 
-                _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+                _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
 
             class TokenPrivileges(ctypes.Structure):
                 """Windows ``TOKEN_PRIVILEGES`` payload for one privilege.
@@ -4743,7 +4754,7 @@ class X64DbgBridge(DebuggerBridge):
                 when toggling a single privilege at a time.
                 """
 
-                _fields_ = [
+                _fields_: ClassVar = [
                     ("PrivilegeCount", wintypes.DWORD),
                     ("Luid", LUID),
                     ("Attributes", wintypes.DWORD),
@@ -4859,7 +4870,7 @@ class X64DbgBridge(DebuggerBridge):
         kernel32 = ctypes.windll.kernel32
 
         class ProcessEntry32W(ctypes.Structure):
-            _fields_ = [
+            _fields_: ClassVar = [
                 ("dwSize", wintypes.DWORD),
                 ("cntUsage", wintypes.DWORD),
                 ("th32ProcessID", wintypes.DWORD),
@@ -4872,6 +4883,8 @@ class X64DbgBridge(DebuggerBridge):
                 ("szExeFile", ctypes.c_wchar * 260),
             ]
 
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
         snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
         if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
             error_code = ctypes.get_last_error()

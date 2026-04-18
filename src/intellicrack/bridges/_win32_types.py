@@ -13,7 +13,7 @@ from __future__ import annotations
 import ctypes
 import sys
 from ctypes import wintypes
-from typing import Final
+from typing import ClassVar, Final
 
 
 _IS_WINDOWS: Final[bool] = sys.platform == "win32"
@@ -171,6 +171,12 @@ NMPWAIT_WAIT_FOREVER: Final[int] = 0xFFFFFFFF
 NMPWAIT_USE_DEFAULT_WAIT: Final[int] = 0x00000000
 
 # ---------------------------------------------------------------------------
+# RTL_USER_PROCESS_PARAMETERS command-line offsets
+# ---------------------------------------------------------------------------
+CMD_LINE_OFFSET_32: Final[int] = 0x40
+CMD_LINE_OFFSET_64: Final[int] = 0x70
+
+# ---------------------------------------------------------------------------
 # Registry constants
 # ---------------------------------------------------------------------------
 HKEY_CLASSES_ROOT: Final[int] = 0x80000000
@@ -229,7 +235,7 @@ THREAD_STATE_NAMES: Final[dict[int, str]] = {
 class PROCESSENTRY32(ctypes.Structure):
     """Windows PROCESSENTRY32 structure for process snapshot enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("dwSize", wintypes.DWORD),
         ("cntUsage", wintypes.DWORD),
         ("th32ProcessID", wintypes.DWORD),
@@ -246,7 +252,7 @@ class PROCESSENTRY32(ctypes.Structure):
 class THREADENTRY32(ctypes.Structure):
     """Windows THREADENTRY32 structure for thread snapshot enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("dwSize", wintypes.DWORD),
         ("cntUsage", wintypes.DWORD),
         ("th32ThreadID", wintypes.DWORD),
@@ -260,7 +266,7 @@ class THREADENTRY32(ctypes.Structure):
 class MODULEENTRY32(ctypes.Structure):
     """Windows MODULEENTRY32 structure for module snapshot enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("dwSize", wintypes.DWORD),
         ("th32ModuleID", wintypes.DWORD),
         ("th32ProcessID", wintypes.DWORD),
@@ -277,7 +283,7 @@ class MODULEENTRY32(ctypes.Structure):
 class MEMORY_BASIC_INFORMATION(ctypes.Structure):
     """Windows MEMORY_BASIC_INFORMATION structure for virtual memory queries."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("BaseAddress", ctypes.c_void_p),
         ("AllocationBase", ctypes.c_void_p),
         ("AllocationProtect", wintypes.DWORD),
@@ -299,7 +305,7 @@ MemoryBasicInformation = MEMORY_BASIC_INFORMATION
 class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
     """Windows PROCESS_MEMORY_COUNTERS structure from psapi."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("cb", wintypes.DWORD),
         ("PageFaultCount", wintypes.DWORD),
         ("PeakWorkingSetSize", ctypes.c_size_t),
@@ -321,7 +327,7 @@ class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
 class LUID(ctypes.Structure):
     """Windows LUID structure for privilege identification."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("LowPart", wintypes.DWORD),
         ("HighPart", wintypes.LONG),
     ]
@@ -330,7 +336,7 @@ class LUID(ctypes.Structure):
 class LUID_AND_ATTRIBUTES(ctypes.Structure):
     """Windows LUID_AND_ATTRIBUTES structure for privilege state."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Luid", LUID),
         ("Attributes", wintypes.DWORD),
     ]
@@ -339,7 +345,7 @@ class LUID_AND_ATTRIBUTES(ctypes.Structure):
 class TOKEN_PRIVILEGES(ctypes.Structure):
     """Windows TOKEN_PRIVILEGES structure for privilege adjustment."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("PrivilegeCount", wintypes.DWORD),
         ("Privileges", LUID_AND_ATTRIBUTES * 1),
     ]
@@ -353,7 +359,7 @@ class TOKEN_PRIVILEGES(ctypes.Structure):
 class UNICODE_STRING(ctypes.Structure):
     """Windows UNICODE_STRING structure from ntdll."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Length", wintypes.USHORT),
         ("MaximumLength", wintypes.USHORT),
         ("Buffer", ctypes.c_wchar_p),
@@ -363,7 +369,7 @@ class UNICODE_STRING(ctypes.Structure):
 class PROCESS_BASIC_INFORMATION(ctypes.Structure):
     """NtQueryInformationProcess result for ProcessBasicInformation."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("ExitStatus", ctypes.c_long),
         ("PebBaseAddress", ctypes.c_void_p),
         ("AffinityMask", ctypes.c_size_t),
@@ -376,7 +382,7 @@ class PROCESS_BASIC_INFORMATION(ctypes.Structure):
 class THREAD_BASIC_INFORMATION(ctypes.Structure):
     """NtQueryInformationThread result for ThreadBasicInformation."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("ExitStatus", ctypes.c_long),
         ("TebBaseAddress", ctypes.c_void_p),
         ("ClientId_UniqueProcess", ctypes.c_void_p),
@@ -395,7 +401,7 @@ class THREAD_BASIC_INFORMATION(ctypes.Structure):
 class SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX(ctypes.Structure):
     """Single handle entry from SystemExtendedHandleInformation."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Object", ctypes.c_void_p),
         ("UniqueProcessId", ctypes.c_void_p),
         ("HandleValue", ctypes.c_void_p),
@@ -410,7 +416,7 @@ class SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX(ctypes.Structure):
 class SYSTEM_HANDLE_INFORMATION_EX(ctypes.Structure):
     """Header for SystemExtendedHandleInformation result buffer."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("NumberOfHandles", ctypes.c_void_p),
         ("Reserved", ctypes.c_void_p),
         ("Handles", SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX * 1),
@@ -425,7 +431,7 @@ class SYSTEM_HANDLE_INFORMATION_EX(ctypes.Structure):
 class HEAPLIST32(ctypes.Structure):
     """Windows HEAPLIST32 structure for heap snapshot enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("dwSize", ctypes.c_size_t),
         ("th32ProcessID", wintypes.DWORD),
         ("th32HeapID", ctypes.c_size_t),
@@ -436,7 +442,7 @@ class HEAPLIST32(ctypes.Structure):
 class HEAPENTRY32(ctypes.Structure):
     """Windows HEAPENTRY32 structure for heap block enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("dwSize", ctypes.c_size_t),
         ("hHandle", wintypes.HANDLE),
         ("dwAddress", ctypes.c_size_t),
@@ -457,7 +463,7 @@ class HEAPENTRY32(ctypes.Structure):
 class M128A(ctypes.Structure):
     """128-bit register value for XMM/SSE context."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Low", ctypes.c_ulonglong),
         ("High", ctypes.c_longlong),
     ]
@@ -466,7 +472,7 @@ class M128A(ctypes.Structure):
 class CONTEXT64(ctypes.Structure):
     """AMD64 CONTEXT structure for GetThreadContext/SetThreadContext."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("P1Home", ctypes.c_ulonglong),
         ("P2Home", ctypes.c_ulonglong),
         ("P3Home", ctypes.c_ulonglong),
@@ -519,7 +525,7 @@ class CONTEXT64(ctypes.Structure):
 class FLOATING_SAVE_AREA(ctypes.Structure):
     """I386 FLOATING_SAVE_AREA structure."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("ControlWord", wintypes.DWORD),
         ("StatusWord", wintypes.DWORD),
         ("TagWord", wintypes.DWORD),
@@ -535,7 +541,7 @@ class FLOATING_SAVE_AREA(ctypes.Structure):
 class CONTEXT32(ctypes.Structure):
     """I386 CONTEXT structure for 32-bit thread context."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("ContextFlags", wintypes.DWORD),
         ("Dr0", wintypes.DWORD),
         ("Dr1", wintypes.DWORD),
@@ -571,7 +577,7 @@ class CONTEXT32(ctypes.Structure):
 class ADDRESS64(ctypes.Structure):
     """DbgHelp ADDRESS64 structure for stack walking."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Offset", ctypes.c_ulonglong),
         ("Segment", wintypes.WORD),
         ("Mode", wintypes.DWORD),
@@ -581,7 +587,7 @@ class ADDRESS64(ctypes.Structure):
 class STACKFRAME64(ctypes.Structure):
     """DbgHelp STACKFRAME64 structure for stack frame enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("AddrPC", ADDRESS64),
         ("AddrReturn", ADDRESS64),
         ("AddrFrame", ADDRESS64),
@@ -599,7 +605,7 @@ class STACKFRAME64(ctypes.Structure):
 class SYMBOL_INFO(ctypes.Structure):
     """DbgHelp SYMBOL_INFO structure for symbol resolution."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("SizeOfStruct", wintypes.ULONG),
         ("TypeIndex", wintypes.ULONG),
         ("Reserved", ctypes.c_ulonglong * 2),
@@ -641,7 +647,7 @@ EXCEPTION_REGISTRATION_RECORD._fields_ = [
 class SERVICE_STATUS_PROCESS(ctypes.Structure):
     """Windows SERVICE_STATUS_PROCESS structure from advapi32."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("dwServiceType", wintypes.DWORD),
         ("dwCurrentState", wintypes.DWORD),
         ("dwControlsAccepted", wintypes.DWORD),
@@ -657,7 +663,7 @@ class SERVICE_STATUS_PROCESS(ctypes.Structure):
 class ENUM_SERVICE_STATUS_PROCESSW(ctypes.Structure):
     """Windows ENUM_SERVICE_STATUS_PROCESSW structure for service enumeration."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("lpServiceName", wintypes.LPWSTR),
         ("lpDisplayName", wintypes.LPWSTR),
         ("ServiceStatusProcess", SERVICE_STATUS_PROCESS),
@@ -672,7 +678,7 @@ class ENUM_SERVICE_STATUS_PROCESSW(ctypes.Structure):
 class IO_COUNTERS(ctypes.Structure):
     """Windows IO_COUNTERS structure for job object info."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("ReadOperationCount", ctypes.c_ulonglong),
         ("WriteOperationCount", ctypes.c_ulonglong),
         ("OtherOperationCount", ctypes.c_ulonglong),
@@ -685,7 +691,7 @@ class IO_COUNTERS(ctypes.Structure):
 class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
     """Windows JOBOBJECT_BASIC_LIMIT_INFORMATION structure."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("PerProcessUserTimeLimit", ctypes.c_longlong),
         ("PerJobUserTimeLimit", ctypes.c_longlong),
         ("LimitFlags", wintypes.DWORD),
@@ -701,7 +707,7 @@ class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
 class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
     """Windows JOBOBJECT_EXTENDED_LIMIT_INFORMATION structure."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
         ("IoInfo", IO_COUNTERS),
         ("ProcessMemoryLimit", ctypes.c_size_t),
@@ -719,7 +725,7 @@ class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
 class PROCESS_MITIGATION_DEP_POLICY(ctypes.Structure):
     """DEP mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
         ("Permanent", wintypes.BOOLEAN),
     ]
@@ -728,7 +734,7 @@ class PROCESS_MITIGATION_DEP_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_ASLR_POLICY(ctypes.Structure):
     """ASLR mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -736,7 +742,7 @@ class PROCESS_MITIGATION_ASLR_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_DYNAMIC_CODE_POLICY(ctypes.Structure):
     """Dynamic code mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -744,7 +750,7 @@ class PROCESS_MITIGATION_DYNAMIC_CODE_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY(ctypes.Structure):
     """Strict handle check mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -752,7 +758,7 @@ class PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY(ctypes.Structure):
     """System call disable mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -760,7 +766,7 @@ class PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY(ctypes.Structure):
     """Control Flow Guard mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -768,7 +774,7 @@ class PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY(ctypes.Structure):
     """Binary signature mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -776,7 +782,7 @@ class PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_IMAGE_LOAD_POLICY(ctypes.Structure):
     """Image load mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
@@ -784,7 +790,7 @@ class PROCESS_MITIGATION_IMAGE_LOAD_POLICY(ctypes.Structure):
 class PROCESS_MITIGATION_FONT_DISABLE_POLICY(ctypes.Structure):
     """Font disable mitigation policy flags."""
 
-    _fields_ = [
+    _fields_: ClassVar = [
         ("Flags", wintypes.DWORD),
     ]
 
