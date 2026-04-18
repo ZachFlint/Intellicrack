@@ -18,6 +18,8 @@ from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
     from intellicrack.core.hexpat import PatternRegistry
     from intellicrack.core.types import HexDocumentFull
 
@@ -60,6 +62,34 @@ class TemplateInfo:
 _BUILTIN_CATEGORIES: tuple[str, ...] = ("pe", "elf", "macho", "zip", "common")
 
 
+class TemplateBootstrapError(RuntimeError):
+    """Raised when built-in template bootstrap encounters failures.
+
+    Aggregates per-template failures encountered while exporting built-in
+    templates or parsing template files so callers can react to or report
+    them without losing information.
+
+    Attributes:
+        failed_templates: Sequence of ``(path, error_message)`` pairs describing
+            each failure encountered during bootstrap.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        failed_templates: Sequence[tuple[Path, str]],
+    ) -> None:
+        """Initialize the error with a message and failure details.
+
+        Args:
+            message: Human-readable summary of the bootstrap failure.
+            failed_templates: Sequence of ``(path, error_message)`` pairs for
+                every template that failed to export or parse.
+        """
+        super().__init__(message)
+        self.failed_templates: Sequence[tuple[Path, str]] = tuple(failed_templates)
+
+
 class TemplateManager:
     """Manages template files on disk for the hex editor.
 
@@ -81,6 +111,7 @@ class TemplateManager:
         self._builtin_dir = self._templates_dir / "builtin"
         self._user_dir = self._templates_dir / "user"
         self._pattern_registry: Any | None = None
+        self.failed_templates: list[tuple[Path, str]] = []
 
     def ensure_directories(self) -> None:
         """Create the template directory structure if it doesn't exist."""
@@ -93,52 +124,115 @@ class TemplateManager:
     def bootstrap_builtins(self, document: HexDocumentFull) -> None:
         """Export all built-in templates as JSON files.
 
-        Only runs if the builtin directory has no existing JSON files.
-        Uses the HexDocument's export_template_json and
-        list_templates_detailed methods.
+        Skips export only when every expected built-in template already exists
+        in the registry on disk. Otherwise iterates over the document's
+        template list, exporting any missing entries via
+        ``export_template_json`` and aggregating per-template failures.
+        Failures are logged at ``warning`` and appended to
+        ``self.failed_templates``; if any failures occurred a
+        :class:`TemplateBootstrapError` is raised after all templates have
+        been processed.
 
         Args:
-            document: HexDocument instance with template export methods.
+            document: HexDocument instance exposing
+                ``list_templates_detailed`` and ``export_template_json``.
+
+        Raises:
+            TemplateBootstrapError: If one or more built-in templates failed
+                to export, or if the document is missing the required
+                template methods while bootstrap is still required.
         """
         self.ensure_directories()
-
-        if existing := list(self._builtin_dir.rglob("*.json")):
-            _logger.debug("builtin_templates_already_exist", count=len(existing))
-            return
+        self.failed_templates = []
 
         list_detailed_fn = getattr(document, "list_templates_detailed", None)
         export_fn = getattr(document, "export_template_json", None)
+
+        existing_json_paths = list(self._builtin_dir.rglob("*.json"))
+        existing_names = {path.stem for path in existing_json_paths}
+
+        expected_names: set[str] = set()
+        template_entries: list[tuple[str, str, str, int]] = []
+        if callable(list_detailed_fn):
+            raw_result: object = list_detailed_fn()
+            if isinstance(raw_result, list):
+                template_entries = cast("list[tuple[str, str, str, int]]", raw_result)
+                expected_names = {entry[0] for entry in template_entries}
+
+        if expected_names and expected_names.issubset(existing_names):
+            _logger.debug(
+                "builtin_templates_already_exist",
+                count=len(existing_json_paths),
+            )
+            return
+
         if not callable(list_detailed_fn) or not callable(export_fn):
-            _logger.debug("document_missing_template_methods")
-            return
+            message = "document is missing list_templates_detailed or export_template_json"
+            _logger.warning("document_missing_template_methods")
+            raise TemplateBootstrapError(message, self.failed_templates)
 
-        raw_result: object = list_detailed_fn()
-        if not isinstance(raw_result, list):
-            _logger.debug("unexpected_template_list_type")
-            return
-        template_entries = cast("list[tuple[str, str, str, int]]", raw_result)
+        if not template_entries:
+            _logger.warning("unexpected_template_list_type")
+            no_entries_message = "list_templates_detailed returned no usable entries"
+            raise TemplateBootstrapError(no_entries_message, self.failed_templates)
+
         exported = 0
-
         for tmpl_entry in template_entries:
-            name = tmpl_entry[0]
-            category = tmpl_entry[2]
-            cat_lower = category.lower().replace("-", "") if category else "common"
-            if cat_lower not in _BUILTIN_CATEGORIES:
-                cat_lower = "common"
-
-            cat_dir = self._builtin_dir / cat_lower
-            cat_dir.mkdir(parents=True, exist_ok=True)
-            target_path = cat_dir / f"{name}.json"
-
-            try:
-                raw_json: object = export_fn(name)
-                if isinstance(raw_json, str):
-                    target_path.write_text(raw_json, encoding="utf-8")
-                    exported += 1
-            except (OSError, ValueError, RuntimeError) as exc:
-                _logger.debug("builtin_export_failed", template_name=name, error=str(exc))
+            if self._bootstrap_single_template(tmpl_entry, export_fn):
+                exported += 1
 
         _logger.info("builtin_templates_bootstrapped", count=exported)
+
+        if self.failed_templates:
+            message = f"bootstrap encountered {len(self.failed_templates)} template failure(s)"
+            raise TemplateBootstrapError(message, self.failed_templates)
+
+    def _bootstrap_single_template(
+        self,
+        tmpl_entry: tuple[str, str, str, int],
+        export_fn: Callable[[str], object],
+    ) -> bool:
+        """Export a single built-in template to its JSON file.
+
+        Args:
+            tmpl_entry: Tuple of (name, description, category, field_count).
+            export_fn: Document-provided export_template_json callable.
+
+        Returns:
+            bool: True on success; False if the template failed to export
+                (with the failure appended to ``self.failed_templates``).
+        """
+        name = tmpl_entry[0]
+        category = tmpl_entry[2]
+        cat_lower = category.lower().replace("-", "") if category else "common"
+        if cat_lower not in _BUILTIN_CATEGORIES:
+            cat_lower = "common"
+
+        cat_dir = self._builtin_dir / cat_lower
+        cat_dir.mkdir(parents=True, exist_ok=True)
+        target_path = cat_dir / f"{name}.json"
+
+        try:
+            raw_json: object = export_fn(name)
+        except (OSError, ValueError, RuntimeError) as exc:
+            _logger.warning("builtin_export_failed", template_name=name, error=str(exc))
+            self.failed_templates.append((target_path, str(exc)))
+            return False
+
+        if not isinstance(raw_json, str):
+            error_message = f"export_template_json returned non-string for {name!r}"
+            _logger.warning("builtin_export_invalid_type", template_name=name)
+            self.failed_templates.append((target_path, error_message))
+            return False
+
+        try:
+            target_path.write_text(raw_json, encoding="utf-8")
+        except OSError as exc:
+            _logger.warning("builtin_export_write_failed", template_name=name, error=str(exc))
+            self.failed_templates.append((target_path, str(exc)))
+            return False
+
+        return True
 
     def list_all_templates(self) -> list[TemplateInfo]:
         """List all available templates (built-in and user).
@@ -262,8 +356,8 @@ class TemplateManager:
             _logger.info("user_template_deleted", name=name)
         return deleted
 
-    @staticmethod
     def _parse_template_file(
+        self,
         json_path: Path,
         *,
         is_builtin: bool,
@@ -271,13 +365,18 @@ class TemplateManager:
     ) -> TemplateInfo | None:
         """Parse a template JSON file to extract metadata.
 
+        Logs any failure at ``warning`` and records a ``(path, error)``
+        entry in ``self.failed_templates`` instead of silently returning
+        ``None``.
+
         Args:
             json_path: Path to the JSON file.
             is_builtin: Whether this is a built-in template.
             dsl_path: Optional path to accompanying DSL file.
 
         Returns:
-            TemplateInfo | None: Parsed template info, or None on error.
+            TemplateInfo | None: Parsed template info, or ``None`` if the
+                file could not be read or parsed.
         """
         try:
             content = json_path.read_text(encoding="utf-8")
@@ -294,11 +393,12 @@ class TemplateManager:
                 dsl_path=dsl_path,
             )
         except (OSError, ValueError, KeyError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "template_parse_failed",
                 path=str(json_path),
                 error=str(exc),
             )
+            self.failed_templates.append((json_path, str(exc)))
             return None
 
     @property
