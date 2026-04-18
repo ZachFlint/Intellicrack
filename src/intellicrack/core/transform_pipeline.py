@@ -10,6 +10,7 @@ built from any combination of Rust-accelerated and pure-Python steps.
 
 from __future__ import annotations
 
+import abc
 import ast
 import operator
 import re
@@ -204,31 +205,33 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
     raise ExpressionError(msg)
 
 
-class TransformNode:
-    """Base class for a single transform step in a pipeline.
+class TransformNode(abc.ABC):
+    """Abstract base class for a single transform step in a pipeline.
 
-    Subclasses override ``name``, ``category``, and ``process`` to provide
-    concrete transform behaviour. The base class returns safe no-op defaults
-    so that partial subclasses remain functional during development.
+    Concrete subclasses must implement ``name``, ``category``, and
+    ``process``. ``name`` identifies the transform, ``category`` groups it
+    for UI presentation, and ``process`` performs the actual byte-level
+    transformation. ``description`` has a default empty implementation and
+    may be overridden to provide human-readable help text.
     """
 
     @property
+    @abc.abstractmethod
     def name(self) -> str:
         """Unique identifier for this transform.
 
         Returns:
-            str: Transform name, empty string in the base class.
+            str: Transform name.
         """
-        return ""
 
     @property
+    @abc.abstractmethod
     def category(self) -> str:
         """Grouping category for this transform.
 
         Returns:
-            str: Category string, empty string in the base class.
+            str: Category string.
         """
-        return ""
 
     @property
     def description(self) -> str:
@@ -239,21 +242,17 @@ class TransformNode:
         """
         return ""
 
+    @abc.abstractmethod
     def process(self, data: bytes, params: dict[str, Any]) -> bytes:
         """Apply this transform to binary data.
 
-        The base implementation returns ``data`` unchanged. Subclasses must
-        override this method to perform the actual transformation.
-
         Args:
             data: Input bytes to transform.
-            params: Transform-specific parameters (unused in base class).
+            params: Transform-specific parameters.
 
         Returns:
             bytes: Transformed output bytes.
         """
-        _logger.debug("transform_noop", node=self.name, params_keys=list(params))
-        return data
 
 
 class RustTransformNode(TransformNode):
