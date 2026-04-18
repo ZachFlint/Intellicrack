@@ -429,6 +429,7 @@ class X64DbgBridge(DebuggerBridge):
             supports_dynamic_analysis=True,
             supports_patching=True,
             supports_scripting=True,
+            supports_memory_access=True,
             supported_architectures=["x86", "x86_64"],
             supported_formats=["pe"],
         )
