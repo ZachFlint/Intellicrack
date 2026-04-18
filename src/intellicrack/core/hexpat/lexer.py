@@ -472,7 +472,11 @@ class HexPatLexer:
             raise HexPatParseError(msg, line, col, self.file_path)
 
     def _scan_token(self) -> None:
-        """Scan and emit the next token from the current position."""
+        """Scan and emit the next token from the current position.
+
+        Raises:
+            HexPatParseError: If the input is malformed.
+        """
         while self._pos < len(self._source):
             if self._skip_whitespace():
                 continue
@@ -505,6 +509,10 @@ class HexPatLexer:
             self._scan_identifier(line, col)
             return
 
+        if ch == "#":
+            msg = "Unexpected '#': did you mean a preprocessor directive? e.g., `#include`, `#define`, `#pragma`, `#ifdef`, `#error`"
+            raise HexPatParseError(msg, line, col, self.file_path)
+
         self._advance()
         singles: dict[str, TokenType] = {
             "{": TokenType.LBRACE,
@@ -516,7 +524,6 @@ class HexPatLexer:
             "?": TokenType.QUESTION,
             "$": TokenType.DOLLAR,
             "@": TokenType.AT,
-            "#": TokenType.HASH,
             "~": TokenType.TILDE,
         }
         if ch in singles:
