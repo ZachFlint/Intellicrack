@@ -1953,15 +1953,26 @@ class FridaBridge(InstrumentationBridge):
 
         script_code = f"""
         var target = {addr_resolve};
-        Interceptor.attach(target, {{
-            onEnter: function(args) {{
-                {on_enter_code}
-            }},
-            onLeave: function(retval) {{
-                {on_leave_code}
+        var onEnterFn = function(args) {{}};
+        var onLeaveFn = function(retval) {{}};
+        recv('install_hook', function(msg) {{
+            try {{
+                if (typeof msg.onEnter === 'string' && msg.onEnter.length > 0) {{
+                    onEnterFn = new Function('args', msg.onEnter);
+                }}
+                if (typeof msg.onLeave === 'string' && msg.onLeave.length > 0) {{
+                    onLeaveFn = new Function('retval', msg.onLeave);
+                }}
+                Interceptor.attach(target, {{
+                    onEnter: function(args) {{ onEnterFn.call(this, args); }},
+                    onLeave: function(retval) {{ onLeaveFn.call(this, retval); }}
+                }});
+                send({{ type: 'hooked', address: target.toString() }});
+            }} catch (e) {{
+                send({{ type: 'hook_error', error: e.message }});
             }}
         }});
-        send({{ type: 'hooked', address: target.toString() }});
+        send({{ type: 'hook_ready' }});
         """
 
         try:
@@ -1970,39 +1981,30 @@ class FridaBridge(InstrumentationBridge):
             _logger.warning("hook_create_script_failed", target=target, error=str(e))
             raise ToolError(_ERR_HOOK_FAILED) from e
 
-        messages: list[ScriptMessage] = []
-        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
-
+        messages, on_message, installed_event = self._make_install_waiter({"hooked", "hook_error"})
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
+        await asyncio.to_thread(
+            script.post,
+            {"type": "install_hook", "onEnter": on_enter_code, "onLeave": on_leave_code},
+        )
 
         try:
-            await asyncio.wait_for(event.wait(), timeout=5.0)
+            await asyncio.wait_for(installed_event.wait(), timeout=5.0)
         except TimeoutError as e:
             await asyncio.to_thread(script.unload)
-            _logger.warning("hook_attach_timeout", target=target)
+            _logger.warning("hook_install_timeout", target=target)
             raise ToolError(_ERR_HOOK_FAILED) from e
 
-        address: int | None = None
-        for msg in messages:
-            if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "hooked":
-                        addr_val = payload_dict.get("address", "0")
-                        if isinstance(addr_val, str):
-                            address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
-                description = msg.get("description", "")
-                _logger.warning("hook_attach_failed", target=target, description=description)
-                raise ToolError(_ERR_HOOK_FAILED, details={"reason": str(description)})
-
-        if address is None:
-            await asyncio.to_thread(script.unload)
-            _logger.warning("hook_attach_no_ack", target=target)
-            raise ToolError(_ERR_HOOK_FAILED)
+        address = await self._resolve_install_address(
+            script=script,
+            messages=messages,
+            target=target,
+            success_type="hooked",
+            error_type="hook_error",
+            error_constant=_ERR_HOOK_FAILED,
+            log_prefix="hook",
+        )
 
         self._scripts[hook_id] = script
 
@@ -2377,6 +2379,120 @@ class FridaBridge(InstrumentationBridge):
             handler = self._message_handler
         if handler is not None:
             handler(message)
+
+    @staticmethod
+    async def _resolve_install_address(
+        *,
+        script: frida.core.Script,
+        messages: list[ScriptMessage],
+        target: str,
+        success_type: str,
+        error_type: str,
+        error_constant: str,
+        log_prefix: str,
+    ) -> int:
+        """Scan install-phase messages for success/error and return the hook address.
+
+        Walks the collected Frida messages looking for a ``send`` payload whose
+        ``type`` matches ``success_type`` (containing the installed address) or
+        ``error_type`` (containing a JS-side error message). Raises ToolError
+        on error payload, Frida transport error, or missing success ack,
+        unloading the script in all failure paths.
+
+        Args:
+            script: Frida script whose install result is being parsed.
+            messages: Buffered script messages from :py:meth:`_make_install_waiter`.
+            target: Install target identifier (used for log context).
+            success_type: Payload ``type`` string that indicates successful install.
+            error_type: Payload ``type`` string that indicates JS-side install failure.
+            error_constant: ``_ERR_*`` constant raised when the install fails.
+            log_prefix: Log-event prefix (e.g. ``"hook"`` or ``"replace"``).
+
+        Returns:
+            int: The installed hook/replacement address.
+
+        Raises:
+            ToolError: If the script emits an error, reports an install failure,
+                or never acknowledges success.
+        """
+        address: int | None = None
+        for msg in messages:
+            msg_type = msg.get("type")
+            if msg_type == "send":
+                payload = msg.get("payload", {})
+                if not isinstance(payload, dict):
+                    continue
+                payload_dict = cast("dict[str, object]", payload)
+                ptype = payload_dict.get("type")
+                if ptype == success_type:
+                    addr_val = payload_dict.get("address", "0")
+                    if isinstance(addr_val, str):
+                        address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
+                elif ptype == error_type:
+                    err_msg = str(payload_dict.get("error", ""))
+                    await asyncio.to_thread(script.unload)
+                    _logger.warning("%s_injection_failed", log_prefix, target=target, error=err_msg)
+                    raise ToolError(error_constant, details={"error": err_msg})
+            elif msg_type == "error":
+                await asyncio.to_thread(script.unload)
+                description = msg.get("description", "")
+                _logger.warning("%s_attach_failed", log_prefix, target=target, description=description)
+                raise ToolError(error_constant, details={"reason": str(description)})
+
+        if address is None:
+            await asyncio.to_thread(script.unload)
+            _logger.warning("%s_attach_no_ack", log_prefix, target=target)
+            raise ToolError(error_constant)
+        return address
+
+    def _make_install_waiter(
+        self,
+        terminal_payload_types: set[str],
+    ) -> tuple[list[ScriptMessage], Callable[[ScriptMessage, bytes | None], None], asyncio.Event]:
+        """Build a Frida message callback that signals an asyncio.Event on install completion.
+
+        Returns a three-tuple of ``(messages, on_message, installed_event)``:
+        the buffer collects every incoming script message, the callback
+        forwards messages to the bridge dispatcher and sets the event
+        when the script emits an error or a ``send`` payload whose
+        ``type`` is in ``terminal_payload_types``. The callback is
+        thread-safe across Frida's C callback thread and the asyncio
+        loop via ``call_soon_threadsafe``.
+
+        Args:
+            terminal_payload_types: Payload ``type`` strings that signal
+                installation is complete (e.g. ``{"hooked", "hook_error"}``).
+
+        Returns:
+            tuple[list[ScriptMessage], Callable[[ScriptMessage, bytes | None], None], asyncio.Event]:
+                Shared message buffer, Frida-compatible message callback, and
+                the asyncio.Event that fires when a terminal message arrives.
+        """
+        messages: list[ScriptMessage] = []
+        installed_event = asyncio.Event()
+        loop = asyncio.get_running_loop()
+
+        def on_message(message: ScriptMessage, data: bytes | None) -> None:
+            """Frida message callback that buffers messages and signals the event.
+
+            Args:
+                message: Frida script message payload.
+                data: Optional binary payload (unused).
+            """
+            del data
+            messages.append(message)
+            self._dispatch_message(dict(cast("dict[str, object]", message)))
+            msg_type = message.get("type")
+            if msg_type == "send":
+                payload = message.get("payload", {})
+                if isinstance(payload, dict):
+                    ptype = cast("dict[str, object]", payload).get("type")
+                    if isinstance(ptype, str) and ptype in terminal_payload_types:
+                        loop.call_soon_threadsafe(installed_event.set)
+            elif msg_type == "error":
+                loop.call_soon_threadsafe(installed_event.set)
+
+        return messages, on_message, installed_event
 
     @override
     async def enumerate_imports(self, module_name: str) -> list[ImportInfo]:
@@ -2912,42 +3028,52 @@ class FridaBridge(InstrumentationBridge):
         hook_id = str(uuid.uuid4())[:8]
         addr_resolve = self._resolve_target_js(target)
 
-        cc_comment = f"// calling_convention: {calling_convention}" if calling_convention != "default" else ""
         script_code = f"""
-        {cc_comment}
         var targetAddr = {addr_resolve};
-        var replacement = {replacement_code};
-        Interceptor.replace(targetAddr, replacement);
-        send({{ type: 'replaced', address: targetAddr.toString() }});
+        recv('install_replacement', function(msg) {{
+            try {{
+                var replacement = (new Function('return (' + msg.replacementCode + ')'))();
+                Interceptor.replace(targetAddr, replacement);
+                send({{
+                    type: 'replaced',
+                    address: targetAddr.toString(),
+                    callingConvention: msg.callingConvention || null
+                }});
+            }} catch (e) {{
+                send({{ type: 'replace_error', error: e.message }});
+            }}
+        }});
+        send({{ type: 'replace_ready' }});
         """
 
         script = await asyncio.to_thread(self._session.create_script, script_code)
 
-        messages: list[ScriptMessage] = []
-        on_message, event = self._make_payload_waiter(messages, self._dispatch_message)
-
+        messages, on_message, installed_event = self._make_install_waiter({"replaced", "replace_error"})
         script.on("message", on_message)
         await asyncio.to_thread(script.load)
+
+        cc_payload = calling_convention if calling_convention != "default" else None
+        await asyncio.to_thread(
+            script.post,
+            {"type": "install_replacement", "replacementCode": replacement_code, "callingConvention": cc_payload},
+        )
+
         try:
-            await asyncio.wait_for(event.wait(), timeout=5.0)
+            await asyncio.wait_for(installed_event.wait(), timeout=5.0)
         except TimeoutError as e:
             await asyncio.to_thread(script.unload)
-            _logger.warning("replace_function_timeout", target=target)
+            _logger.warning("replace_install_timeout", target=target)
             raise ToolError(_ERR_REPLACE_FAILED) from e
 
-        address: int | None = None
-        for msg in messages:
-            if msg["type"] == "send":
-                payload = msg.get("payload", {})
-                if isinstance(payload, dict):
-                    payload_dict = cast("dict[str, object]", payload)
-                    if payload_dict.get("type") == "replaced":
-                        addr_val = payload_dict.get("address", "0")
-                        if isinstance(addr_val, str):
-                            address = int(addr_val, 16) if addr_val.startswith("0x") else int(addr_val)
-            elif msg["type"] == "error":
-                await asyncio.to_thread(script.unload)
-                raise ToolError(_ERR_REPLACE_FAILED)
+        address = await self._resolve_install_address(
+            script=script,
+            messages=messages,
+            target=target,
+            success_type="replaced",
+            error_type="replace_error",
+            error_constant=_ERR_REPLACE_FAILED,
+            log_prefix="replace",
+        )
 
         self._scripts[hook_id] = script
 

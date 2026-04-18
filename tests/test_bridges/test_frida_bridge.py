@@ -16,7 +16,7 @@ import logging
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING, Final, TypeVar
+from typing import TYPE_CHECKING, Final, TypeVar, cast
 
 
 if TYPE_CHECKING:
