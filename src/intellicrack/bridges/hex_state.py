@@ -193,20 +193,27 @@ class HexDocumentState:
     ) -> None:
         """Set or clear the active document.
 
+        The mutation of ``_document``, ``_file_path``, ``_cursor_offset``,
+        and ``_selection`` is performed atomically under the internal
+        lock so concurrent callers cannot observe partially-updated
+        state.
+
         Args:
             document: HexDocument instance, or None to close.
             file_path: Path to the opened file, or None.
             source: Identifier of the caller for loop-guard filtering.
         """
-        self._document = document
-        self._file_path = file_path
-        self._cursor_offset = 0
-        self._selection = None
+        doc_len = 0
         if document is not None:
-            doc_len = 0
             length_fn = getattr(document, "length", None)
             if callable(length_fn):
                 doc_len = length_fn()
+        with self._lock:
+            self._document = document
+            self._file_path = file_path
+            self._cursor_offset = 0
+            self._selection = None
+        if document is not None:
             self._notify(
                 HexDocumentEvent.DOCUMENT_OPENED,
                 {"file_path": str(file_path) if file_path else None, "size": doc_len},
@@ -265,6 +272,29 @@ class HexDocumentState:
             {"start": -1, "end": -1},
             source=source,
         )
+
+    def clear_all(self, *, source: str = "") -> None:
+        """Clear every document-related slot atomically.
+
+        Used by bridge ``shutdown`` to fully reset state including the
+        document, file path, cursor, selection, and highlight rules. A
+        single ``DOCUMENT_CLOSED`` event is emitted once the mutations
+        complete, but only when a document was previously attached, so
+        observers can drop their caches without seeing spurious events
+        from an already-empty state.
+
+        Args:
+            source: Identifier of the caller for loop-guard filtering.
+        """
+        with self._lock:
+            had_document = self._document is not None
+            self._document = None
+            self._file_path = None
+            self._cursor_offset = 0
+            self._selection = None
+            self._highlight_rules.clear()
+        if had_document:
+            self._notify(HexDocumentEvent.DOCUMENT_CLOSED, {}, source=source)
 
     def get_highlight_rules(self) -> dict[str, dict[str, Any]]:
         """Get a copy of all stored highlight rules.
@@ -343,11 +373,16 @@ class HexDocumentState:
     def notify_document_saved(self, path: str, *, source: str = "") -> None:
         """Notify observers that the document was saved.
 
+        The ``_file_path`` assignment is performed under the internal
+        lock so concurrent readers of :attr:`file_path` never observe a
+        torn update.
+
         Args:
             path: Path where the document was saved.
             source: Identifier of the caller for loop-guard filtering.
         """
-        self._file_path = Path(path)
+        with self._lock:
+            self._file_path = Path(path)
         self._notify(
             HexDocumentEvent.DOCUMENT_SAVED,
             {"path": path},
