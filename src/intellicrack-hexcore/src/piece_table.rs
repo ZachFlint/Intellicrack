@@ -180,8 +180,9 @@ impl PieceTable {
     ///
     /// # Panics
     ///
-    /// Panics if the piece list is non-empty but `last()` returns `None`, which
-    /// indicates internal state corruption.
+    /// Panics if internal state is corrupt: either `pieces.last()` returns
+    /// `None` when `total_length > 0`, or `find_piece(end)` returns `None`
+    /// when `end < total_length`.
     pub fn delete(&mut self, offset: usize, length: usize) {
         if length == 0 || offset >= self.total_length {
             return;
@@ -203,16 +204,8 @@ impl PieceTable {
                     .length,
             )
         } else {
-            match self.find_piece(end) {
-                Some(v) => v,
-                None => (
-                    self.pieces.len() - 1,
-                    self.pieces
-                        .last()
-                        .expect("invariant: pieces non-empty after length guard")
-                        .length,
-                ),
-            }
+            self.find_piece(end)
+                .expect("find_piece(end) must succeed when end < total_length")
         };
 
         let mut new_pieces: Vec<Piece> = Vec::new();
