@@ -14,6 +14,7 @@ import asyncio
 import json
 import random
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
@@ -42,6 +43,22 @@ _T = TypeVar("_T")
 
 _logger = get_logger("providers.base")
 _secure_rng = random.SystemRandom()
+
+
+@dataclass(slots=True)
+class UsageInfo:
+    """Token usage statistics reported by a provider.
+
+    Attributes:
+        prompt_tokens: Tokens consumed by the prompt / input messages.
+        completion_tokens: Tokens generated in the completion / output.
+        total_tokens: Sum of prompt and completion tokens as reported
+            by the provider when available.
+    """
+
+    prompt_tokens: int = field(default=0)
+    completion_tokens: int = field(default=0)
+    total_tokens: int = field(default=0)
 
 
 class JSONSchemaProperty(TypedDict, total=False):
@@ -156,6 +173,8 @@ class LLMProviderBase(ABC):
         self.connected: bool = False
         self._cancel_requested: bool = False
         self._pending_tool_calls: list[ToolCall] = []
+        self._pending_usage: UsageInfo | None = None
+        self._pending_thinking: list[str] = []
         self._logger = get_logger("providers.base")
 
     @property
@@ -197,6 +216,8 @@ class LLMProviderBase(ABC):
         self._credentials = None
         self._cancel_requested = False
         self._pending_tool_calls.clear()
+        self._pending_usage = None
+        self._pending_thinking.clear()
         self._logger.debug("provider_base_disconnected")
 
     @abstractmethod
@@ -294,6 +315,40 @@ class LLMProviderBase(ABC):
         calls = list(self._pending_tool_calls)
         self._pending_tool_calls.clear()
         return calls
+
+    def get_pending_usage(self) -> UsageInfo | None:
+        """Retrieve token usage captured during the last request.
+
+        After a ``chat()`` or ``chat_stream()`` call completes, providers
+        store token-usage statistics reported by the backend (when
+        available).  Consumers call this method once to collect them.
+        The internal buffer is cleared on each call so the same usage
+        record is never returned twice.
+
+        Returns:
+            UsageInfo | None: Captured UsageInfo if the provider reported
+            any usage, otherwise ``None``.
+        """
+        usage = self._pending_usage
+        self._pending_usage = None
+        return usage
+
+    def get_pending_thinking(self) -> list[str]:
+        """Retrieve extended-thinking text emitted during the last request.
+
+        After a streaming call that enabled extended thinking, providers
+        store each thinking block seen on the wire.  Consumers call this
+        method once to collect them.  The internal buffer is cleared on
+        each call so the same block is never returned twice.
+
+        Returns:
+            list[str]: List of thinking block texts accumulated during the
+            last request.  Empty when thinking was not enabled or not
+            emitted.
+        """
+        thinking = list(self._pending_thinking)
+        self._pending_thinking.clear()
+        return thinking
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.
