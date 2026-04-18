@@ -43,11 +43,11 @@ Unified interfaces for external reverse engineering tools:
 
 Multiple provider implementations with unified interface:
 
-- Anthropic Claude (up to 200k context)
+- Anthropic Claude
 - OpenAI GPT-4/3.5
-- Google Gemini (up to 2M context)
-- Ollama (local + cloud)
-- OpenRouter (200+ models)
+- Google Gemini
+- Ollama
+- OpenRouter
 - Hugging Face
 - xAI Grok
 
