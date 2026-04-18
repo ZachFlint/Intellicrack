@@ -38,9 +38,21 @@ _ERR_UNSUPPORTED_ARCHIVE = "unsupported archive format"
 _ERR_EXTRACTION_FAILED = "extraction failed"
 _ERR_ENSURE_FAILED = "failed to ensure tool"
 _ERR_EXTRACT_FAILED_FMT = "failed to extract archive"
+_ERR_UNSAFE_ZIP_MEMBER = "unsafe zip member"
 _MIN_URL_PARTS = 2
 _PROGRESS_CHUNK = 8192
 _ONE_MB = 1024 * 1024
+
+_WINDOWS_RESERVED_NAMES: frozenset[str] = frozenset(
+    {
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        *(f"COM{n}" for n in range(1, 10)),
+        *(f"LPT{n}" for n in range(1, 10)),
+    },
+)
 
 
 @dataclass
@@ -525,7 +537,7 @@ class ToolInstaller:
                 version=version,
             )
 
-        except (OSError, RuntimeError, ValueError, zipfile.BadZipFile, httpx.HTTPError) as e:
+        except (OSError, RuntimeError, ValueError, zipfile.BadZipFile, httpx.HTTPError, ToolError) as e:
             _logger.exception("tool_install_failed", tool=tool_info.display_name)
             return InstallResult(success=False, error=str(e))
 
@@ -617,7 +629,11 @@ class ToolInstaller:
         return None
 
     async def _download_file(self, url: str) -> Path | None:
-        """Download a file to temporary location.
+        """Download a file to a temporary location by streaming to disk.
+
+        Reads the response incrementally and writes each chunk directly to
+        the destination file via ``asyncio.to_thread`` so the archive
+        never has to be buffered in memory in full.
 
         Args:
             url: URL to download.
@@ -638,16 +654,18 @@ class ToolInstaller:
                 total = int(response.headers.get("content-length", 0))
                 downloaded = 0
 
-                chunks: list[bytes] = []
-                async for chunk in response.aiter_bytes(chunk_size=8192):
-                    chunks.append(chunk)
-                    downloaded += len(chunk)
-                    if total > 0:
-                        percent = (downloaded / total) * 100
-                        if downloaded % _ONE_MB < _PROGRESS_CHUNK:
+                file_handle = await asyncio.to_thread(temp_path.open, "wb")
+                try:
+                    async for chunk in response.aiter_bytes(chunk_size=_PROGRESS_CHUNK):
+                        if not chunk:
+                            continue
+                        await asyncio.to_thread(file_handle.write, chunk)
+                        downloaded += len(chunk)
+                        if total > 0 and downloaded % _ONE_MB < _PROGRESS_CHUNK:
+                            percent = (downloaded / total) * 100
                             _logger.debug("download_progress", percent=round(percent, 1))
-
-                await asyncio.to_thread(temp_path.write_bytes, b"".join(chunks))
+                finally:
+                    await asyncio.to_thread(file_handle.close)
 
             _logger.info("download_completed", file_name=filename, bytes=downloaded)
 
@@ -692,15 +710,72 @@ class ToolInstaller:
             return subdirs[0] if len(subdirs) == 1 else tool_dir
 
     @staticmethod
+    def _is_reserved_windows_name(name: str) -> bool:
+        """Check whether a path component is a Windows-reserved name.
+
+        Reserved names such as ``CON``, ``PRN``, ``AUX``, ``NUL``,
+        ``COM1``-``COM9`` and ``LPT1``-``LPT9`` cannot be created on
+        Windows regardless of extension, and any archive that contains
+        them must be rejected rather than silently lose files.
+
+        Args:
+            name: A single path component (no separators).
+
+        Returns:
+            bool: True when ``name`` (ignoring extension) is reserved.
+        """
+        stem = name.split(".", maxsplit=1)[0].upper()
+        return stem in _WINDOWS_RESERVED_NAMES
+
+    @staticmethod
     def _extract_zip(archive_path: Path, dest_dir: Path) -> None:
-        """Extract a zip archive.
+        """Extract a zip archive with Zip Slip and Windows-name guards.
+
+        Each member's resolved destination must stay inside ``dest_dir``
+        (prevents Zip Slip traversal via ``..`` or absolute paths), and
+        no path component may match a Windows-reserved device name.
 
         Args:
             archive_path: Path to zip file.
             dest_dir: Destination directory.
+
+        Raises:
+            ToolError: If an archive member escapes ``dest_dir`` or uses
+                a reserved Windows name.
         """
+        resolved_root = dest_dir.resolve()
         with zipfile.ZipFile(archive_path, "r") as zf:
-            zf.extractall(dest_dir)
+            members = zf.infolist()
+            for member in members:
+                raw_name = member.filename.replace("\\", "/")
+                normalized = raw_name.lstrip("/")
+                if not normalized:
+                    continue
+
+                candidate = (resolved_root / normalized).resolve()
+                try:
+                    candidate.relative_to(resolved_root)
+                except ValueError as exc:
+                    _logger.warning(
+                        "zip_member_escapes_dest",
+                        member=member.filename,
+                        dest=str(resolved_root),
+                    )
+                    raise ToolError(_ERR_UNSAFE_ZIP_MEMBER) from exc
+
+                for part in normalized.split("/"):
+                    if part in {"", "."}:
+                        continue
+                    if ToolInstaller._is_reserved_windows_name(part):
+                        _logger.warning(
+                            "zip_member_reserved_name",
+                            member=member.filename,
+                            component=part,
+                        )
+                        raise ToolError(_ERR_UNSAFE_ZIP_MEMBER)
+
+            for member in members:
+                zf.extract(member, resolved_root)
 
     async def ensure_tool(self, tool: ToolName) -> Path:
         """Ensure a tool is available, installing if necessary.

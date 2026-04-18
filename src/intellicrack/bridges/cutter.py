@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Literal, cast, override
 
@@ -1461,10 +1462,12 @@ class CutterBridge(StaticAnalysisBridge):
 
         Returns:
             list[SectionInfo]: List of section info.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", operation="_get_sections_internal")
-            return []
+            raise ToolError(_ERR_NO_BINARY)
 
         sections = await self._cmd_json("iSj")
 
@@ -1485,10 +1488,12 @@ class CutterBridge(StaticAnalysisBridge):
 
         Returns:
             list[ImportInfo]: List of import info.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", operation="_get_imports_internal")
-            return []
+            raise ToolError(_ERR_NO_BINARY)
 
         imports = await self._cmd_json("iij")
 
@@ -1507,10 +1512,12 @@ class CutterBridge(StaticAnalysisBridge):
 
         Returns:
             list[ExportInfo]: List of export info.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", operation="_get_exports_internal")
-            return []
+            raise ToolError(_ERR_NO_BINARY)
 
         exports = await self._cmd_json("iEj")
 
@@ -1634,6 +1641,9 @@ class CutterBridge(StaticAnalysisBridge):
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
 
+        Validates the assembly via ``pa`` (dry-run encoding) first, then
+        commits the resulting hex to the target address with ``wx``.
+
         Args:
             address: Target address.
             instruction: Assembly instruction.
@@ -1649,15 +1659,23 @@ class CutterBridge(StaticAnalysisBridge):
         if not self._analyzed:
             raise ToolError(_ERR_NOT_ANALYZED)
 
-        await self._r2_cmd(f"wa {instruction} @ {address}")
+        dry_run = await self._r2_cmd(f"pa {instruction} @ {address}")
 
-        result = await self._r2_cmd(f"pa {instruction} @ {address}")
-
-        if not result or not result.strip() or "Cannot" in result:
+        if not dry_run or not dry_run.strip() or "Cannot" in dry_run:
             raise ToolError(_ERR_ASSEMBLE_FAILED)
 
+        assembled_hex = dry_run.strip()
+
+        try:
+            assembled_bytes = bytes.fromhex(assembled_hex)
+        except ValueError as exc:
+            raise ToolError(_ERR_ASSEMBLE_FAILED) from exc
+
+        await self._r2_cmd(f"wa {instruction} @ {address}")
+        await self._r2_cmd(f"wx {assembled_hex} @ {address}")
+
         _logger.info("instruction_assembled", instruction=instruction, address=hex(address))
-        return bytes.fromhex(result.strip())
+        return assembled_bytes
 
     async def execute_command(self, command: str) -> str:
         """Execute raw Rizin command.
@@ -1679,10 +1697,12 @@ class CutterBridge(StaticAnalysisBridge):
 
         Returns:
             list[dict[str, Any]]: Parsed JSON as list of dicts.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
         if self._r2 is None:
-            _logger.error("cutter_unavailable", operation="_cmd_json")
-            return []
+            raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(command)
 
@@ -2159,6 +2179,10 @@ class CutterBridge(StaticAnalysisBridge):
     async def resolve_flag(self, address: int) -> str | None:
         """Resolve a flag name from an address.
 
+        Uses rizin's ``fdj`` (flag-distance JSON) command and parses the
+        structured payload rather than scraping the textual ``fd`` output.
+        The nearest flag by absolute distance is returned.
+
         Args:
             address: Address to resolve.
 
@@ -2171,12 +2195,30 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._r2_cmd(f"fd {address}")
-        text = result.strip()
-        if not text or ("+" not in text and text.startswith("0x")):
-            return None
-        _logger.debug("flag_resolved", address=hex(address), flag=text)
-        return text
+        raw = await self._r2_cmd(f"fdj @ {address}")
+        flag_name: str | None = None
+
+        if raw.strip():
+            try:
+                parsed: Any = json.loads(raw)
+            except json.JSONDecodeError:
+                _logger.warning("flag_resolve_json_parse_failed", address=hex(address))
+            else:
+                candidates: list[dict[str, Any]] = []
+                if isinstance(parsed, dict):
+                    candidates.append(cast("dict[str, Any]", parsed))
+                elif isinstance(parsed, list):
+                    candidates.extend(cast("dict[str, Any]", entry) for entry in cast("list[Any]", parsed) if isinstance(entry, dict))
+
+                if candidates:
+                    nearest = min(
+                        candidates,
+                        key=lambda item: abs(_get_int(item, "offset", _get_int(item, "addr", address)) - address),
+                    )
+                    flag_name = _get_optional_str(nearest, "name") or None
+
+        _logger.debug("flag_resolved", address=hex(address), flag=flag_name)
+        return flag_name
 
     async def get_types(self) -> list[dict[str, Any]]:
         """Get all defined types from the binary analysis.
@@ -2277,6 +2319,10 @@ class CutterBridge(StaticAnalysisBridge):
     async def import_c_header(self, header_text: str) -> bool:
         """Import C header type definitions into the analysis.
 
+        Writes ``header_text`` to a temporary ``.h`` file, invokes rizin's
+        ``to`` command pointing at that file, and removes the temporary
+        file on both success and failure paths.
+
         Args:
             header_text: C header source text to parse.
 
@@ -2289,9 +2335,18 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        escaped = header_text.replace('"', '\\"')
-        await self._r2_cmd(f'"to -" <<< "{escaped}"')
-        _logger.info("c_header_imported", length=len(header_text))
+        def _write_temp() -> Path:
+            fd, name = tempfile.mkstemp(suffix=".h", prefix="intellicrack_hdr_")
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(header_text)
+            return Path(name)
+
+        temp_path = await asyncio.to_thread(_write_temp)
+        try:
+            await self._r2_cmd(f'"to {temp_path}"')
+            _logger.info("c_header_imported", length=len(header_text))
+        finally:
+            await asyncio.to_thread(temp_path.unlink, missing_ok=True)
         return True
 
     async def esil_eval(self, expression: str) -> str:
@@ -2557,6 +2612,10 @@ class CutterBridge(StaticAnalysisBridge):
     async def write_xor(self, address: int, length: int, key: int) -> bool:
         """XOR bytes at an address with a key.
 
+        Uses rizin's ``@!{length}`` block-size suffix so the operation
+        targets exactly ``length`` bytes regardless of the current block
+        size configured in the session.
+
         Args:
             address: Start address.
             length: Number of bytes to XOR.
@@ -2571,13 +2630,16 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        await self._r2_cmd(f"b {length} @ {address}")
-        await self._r2_cmd(f"wox {key} @ {address}")
+        await self._r2_cmd(f"wox {key} @ {address} @!{length}")
         _logger.debug("xor_written", address=hex(address), length=length, key=key)
         return True
 
     async def write_add(self, address: int, length: int, value: int) -> bool:
         """Add a value to bytes at an address.
+
+        Uses rizin's ``@!{length}`` block-size suffix so the operation
+        targets exactly ``length`` bytes regardless of the current block
+        size configured in the session.
 
         Args:
             address: Start address.
@@ -2593,13 +2655,16 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        await self._r2_cmd(f"b {length} @ {address}")
-        await self._r2_cmd(f"woa {value} @ {address}")
+        await self._r2_cmd(f"woa {value} @ {address} @!{length}")
         _logger.debug("add_written", address=hex(address), length=length)
         return True
 
     async def write_sub(self, address: int, length: int, value: int) -> bool:
         """Subtract a value from bytes at an address.
+
+        Uses rizin's ``@!{length}`` block-size suffix so the operation
+        targets exactly ``length`` bytes regardless of the current block
+        size configured in the session.
 
         Args:
             address: Start address.
@@ -2615,8 +2680,7 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        await self._r2_cmd(f"b {length} @ {address}")
-        await self._r2_cmd(f"wos {value} @ {address}")
+        await self._r2_cmd(f"wos {value} @ {address} @!{length}")
         _logger.debug("sub_written", address=hex(address), length=length)
         return True
 
@@ -2819,12 +2883,16 @@ class CutterBridge(StaticAnalysisBridge):
     async def compare_disassembly(self, file_path: str, address: int) -> str:
         """Compare disassembly at an address with another file.
 
+        Issues rizin's ``cD`` (compare disassembly) command for a human
+        readable listing, then requests the structured ``cCj`` output so
+        callers can consume either the textual diff or the JSON tail.
+
         Args:
             file_path: Path to file to compare against.
             address: Address to compare at.
 
         Returns:
-            str: Comparison output text.
+            str: Textual ``cD`` diff followed by a ``cCj`` JSON block.
 
         Raises:
             ToolError: If no binary is loaded.
@@ -2832,9 +2900,16 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._r2_cmd(f"cd {file_path} @ {address}")
+        disasm_diff = await self._r2_cmd(f"cD {file_path} @ {address}")
+        json_diff = await self._r2_cmd(f"cCj {file_path} @ {address}")
         _logger.debug("disassembly_compared", file_path=file_path, address=hex(address))
-        return result
+
+        sections: list[str] = []
+        if disasm_diff.strip():
+            sections.append(disasm_diff.rstrip())
+        if json_diff.strip():
+            sections.append(json_diff.rstrip())
+        return "\n".join(sections)
 
     async def get_segments(self) -> list[SegmentInfo]:
         """Get binary segment information.
