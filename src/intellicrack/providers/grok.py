@@ -29,7 +29,12 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+from intellicrack.providers.base import (
+    LLMProviderBase,
+    ToolCallBufferManager,
+    UsageInfo,
+    create_openai_tool_schema,
+)
 
 
 _ERR_KEY_REQUIRED = "Grok API key is required"
@@ -119,21 +124,28 @@ class GrokProvider(LLMProviderBase):
                 base_url=base_url,
             )
             await self.client.models.list()
-            self._credentials = credentials
-            self.connected = True
-            self._logger.info("grok_api_connected", base_url=base_url)
         except openai.AuthenticationError as e:
+            self.connected = False
+            self.client = None
             self._logger.warning("grok_auth_failed", error=str(e))
             raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
         except openai.BadRequestError as e:
+            self.connected = False
+            self.client = None
             self._logger.warning("grok_bad_request", error=str(e))
             error_str = str(e).lower()
             if "api key" in error_str or "incorrect" in error_str:
                 raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
             raise ProviderError(_ERR_API_REQUEST % e) from e
         except (ConnectionError, TimeoutError, OSError) as e:
+            self.connected = False
+            self.client = None
             self._logger.warning("grok_connect_failed", error=str(e))
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+        else:
+            self._credentials = credentials
+            self.connected = True
+            self._logger.info("grok_api_connected", base_url=base_url)
 
     async def disconnect(self) -> None:
         """Disconnect from Grok API."""
@@ -264,6 +276,7 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
 
         grok_messages_raw = self.convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
@@ -303,8 +316,9 @@ class GrokProvider(LLMProviderBase):
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         response_message = response.choices[0].message
-        content = response_message.content or ""
+        content = response_message.content if response_message.content is not None else ""
         tool_calls = self._parse_grok_tool_calls(response_message)
+        self._pending_usage = self._build_usage_from_completion(response)
 
         return self._build_chat_response(
             provider="grok",
@@ -338,6 +352,7 @@ class GrokProvider(LLMProviderBase):
             ChatCompletion: The chat completion response object.
 
         Raises:
+            AuthenticationError: If the API key is invalid.
             ProviderError: If the API call fails.
             RateLimitError: If rate limited.
         """
@@ -345,7 +360,7 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            if tools and tool_choice is not None:
+            if tools is not None and tool_choice is not None:
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -354,7 +369,7 @@ class GrokProvider(LLMProviderBase):
                     tools=tools,
                     tool_choice=tool_choice,
                 )
-            if tools:
+            if tools is not None:
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -368,6 +383,9 @@ class GrokProvider(LLMProviderBase):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+        except openai.AuthenticationError as e:
+            self._logger.warning("grok_chat_auth_failed", error=str(e))
+            raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
         except openai.RateLimitError as e:
             self._logger.warning("grok_chat_rate_limited", error=str(e))
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
@@ -377,6 +395,51 @@ class GrokProvider(LLMProviderBase):
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             self._logger.warning("grok_chat_request_failed", error=str(e))
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
+
+    @staticmethod
+    def _build_usage_from_completion(response: ChatCompletion) -> UsageInfo | None:
+        """Extract token-usage statistics from a Grok chat completion.
+
+        Args:
+            response: The Grok API chat completion response.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present on
+            the response, otherwise ``None``.
+        """
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return None
+        prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion = int(getattr(usage, "completion_tokens", 0) or 0)
+        total = int(getattr(usage, "total_tokens", 0) or 0) or (prompt + completion)
+        return UsageInfo(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+        )
+
+    @staticmethod
+    def _build_usage_from_chunk_usage(chunk_usage: object) -> UsageInfo | None:
+        """Extract token-usage statistics from a Grok streaming chunk usage field.
+
+        Args:
+            chunk_usage: The ``usage`` attribute from a streaming chunk.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present,
+            otherwise ``None``.
+        """
+        if chunk_usage is None:
+            return None
+        prompt = int(getattr(chunk_usage, "prompt_tokens", 0) or 0)
+        completion = int(getattr(chunk_usage, "completion_tokens", 0) or 0)
+        total = int(getattr(chunk_usage, "total_tokens", 0) or 0) or (prompt + completion)
+        return UsageInfo(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+        )
 
     def _parse_grok_tool_calls(
         self,
@@ -439,6 +502,7 @@ class GrokProvider(LLMProviderBase):
             str: Text chunks as they arrive.
 
         Raises:
+            AuthenticationError: If the API key is invalid.
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limit is exceeded.
         """
@@ -446,6 +510,7 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         if thinking is not None and thinking.enabled:
             self._logger.debug("grok_stream_thinking_ignored")
         if enable_cache:
@@ -474,6 +539,7 @@ class GrokProvider(LLMProviderBase):
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
+                    stream_options={"include_usage": True},
                     tools=grok_tools_typed,
                     tool_choice=tool_choice_value,
                 )
@@ -484,6 +550,7 @@ class GrokProvider(LLMProviderBase):
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
+                    stream_options={"include_usage": True},
                     tools=grok_tools_typed,
                 )
             else:
@@ -493,6 +560,7 @@ class GrokProvider(LLMProviderBase):
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
+                    stream_options={"include_usage": True},
                 )
 
             tc_buffer = ToolCallBufferManager()
@@ -500,6 +568,9 @@ class GrokProvider(LLMProviderBase):
             async for chunk in stream:
                 if self._cancel_requested:
                     break
+                chunk_usage = getattr(chunk, "usage", None)
+                if chunk_usage is not None:
+                    self._pending_usage = self._build_usage_from_chunk_usage(chunk_usage)
                 if not chunk.choices:
                     continue
                 delta = chunk.choices[0].delta
@@ -516,6 +587,9 @@ class GrokProvider(LLMProviderBase):
 
             self._pending_tool_calls = tc_buffer.finalize()
 
+        except openai.AuthenticationError as e:
+            self._logger.warning("grok_stream_auth_failed", error=str(e))
+            raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
         except openai.RateLimitError as e:
             self._logger.warning("grok_stream_rate_limited", error=str(e))
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e

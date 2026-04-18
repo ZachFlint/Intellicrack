@@ -31,7 +31,12 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+from intellicrack.providers.base import (
+    LLMProviderBase,
+    ToolCallBufferManager,
+    UsageInfo,
+    create_openai_tool_schema,
+)
 
 
 if TYPE_CHECKING:
@@ -107,14 +112,12 @@ class OpenRouterProvider(LLMProviderBase):
 
             response = await self.client.get(f"{self.BASE_URL}/models")
             response.raise_for_status()
-
-            self._credentials = credentials
-            self.connected = True
-            self._logger.info(
-                "openrouter_connected",
-                has_custom_base=credentials.api_base is not None,
-            )
         except httpx.HTTPStatusError as e:
+            self.connected = False
+            self._api_key = None
+            if self.client is not None:
+                await self.client.aclose()
+                self.client = None
             self._logger.warning(
                 "openrouter_connect_failed",
                 status_code=e.response.status_code,
@@ -123,8 +126,20 @@ class OpenRouterProvider(LLMProviderBase):
                 raise AuthenticationError(_ERR_INVALID_KEY % e) from e
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
+            self.connected = False
+            self._api_key = None
+            if self.client is not None:
+                await self.client.aclose()
+                self.client = None
             self._logger.warning("openrouter_connect_failed", error=str(e))
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+        else:
+            self._credentials = credentials
+            self.connected = True
+            self._logger.info(
+                "openrouter_connected",
+                has_custom_base=credentials.api_base is not None,
+            )
 
     async def disconnect(self) -> None:
         """Disconnect from OpenRouter API."""
@@ -244,6 +259,7 @@ class OpenRouterProvider(LLMProviderBase):
             tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
+            AuthenticationError: If the API key is rejected by OpenRouter.
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited.
         """
@@ -251,6 +267,7 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
 
         openrouter_messages = self.convert_messages_to_provider_format(messages)
 
@@ -317,6 +334,8 @@ class OpenRouterProvider(LLMProviderBase):
                 model=model,
                 status_code=e.response.status_code,
             )
+            if e.response.status_code == HTTP_UNAUTHORIZED:
+                raise AuthenticationError(_ERR_INVALID_KEY % e) from e
             raise ProviderError(_ERR_API_ERROR % e) from e
 
         data = response.json()
@@ -327,8 +346,10 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_NO_RESPONSE_CHOICES)
 
         response_message = choices[0].get("message", {})
-        content = response_message.get("content", "") or ""
+        content_raw = response_message.get("content")
+        content = content_raw if isinstance(content_raw, str) else ""
         tool_calls = self._parse_tool_calls_from_response(response_message)
+        self._pending_usage = self._build_usage_from_data(data)
 
         message = Message(
             role="assistant",
@@ -353,6 +374,33 @@ class OpenRouterProvider(LLMProviderBase):
         )
 
         return message, tool_calls or None
+
+    @staticmethod
+    def _build_usage_from_data(data: dict[str, Any]) -> UsageInfo | None:
+        """Extract token-usage statistics from an OpenRouter response body.
+
+        Args:
+            data: The decoded JSON response body.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present on
+            the response, otherwise ``None``.
+        """
+        usage_raw = data.get("usage")
+        if not isinstance(usage_raw, dict):
+            return None
+        usage_dict: dict[str, Any] = cast("dict[str, Any]", usage_raw)
+        try:
+            prompt = int(usage_dict.get("prompt_tokens") or 0)
+            completion = int(usage_dict.get("completion_tokens") or 0)
+            total = int(usage_dict.get("total_tokens") or 0) or (prompt + completion)
+        except (TypeError, ValueError):
+            return None
+        return UsageInfo(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+        )
 
     def _parse_tool_calls_from_response(
         self,
@@ -416,6 +464,7 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         if thinking is not None and thinking.enabled:
             self._logger.debug("openrouter_stream_thinking_ignored")
         if enable_cache:
@@ -442,6 +491,7 @@ class OpenRouterProvider(LLMProviderBase):
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "stream": True,
+                "stream_options": {"include_usage": True},
             }
 
             if tools:
@@ -469,6 +519,9 @@ class OpenRouterProvider(LLMProviderBase):
                             break
                         try:
                             data = json.loads(data_str)
+                            chunk_usage = self._build_usage_from_data(data)
+                            if chunk_usage is not None:
+                                self._pending_usage = chunk_usage
                             if choices := data.get("choices", []):
                                 delta = choices[0].get("delta", {})
                                 if content := delta.get("content", ""):
