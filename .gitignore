@@ -466,3 +466,7 @@ gha-creds-*.json
 IntellicrackKnowledgeGraph.html
 scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
 scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml
+
+# Auto-regenerated project structure artifacts (never tracked)
+IntellicrackStructure.hta
+IntellicrackStructure.txt
