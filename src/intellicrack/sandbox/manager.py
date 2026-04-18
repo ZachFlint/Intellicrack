@@ -64,6 +64,7 @@ class SandboxInstance:
         self.last_used = datetime.now(UTC)
         self.binary_path = binary_path
         self.last_report: ExecutionReport | None = None
+        self.is_busy: bool = False
 
     @property
     def state(self) -> SandboxState:
@@ -177,7 +178,7 @@ class SandboxManager:
                 if oldest is not None:
                     await self.destroy(oldest.id)
                 else:
-                    error_message = f"Maximum sandbox instances ({self._max_instances}) reached"
+                    error_message = f"All {self._max_instances} sandboxes busy"
                     raise SandboxError(error_message)
 
             effective_config = config or self._default_config
@@ -312,6 +313,7 @@ class SandboxManager:
             instance.binary_path = binary_path
 
         instance.touch()
+        instance.is_busy = True
 
         try:
             report = await instance.sandbox.run_binary(
@@ -324,6 +326,8 @@ class SandboxManager:
         except (OSError, RuntimeError, SandboxError):
             _logger.warning("binary_execution_failed", instance_id=instance.id)
             raise
+        finally:
+            instance.is_busy = False
 
         instance.last_report = report
         return (instance, report)
@@ -344,7 +348,7 @@ class SandboxManager:
             (
                 instance
                 for instance in self._instances.values()
-                if instance.sandbox_type == sandbox_type and instance.state.status == "running"
+                if instance.sandbox_type == sandbox_type and instance.state.status == "running" and not instance.is_busy
             ),
             None,
         )
@@ -361,7 +365,7 @@ class SandboxManager:
         oldest_time: datetime | None = None
 
         for instance in self._instances.values():
-            if instance.state.status == "running" and (oldest_time is None or instance.last_used < oldest_time):
+            if instance.state.status == "running" and not instance.is_busy and (oldest_time is None or instance.last_used < oldest_time):
                 oldest = instance
                 oldest_time = instance.last_used
 
