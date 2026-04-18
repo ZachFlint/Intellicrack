@@ -88,62 +88,122 @@ fn extract_ascii_strings_parallel(data: &[u8], min_length: usize) -> Vec<StringM
     all_results
 }
 
+fn is_printable_char(c: char) -> bool {
+    !c.is_control() || c == '\t' || c == '\n' || c == '\r'
+}
+
+enum DecodeStep {
+    Scalar { value: u32, bytes: usize },
+    Invalid { bytes: usize },
+    Eof,
+}
+
+fn decode_utf16le_step(data: &[u8], i: usize) -> DecodeStep {
+    let unit = u16::from_le_bytes([data[i], data[i + 1]]);
+
+    if (0xDC00..=0xDFFF).contains(&unit) {
+        return DecodeStep::Invalid { bytes: 2 };
+    }
+
+    if !(0xD800..=0xDBFF).contains(&unit) {
+        return DecodeStep::Scalar {
+            value: u32::from(unit),
+            bytes: 2,
+        };
+    }
+
+    if i + 3 >= data.len() {
+        return DecodeStep::Eof;
+    }
+
+    let low = u16::from_le_bytes([data[i + 2], data[i + 3]]);
+    if !(0xDC00..=0xDFFF).contains(&low) {
+        return DecodeStep::Invalid { bytes: 2 };
+    }
+
+    let cp = ((u32::from(unit) - 0xD800) << 10) + (u32::from(low) - 0xDC00) + 0x10000;
+    DecodeStep::Scalar {
+        value: cp,
+        bytes: 4,
+    }
+}
+
 fn extract_utf16le_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
     let mut results = Vec::new();
     if data.len() < 2 {
         return results;
     }
 
-    let mut chars: Vec<char> = Vec::new();
+    let mut current = String::new();
+    let mut char_count: usize = 0;
     let mut start_offset: usize = 0;
-    let mut in_string = false;
+
+    let flush = |current: &mut String,
+                 char_count: &mut usize,
+                 start: usize,
+                 end: usize,
+                 results: &mut Vec<StringMatch>| {
+        if *char_count >= min_length {
+            results.push(StringMatch {
+                offset: start,
+                length: end - start,
+                encoding: "utf16le".to_string(),
+                content: std::mem::take(current),
+            });
+        }
+        current.clear();
+        *char_count = 0;
+    };
 
     let mut i = 0;
     while i + 1 < data.len() {
-        let code_unit = u16::from_le_bytes([data[i], data[i + 1]]);
-
-        let is_printable = (0x0020..=0x007E).contains(&code_unit)
-            || code_unit == 0x0009
-            || code_unit == 0x000A
-            || code_unit == 0x000D;
-
-        if is_printable {
-            if !in_string {
-                start_offset = i;
-                chars.clear();
-                in_string = true;
+        let unit_start = i;
+        match decode_utf16le_step(data, i) {
+            DecodeStep::Scalar { value, bytes } => {
+                match char::from_u32(value).filter(|c| is_printable_char(*c)) {
+                    Some(c) => {
+                        if char_count == 0 {
+                            start_offset = unit_start;
+                        }
+                        current.push(c);
+                        char_count += 1;
+                    }
+                    None => {
+                        flush(
+                            &mut current,
+                            &mut char_count,
+                            start_offset,
+                            unit_start,
+                            &mut results,
+                        );
+                    }
+                }
+                i += bytes;
             }
-            chars.push(char::from(
-                u8::try_from(code_unit).expect("ASCII range fits in u8"),
-            ));
-        } else if in_string {
-            if chars.len() >= min_length {
-                let content: String = chars.iter().collect();
-                let byte_len = i - start_offset;
-                results.push(StringMatch {
-                    offset: start_offset,
-                    length: byte_len,
-                    encoding: "utf16le".to_string(),
-                    content,
-                });
+            DecodeStep::Invalid { bytes } => {
+                flush(
+                    &mut current,
+                    &mut char_count,
+                    start_offset,
+                    unit_start,
+                    &mut results,
+                );
+                i += bytes;
             }
-            in_string = false;
-            chars.clear();
+            DecodeStep::Eof => {
+                flush(
+                    &mut current,
+                    &mut char_count,
+                    start_offset,
+                    unit_start,
+                    &mut results,
+                );
+                break;
+            }
         }
-
-        i += 2;
     }
 
-    if in_string && chars.len() >= min_length {
-        let content: String = chars.iter().collect();
-        let byte_len = i - start_offset;
-        results.push(StringMatch {
-            offset: start_offset,
-            length: byte_len,
-            encoding: "utf16le".to_string(),
-            content,
-        });
-    }
+    flush(&mut current, &mut char_count, start_offset, i, &mut results);
 
     results
 }
@@ -230,5 +290,77 @@ mod tests {
         }
         let results = extract_strings(&data, 4, true, false, 10);
         assert_eq!(results.len(), 10);
+    }
+
+    fn encode_utf16le(text: &str) -> Vec<u8> {
+        let mut out = Vec::new();
+        for unit in text.encode_utf16() {
+            out.extend_from_slice(&unit.to_le_bytes());
+        }
+        out
+    }
+
+    #[test]
+    fn test_utf16le_cyrillic() {
+        let text = "Привет";
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le(text));
+        data.extend_from_slice(&[0, 0]);
+        let results = extract_strings(&data, 4, false, true, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, text);
+        assert_eq!(results[0].encoding, "utf16le");
+        assert_eq!(results[0].offset, 2);
+        assert_eq!(results[0].length, text.encode_utf16().count() * 2);
+    }
+
+    #[test]
+    fn test_utf16le_emoji_supplementary_plane() {
+        let text = "Hi\u{1F600}!";
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le(text));
+        data.extend_from_slice(&[0, 0]);
+        let results = extract_strings(&data, 4, false, true, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, text);
+        assert_eq!(results[0].encoding, "utf16le");
+        assert_eq!(results[0].offset, 2);
+        assert_eq!(results[0].length, text.encode_utf16().count() * 2);
+    }
+
+    #[test]
+    fn test_utf16le_dangling_high_surrogate_terminates() {
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le("Hello"));
+        data.extend_from_slice(&[0x00, 0xD8]);
+        data.extend_from_slice(&encode_utf16le("World"));
+        data.extend_from_slice(&[0, 0]);
+        let results = extract_strings(&data, 4, false, true, 100);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].content, "Hello");
+        assert_eq!(results[1].content, "World");
+    }
+
+    #[test]
+    fn test_utf16le_dangling_high_surrogate_at_eof() {
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le("Hello"));
+        data.extend_from_slice(&[0x00, 0xD8]);
+        let results = extract_strings(&data, 4, false, true, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "Hello");
+    }
+
+    #[test]
+    fn test_utf16le_lone_low_surrogate_terminates() {
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le("Hello"));
+        data.extend_from_slice(&[0x00, 0xDC]);
+        data.extend_from_slice(&encode_utf16le("World"));
+        data.extend_from_slice(&[0, 0]);
+        let results = extract_strings(&data, 4, false, true, 100);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].content, "Hello");
+        assert_eq!(results[1].content, "World");
     }
 }
