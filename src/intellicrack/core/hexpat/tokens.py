@@ -90,7 +90,6 @@ class TokenType(enum.Enum):
 
     DOLLAR = "$"
     AT = "@"
-    HASH = "#"
     ARROW = "->"
     DOUBLE_COLON = "::"
     ELLIPSIS = "..."
