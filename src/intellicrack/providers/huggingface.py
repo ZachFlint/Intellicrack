@@ -4,16 +4,30 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """HuggingFace Inference API provider implementation.
 
-This module provides integration with HuggingFace's Inference API for accessing various open-source LLM models through the serverless API.
+This module provides integration with HuggingFace's Inference API using the
+official ``huggingface_hub.AsyncInferenceClient`` and its ``chat_completion``
+method.  The client targets the HuggingFace router (serverless providers via
+``provider="auto"``) so requests are routed to a warm provider for the given
+model.
 """
 
 from __future__ import annotations
 
-import json
+import asyncio
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, cast, overload, override
 
-import httpx
+from huggingface_hub import (
+    AsyncInferenceClient,
+    ChatCompletionInputFunctionName,
+    ChatCompletionInputToolChoiceClass,
+    HfApi,
+)
+from huggingface_hub.errors import (
+    BadRequestError,
+    HfHubHTTPError,
+    InferenceTimeoutError,
+)
 
 from intellicrack.core.logging import get_logger, log_provider_request
 from intellicrack.core.types import (
@@ -27,13 +41,65 @@ from intellicrack.core.types import (
     ThinkingConfig,
     ToolCall,
     ToolChoice,
+    ToolChoiceMode,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+from intellicrack.providers.base import (
+    LLMProviderBase,
+    ToolCallBufferManager,
+    UsageInfo,
+    create_openai_tool_schema,
+    parse_tool_call,
+)
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterable, AsyncIterator
+
+    from huggingface_hub import (
+        ChatCompletionInputMessage,
+        ChatCompletionInputTool,
+        ChatCompletionOutput,
+        ChatCompletionOutputMessage,
+        ChatCompletionStreamOutput,
+        ModelInfo as HfModelInfo,
+    )
+
+
+class _ChatCompletionCallable(Protocol):
+    """Protocol matching the typed subset of ``chat_completion`` we use."""
+
+    @overload
+    async def __call__(
+        self,
+        *,
+        messages: list[dict[str, Any] | ChatCompletionInputMessage],
+        model: str,
+        stream: Literal[False],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionInputTool] | None,
+        tool_choice: ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None,
+    ) -> ChatCompletionOutput: ...
+
+    @overload
+    async def __call__(
+        self,
+        *,
+        messages: list[dict[str, Any] | ChatCompletionInputMessage],
+        model: str,
+        stream: Literal[True],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionInputTool] | None,
+        tool_choice: ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None,
+    ) -> AsyncIterable[ChatCompletionStreamOutput]: ...
+
+
+class _WhoamiCallable(Protocol):
+    """Protocol matching the typed subset of ``HfApi.whoami`` we use."""
+
+    def __call__(self) -> dict[str, Any]: ...
 
 
 _ERR_NOT_CONNECTED = "Not connected to HuggingFace"
@@ -44,35 +110,45 @@ _ERR_LIST_MODELS_FAILED = "Failed to list HuggingFace models: %s"
 _ERR_NO_RESPONSE_CHOICES = "No response choices returned"
 _ERR_API_ERROR = "HuggingFace API error: %s"
 _ERR_RATE_LIMITED = "HuggingFace rate limit exceeded"
-_ERR_MODEL_LOADING = "Model is loading: %s"
-_ERR_MODEL_LOADING_WAIT = "Model is loading. Please wait and try again."
+_ERR_BAD_REQUEST = "HuggingFace bad request: %s"
+_ERR_TIMEOUT = "HuggingFace inference timeout: %s"
 _ERR_STREAM_FAILED = "HuggingFace stream failed: %s"
 
 HTTP_UNAUTHORIZED = 401
+HTTP_FORBIDDEN = 403
+HTTP_NOT_FOUND = 404
 HTTP_RATE_LIMITED = 429
+HTTP_INTERNAL_ERROR = 500
 HTTP_SERVICE_UNAVAILABLE = 503
+
+_MODEL_LIST_LIMIT = 100
+_DEFAULT_CONTEXT_WINDOW = 4096
 
 
 class HuggingFaceProvider(LLMProviderBase):
     """HuggingFace Inference API provider implementation.
 
-    Provides access to open-source LLM models through HuggingFace's
-    Inference API using the OpenAI-compatible chat completions endpoint.
+    Uses ``huggingface_hub.AsyncInferenceClient.chat_completion`` for both
+    blocking and streaming requests.  The client is configured with
+    ``provider="auto"`` so HuggingFace's router selects a warm serverless
+    provider for each model.
 
     Attributes:
-        BASE_URL: HuggingFace Inference API endpoint base URL.
-        MODELS_API_URL: HuggingFace model catalog API endpoint URL.
+        DEFAULT_PROVIDER: HuggingFace inference-provider routing strategy.
+        MODELS_LIST_LIMIT: Maximum number of models fetched from ``HfApi``.
     """
 
-    BASE_URL: ClassVar[str] = "https://api-inference.huggingface.co"
-    MODELS_API_URL: ClassVar[str] = "https://huggingface.co/api/models"
+    DEFAULT_PROVIDER: ClassVar[Literal["auto"]] = "auto"
+    MODELS_LIST_LIMIT: ClassVar[int] = _MODEL_LIST_LIMIT
 
     def __init__(self) -> None:
         """Initialize the HuggingFaceProvider instance."""
         super().__init__()
-        self.client: httpx.AsyncClient | None = None
+        self.client: AsyncInferenceClient | None = None
+        self._hf_api: HfApi | None = None
         self._api_token: str | None = None
-        self._base_url: str = self.BASE_URL
+        self._api_base: str | None = None
+        self._timeout: float = 120.0
         self._logger = get_logger("providers.huggingface").bind(provider="huggingface")
 
     @property
@@ -85,167 +161,249 @@ class HuggingFaceProvider(LLMProviderBase):
         return ProviderName.HUGGINGFACE
 
     async def connect(self, credentials: ProviderCredentials) -> None:
-        """Connect to HuggingFace Inference API.
+        """Connect to the HuggingFace Inference API.
+
+        Creates an ``AsyncInferenceClient`` and verifies the token with a
+        ``whoami()`` probe via ``HfApi`` (executed in a worker thread since
+        ``HfApi`` is synchronous).
 
         Args:
-            credentials: Must contain api_key (HuggingFace token).
+            credentials: Must contain ``api_key`` set to a HuggingFace token.
 
         Raises:
-            AuthenticationError: If API token is invalid or missing.
-            ProviderError: If connection fails.
+            AuthenticationError: If the API token is missing or invalid.
+            ProviderError: If the connection probe fails for other reasons.
         """
         if not credentials.api_key:
             raise AuthenticationError(_ERR_CREDENTIAL_REQUIRED)
 
+        self._api_token = credentials.api_key
+        self._api_base = credentials.api_base
+        self._timeout = credentials.timeout or 120.0
+
+        self.client = AsyncInferenceClient(
+            token=self._api_token,
+            timeout=self._timeout,
+            provider=self.DEFAULT_PROVIDER,
+            base_url=self._api_base,
+        )
+        self._hf_api = HfApi(token=self._api_token)
+
+        whoami: _WhoamiCallable = cast("_WhoamiCallable", self._hf_api.whoami)
+
+        identity: dict[str, Any] = {}
         try:
-            self._api_token = credentials.api_key
-            if credentials.api_base:
-                self._base_url = credentials.api_base
-            else:
-                self._base_url = self.BASE_URL
-
-            self.client = httpx.AsyncClient(
-                timeout=httpx.Timeout(credentials.timeout or 120.0),
-                headers={
-                    "Authorization": f"Bearer {credentials.api_key}",
-                },
-            )
-
-            response = await self.client.get(
-                self.MODELS_API_URL,
-                params={
-                    "filter": "text-generation",
-                    "limit": 1,
-                },
-            )
-            response.raise_for_status()
-
-            self._credentials = credentials
-            self.connected = True
-            self._logger.info(
-                "huggingface_connected",
-                has_custom_base=credentials.api_base is not None,
-            )
-        except httpx.HTTPStatusError as e:
+            identity = await asyncio.to_thread(whoami)
+        except HfHubHTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
             self._logger.warning(
                 "huggingface_connect_failed",
-                status_code=e.response.status_code,
+                status_code=status_code,
+                error_type=type(exc).__name__,
             )
-            if e.response.status_code == HTTP_UNAUTHORIZED:
-                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % e) from e
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
-        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
+            self.connected = False
+            await self._close_client()
+            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
+        except (ConnectionError, TimeoutError, OSError) as exc:
             self._logger.warning(
                 "huggingface_connect_failed",
-                error_type=type(e).__name__,
+                error_type=type(exc).__name__,
             )
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+            self.connected = False
+            await self._close_client()
+            raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
+
+        self._credentials = credentials
+        self.connected = True
+        user_name = identity.get("name")
+        self._logger.info(
+            "huggingface_connected",
+            user=str(user_name) if user_name else None,
+            has_custom_base=credentials.api_base is not None,
+        )
+
+    async def _close_client(self) -> None:
+        """Close the inference client if present, ignoring shutdown errors."""
+        if self.client is not None:
+            try:
+                await self.client.close()
+            except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
+                self._logger.debug("close_client_error", error=str(exc))
+            self.client = None
 
     async def disconnect(self) -> None:
-        """Disconnect from HuggingFace API and clean up resources."""
-        try:
-            was_connected = self.connected
-            await super().disconnect()
-            if self.client:
-                await self.client.aclose()
-                self.client = None
-            self._api_token = None
-            self._base_url = self.BASE_URL
-            self._logger.info(
-                "huggingface_disconnected",
-                was_connected=was_connected,
-            )
-        except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
-            self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self.connected = False
+        """Disconnect from the HuggingFace API and clean up resources."""
+        was_connected = self.connected
+        await super().disconnect()
+        await self._close_client()
+        self._hf_api = None
+        self._api_token = None
+        self._api_base = None
+        self._pending_usage = None
+        self._logger.info(
+            "huggingface_disconnected",
+            was_connected=was_connected,
+        )
 
     async def list_models(self) -> list[ModelInfo]:
-        """Dynamically fetch available text-generation models from HuggingFace.
+        """Fetch available text-generation models from HuggingFace.
 
-        Fetches models from the HuggingFace Hub API, filtering for
-        text-generation and conversational pipeline tags. Also includes
-        recommended models that may not appear in the default listing.
+        Queries ``HfApi.list_models`` filtered to text-generation models
+        with warm inference endpoints, then normalises the results into
+        ``ModelInfo`` objects.  The call is dispatched to a worker thread
+        because ``HfApi`` is synchronous.
 
         Returns:
             list[ModelInfo]: List of available models with their capabilities.
 
         Raises:
-            ProviderError: If not connected or request fails.
+            AuthenticationError: If HuggingFace returns 401/403 while listing.
+            ProviderError: If not connected or the listing call fails.
         """
-        if not self.connected or self.client is None:
+        if not self.connected or self._hf_api is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
+        api = self._hf_api
+
+        def _fetch() -> list[HfModelInfo]:
+            """Execute the synchronous ``HfApi.list_models`` call.
+
+            Returns:
+                list[HfModelInfo]: Raw model metadata objects from the Hub.
+            """
+            return list(
+                api.list_models(
+                    filter="text-generation",
+                    inference="warm",
+                    sort="downloads",
+                    limit=self.MODELS_LIST_LIMIT,
+                    cardData=False,
+                ),
+            )
+
         try:
-            response = await self.client.get(
-                self.MODELS_API_URL,
-                params={
-                    "filter": "text-generation-inference",
-                    "sort": "downloads",
-                    "direction": -1,
-                    "limit": 100,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            models: list[ModelInfo] = []
-            seen_ids: set[str] = set()
-
-            for model_data in data:
-                model_id = model_data.get("id", "")
-                if not model_id or model_id in seen_ids:
-                    continue
-
-                pipeline_tag: str = model_data.get("pipeline_tag", "")
-                if pipeline_tag not in {"text-generation", "conversational"}:
-                    continue
-
-                seen_ids.add(model_id)
-
-                tags: list[str] = [str(t).lower() for t in model_data.get("tags", [])]
-
-                tool_indicators = frozenset({
-                    "function-calling",
-                    "tool-use",
-                    "tool_use",
-                    "function_calling",
-                })
-                supports_tools = bool(tool_indicators & set(tags))
-
-                vision_indicators = frozenset({
-                    "vision",
-                    "image-text-to-text",
-                    "multimodal",
-                    "visual-question-answering",
-                })
-                supports_vision = bool(vision_indicators & set(tags)) or pipeline_tag in {"image-text-to-text", "visual-question-answering"}
-
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        name=model_id.split("/")[-1] if "/" in model_id else model_id,
-                        provider=ProviderName.HUGGINGFACE,
-                        context_window=4096,
-                        supports_tools=supports_tools,
-                        supports_vision=supports_vision,
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    ),
-                )
-
-            self._logger.info(
-                "huggingface_models_listed",
-                count=len(models),
-            )
-        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
+            raw_models = await asyncio.to_thread(_fetch)
+        except HfHubHTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
             self._logger.warning(
                 "huggingface_list_models_failed",
-                error_type=type(e).__name__,
+                status_code=status_code,
+                error_type=type(exc).__name__,
             )
-            raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
-        else:
-            return models
+            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
+        except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
+            self._logger.warning(
+                "huggingface_list_models_failed",
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
+
+        models = self._build_model_info_list(raw_models)
+
+        self._logger.info(
+            "huggingface_models_listed",
+            count=len(models),
+        )
+        return models
+
+    @staticmethod
+    def _build_model_info_list(raw_models: list[HfModelInfo]) -> list[ModelInfo]:
+        """Normalise raw ``HfApi`` model entries into ``ModelInfo`` instances.
+
+        Args:
+            raw_models: Sequence of ``huggingface_hub.ModelInfo`` objects.
+
+        Returns:
+            list[ModelInfo]: De-duplicated list preserving input order.
+        """
+        models: list[ModelInfo] = []
+        seen_ids: set[str] = set()
+
+        for raw in raw_models:
+            model_id = str(getattr(raw, "id", "") or "")
+            if not model_id or model_id in seen_ids:
+                continue
+
+            pipeline_tag = str(getattr(raw, "pipeline_tag", "") or "")
+            tags_obj = cast("list[object]", getattr(raw, "tags", None) or [])
+            tags: list[str] = [str(t).lower() for t in tags_obj]
+
+            tool_indicators = frozenset({
+                "function-calling",
+                "tool-use",
+                "tool_use",
+                "function_calling",
+            })
+            supports_tools = bool(tool_indicators & set(tags))
+
+            vision_indicators = frozenset({
+                "vision",
+                "image-text-to-text",
+                "multimodal",
+                "visual-question-answering",
+            })
+            supports_vision = bool(vision_indicators & set(tags)) or pipeline_tag in {
+                "image-text-to-text",
+                "visual-question-answering",
+            }
+
+            seen_ids.add(model_id)
+            short_name = model_id.rsplit("/", maxsplit=1)[-1] if "/" in model_id else model_id
+            models.append(
+                ModelInfo(
+                    id=model_id,
+                    name=short_name,
+                    provider=ProviderName.HUGGINGFACE,
+                    context_window=_DEFAULT_CONTEXT_WINDOW,
+                    supports_tools=supports_tools,
+                    supports_vision=supports_vision,
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
+                ),
+            )
+        return models
+
+    def _prepare_request_payload(
+        self,
+        messages: list[Message],
+        tools: list[ToolDefinition] | None,
+        tool_choice: ToolChoice | None,
+    ) -> tuple[
+        list[dict[str, Any] | ChatCompletionInputMessage],
+        list[ChatCompletionInputTool] | None,
+        ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None,
+    ]:
+        """Convert Intellicrack objects to the SDK's input types.
+
+        Args:
+            messages: Conversation history.
+            tools: Tool definitions, or ``None``.
+            tool_choice: Tool-selection policy, or ``None``.
+
+        Returns:
+            tuple[list[dict[str, Any] | ChatCompletionInputMessage], list[ChatCompletionInputTool] | None, ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None]:
+                The ``messages``, ``tools``, and ``tool_choice`` arguments
+                ready to be passed to ``AsyncInferenceClient.chat_completion``.
+        """
+        hf_messages = cast(
+            "list[dict[str, Any] | ChatCompletionInputMessage]",
+            self.convert_messages_to_provider_format(messages),
+        )
+        hf_tools: list[ChatCompletionInputTool] | None = None
+        if tools:
+            hf_tools = cast(
+                "list[ChatCompletionInputTool]",
+                self.convert_tools_to_provider_format(tools),
+            )
+        hf_tool_choice: ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None = None
+        if tool_choice is not None and tools:
+            hf_tool_choice = _convert_tool_choice(tool_choice)
+        return hf_messages, hf_tools, hf_tool_choice
 
     async def chat(
         self,
@@ -259,34 +417,43 @@ class HuggingFaceProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> tuple[Message, list[ToolCall] | None]:
-        """Send a chat completion request through HuggingFace Inference API.
+        """Send a chat completion request via ``AsyncInferenceClient``.
 
         Args:
             messages: Conversation history.
-            model: Model ID to use (e.g., 'meta-llama/Llama-3.1-8B-Instruct').
-            tools: Available tools for function calling.
-            temperature: Sampling temperature (0.0 to 2.0).
-            max_tokens: Maximum tokens in response.
-            tool_choice: How the model should select tools.
+            model: Model ID to use (e.g. ``meta-llama/Meta-Llama-3-8B-Instruct``).
+            tools: Available tools for function calling, or ``None``.
+            temperature: Sampling temperature in the range [0.0, 2.0].
+            max_tokens: Maximum tokens in the response.
+            tool_choice: How the model should select tools, or ``None``.
             thinking: Extended thinking configuration (ignored by HuggingFace).
-            enable_cache: Whether to enable prompt caching (ignored by HuggingFace).
+            enable_cache: Whether to enable prompt caching (ignored).
 
         Returns:
-            tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
+            tuple[Message, list[ToolCall] | None]: Tuple of
+                (assistant message, parsed tool calls or ``None``).
 
         Raises:
-            ProviderError: If not connected, model loading, or request fails.
+            AuthenticationError: If HuggingFace returns 401/403.
+            RateLimitError: If HuggingFace returns 429.
+            ProviderError: If not connected, the response is empty, or the
+                underlying SDK raises a non-auth/rate-limit error.
         """
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         if thinking is not None and thinking.enabled:
             self._logger.debug("huggingface_thinking_ignored")
         if enable_cache:
             self._logger.debug("huggingface_cache_ignored")
 
-        hf_messages = self.convert_messages_to_provider_format(messages)
+        hf_messages, hf_tools, hf_tool_choice = self._prepare_request_payload(
+            messages,
+            tools,
+            tool_choice,
+        )
 
         log_provider_request(
             provider="huggingface",
@@ -295,29 +462,69 @@ class HuggingFaceProvider(LLMProviderBase):
             tools_count=len(tools) if tools else 0,
         )
 
-        request_body: dict[str, object] = {
-            "model": model,
-            "messages": hf_messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": False,
-        }
-        if tools:
-            request_body["tools"] = self.convert_tools_to_provider_format(tools)
-        if tool_choice is not None and tools:
-            request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
+        chat_completion = cast("_ChatCompletionCallable", self.client.chat_completion)
 
         start_time = time.perf_counter()
-        data = await self._make_hf_api_call(model=model, request_body=request_body)
+        try:
+            raw_result: ChatCompletionOutput = await chat_completion(
+                messages=hf_messages,
+                model=model,
+                stream=False,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=hf_tools,
+                tool_choice=hf_tool_choice,
+            )
+        except BadRequestError as exc:
+            self._logger.warning("huggingface_bad_request", model=model, error=str(exc))
+            raise ProviderError(_ERR_BAD_REQUEST % exc) from exc
+        except InferenceTimeoutError as exc:
+            self._logger.warning("huggingface_timeout", model=model, error=str(exc))
+            raise ProviderError(_ERR_TIMEOUT % exc) from exc
+        except HfHubHTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            self._logger.warning(
+                "huggingface_chat_http_error",
+                model=model,
+                status_code=status_code,
+                error_type=type(exc).__name__,
+            )
+            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            if status_code == HTTP_RATE_LIMITED:
+                raise RateLimitError(_ERR_RATE_LIMITED) from exc
+            raise ProviderError(_ERR_API_ERROR % exc) from exc
+        except TimeoutError as exc:
+            self._logger.warning(
+                "huggingface_chat_timeout",
+                model=model,
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_TIMEOUT % exc) from exc
+        except (ConnectionError, OSError) as exc:
+            self._logger.warning(
+                "huggingface_chat_transport_error",
+                model=model,
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_API_ERROR % exc) from exc
+
         duration_ms = (time.perf_counter() - start_time) * 1000
 
-        choices = data.get("choices", [])
+        choices = raw_result.choices
         if not choices:
             raise ProviderError(_ERR_NO_RESPONSE_CHOICES)
 
-        response_message = choices[0].get("message", {})
-        content = response_message.get("content", "") or ""
-        tool_calls = self._parse_hf_tool_calls(response_message)
+        response_message = choices[0].message
+        content = response_message.content or ""
+        tool_calls = _parse_message_tool_calls(response_message)
+
+        usage = raw_result.usage
+        self._pending_usage = UsageInfo(
+            prompt_tokens=int(usage.prompt_tokens),
+            completion_tokens=int(usage.completion_tokens),
+            total_tokens=int(usage.total_tokens),
+        )
 
         self._logger.info(
             "huggingface_chat_completed",
@@ -326,6 +533,7 @@ class HuggingFaceProvider(LLMProviderBase):
             tool_calls_count=len(tool_calls),
             duration_ms=round(duration_ms, 2),
             has_tools=tools is not None,
+            has_usage=True,
         )
 
         return self._build_chat_response(
@@ -335,107 +543,6 @@ class HuggingFaceProvider(LLMProviderBase):
             tool_calls=tool_calls,
             duration_ms=duration_ms,
         )
-
-    async def _make_hf_api_call(
-        self,
-        *,
-        model: str,
-        request_body: dict[str, object],
-    ) -> dict[str, Any]:
-        """Execute the HuggingFace API chat call with error handling.
-
-        Args:
-            model: Model ID for URL construction and logging.
-            request_body: The request payload.
-
-        Returns:
-            dict[str, Any]: Parsed JSON response dictionary.
-
-        Raises:
-            ProviderError: If the API call fails or model is loading.
-            RateLimitError: If rate limited by the API.
-        """
-        if self.client is None:
-            raise ProviderError(_ERR_NOT_CONNECTED)
-
-        try:
-            response = await self.client.post(
-                f"{self._base_url}/models/{model}/v1/chat/completions",
-                json=request_body,
-            )
-        except httpx.HTTPStatusError as e:
-            self._logger.warning(
-                "huggingface_chat_http_error",
-                model=model,
-                status_code=e.response.status_code,
-            )
-            raise ProviderError(_ERR_API_ERROR % e) from e
-
-        if response.status_code == HTTP_RATE_LIMITED:
-            self._logger.warning(
-                "huggingface_rate_limited",
-                model=model,
-            )
-            raise RateLimitError(_ERR_RATE_LIMITED)
-        if response.status_code == HTTP_SERVICE_UNAVAILABLE:
-            error_data = response.json()
-            error_msg = error_data.get("error", "Model is loading")
-            raise ProviderError(_ERR_MODEL_LOADING % error_msg)
-
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            self._logger.warning(
-                "huggingface_chat_http_error",
-                model=model,
-                status_code=e.response.status_code,
-            )
-            raise ProviderError(_ERR_API_ERROR % e) from e
-
-        try:
-            result: dict[str, Any] = response.json()
-        except (json.JSONDecodeError, ValueError) as e:
-            self._logger.warning(
-                "huggingface_json_decode_error",
-                model=model,
-                status_code=response.status_code,
-            )
-            raise ProviderError(_ERR_API_ERROR % f"Invalid JSON response: {e}") from e
-        return result
-
-    def _parse_hf_tool_calls(
-        self,
-        response_message: dict[str, Any],
-    ) -> list[ToolCall]:
-        """Parse tool calls from a HuggingFace API response message.
-
-        Args:
-            response_message: The message dict from the API response.
-
-        Returns:
-            list[ToolCall]: List of parsed ToolCall instances.
-        """
-        tool_calls: list[ToolCall] = []
-        if not response_message.get("tool_calls"):
-            return tool_calls
-
-        for tc in response_message["tool_calls"]:
-            func_data = tc.get("function", {})
-            func_name = func_data.get("name", "")
-            args_str = func_data.get("arguments", "{}")
-
-            tool_call = self._parse_tool_call_common(
-                call_id=tc.get("id", f"call_{len(tool_calls)}"),
-                function_name=func_name,
-                raw_arguments=args_str,
-            )
-            tool_calls.append(tool_call)
-            self._logger.debug(
-                "tool_call_parsed",
-                tool_name=tool_call.tool_name,
-                arguments_count=len(tool_call.arguments),
-            )
-        return tool_calls
 
     async def chat_stream(
         self,
@@ -449,34 +556,41 @@ class HuggingFaceProvider(LLMProviderBase):
         *,
         enable_cache: bool = False,
     ) -> AsyncIterator[str]:
-        """Stream a chat completion response from HuggingFace.
+        """Stream chat completion chunks from the HuggingFace Inference API.
 
         Args:
             messages: Conversation history.
             model: Model ID to use.
-            tools: Available tools for function calling.
+            tools: Available tools for function calling, or ``None``.
             temperature: Sampling temperature.
-            max_tokens: Maximum tokens in response.
-            tool_choice: How the model should select tools.
-            thinking: Extended thinking configuration (ignored by HuggingFace).
-            enable_cache: Whether to enable prompt caching (ignored by HuggingFace).
+            max_tokens: Maximum tokens in the response.
+            tool_choice: How the model should select tools, or ``None``.
+            thinking: Extended thinking configuration (ignored).
+            enable_cache: Whether to enable prompt caching (ignored).
 
         Yields:
-            str: Text chunks as they arrive from the API.
+            str: Text chunks as they arrive from the stream.
 
         Raises:
-            ProviderError: If not connected, model loading, or request fails.
+            AuthenticationError: If HuggingFace returns 401/403.
+            RateLimitError: If HuggingFace returns 429.
+            ProviderError: If not connected or the stream fails transportwise.
         """
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         if thinking is not None and thinking.enabled:
             self._logger.debug("huggingface_stream_thinking_ignored")
         if enable_cache:
             self._logger.debug("huggingface_stream_cache_ignored")
 
-        hf_messages = self.convert_messages_to_provider_format(messages)
+        hf_messages, hf_tools, hf_tool_choice = self._prepare_request_payload(
+            messages,
+            tools,
+            tool_choice,
+        )
 
         self._logger.info(
             "huggingface_stream_started",
@@ -487,78 +601,143 @@ class HuggingFaceProvider(LLMProviderBase):
 
         chunk_count = 0
         tc_buffer = ToolCallBufferManager()
+        chat_completion = cast("_ChatCompletionCallable", self.client.chat_completion)
+
         try:
-            request_body: dict[str, object] = {
-                "model": model,
-                "messages": hf_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-            }
+            raw_stream: AsyncIterable[ChatCompletionStreamOutput] = await chat_completion(
+                messages=hf_messages,
+                model=model,
+                stream=True,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=hf_tools,
+                tool_choice=hf_tool_choice,
+            )
+        except BadRequestError as exc:
+            self._logger.warning("huggingface_stream_bad_request", model=model, error=str(exc))
+            raise ProviderError(_ERR_BAD_REQUEST % exc) from exc
+        except InferenceTimeoutError as exc:
+            self._logger.warning("huggingface_stream_timeout", model=model, error=str(exc))
+            raise ProviderError(_ERR_TIMEOUT % exc) from exc
+        except HfHubHTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            self._logger.warning(
+                "huggingface_stream_http_error",
+                model=model,
+                status_code=status_code,
+                error_type=type(exc).__name__,
+            )
+            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            if status_code == HTTP_RATE_LIMITED:
+                raise RateLimitError(_ERR_RATE_LIMITED) from exc
+            raise ProviderError(_ERR_API_ERROR % exc) from exc
+        except TimeoutError as exc:
+            self._logger.warning(
+                "huggingface_stream_timeout",
+                model=model,
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_TIMEOUT % exc) from exc
+        except (ConnectionError, OSError) as exc:
+            self._logger.warning(
+                "huggingface_stream_transport_error",
+                model=model,
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_STREAM_FAILED % exc) from exc
 
-            if tools:
-                request_body["tools"] = self.convert_tools_to_provider_format(tools)
-            if tool_choice is not None and tools:
-                request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
+        try:
+            async for chunk in raw_stream:
+                if self._cancel_requested:
+                    self._logger.info(
+                        "huggingface_stream_cancelled",
+                        model=model,
+                        chunks_received=chunk_count,
+                    )
+                    break
 
-            async with self.client.stream(
-                "POST",
-                f"{self._base_url}/models/{model}/v1/chat/completions",
-                json=request_body,
-            ) as response:
-                self._check_stream_response_status(response, model)
-                response.raise_for_status()
+                content_piece, tool_updates = _extract_stream_delta(chunk)
+                if content_piece:
+                    chunk_count += 1
+                    yield content_piece
+                for upd in tool_updates:
+                    tc_buffer.accumulate(
+                        index=upd["index"],
+                        call_id=upd["id"],
+                        name=upd["name"],
+                        arguments=upd["arguments"],
+                    )
 
-                async for line in response.aiter_lines():
-                    if self._cancel_requested:
-                        self._logger.info(
-                            "huggingface_stream_cancelled",
-                            model=model,
-                            chunks_received=chunk_count,
-                        )
-                        break
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            if choices := data.get("choices", []):
-                                delta = choices[0].get("delta", {})
-                                if content := delta.get("content", ""):
-                                    chunk_count += 1
-                                    yield content
-                                if tc_deltas := delta.get("tool_calls"):
-                                    for tc_d in tc_deltas:
-                                        fn: dict[str, str] = tc_d.get("function") or {}
-                                        tc_buffer.accumulate(
-                                            index=tc_d.get("index", 0),
-                                            call_id=tc_d.get("id"),
-                                            name=fn.get("name"),
-                                            arguments=fn.get("arguments"),
-                                        )
-                        except json.JSONDecodeError as exc:
-                            self._logger.debug("stream_json_parse_skipped", error=str(exc))
-                            continue
+                usage = getattr(chunk, "usage", None)
+                if usage is not None:
+                    self._pending_usage = UsageInfo(
+                        prompt_tokens=int(usage.prompt_tokens),
+                        completion_tokens=int(usage.completion_tokens),
+                        total_tokens=int(usage.total_tokens),
+                    )
 
             self._pending_tool_calls = tc_buffer.finalize()
-
             self._logger.info(
                 "huggingface_stream_completed",
                 model=model,
                 chunks_received=chunk_count,
+                has_usage=self._pending_usage is not None,
             )
-
-        except ProviderError:
-            raise
-        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
-            if not self._cancel_requested:
-                self._logger.warning(
-                    "huggingface_stream_failed",
+        except BadRequestError as exc:
+            self._logger.warning(
+                "huggingface_stream_bad_request",
+                model=model,
+                error=str(exc),
+            )
+            raise ProviderError(_ERR_BAD_REQUEST % exc) from exc
+        except InferenceTimeoutError as exc:
+            self._logger.warning(
+                "huggingface_stream_timeout",
+                model=model,
+                error=str(exc),
+            )
+            raise ProviderError(_ERR_TIMEOUT % exc) from exc
+        except HfHubHTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            self._logger.warning(
+                "huggingface_stream_http_error",
+                model=model,
+                status_code=status_code,
+                error_type=type(exc).__name__,
+            )
+            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            if status_code == HTTP_RATE_LIMITED:
+                raise RateLimitError(_ERR_RATE_LIMITED) from exc
+            raise ProviderError(_ERR_API_ERROR % exc) from exc
+        except TimeoutError as exc:
+            if self._cancel_requested:
+                self._logger.debug(
+                    "huggingface_stream_cancelled_with_timeout",
                     model=model,
-                    error_type=type(e).__name__,
                 )
-                raise ProviderError(_ERR_STREAM_FAILED % e) from e
+                return
+            self._logger.warning(
+                "huggingface_stream_timeout_generic",
+                model=model,
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_TIMEOUT % exc) from exc
+        except (ConnectionError, OSError, ValueError) as exc:
+            if self._cancel_requested:
+                self._logger.debug(
+                    "huggingface_stream_cancelled_with_error",
+                    model=model,
+                    error_type=type(exc).__name__,
+                )
+                return
+            self._logger.warning(
+                "huggingface_stream_failed",
+                model=model,
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_STREAM_FAILED % exc) from exc
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
@@ -568,37 +747,18 @@ class HuggingFaceProvider(LLMProviderBase):
             was_connected=self.connected,
         )
 
-    def _check_stream_response_status(self, response: httpx.Response, model: str) -> None:
-        """Check streaming response status and raise appropriate errors.
-
-        Args:
-            response: The HTTP response from the streaming request.
-            model: The model name for error logging.
-
-        Raises:
-            ProviderError: If the model is loading or unavailable.
-        """
-        if response.status_code == HTTP_SERVICE_UNAVAILABLE:
-            self._logger.warning(
-                "huggingface_model_loading",
-                model=model,
-            )
-            raise ProviderError(_ERR_MODEL_LOADING_WAIT)
-
     @override
     def _convert_messages_to_provider_format(
         self,
         messages: list[Message],
     ) -> list[dict[str, object]]:
-        """Convert internal messages to HuggingFace format.
-
-        Uses OpenAI-compatible format for the chat completions endpoint.
+        """Convert internal messages to HuggingFace's OpenAI-compatible format.
 
         Args:
-            messages: List of Message objects.
+            messages: List of ``Message`` objects.
 
         Returns:
-            list[dict[str, object]]: List of messages in HuggingFace's OpenAI-compatible format.
+            list[dict[str, object]]: Messages in OpenAI-compatible schema.
         """
         return self._convert_messages_to_openai_format(messages)
 
@@ -607,18 +767,103 @@ class HuggingFaceProvider(LLMProviderBase):
         self,
         tools: list[ToolDefinition],
     ) -> list[dict[str, object]]:
-        """Convert internal tools to HuggingFace format.
-
-        Uses OpenAI-compatible function calling format.
+        """Convert internal tools to HuggingFace's OpenAI-compatible format.
 
         Args:
-            tools: List of ToolDefinition objects.
+            tools: List of ``ToolDefinition`` objects.
 
         Returns:
-            list[dict[str, object]]: List of tools in HuggingFace's OpenAI-compatible format.
+            list[dict[str, object]]: Tools in OpenAI-compatible schema.
         """
         hf_tools: list[dict[str, object]] = []
         for tool in tools:
             tool_schemas = create_openai_tool_schema(tool)
             hf_tools.extend(dict(schema) for schema in tool_schemas)
         return hf_tools
+
+
+def _convert_tool_choice(
+    tool_choice: ToolChoice,
+) -> ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"]:
+    """Translate an Intellicrack ``ToolChoice`` into the SDK's schema.
+
+    Args:
+        tool_choice: The Intellicrack tool-selection directive.
+
+    Returns:
+        ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"]:
+            ``"auto"``/``"none"``/``"required"`` for enum modes, or a
+            ``ChatCompletionInputToolChoiceClass`` naming the function to
+            invoke for ``SPECIFIC`` mode.
+    """
+    if tool_choice.mode is ToolChoiceMode.AUTO:
+        return "auto"
+    if tool_choice.mode is ToolChoiceMode.NONE:
+        return "none"
+    if tool_choice.mode is ToolChoiceMode.REQUIRED:
+        return "required"
+    return ChatCompletionInputToolChoiceClass(
+        function=ChatCompletionInputFunctionName(name=tool_choice.function_name or ""),
+    )
+
+
+def _parse_message_tool_calls(response_message: ChatCompletionOutputMessage) -> list[ToolCall]:
+    """Parse tool calls from a ``ChatCompletionOutputMessage`` instance.
+
+    Args:
+        response_message: Assistant message returned by the SDK.
+
+    Returns:
+        list[ToolCall]: Parsed ``ToolCall`` instances (possibly empty).
+    """
+    tool_calls: list[ToolCall] = []
+    raw_calls = response_message.tool_calls or []
+    for tc in raw_calls:
+        func = tc.function
+        args_str = func.arguments or "{}"
+        tool_calls.append(
+            parse_tool_call(
+                call_id=tc.id,
+                function_name=func.name,
+                raw_arguments=args_str,
+            ),
+        )
+    return tool_calls
+
+
+def _extract_stream_delta(
+    chunk: ChatCompletionStreamOutput,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Extract content text and tool-call updates from a stream chunk.
+
+    Args:
+        chunk: A single ``ChatCompletionStreamOutput`` from the SDK stream.
+
+    Returns:
+        tuple[str, list[dict[str, Any]]]: Pair of ``(content_text, tool_updates)``
+            where ``tool_updates`` is a list of dicts with keys ``index``,
+            ``id``, ``name``, ``arguments``.
+    """
+    choices = chunk.choices
+    if not choices:
+        return "", []
+    delta = choices[0].delta
+
+    content_piece = delta.content or ""
+    tool_updates: list[dict[str, Any]] = []
+    raw_tc_deltas = delta.tool_calls or []
+    for tc_d in raw_tc_deltas:
+        func = tc_d.function
+        tool_updates.append({
+            "index": tc_d.index,
+            "id": tc_d.id,
+            "name": func.name,
+            "arguments": func.arguments,
+        })
+    return content_piece, tool_updates
+
+
+__all__ = [
+    "HuggingFaceProvider",
+    "UsageInfo",
+]
