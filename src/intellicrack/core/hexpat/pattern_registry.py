@@ -66,6 +66,7 @@ class PatternRegistry:
         self._patterns: list[PatternMetadata] = []
         self._by_name: dict[str, PatternMetadata] = {}
         self._scanned: bool = False
+        self._max_magic_end: int = 0
 
     def scan(self) -> None:
         """Scan all configured directories for .hexpat files.
@@ -74,6 +75,7 @@ class PatternRegistry:
         """
         self._patterns = []
         self._by_name = {}
+        self._max_magic_end = 0
 
         for pattern_dir in self._pattern_dirs:
             if not pattern_dir.exists():
@@ -88,6 +90,7 @@ class PatternRegistry:
                 if metadata is not None:
                     self._patterns.append(metadata)
                     self._by_name[metadata.name] = metadata
+                    self._update_max_magic_end(metadata)
 
         self._scanned = True
         _logger.info(
@@ -151,10 +154,7 @@ class PatternRegistry:
         if not self._scanned:
             self.scan()
 
-        max_magic_end = 1024
-        for pattern in self._patterns:
-            for pat_offset, magic in pattern.magic_bytes:
-                max_magic_end = max(max_magic_end, pat_offset + len(magic))
+        max_magic_end = max(1024, self._max_magic_end)
 
         read_size = min(max_magic_end, data_reader.size)
         if read_size == 0:
@@ -184,6 +184,17 @@ class PatternRegistry:
 
         matches.sort(key=operator.itemgetter(0), reverse=True)
         return [m[1] for m in matches]
+
+    def _update_max_magic_end(self, metadata: PatternMetadata) -> None:
+        """Update the cached maximum magic-byte end offset for a pattern.
+
+        Args:
+            metadata: The pattern metadata whose magic_bytes should be folded
+                into the cached maximum.
+        """
+        for pat_offset, magic in metadata.magic_bytes:
+            end = pat_offset + len(magic)
+            self._max_magic_end = max(self._max_magic_end, end)
 
     @staticmethod
     def load_source(metadata: PatternMetadata) -> str:
