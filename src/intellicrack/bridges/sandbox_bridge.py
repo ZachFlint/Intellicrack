@@ -79,6 +79,9 @@ _ERR_TIMELINE_FAILED = "Failed to generate timeline"
 _ERR_BEHAVIOR_FAILED = "Failed to detect behaviors"
 _ERR_C2_DETECT_FAILED = "Failed to detect C2 patterns"
 _ERR_DIFF_FAILED = "Failed to diff reports"
+_ERR_INVALID_SANDBOX_TYPE = "Invalid sandbox_type"
+
+_VALID_SANDBOX_TYPES: frozenset[str] = frozenset({"windows", "qemu"})
 
 
 class SandboxBridge(ToolBridgeBase):
@@ -366,7 +369,7 @@ class SandboxBridge(ToolBridgeBase):
                             required=True,
                         ),
                     ],
-                    returns="List of snapshot names",
+                    returns="Dictionary with instance_id, snapshots (list of names), and count",
                 ),
                 ToolFunction(
                     name="sandbox.snapshot_delete",
@@ -638,6 +641,23 @@ class SandboxBridge(ToolBridgeBase):
                     ],
                     returns="Dictionary with per-field comparison of unique and common items",
                 ),
+                ToolFunction(
+                    name="sandbox.get_vnc_port",
+                    description=(
+                        "Return the VNC TCP port the sandbox is exposing its framebuffer on, "
+                        "or null when no VNC display is configured. Use this to attach a VNC "
+                        "viewer to a running QEMU sandbox for interactive display inspection."
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="VNC port number or null",
+                ),
             ],
         )
 
@@ -704,8 +724,14 @@ class SandboxBridge(ToolBridgeBase):
     ) -> dict[str, Any]:
         """Create a new sandbox instance.
 
+        Rejects unknown ``sandbox_type`` values explicitly instead of
+        silently coercing them to ``"qemu"``. The previous behaviour
+        hid typos (``"Qemu"``, ``"window"``, ``"vm"``) and caused the
+        orchestrator to spin up the wrong sandbox flavour; validating
+        up-front surfaces the mistake to the caller immediately.
+
         Args:
-            sandbox_type: Type of sandbox ('windows' or 'qemu').
+            sandbox_type: Type of sandbox (``"windows"`` or ``"qemu"``).
             timeout_seconds: Execution timeout in seconds.
             network_enabled: Whether to enable network access.
             memory_limit_mb: Memory limit in megabytes.
@@ -714,8 +740,13 @@ class SandboxBridge(ToolBridgeBase):
             dict[str, Any]: Dictionary with instance_id and status.
 
         Raises:
-            ToolError: If creation fails.
+            ToolError: If ``sandbox_type`` is not one of the supported
+                values or if creation fails inside the manager.
         """
+        if sandbox_type not in _VALID_SANDBOX_TYPES:
+            msg = f"{_ERR_INVALID_SANDBOX_TYPE}: {sandbox_type!r}"
+            raise ToolError(msg)
+
         manager = self._ensure_manager()
 
         config = SandboxConfig(
@@ -725,7 +756,7 @@ class SandboxBridge(ToolBridgeBase):
         )
 
         try:
-            sb_type: SandboxType = "windows" if sandbox_type == "windows" else "qemu"
+            sb_type: SandboxType = cast("SandboxType", sandbox_type)
             instance = await manager.create(
                 sandbox_type=sb_type,
                 config=config,
@@ -781,10 +812,18 @@ class SandboxBridge(ToolBridgeBase):
     ) -> dict[str, Any]:
         """Execute a binary in a sandbox with monitoring.
 
+        Validates ``sandbox_type`` up-front and refuses to launch the
+        target under a coerced fallback when the caller supplies an
+        unknown flavour. The previous silent coercion mapped any
+        non-``"windows"`` string to ``"qemu"``, which made
+        ``sandbox_type="Qemu"`` (capitalised) or future sandbox flavours
+        silently behave as QEMU.
+
         Args:
             binary_path: Path to the binary to execute.
             args: Optional command line arguments.
-            sandbox_type: Type of sandbox to use.
+            sandbox_type: Type of sandbox to use (``"windows"`` or
+                ``"qemu"``).
             time_limit: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
 
@@ -792,8 +831,13 @@ class SandboxBridge(ToolBridgeBase):
             dict[str, Any]: ExecutionReport as dictionary.
 
         Raises:
-            ToolError: If execution fails.
+            ToolError: If ``sandbox_type`` is not one of the supported
+                values, the binary does not exist, or execution fails.
         """
+        if sandbox_type not in _VALID_SANDBOX_TYPES:
+            msg = f"{_ERR_INVALID_SANDBOX_TYPE}: {sandbox_type!r}"
+            raise ToolError(msg)
+
         manager = self._ensure_manager()
 
         path = Path(binary_path)
@@ -802,7 +846,7 @@ class SandboxBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            sb_type: SandboxType = "windows" if sandbox_type == "windows" else "qemu"
+            sb_type: SandboxType = cast("SandboxType", sandbox_type)
             instance, report = await manager.run_binary(
                 binary_path=path,
                 args=args,
@@ -1211,6 +1255,14 @@ class SandboxBridge(ToolBridgeBase):
     ) -> dict[str, Any]:
         """Get pending messages from the QEMU guest agent.
 
+        Raises ``ToolError`` when the guest agent is not connected
+        instead of returning an empty list, so callers can distinguish
+        "no messages waiting" (empty ``messages`` list, success) from
+        "agent channel is dead" (error). Previously both paths returned
+        ``{"messages": [], "count": 0}``, which masked agent-channel
+        faults behind a benign-looking empty response and left GUI /
+        orchestrator consumers with no way to surface the root cause.
+
         Args:
             instance_id: ID of the QEMU sandbox instance.
 
@@ -1218,7 +1270,9 @@ class SandboxBridge(ToolBridgeBase):
             dict[str, Any]: Dictionary with list of pending messages.
 
         Raises:
-            ToolError: If retrieval fails or not supported.
+            ToolError: If the instance is unknown, is not a QEMU
+                sandbox, has no connected guest agent, or the retrieval
+                call itself fails.
         """
         manager = self._ensure_manager()
 
@@ -1230,15 +1284,12 @@ class SandboxBridge(ToolBridgeBase):
         if instance.sandbox_type != "qemu":
             raise ToolError(_ERR_QEMU_ONLY)
 
-        try:
-            agent = getattr(instance.sandbox, "_agent", None)
-            if agent is None:
-                return {
-                    "instance_id": instance_id,
-                    "messages": [],
-                    "count": 0,
-                }
+        agent = getattr(instance.sandbox, "_agent", None)
+        if agent is None:
+            msg = f"{_ERR_MESSAGES_FAILED}: guest agent channel not connected"
+            raise ToolError(msg)
 
+        try:
             messages = await agent.get_pending_messages()
             _logger.info(
                 "pending_messages_retrieved",
@@ -1764,14 +1815,21 @@ class SandboxBridge(ToolBridgeBase):
     async def get_vnc_port(self, instance_id: str) -> int | None:
         """Get the VNC port for a sandbox instance.
 
+        Queries the VM manager for the TCP port the sandbox's VNC
+        server is listening on. Returns ``None`` when the sandbox type
+        does not expose a VNC display (for example Windows Sandbox) or
+        when the VM has not yet allocated one.
+
         Args:
             instance_id: ID of the sandbox instance.
 
         Returns:
-            int | None: VNC port number, or None if not available.
+            int | None: The VNC port number, or ``None`` if not
+                available.
 
         Raises:
-            ToolError: If instance not found.
+            ToolError: If the instance is not registered with the
+                manager.
         """
         manager = self._ensure_manager()
 
@@ -1780,7 +1838,9 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
             raise ToolError(msg)
 
-        return instance.sandbox.vnc_port
+        port = instance.sandbox.vnc_port
+        _logger.info("vnc_port_queried", instance_id=instance_id, vnc_port=port)
+        return port
 
     @staticmethod
     def _report_to_dict(

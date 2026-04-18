@@ -1,1 +1,1 @@
-tests/test_bridges/test_schemas.py -x --tb=short
+tests/test_bridges/test_frida_bridge.py::test_symbol_info_full --no-cov -p no:cacheprovider
