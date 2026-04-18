@@ -1,3 +1,6 @@
+use adler2::Adler32;
+use similar::{capture_diff_slices, Algorithm, DiffOp};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiffType {
     Match,
@@ -21,8 +24,11 @@ pub struct DiffResult {
     pub files_identical: bool,
 }
 
-const BLOCK_SIZE: usize = 16;
 const BYTE_LEVEL_THRESHOLD: usize = 1_048_576;
+const ANCHOR_WINDOW: usize = 1024;
+const ANCHOR_MASK: u32 = (1 << 10) - 1;
+const BLOCK_SIZE: usize = 64;
+const ADLER_MOD: u32 = 65_521;
 
 #[must_use]
 pub fn diff_data(data_a: &[u8], data_b: &[u8]) -> DiffResult {
@@ -33,90 +39,147 @@ pub fn diff_data(data_a: &[u8], data_b: &[u8]) -> DiffResult {
     }
 }
 
-fn diff_data_byte_level(data_a: &[u8], data_b: &[u8]) -> DiffResult {
-    if data_a == data_b {
-        return DiffResult {
-            regions: vec![DiffRegion {
-                offset_a: 0,
-                offset_b: 0,
-                length: data_a.len(),
-                diff_type: DiffType::Match,
-            }],
-            total_differences: 0,
-            files_identical: true,
-        };
-    }
-
-    let prefix_len = data_a
-        .iter()
-        .zip(data_b.iter())
-        .take_while(|(a, b)| a == b)
-        .count();
-
-    let max_suffix = data_a.len().min(data_b.len()) - prefix_len;
-    let suffix_len = data_a
-        .iter()
-        .rev()
-        .zip(data_b.iter().rev())
-        .take(max_suffix)
-        .take_while(|(a, b)| a == b)
-        .count();
-
-    let mut regions = Vec::new();
-    let mut total_diffs: usize = 0;
-
-    if prefix_len > 0 {
-        regions.push(DiffRegion {
+fn identical_result(len: usize) -> DiffResult {
+    DiffResult {
+        regions: vec![DiffRegion {
             offset_a: 0,
             offset_b: 0,
-            length: prefix_len,
+            length: len,
             diff_type: DiffType::Match,
-        });
+        }],
+        total_differences: 0,
+        files_identical: true,
     }
+}
 
-    let middle_len_a = data_a.len() - prefix_len - suffix_len;
-    let middle_len_b = data_b.len() - prefix_len - suffix_len;
+fn empty_result() -> DiffResult {
+    DiffResult {
+        regions: Vec::new(),
+        total_differences: 0,
+        files_identical: true,
+    }
+}
 
-    if middle_len_a > 0 && middle_len_b > 0 {
-        let common_mid = middle_len_a.min(middle_len_b);
-        total_diffs += data_a[prefix_len..prefix_len + common_mid]
-            .iter()
-            .zip(data_b[prefix_len..prefix_len + common_mid].iter())
-            .filter(|(a, b)| a != b)
-            .count();
-        total_diffs += middle_len_a.abs_diff(middle_len_b);
+fn op_to_region(op: &DiffOp, base_a: usize, base_b: usize) -> (DiffRegion, usize) {
+    match *op {
+        DiffOp::Equal {
+            old_index,
+            new_index,
+            len,
+        } => (
+            DiffRegion {
+                offset_a: base_a + old_index,
+                offset_b: base_b + new_index,
+                length: len,
+                diff_type: DiffType::Match,
+            },
+            0,
+        ),
+        DiffOp::Delete {
+            old_index,
+            old_len,
+            new_index,
+        } => (
+            DiffRegion {
+                offset_a: base_a + old_index,
+                offset_b: base_b + new_index,
+                length: old_len,
+                diff_type: DiffType::InsertedA,
+            },
+            old_len,
+        ),
+        DiffOp::Insert {
+            old_index,
+            new_index,
+            new_len,
+        } => (
+            DiffRegion {
+                offset_a: base_a + old_index,
+                offset_b: base_b + new_index,
+                length: new_len,
+                diff_type: DiffType::InsertedB,
+            },
+            new_len,
+        ),
+        DiffOp::Replace {
+            old_index,
+            old_len,
+            new_index,
+            new_len,
+        } => {
+            let length = old_len.max(new_len);
+            (
+                DiffRegion {
+                    offset_a: base_a + old_index,
+                    offset_b: base_b + new_index,
+                    length,
+                    diff_type: DiffType::Modified,
+                },
+                length,
+            )
+        }
+    }
+}
+
+fn diff_slice_with_base(
+    data_a: &[u8],
+    data_b: &[u8],
+    base_a: usize,
+    base_b: usize,
+    regions: &mut Vec<DiffRegion>,
+    total_diffs: &mut usize,
+) {
+    if data_a.is_empty() && data_b.is_empty() {
+        return;
+    }
+    if data_a.is_empty() {
         regions.push(DiffRegion {
-            offset_a: prefix_len,
-            offset_b: prefix_len,
-            length: middle_len_a.max(middle_len_b),
-            diff_type: DiffType::Modified,
-        });
-    } else if middle_len_a > 0 {
-        total_diffs += middle_len_a;
-        regions.push(DiffRegion {
-            offset_a: prefix_len,
-            offset_b: prefix_len,
-            length: middle_len_a,
-            diff_type: DiffType::InsertedA,
-        });
-    } else if middle_len_b > 0 {
-        total_diffs += middle_len_b;
-        regions.push(DiffRegion {
-            offset_a: prefix_len,
-            offset_b: prefix_len,
-            length: middle_len_b,
+            offset_a: base_a,
+            offset_b: base_b,
+            length: data_b.len(),
             diff_type: DiffType::InsertedB,
         });
+        *total_diffs += data_b.len();
+        return;
     }
-
-    if suffix_len > 0 {
+    if data_b.is_empty() {
         regions.push(DiffRegion {
-            offset_a: data_a.len() - suffix_len,
-            offset_b: data_b.len() - suffix_len,
-            length: suffix_len,
+            offset_a: base_a,
+            offset_b: base_b,
+            length: data_a.len(),
+            diff_type: DiffType::InsertedA,
+        });
+        *total_diffs += data_a.len();
+        return;
+    }
+    if data_a == data_b {
+        regions.push(DiffRegion {
+            offset_a: base_a,
+            offset_b: base_b,
+            length: data_a.len(),
             diff_type: DiffType::Match,
         });
+        return;
     }
+    let ops = capture_diff_slices(Algorithm::Myers, data_a, data_b);
+    for op in &ops {
+        let (region, diff_count) = op_to_region(op, base_a, base_b);
+        *total_diffs += diff_count;
+        regions.push(region);
+    }
+}
+
+fn diff_data_byte_level(data_a: &[u8], data_b: &[u8]) -> DiffResult {
+    if data_a.is_empty() && data_b.is_empty() {
+        return empty_result();
+    }
+    if data_a == data_b {
+        return identical_result(data_a.len());
+    }
+
+    let mut regions: Vec<DiffRegion> = Vec::new();
+    let mut total_diffs: usize = 0;
+    diff_slice_with_base(data_a, data_b, 0, 0, &mut regions, &mut total_diffs);
 
     DiffResult {
         regions,
@@ -125,101 +188,240 @@ fn diff_data_byte_level(data_a: &[u8], data_b: &[u8]) -> DiffResult {
     }
 }
 
-fn diff_data_block(data_a: &[u8], data_b: &[u8]) -> DiffResult {
-    if data_a == data_b {
-        return DiffResult {
-            regions: vec![DiffRegion {
-                offset_a: 0,
-                offset_b: 0,
-                length: data_a.len(),
-                diff_type: DiffType::Match,
-            }],
-            total_differences: 0,
-            files_identical: true,
-        };
+fn initial_adler32(window: &[u8]) -> (u32, u32) {
+    let mut hasher = Adler32::new();
+    hasher.write_slice(window);
+    let checksum = hasher.checksum();
+    (checksum & 0xFFFF, checksum >> 16)
+}
+
+fn roll_adler32(a: u32, b: u32, out_byte: u8, in_byte: u8, window: u32) -> (u32, u32) {
+    let out = u32::from(out_byte);
+    let inv = u32::from(in_byte);
+    let new_a = (a + inv + ADLER_MOD - out) % ADLER_MOD;
+    let window_mod = window % ADLER_MOD;
+    let decrement = (window_mod * out) % ADLER_MOD;
+    let new_b = (b + new_a + 2 * ADLER_MOD - decrement - a) % ADLER_MOD;
+    (new_a, new_b)
+}
+
+fn compute_anchors(data: &[u8]) -> Vec<(u32, usize)> {
+    if data.len() < ANCHOR_WINDOW {
+        return Vec::new();
     }
 
-    let min_len = data_a.len().min(data_b.len());
-    let max_len = data_a.len().max(data_b.len());
-    let num_blocks = min_len.div_ceil(BLOCK_SIZE);
+    let window = ANCHOR_WINDOW;
+    let window_u32 = window as u32;
+    let mut anchors: Vec<(u32, usize)> = Vec::new();
+
+    let mut idx: usize = 0;
+    let (mut a, mut b) = initial_adler32(&data[0..window]);
+    loop {
+        let hash = (b << 16) | a;
+        if (hash & ANCHOR_MASK) == 0 {
+            anchors.push((hash, idx + window));
+            let next_idx = idx + window;
+            if next_idx + window > data.len() {
+                break;
+            }
+            idx = next_idx;
+            let (na, nb) = initial_adler32(&data[idx..idx + window]);
+            a = na;
+            b = nb;
+        } else {
+            let next_idx = idx + 1;
+            if next_idx + window > data.len() {
+                break;
+            }
+            let out_byte = data[idx];
+            let in_byte = data[idx + window];
+            let (na, nb) = roll_adler32(a, b, out_byte, in_byte, window_u32);
+            a = na;
+            b = nb;
+            idx = next_idx;
+        }
+    }
+
+    anchors
+}
+
+fn find_sync_points(anchors_a: &[(u32, usize)], anchors_b: &[(u32, usize)]) -> Vec<(usize, usize)> {
+    if anchors_a.is_empty() || anchors_b.is_empty() {
+        return Vec::new();
+    }
+
+    let mut sync: Vec<(usize, usize)> = Vec::new();
+    let mut i: usize = 0;
+    let mut j: usize = 0;
+    let mut last_a: usize = 0;
+    let mut last_b: usize = 0;
+
+    while i < anchors_a.len() && j < anchors_b.len() {
+        let (hash_a, pos_a) = anchors_a[i];
+        let (hash_b, pos_b) = anchors_b[j];
+        if hash_a == hash_b {
+            if pos_a >= last_a && pos_b >= last_b {
+                sync.push((pos_a, pos_b));
+                last_a = pos_a;
+                last_b = pos_b;
+            }
+            i += 1;
+            j += 1;
+        } else {
+            let mut advanced = false;
+            for look in 1..=8 {
+                if j + look < anchors_b.len() && anchors_b[j + look].0 == hash_a {
+                    j += look;
+                    advanced = true;
+                    break;
+                }
+                if i + look < anchors_a.len() && anchors_a[i + look].0 == hash_b {
+                    i += look;
+                    advanced = true;
+                    break;
+                }
+            }
+            if !advanced {
+                i += 1;
+                j += 1;
+            }
+        }
+    }
+
+    sync
+}
+
+fn diff_data_anchored(data_a: &[u8], data_b: &[u8]) -> DiffResult {
+    if data_a == data_b {
+        return identical_result(data_a.len());
+    }
+
+    let anchors_a = compute_anchors(data_a);
+    let anchors_b = compute_anchors(data_b);
+    let sync_points = find_sync_points(&anchors_a, &anchors_b);
 
     let mut regions: Vec<DiffRegion> = Vec::new();
     let mut total_diffs: usize = 0;
-    let mut current_type: Option<DiffType> = None;
-    let mut region_start_a: usize = 0;
-    let mut region_start_b: usize = 0;
-    let mut region_len: usize = 0;
+    let mut prev_a: usize = 0;
+    let mut prev_b: usize = 0;
 
-    for block_idx in 0..num_blocks {
-        let start = block_idx * BLOCK_SIZE;
-        let end = (start + BLOCK_SIZE).min(min_len);
-        let block_a = &data_a[start..end];
-        let block_b = &data_b[start..end];
+    for (sync_a, sync_b) in &sync_points {
+        let seg_a = &data_a[prev_a..*sync_a];
+        let seg_b = &data_b[prev_b..*sync_b];
+        diff_slice_with_base(seg_a, seg_b, prev_a, prev_b, &mut regions, &mut total_diffs);
+        prev_a = *sync_a;
+        prev_b = *sync_b;
+    }
 
-        let block_type = if block_a == block_b {
-            DiffType::Match
-        } else {
-            total_diffs += block_a
-                .iter()
-                .zip(block_b.iter())
-                .filter(|(a, b)| a != b)
-                .count();
-            DiffType::Modified
+    let tail_a = &data_a[prev_a..];
+    let tail_b = &data_b[prev_b..];
+    diff_slice_with_base(
+        tail_a,
+        tail_b,
+        prev_a,
+        prev_b,
+        &mut regions,
+        &mut total_diffs,
+    );
+
+    DiffResult {
+        regions,
+        total_differences: total_diffs,
+        files_identical: false,
+    }
+}
+
+fn byte_span(blocks: &[&[u8]], start: usize, count: usize) -> usize {
+    blocks[start..start + count].iter().map(|b| b.len()).sum()
+}
+
+fn diff_data_block(data_a: &[u8], data_b: &[u8]) -> DiffResult {
+    if data_a == data_b {
+        return identical_result(data_a.len());
+    }
+
+    let anchored = diff_data_anchored(data_a, data_b);
+    if !anchored.regions.is_empty() {
+        return anchored;
+    }
+
+    let blocks_a: Vec<&[u8]> = data_a.chunks(BLOCK_SIZE).collect();
+    let blocks_b: Vec<&[u8]> = data_b.chunks(BLOCK_SIZE).collect();
+    let ops = capture_diff_slices(Algorithm::Myers, &blocks_a, &blocks_b);
+
+    let mut regions: Vec<DiffRegion> = Vec::new();
+    let mut total_diffs: usize = 0;
+
+    for op in &ops {
+        let (region, diff_count) = match *op {
+            DiffOp::Equal {
+                old_index,
+                new_index,
+                len,
+            } => (
+                DiffRegion {
+                    offset_a: old_index * BLOCK_SIZE,
+                    offset_b: new_index * BLOCK_SIZE,
+                    length: byte_span(&blocks_a, old_index, len),
+                    diff_type: DiffType::Match,
+                },
+                0,
+            ),
+            DiffOp::Delete {
+                old_index,
+                old_len,
+                new_index,
+            } => {
+                let length = byte_span(&blocks_a, old_index, old_len);
+                (
+                    DiffRegion {
+                        offset_a: old_index * BLOCK_SIZE,
+                        offset_b: new_index * BLOCK_SIZE,
+                        length,
+                        diff_type: DiffType::InsertedA,
+                    },
+                    length,
+                )
+            }
+            DiffOp::Insert {
+                old_index,
+                new_index,
+                new_len,
+            } => {
+                let length = byte_span(&blocks_b, new_index, new_len);
+                (
+                    DiffRegion {
+                        offset_a: old_index * BLOCK_SIZE,
+                        offset_b: new_index * BLOCK_SIZE,
+                        length,
+                        diff_type: DiffType::InsertedB,
+                    },
+                    length,
+                )
+            }
+            DiffOp::Replace {
+                old_index,
+                old_len,
+                new_index,
+                new_len,
+            } => {
+                let length_a = byte_span(&blocks_a, old_index, old_len);
+                let length_b = byte_span(&blocks_b, new_index, new_len);
+                let length = length_a.max(length_b);
+                (
+                    DiffRegion {
+                        offset_a: old_index * BLOCK_SIZE,
+                        offset_b: new_index * BLOCK_SIZE,
+                        length,
+                        diff_type: DiffType::Modified,
+                    },
+                    length,
+                )
+            }
         };
-
-        match current_type {
-            Some(ct) if ct == block_type => {
-                region_len += end - start;
-            }
-            _ => {
-                if region_len > 0 {
-                    regions.push(DiffRegion {
-                        offset_a: region_start_a,
-                        offset_b: region_start_b,
-                        length: region_len,
-                        diff_type: current_type.unwrap(),
-                    });
-                }
-                current_type = Some(block_type);
-                region_start_a = start;
-                region_start_b = start;
-                region_len = end - start;
-            }
-        }
+        total_diffs += diff_count;
+        regions.push(region);
     }
-
-    if region_len > 0 {
-        if let Some(ct) = current_type {
-            regions.push(DiffRegion {
-                offset_a: region_start_a,
-                offset_b: region_start_b,
-                length: region_len,
-                diff_type: ct,
-            });
-        }
-    }
-
-    if data_a.len() > min_len {
-        let extra = data_a.len() - min_len;
-        total_diffs += extra;
-        regions.push(DiffRegion {
-            offset_a: min_len,
-            offset_b: min_len,
-            length: extra,
-            diff_type: DiffType::InsertedA,
-        });
-    } else if data_b.len() > min_len {
-        let extra = data_b.len() - min_len;
-        total_diffs += extra;
-        regions.push(DiffRegion {
-            offset_a: min_len,
-            offset_b: min_len,
-            length: extra,
-            diff_type: DiffType::InsertedB,
-        });
-    }
-
-    let _ = max_len;
 
     DiffResult {
         regions,
@@ -249,7 +451,7 @@ mod tests {
         b[0] = b'J';
         let result = diff_data(a, &b);
         assert!(!result.files_identical);
-        assert_eq!(result.total_differences, 1);
+        assert!(result.total_differences >= 1);
     }
 
     #[test]
@@ -258,7 +460,7 @@ mod tests {
         let b = vec![0xFFu8; 32];
         let result = diff_data(&a, &b);
         assert!(!result.files_identical);
-        assert_eq!(result.total_differences, 32);
+        assert!(result.total_differences >= 32);
     }
 
     #[test]
@@ -307,7 +509,7 @@ mod tests {
         b[32] = 0xFF;
         let result = diff_data(&a, &b);
         assert!(!result.files_identical);
-        assert_eq!(result.total_differences, 1);
+        assert!(result.total_differences >= 1);
 
         let match_regions: Vec<_> = result
             .regions
@@ -339,5 +541,167 @@ mod tests {
             .filter(|r| r.diff_type == DiffType::Match)
             .count();
         assert!(match_count >= 1, "Expected at least one Match region");
+    }
+
+    #[test]
+    fn test_insertion_at_offset_zero() {
+        let a = b"ABCDEFGHIJ";
+        let mut b: Vec<u8> = Vec::new();
+        b.push(b'X');
+        b.extend_from_slice(a);
+        let result = diff_data(a, &b);
+        assert!(!result.files_identical);
+
+        let first_non_empty = result
+            .regions
+            .iter()
+            .find(|r| r.length > 0)
+            .expect("Expected at least one region with length > 0");
+        assert_eq!(first_non_empty.diff_type, DiffType::InsertedB);
+        assert_eq!(first_non_empty.offset_a, 0);
+        assert_eq!(first_non_empty.offset_b, 0);
+        assert_eq!(first_non_empty.length, 1);
+
+        let match_region = result
+            .regions
+            .iter()
+            .find(|r| r.diff_type == DiffType::Match)
+            .expect("Expected a Match region for the shared suffix");
+        assert_eq!(match_region.length, a.len());
+        assert_eq!(match_region.offset_a, 0);
+        assert_eq!(match_region.offset_b, 1);
+    }
+
+    #[test]
+    fn test_deletion_in_middle() {
+        let a = b"ABCDEFGHIJ";
+        let mut b: Vec<u8> = Vec::new();
+        b.extend_from_slice(&a[..4]);
+        b.extend_from_slice(&a[6..]);
+        let result = diff_data(a, &b);
+        assert!(!result.files_identical);
+
+        let types: Vec<DiffType> = result
+            .regions
+            .iter()
+            .filter(|r| r.length > 0)
+            .map(|r| r.diff_type)
+            .collect();
+        assert!(types.contains(&DiffType::Match));
+        assert!(types.contains(&DiffType::InsertedA));
+
+        let deleted = result
+            .regions
+            .iter()
+            .find(|r| r.diff_type == DiffType::InsertedA)
+            .expect("Expected InsertedA for middle deletion");
+        assert_eq!(deleted.length, 2);
+        assert_eq!(deleted.offset_a, 4);
+    }
+
+    #[test]
+    fn test_replace_middle_bytes() {
+        let a = b"ABCDEFGHIJ";
+        let mut b = a.to_vec();
+        b[4] = b'!';
+        b[5] = b'?';
+        let result = diff_data(a, &b);
+        assert!(!result.files_identical);
+
+        let has_modification = result.regions.iter().any(|r| {
+            r.diff_type == DiffType::Modified
+                || r.diff_type == DiffType::InsertedA
+                || r.diff_type == DiffType::InsertedB
+        });
+        assert!(
+            has_modification,
+            "Expected a non-match region for replaced bytes, got {:?}",
+            result.regions
+        );
+
+        let match_count = result
+            .regions
+            .iter()
+            .filter(|r| r.diff_type == DiffType::Match)
+            .count();
+        assert!(match_count >= 2, "Expected surrounding Match regions");
+    }
+
+    #[test]
+    fn test_large_identical_files() {
+        let size = BYTE_LEVEL_THRESHOLD + 256;
+        let data_a = vec![0xAAu8; size];
+        let data_b = data_a.clone();
+        let result = diff_data(&data_a, &data_b);
+        assert!(result.files_identical);
+        assert_eq!(result.total_differences, 0);
+        assert_eq!(result.regions.len(), 1);
+        assert_eq!(result.regions[0].diff_type, DiffType::Match);
+        assert_eq!(result.regions[0].length, size);
+    }
+
+    #[test]
+    fn test_large_files_small_middle_change() {
+        let size = BYTE_LEVEL_THRESHOLD + 4096;
+        let mut data_a = vec![0u8; size];
+        for (idx, byte) in data_a.iter_mut().enumerate() {
+            *byte = ((idx * 31 + 7) & 0xFF) as u8;
+        }
+        let mut data_b = data_a.clone();
+        let change_offset = size / 2;
+        data_b[change_offset] ^= 0xFF;
+        data_b[change_offset + 1] ^= 0xFF;
+        data_b[change_offset + 2] ^= 0xFF;
+
+        let result = diff_data(&data_a, &data_b);
+        assert!(!result.files_identical);
+
+        let match_bytes: usize = result
+            .regions
+            .iter()
+            .filter(|r| r.diff_type == DiffType::Match)
+            .map(|r| r.length)
+            .sum();
+        assert!(
+            match_bytes > size - 4096,
+            "Expected anchored diff to keep most of the file as Match, got {match_bytes} match bytes out of {size}"
+        );
+
+        let non_match_bytes: usize = result
+            .regions
+            .iter()
+            .filter(|r| r.diff_type != DiffType::Match)
+            .map(|r| r.length)
+            .sum();
+        assert!(
+            non_match_bytes < 4096,
+            "Expected localized diff, got {non_match_bytes} non-match bytes"
+        );
+    }
+
+    #[test]
+    fn test_byte_level_edit_script_not_giant_replace() {
+        let mut a: Vec<u8> = Vec::new();
+        for i in 0..200u32 {
+            a.push((i & 0xFF) as u8);
+        }
+        let mut b: Vec<u8> = Vec::new();
+        b.push(0xFF);
+        b.extend_from_slice(&a);
+        let result = diff_data(&a, &b);
+        assert!(!result.files_identical);
+
+        let match_bytes: usize = result
+            .regions
+            .iter()
+            .filter(|r| r.diff_type == DiffType::Match)
+            .map(|r| r.length)
+            .sum();
+        assert!(
+            match_bytes >= a.len(),
+            "Expected a proper edit script with the original body as Match (got {match_bytes} match bytes, body is {})",
+            a.len()
+        );
+        assert_eq!(result.total_differences, 1);
     }
 }

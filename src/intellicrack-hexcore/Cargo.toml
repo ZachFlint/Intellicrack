@@ -32,6 +32,7 @@ encoding_rs = "0.8"
 aes = "0.8"
 flate2 = "1.0"
 base64 = "0.22"
+similar = { version = "2.7", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_Memory", "Win32_System_Threading"] }
