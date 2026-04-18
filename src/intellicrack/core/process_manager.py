@@ -41,6 +41,28 @@ _SIGNAL_SIGKILL = 9
 _SIGNAL_SIGTERM = 15
 
 
+class ProcessStateError(RuntimeError):
+    """Raised when a tracked subprocess finishes in an unexpected state.
+
+    This error surfaces cases where a subprocess wrapped by ``ProcessManager``
+    leaves ``returncode`` unset after ``communicate`` returns, indicating the
+    operating system failed to report the final exit status.
+    """
+
+    def __init__(self, name: str, pid: int, message: str | None = None) -> None:
+        """Initialize the ProcessStateError.
+
+        Args:
+            name: Human-readable name of the subprocess.
+            pid: Process ID of the subprocess.
+            message: Optional additional detail describing the failure.
+        """
+        self.process_name = name
+        self.pid = pid
+        detail = message or "subprocess returned no exit status"
+        super().__init__(f"{detail} (name={name!r}, pid={pid})")
+
+
 class ProcessType(Enum):
     """Type of process being tracked."""
 
@@ -67,7 +89,7 @@ class TrackedProcess:
     process: Popen[bytes] | asyncio.subprocess.Process
     process_type: ProcessType
     name: str
-    registered_at: datetime = field(default_factory=datetime.now)
+    registered_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
     cleanup_callback: Callable[[], Coroutine[Any, Any, None]] | None = None
 
@@ -391,8 +413,23 @@ class ProcessManager:
             graceful_timeout: Seconds to wait for SIGTERM.
             force_timeout: Seconds to wait for SIGKILL.
         """
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
+        try:
+            parent = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            _module_logger.debug("terminate_tree_root_missing", pid=pid)
+            return
+        except psutil.AccessDenied:
+            _module_logger.warning("terminate_tree_root_access_denied", pid=pid)
+            return
+
+        try:
+            children = parent.children(recursive=True)
+        except psutil.NoSuchProcess:
+            _module_logger.debug("terminate_tree_root_exited", pid=pid)
+            return
+        except psutil.AccessDenied:
+            _module_logger.warning("terminate_tree_children_access_denied", pid=pid)
+            return
 
         all_procs = [*children, parent]
 
@@ -401,6 +438,8 @@ class ProcessManager:
                 p.terminate()
             except psutil.NoSuchProcess:
                 _module_logger.debug("terminate_tree_process_exited", pid=p.pid)
+            except psutil.AccessDenied:
+                _module_logger.warning("terminate_tree_access_denied", pid=p.pid)
 
         _, alive = psutil.wait_procs(all_procs, timeout=graceful_timeout)
 
@@ -410,6 +449,8 @@ class ProcessManager:
                     p.kill()
                 except psutil.NoSuchProcess:
                     _module_logger.debug("kill_tree_process_exited", pid=p.pid)
+                except psutil.AccessDenied:
+                    _module_logger.warning("kill_tree_access_denied", pid=p.pid)
             psutil.wait_procs(alive, timeout=force_timeout)
 
     def register(
@@ -757,6 +798,7 @@ class ProcessManager:
         Raises:
             TimeoutExpired: If timeout exceeded.
             CalledProcessError: If check=True and process failed.
+            ProcessStateError: If the subprocess returns without an exit status.
         """
         logger = ProcessManager._get_logger()
         stdout_pipe = PIPE if capture_output else None
@@ -779,14 +821,29 @@ class ProcessManager:
             metadata={"args": args, "timeout": timeout},
         )
 
+        empty_text: str | bytes = "" if text else b""
         try:
-            stdout_data, stderr_data = process.communicate(timeout=timeout)
+            communicate_result = cast(
+                "tuple[bytes | None, bytes | None]",
+                process.communicate(timeout=timeout),
+            )
+            stdout_data, stderr_data = communicate_result
 
             stdout_result: str | bytes
-            stdout_result = stdout_data.decode("utf-8", errors="replace") if text else stdout_data
+            if stdout_data is None:
+                stdout_result = empty_text
+            elif text:
+                stdout_result = stdout_data.decode("utf-8", errors="replace")
+            else:
+                stdout_result = stdout_data
 
             stderr_result: str | bytes
-            stderr_result = stderr_data.decode("utf-8", errors="replace") if text else stderr_data
+            if stderr_data is None:
+                stderr_result = empty_text
+            elif text:
+                stderr_result = stderr_data.decode("utf-8", errors="replace")
+            else:
+                stderr_result = stderr_data
 
             returncode = process.returncode
             logger.debug("subprocess_completed", process_name=name, returncode=returncode)
@@ -801,9 +858,13 @@ class ProcessManager:
         finally:
             self.unregister(pid)
 
+        if returncode is None:
+            logger.error("subprocess_missing_returncode", process_name=name, pid=pid)
+            raise ProcessStateError(name=name, pid=pid)
+
         result: CompletedProcess[Any] = CompletedProcess(
             args=args,
-            returncode=returncode if returncode is not None else -1,
+            returncode=returncode,
             stdout=stdout_result,
             stderr=stderr_result,
         )
