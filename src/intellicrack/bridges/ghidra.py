@@ -61,17 +61,64 @@ _PE_HEADER_MIN = 6
 _PE_MAGIC = b"PE\x00\x00"
 _MZ_MAGIC = b"MZ"
 _ELF_MAGIC = b"\x7fELF"
+_MACHO_MAGIC_BE32 = b"\xfe\xed\xfa\xce"
+_MACHO_MAGIC_LE32 = b"\xce\xfa\xed\xfe"
+_MACHO_MAGIC_BE64 = b"\xfe\xed\xfa\xcf"
+_MACHO_MAGIC_LE64 = b"\xcf\xfa\xed\xfe"
 _MACHO_MAGICS = {
-    b"\xfe\xed\xfa\xce",
-    b"\xce\xfa\xed\xfe",
-    b"\xfe\xed\xfa\xcf",
-    b"\xcf\xfa\xed\xfe",
+    _MACHO_MAGIC_BE32,
+    _MACHO_MAGIC_LE32,
+    _MACHO_MAGIC_BE64,
+    _MACHO_MAGIC_LE64,
 }
+_MACHO_MAGICS_64 = {_MACHO_MAGIC_BE64, _MACHO_MAGIC_LE64}
+_MACHO_MAGICS_BE = {_MACHO_MAGIC_BE32, _MACHO_MAGIC_BE64}
+_MACHO_HEADER_MIN = 8
+_MACHO_CPU_TYPE_X86 = 0x07
+_MACHO_CPU_TYPE_X86_64 = 0x01000007
+_MACHO_CPU_TYPE_ARM = 0x0C
+_MACHO_CPU_TYPE_ARM64 = 0x0100000C
+_MACHO_CPU_TYPE_PPC = 0x12
+_MACHO_CPU_TYPE_PPC64 = 0x01000012
 _ELF_CLASS_64 = 2
-_MIN_ELF_HEADER = 64
+_ELF_DATA_BE = 2
+_ELF_E_MACHINE_OFFSET = 0x12
+_ELF_E_MACHINE_END = 0x14
+_ELF_EM_386 = 0x03
+_ELF_EM_ARM = 0x28
+_ELF_EM_X86_64 = 0x3E
+_ELF_EM_AARCH64 = 0xB7
+_ELF_EM_MIPS = 0x08
+_ELF_EM_PPC = 0x14
+_ELF_EM_PPC64 = 0x15
+_ELF_EM_RISCV = 0xF3
 _MACHINE_AMD64 = 0x8664
 _MACHINE_I386 = 0x14C
+_MACHINE_ARM = 0x1C0
+_MACHINE_ARMNT = 0x1C4
+_MACHINE_ARM64 = 0xAA64
+_MACHINE_MIPS = 0x166
+_MACHINE_MIPS16 = 0x266
+_MACHINE_POWERPC = 0x1F0
+_MACHINE_POWERPCFP = 0x1F1
+_MACHINE_RISCV32 = 0x5032
+_MACHINE_RISCV64 = 0x5064
+_MACHINE_RISCV128 = 0x5128
 _JAVA_SIGNED_THRESHOLD = 127
+_JAVA_SIGNED_RANGE = 256
+_ELF_EI_CLASS_OFFSET = 4
+_ELF_EI_DATA_OFFSET = 5
+_ARCH_64_POINTER_BYTES = 8
+
+_ERR_NOT_CONNECTED = "Ghidra not connected"
+_ERR_IMPORT_FILE_FAILED = "Failed to import binary into Ghidra"
+_ERR_FILE_NOT_FOUND = "File not found"
+_ERR_WRITE_VERIFICATION_FAILED = "Write verification failed: readback does not match written bytes"
+_ERR_FUNCTION_NOT_FOUND = "Function not found at address"
+_ERR_BOOKMARK_NOT_FOUND = "Bookmark not found"
+_ERR_LABEL_NOT_FOUND = "Label not found"
+_ERR_DEBUG_IMPORT_FAILED = "Debug info import failed"
+_ERR_UNSUPPORTED_DEBUG_FORMAT = "Unsupported debug info file format"
 
 
 class GhidraBridge(StaticAnalysisBridge):
@@ -103,11 +150,26 @@ class GhidraBridge(StaticAnalysisBridge):
         self._project_path: Path | None = None
         self._port: int = self.DEFAULT_PORT
         self._bridge_script_path: Path | None = None
+        self._decompiler_simplification: str | None = None
+        self._decompiler_max_instructions: int | None = None
+        self._decompiler_options_extra: dict[str, Any] = {}
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_decompilation=True,
             supports_scripting=True,
-            supported_architectures=["x86", "x86_64", "arm", "arm64", "mips", "ppc", "sparc"],
+            supported_architectures=[
+                "x86",
+                "x86_64",
+                "arm",
+                "arm64",
+                "mips",
+                "mips64",
+                "ppc",
+                "ppc64",
+                "sparc",
+                "riscv",
+                "riscv64",
+            ],
             supported_formats=["pe", "elf", "macho", "raw", "coff"],
         )
 
@@ -976,6 +1038,93 @@ class GhidraBridge(StaticAnalysisBridge):
                     ],
                     returns="Dict with name and success",
                 ),
+                ToolFunction(
+                    name="ghidra.add_bookmark",
+                    description="Add a bookmark at an address (explicit mutator)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address to bookmark", required=True),
+                        ToolParameter(name="category", type="string", description="Bookmark category", required=True),
+                        ToolParameter(name="comment", type="string", description="Bookmark comment", required=True),
+                        ToolParameter(
+                            name="bookmark_type",
+                            type="string",
+                            description="Bookmark type",
+                            required=False,
+                            default="Note",
+                            enum=["Note", "Analysis", "Error", "Warning", "Info"],
+                        ),
+                    ],
+                    returns="Dict with address, category, comment, bookmark_type, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.remove_bookmark",
+                    description="Remove a bookmark at an address, optionally matching category and/or bookmark_type",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of bookmark to remove", required=True),
+                        ToolParameter(name="category", type="string", description="Optional category filter", required=False),
+                        ToolParameter(name="bookmark_type", type="string", description="Optional type filter", required=False),
+                    ],
+                    returns="Dict with address, removed count, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.add_label",
+                    description="Add a label at an address (explicit mutator)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address for the label", required=True),
+                        ToolParameter(name="name", type="string", description="Label name", required=True),
+                        ToolParameter(name="primary", type="boolean", description="Set label as primary", required=False, default=False),
+                    ],
+                    returns="Dict with address, name, primary, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.remove_label",
+                    description="Remove a named label at an address",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Address of the label", required=True),
+                        ToolParameter(name="name", type="string", description="Label name to remove", required=True),
+                    ],
+                    returns="Dict with address, name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.add_thunk",
+                    description="Mark a function as a thunk for a target function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Thunk function address", required=True),
+                        ToolParameter(
+                            name="thunked_address",
+                            type="integer",
+                            description="Target (thunked) function address",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with address, thunked_address, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.remove_thunk",
+                    description="Clear thunk status from a function",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Thunk function address", required=True),
+                    ],
+                    returns="Dict with address and success",
+                ),
+                ToolFunction(
+                    name="ghidra.add_external_reference",
+                    description="Add an external reference from an address to a named external function",
+                    parameters=[
+                        ToolParameter(name="from_addr", type="integer", description="Source address", required=True),
+                        ToolParameter(name="library", type="string", description="External library name", required=True),
+                        ToolParameter(name="name", type="string", description="External function name", required=True),
+                    ],
+                    returns="Dict with from_addr, library, name, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.remove_external_reference",
+                    description="Remove external references from an address",
+                    parameters=[
+                        ToolParameter(name="from_addr", type="integer", description="Source address", required=True),
+                    ],
+                    returns="Dict with from_addr, removed count, and success",
+                ),
             ],
         )
 
@@ -1284,29 +1433,47 @@ ghidra_bridge_server.GhidraBridgeServer(
             BinaryInfo: BinaryInfo with file details.
 
         Raises:
-            ToolError: If load fails.
+            ToolError: If the file does not exist, if the remote importFile
+                call fails, or if Ghidra reports that no program was produced.
         """
         if not await asyncio.to_thread(path.exists):
-            error_message = f"File not found: {path}"
+            error_message = f"{_ERR_FILE_NOT_FOUND}: {path}"
             raise ToolError(error_message)
 
         self._binary_path = await asyncio.to_thread(path.resolve)
 
         if self._bridge is not None:
+            safe_path = json.dumps(path.as_posix())
             try:
-                safe_path = json.dumps(path.as_posix())
-                await self._execute_remote(
-                    f"prog = importFile(java.io.File({safe_path}))\nif prog is not None:\n    state.setCurrentProgram(prog)\n",
+                import_result = await self._execute_remote(
+                    "import java.io.File as _JFile\n"
+                    f"prog = importFile(_JFile({safe_path}))\n"
+                    "if prog is None:\n"
+                    "    {'imported': False}\n"
+                    "else:\n"
+                    "    state.setCurrentProgram(prog)\n"
+                    "    {'imported': True, 'name': prog.getName()}\n",
                 )
-            except Exception:
+            except ToolError:
                 _logger.exception("ghidra_remote_import_failed", binary_path=str(path))
+                raise
+            except Exception as exc:
+                _logger.exception("ghidra_remote_import_failed", binary_path=str(path))
+                msg = f"{_ERR_IMPORT_FILE_FAILED}: {exc}"
+                raise ToolError(msg) from exc
+
+            if not isinstance(import_result, dict) or not bool(
+                cast("dict[str, Any]", import_result).get("imported", False),
+            ):
+                msg = f"{_ERR_IMPORT_FILE_FAILED}: Ghidra returned no program for {path}"
+                raise ToolError(msg)
 
         data = await asyncio.to_thread(path.read_bytes)
         md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
         sha256 = hashlib.sha256(data).hexdigest()
 
         file_type = self._detect_format(data)
-        arch, is_64 = self._detect_architecture(data)
+        arch, is_64 = await self._resolve_architecture(data)
 
         self.state.connected = True
         self.state.tool_running = True
@@ -1510,7 +1677,11 @@ metadata
 
     @staticmethod
     def _detect_architecture(data: bytes) -> tuple[str, bool]:
-        """Detect CPU architecture.
+        """Detect CPU architecture from raw header bytes.
+
+        Covers PE (x86, x86_64, ARM, ARM64, MIPS, PPC, RISC-V), ELF
+        (x86, x86_64, ARM, AArch64, MIPS, PPC/PPC64, RISC-V), and
+        Mach-O (x86, x86_64, ARM, ARM64, PPC/PPC64) binaries.
 
         Args:
             data: Binary data.
@@ -1518,7 +1689,7 @@ metadata
         Returns:
             tuple[str, bool]: Tuple of (architecture, is_64bit).
         """
-        if len(data) < _MIN_ELF_HEADER:
+        if len(data) < _MIN_HEADER_SIZE:
             return "unknown", False
 
         if data[:2] == _MZ_MAGIC and len(data) > _PE_POINTER_END:
@@ -1526,7 +1697,7 @@ metadata
                 data[_PE_POINTER_OFFSET:_PE_POINTER_END],
                 "little",
             )
-            if len(data) > pe_offset + _PE_HEADER_MIN:
+            if len(data) > pe_offset + _PE_HEADER_MIN and data[pe_offset : pe_offset + 4] == _PE_MAGIC:
                 machine = int.from_bytes(
                     data[pe_offset + 4 : pe_offset + 6],
                     "little",
@@ -1535,10 +1706,128 @@ metadata
                     return "x86_64", True
                 if machine == _MACHINE_I386:
                     return "x86", False
+                if machine in {_MACHINE_ARM, _MACHINE_ARMNT}:
+                    return "arm", False
+                if machine == _MACHINE_ARM64:
+                    return "arm64", True
+                if machine in {_MACHINE_MIPS, _MACHINE_MIPS16}:
+                    return "mips", False
+                if machine in {_MACHINE_POWERPC, _MACHINE_POWERPCFP}:
+                    return "ppc", False
+                if machine == _MACHINE_RISCV32:
+                    return "riscv", False
+                if machine in {_MACHINE_RISCV64, _MACHINE_RISCV128}:
+                    return "riscv64", True
+                return "unknown", False
 
-        if data[:4] == _ELF_MAGIC:
-            return ("x86_64", True) if data[4] == _ELF_CLASS_64 else ("x86", False)
+        if data[:4] == _ELF_MAGIC and len(data) >= _ELF_E_MACHINE_END:
+            is_64 = len(data) > _ELF_EI_CLASS_OFFSET and data[_ELF_EI_CLASS_OFFSET] == _ELF_CLASS_64
+            byte_order: Literal["little", "big"] = (
+                "big" if len(data) > _ELF_EI_DATA_OFFSET and data[_ELF_EI_DATA_OFFSET] == _ELF_DATA_BE else "little"
+            )
+            e_machine = int.from_bytes(
+                data[_ELF_E_MACHINE_OFFSET:_ELF_E_MACHINE_END],
+                byte_order,
+            )
+            if e_machine == _ELF_EM_X86_64:
+                return "x86_64", True
+            if e_machine == _ELF_EM_386:
+                return "x86", False
+            if e_machine == _ELF_EM_ARM:
+                return "arm", False
+            if e_machine == _ELF_EM_AARCH64:
+                return "arm64", True
+            if e_machine == _ELF_EM_MIPS:
+                return ("mips64", True) if is_64 else ("mips", False)
+            if e_machine == _ELF_EM_PPC:
+                return "ppc", False
+            if e_machine == _ELF_EM_PPC64:
+                return "ppc64", True
+            if e_machine == _ELF_EM_RISCV:
+                return ("riscv64", True) if is_64 else ("riscv", False)
+            return ("unknown", True) if is_64 else ("unknown", False)
+
+        if data[:4] in _MACHO_MAGICS and len(data) >= _MACHO_HEADER_MIN:
+            macho_magic = data[:4]
+            is_64 = macho_magic in _MACHO_MAGICS_64
+            mach_order: Literal["little", "big"] = "big" if macho_magic in _MACHO_MAGICS_BE else "little"
+            cpu_type = int.from_bytes(data[4:8], mach_order)
+            if cpu_type == _MACHO_CPU_TYPE_X86_64:
+                return "x86_64", True
+            if cpu_type == _MACHO_CPU_TYPE_X86:
+                return "x86", False
+            if cpu_type == _MACHO_CPU_TYPE_ARM64:
+                return "arm64", True
+            if cpu_type == _MACHO_CPU_TYPE_ARM:
+                return "arm", False
+            if cpu_type == _MACHO_CPU_TYPE_PPC64:
+                return "ppc64", True
+            if cpu_type == _MACHO_CPU_TYPE_PPC:
+                return "ppc", False
+            return ("unknown", True) if is_64 else ("unknown", False)
+
         return "unknown", False
+
+    async def _query_ghidra_arch(self) -> tuple[str, bool] | None:
+        """Query the active Ghidra program for its architecture via RPC.
+
+        Returns:
+            tuple[str, bool] | None: Tuple of (architecture name, is_64bit),
+            or None if Ghidra is not connected or if the query fails.
+        """
+        if self._bridge is None:
+            return None
+        try:
+            result = await self._execute_remote(
+                "lang = currentProgram.getLanguage()\n"
+                "proc = str(lang.getProcessor()) if lang is not None else ''\n"
+                "psize = int(lang.getDefaultSpace().getPointerSize()) if lang is not None else 0\n"
+                "{'processor': proc, 'pointer_size': psize}\n",
+            )
+        except ToolError:
+            return None
+        except Exception:
+            _logger.exception("ghidra_arch_query_failed")
+            return None
+        if not isinstance(result, dict):
+            return None
+        arch_info = cast("dict[str, Any]", result)
+        processor = str(arch_info.get("processor", "")).lower()
+        pointer_size = int(arch_info.get("pointer_size", 0))
+        is_64 = pointer_size >= _ARCH_64_POINTER_BYTES
+        if processor in {"", "unknown"}:
+            return None
+        if "x86" in processor or "intel" in processor:
+            return ("x86_64", True) if is_64 else ("x86", False)
+        if "aarch64" in processor or ("arm" in processor and is_64):
+            return "arm64", True
+        if "arm" in processor:
+            return "arm", False
+        if "mips" in processor:
+            return ("mips64", True) if is_64 else ("mips", False)
+        if "powerpc" in processor or "ppc" in processor:
+            return ("ppc64", True) if is_64 else ("ppc", False)
+        if "riscv" in processor or "risc-v" in processor:
+            return ("riscv64", True) if is_64 else ("riscv", False)
+        if "sparc" in processor:
+            return ("sparc64", True) if is_64 else ("sparc", False)
+        return processor, is_64
+
+    async def _resolve_architecture(self, data: bytes) -> tuple[str, bool]:
+        """Resolve architecture by combining header parsing with a Ghidra query.
+
+        Args:
+            data: Binary data.
+
+        Returns:
+            tuple[str, bool]: Tuple of (architecture, is_64bit).
+        """
+        header_arch, header_is_64 = self._detect_architecture(data)
+        if header_arch == "unknown":
+            queried = await self._query_ghidra_arch()
+            if queried is not None:
+                return queried
+        return header_arch, header_is_64
 
     async def analyze(self) -> None:
         """Run full Ghidra analysis.
@@ -1712,6 +2001,10 @@ metadata
     async def decompile(self, address: int) -> str:
         """Decompile function at address.
 
+        Applies the bridge-level decompiler configuration (set via
+        :meth:`set_decompiler_options`) to the ``DecompInterface``
+        before invoking decompilation.
+
         Args:
             address: Function address.
 
@@ -1719,18 +2012,36 @@ metadata
             str: Decompiled C pseudocode.
 
         Raises:
-            ToolError: If decompilation fails.
+            ToolError: If Ghidra is not connected or decompilation fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
+        simp_literal = json.dumps(self._decompiler_simplification) if self._decompiler_simplification is not None else "None"
+        max_instr_literal = str(self._decompiler_max_instructions) if self._decompiler_max_instructions is not None else "None"
+        extra_literal = json.dumps(self._decompiler_options_extra)
         try:
             result = await self._execute_remote(f"""
+                import json as _json
                 from ghidra.app.decompiler import DecompInterface
 
                 ifc = DecompInterface()
                 ifc.openProgram(currentProgram)
+                opts = ifc.getOptions()
+                simp = {simp_literal}
+                max_instr = {max_instr_literal}
+                extra_data = _json.loads({json.dumps(extra_literal)})
+                if simp is not None:
+                    opts.setSimplificationStyle(simp)
+                if max_instr is not None:
+                    opts.setMaxInstructions(max_instr)
+                for key, value in extra_data.items():
+                    try:
+                        if hasattr(opts, 'setOption'):
+                            opts.setOption(key, str(value))
+                    except Exception:
+                        pass
+                ifc.setOptions(opts)
 
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
@@ -1747,10 +2058,12 @@ metadata
 
             return str(result) if result else "Decompilation failed"
 
-        except Exception as e:
-            _logger.warning("ghidra_decompilation_failed", error=str(e))
-            error_message = f"Decompilation failed: {e}"
-            raise ToolError(error_message) from e
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.warning("ghidra_decompilation_failed", error=str(exc))
+            msg = f"Decompilation failed: {exc}"
+            raise ToolError(msg) from exc
 
     async def disassemble(
         self,
@@ -2545,32 +2858,60 @@ metadata
     async def delete_function(self, address: int) -> dict[str, Any]:
         """Remove function definition at an address.
 
+        Raises ``ToolError`` when no function is defined at the given
+        address so callers never silently observe a no-op.
+
         Args:
             address: Function entry point address.
 
         Returns:
-            dict[str, Any]: Dict with address and success status.
+            dict[str, Any]: Dict with address, name of the deleted
+            function, and success status.
 
         Raises:
-            ToolError: If Ghidra is not connected or deletion fails.
+            ToolError: If Ghidra is not connected, if no function exists
+                at the address, or if deletion fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
         _logger.info("function_deleting", address=hex(address))
         try:
-            await self._execute_remote(f"""
+            result = await self._execute_remote(f"""
                 addr = toAddr({address})
                 fm = currentProgram.getFunctionManager()
                 func = fm.getFunctionAt(addr)
-                if func is not None:
-                    fm.removeFunction(func.getEntryPoint())
+                if func is None:
+                    {{'exists': False, 'name': None, 'removed': False}}
+                else:
+                    name = func.getName()
+                    tx_id = currentProgram.startTransaction('intellicrack.delete_function')
+                    removed = False
+                    try:
+                        removed = bool(fm.removeFunction(func.getEntryPoint()))
+                    finally:
+                        currentProgram.endTransaction(tx_id, removed)
+                    {{'exists': True, 'name': name, 'removed': removed}}
             """)
-            return {"address": hex(address), "success": True}
-        except Exception as e:
-            error_message = f"Delete function failed: {e}"
-            raise ToolError(error_message) from e
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_delete_function_failed", address=hex(address))
+            msg = f"Delete function failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("exists", False)):
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        if not bool(info.get("removed", False)):
+            msg = f"Delete function failed: Ghidra refused removal at {hex(address)}"
+            raise ToolError(msg)
+        return {
+            "address": hex(address),
+            "name": str(info.get("name", "")),
+            "success": True,
+        }
 
     async def edit_function_signature(
         self,
@@ -2871,48 +3212,40 @@ metadata
             return []
 
     async def get_call_graph(self, address: int, depth: int = 2) -> dict[str, Any]:
-        """Get function call graph from an address to a specified depth.
+        """Get function call graph rooted at an address in both directions.
+
+        Recursively traverses call references both outward (callees)
+        and inward (callers) from the function containing the given
+        address up to ``depth`` levels. Each direction is returned as
+        a tree so the caller can walk the full bidirectional call
+        relationship.
 
         Args:
-            address: Root function address.
-            depth: Maximum call depth to traverse.
+            address: Root function address (or any address inside the
+                root function).
+            depth: Maximum recursion depth in each direction.
 
         Returns:
-            dict[str, Any]: Dict with call graph tree structure containing callers and callees.
+            dict[str, Any]: Dict with the root function name and
+            address, plus ``callees`` and ``callers`` tree lists.
 
         Raises:
-            ToolError: If Ghidra is not connected.
+            ToolError: If Ghidra is not connected or the RPC fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
         try:
             result = await self._execute_remote(f"""
-                from ghidra.program.model.symbol import RefType
-
-                def build_graph(func_addr, max_depth, current_depth, visited):
-                    if current_depth >= max_depth or func_addr in visited:
-                        return None
-                    visited.add(func_addr)
-                    func = getFunctionAt(func_addr)
-                    if func is None:
-                        return None
-
-                    callees = []
-                    for ref in getReferencesFrom(func.getEntryPoint()):
-                        if ref.getReferenceType().isCall():
-                            target = ref.getToAddress()
-                            target_func = getFunctionAt(target)
-                            if target_func is not None:
-                                child = build_graph(target_func.getEntryPoint(), max_depth, current_depth + 1, visited)
-                                callees.append({{
-                                    'name': target_func.getName(),
-                                    'address': target_func.getEntryPoint().getOffset(),
-                                    'callees': child.get('callees', []) if child else [],
-                                }})
-
+                def collect_callees(func, cur_depth, max_depth, visited):
+                    offset = func.getEntryPoint().getOffset()
+                    if cur_depth >= max_depth or offset in visited:
+                        return {{'name': func.getName(), 'address': offset, 'callees': []}}
+                    visited = set(visited)
+                    visited.add(offset)
                     body = func.getBody()
+                    seen_targets = set()
+                    callees = []
                     addr_iter = body.getAddresses(True)
                     while addr_iter.hasNext():
                         a = addr_iter.next()
@@ -2920,33 +3253,67 @@ metadata
                             if ref.getReferenceType().isCall():
                                 target = ref.getToAddress()
                                 target_func = getFunctionAt(target)
-                                if target_func is not None and target_func.getEntryPoint().getOffset() not in [c.get('address') for c in callees]:
-                                    child = build_graph(target_func.getEntryPoint(), max_depth, current_depth + 1, visited)
-                                    callees.append({{
-                                        'name': target_func.getName(),
-                                        'address': target_func.getEntryPoint().getOffset(),
-                                        'callees': child.get('callees', []) if child else [],
-                                    }})
+                                if target_func is None:
+                                    target_func = getFunctionContaining(target)
+                                if target_func is not None:
+                                    target_offset = target_func.getEntryPoint().getOffset()
+                                    if target_offset in seen_targets:
+                                        continue
+                                    seen_targets.add(target_offset)
+                                    callees.append(collect_callees(target_func, cur_depth + 1, max_depth, visited))
+                    return {{'name': func.getName(), 'address': offset, 'callees': callees}}
 
-                    return {{
-                        'name': func.getName(),
-                        'address': func.getEntryPoint().getOffset(),
-                        'callees': callees,
-                    }}
+                def collect_callers(func, cur_depth, max_depth, visited):
+                    offset = func.getEntryPoint().getOffset()
+                    if cur_depth >= max_depth or offset in visited:
+                        return {{'name': func.getName(), 'address': offset, 'callers': []}}
+                    visited = set(visited)
+                    visited.add(offset)
+                    seen_sources = set()
+                    callers = []
+                    for ref in getReferencesTo(func.getEntryPoint()):
+                        if ref.getReferenceType().isCall():
+                            from_addr = ref.getFromAddress()
+                            caller_func = getFunctionContaining(from_addr)
+                            if caller_func is not None:
+                                caller_offset = caller_func.getEntryPoint().getOffset()
+                                if caller_offset in seen_sources:
+                                    continue
+                                seen_sources.add(caller_offset)
+                                callers.append(collect_callers(caller_func, cur_depth + 1, max_depth, visited))
+                    return {{'name': func.getName(), 'address': offset, 'callers': callers}}
 
                 root_addr = toAddr({address})
                 root_func = getFunctionContaining(root_addr)
-                if root_func is not None:
-                    build_graph(root_func.getEntryPoint(), {depth}, 0, set())
-                else:
+                if root_func is None:
                     None
+                else:
+                    callee_tree = collect_callees(root_func, 0, {depth}, set())
+                    caller_tree = collect_callers(root_func, 0, {depth}, set())
+                    {{
+                        'name': root_func.getName(),
+                        'address': root_func.getEntryPoint().getOffset(),
+                        'callees': callee_tree.get('callees', []),
+                        'callers': caller_tree.get('callers', []),
+                    }}
             """)
-            if result is None:
-                return {"address": hex(address), "callees": [], "callers": []}
-            return cast("dict[str, Any]", result)
-        except Exception:
-            _logger.exception("get_call_graph_failed", address=hex(address))
-            return {"address": hex(address), "callees": [], "callers": []}
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_get_call_graph_failed", address=hex(address))
+            msg = f"Get call graph failed: {exc}"
+            raise ToolError(msg) from exc
+
+        if result is None:
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        graph = cast("dict[str, Any]", result)
+        return {
+            "name": str(graph.get("name", "")),
+            "address": int(graph.get("address", address)),
+            "callees": cast("list[dict[str, Any]]", graph.get("callees", [])),
+            "callers": cast("list[dict[str, Any]]", graph.get("callers", [])),
+        }
 
     async def get_segments(self) -> list[dict[str, Any]]:
         """Get program segments with detailed permissions and attributes.
@@ -3027,36 +3394,121 @@ metadata
     async def write_bytes(self, address: int, data: str) -> dict[str, Any]:
         """Patch bytes at an address in the program.
 
+        Opens a Ghidra transaction, sign-folds every byte to the signed
+        ``-128..127`` range Jython's ``jarray`` requires, writes via
+        ``Memory.setBytes``, then reads the bytes back and compares them
+        to the requested payload. The transaction is committed only when
+        the readback matches; otherwise it is rolled back and a
+        ``ToolError`` is raised.
+
         Args:
             address: Address to write at.
             data: Hex string of bytes (e.g. '90 90 90' or '909090').
 
         Returns:
-            dict[str, Any]: Dict with address and bytes_written count.
+            dict[str, Any]: Dict with address, bytes_written count,
+            verified flag, and success.
 
         Raises:
-            ToolError: If Ghidra is not connected or write fails.
+            ToolError: If Ghidra is not connected, the hex input is
+                malformed, the write fails, or readback verification
+                fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
-        _logger.debug("bytes_writing", address=hex(address), data_length=len(data.replace(" ", "")) // 2)
-        clean_hex = data.replace(" ", "")
-        byte_values = [int(clean_hex[i : i + 2], 16) for i in range(0, len(clean_hex), 2)]
-        byte_list_str = ", ".join(str(b) for b in byte_values)
+        clean_hex = data.replace(" ", "").replace(",", "")
+        if not clean_hex or len(clean_hex) % 2 != 0:
+            msg = f"Invalid hex payload: {data!r}"
+            raise ToolError(msg)
+        try:
+            unsigned_bytes = [int(clean_hex[i : i + 2], 16) for i in range(0, len(clean_hex), 2)]
+        except ValueError as exc:
+            msg = f"Invalid hex payload: {exc}"
+            raise ToolError(msg) from exc
+
+        _logger.debug("bytes_writing", address=hex(address), data_length=len(unsigned_bytes))
+
+        signed_bytes = [(b - _JAVA_SIGNED_RANGE) if b > _JAVA_SIGNED_THRESHOLD else b for b in unsigned_bytes]
+        expected_list = list(unsigned_bytes)
+        byte_list_str = ", ".join(str(b) for b in signed_bytes)
+        length = len(unsigned_bytes)
 
         try:
-            await self._execute_remote(f"""
-                from jarray import array
+            result = await self._execute_remote(f"""
+                from jarray import array, zeros
+
                 addr = toAddr({address})
-                data = array([{byte_list_str}], 'b')
-                currentProgram.getMemory().setBytes(addr, data)
+                memory = currentProgram.getMemory()
+                payload = array([{byte_list_str}], 'b')
+                expected_length = {length}
+
+                tx_id = currentProgram.startTransaction('intellicrack.write_bytes')
+                commit_ok = False
+                readback_hex = ''
+                readback_bytes = []
+                write_error = None
+                try:
+                    try:
+                        memory.setBytes(addr, payload)
+                    except Exception as _write_exc:
+                        write_error = str(_write_exc)
+
+                    buf = zeros(expected_length, 'b')
+                    try:
+                        memory.getBytes(addr, buf)
+                        readback_bytes = [((b + 256) % 256) for b in buf]
+                        readback_hex = ''.join('%02X' % v for v in readback_bytes)
+                    except Exception as _read_exc:
+                        if write_error is None:
+                            write_error = str(_read_exc)
+
+                    commit_ok = write_error is None
+                finally:
+                    currentProgram.endTransaction(tx_id, commit_ok)
+
+                {{
+                    'write_error': write_error,
+                    'readback_bytes': readback_bytes,
+                    'readback_hex': readback_hex,
+                    'committed': commit_ok,
+                }}
             """)
-            return {"address": hex(address), "bytes_written": len(byte_values), "success": True}
-        except Exception as e:
-            error_message = f"Write bytes failed: {e}"
-            raise ToolError(error_message) from e
+        except ToolError:
+            _logger.exception("ghidra_write_bytes_rpc_failed", address=hex(address))
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_write_bytes_failed", address=hex(address))
+            msg = f"Write bytes failed: {exc}"
+            raise ToolError(msg) from exc
+
+        write_info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        write_error = write_info.get("write_error")
+        if write_error:
+            msg = f"Write bytes failed: {write_error}"
+            raise ToolError(msg)
+
+        readback = [int(b) & 0xFF for b in cast("list[int]", write_info.get("readback_bytes", []))]
+        if readback != expected_list:
+            _logger.error(
+                "ghidra_write_bytes_verification_mismatch",
+                address=hex(address),
+                expected_length=length,
+                readback_length=len(readback),
+            )
+            raise ToolError(_ERR_WRITE_VERIFICATION_FAILED)
+
+        _logger.info(
+            "ghidra_write_bytes_verified",
+            address=hex(address),
+            bytes_written=length,
+        )
+        return {
+            "address": hex(address),
+            "bytes_written": length,
+            "verified": True,
+            "success": True,
+        }
 
     async def read_bytes(self, address: int, length: int) -> dict[str, Any]:
         """Read bytes from an address in the program.
@@ -3467,59 +3919,143 @@ metadata
     async def import_debug_info(self, path: str) -> dict[str, Any]:
         """Import debug symbols from a PDB or DWARF file.
 
+        Dispatches to Ghidra's real ``PdbAnalyzer`` / ``PdbUniversalAnalyzer``
+        for ``.pdb`` inputs and ``DWARFExternalDebugFilesPlugin`` /
+        ``DWARFAnalyzer`` for DWARF-bearing files (``.debug``, ``.dbg``,
+        ``.dwarf``, ``.so``, ``.dylib``, ``.o``, ``.elf``). The import
+        runs inside a Ghidra transaction and is rolled back if the
+        analyzer raises.
+
         Args:
-            path: Path to the .pdb or .debug file.
+            path: Path to a ``.pdb`` file or to a DWARF-bearing debug file.
 
         Returns:
-            dict[str, Any]: Dict with path, success, and debug info type.
+            dict[str, Any]: Dict with path, success flag, debug info
+            type, analyzer name used, and any error text returned by
+            Ghidra.
 
         Raises:
-            ToolError: If Ghidra is not connected.
+            ToolError: If Ghidra is not connected, if the file extension
+                is not recognised, or if the Ghidra analyzer raises.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
-        _logger.info("debug_info_importing", path=path)
+        ext = Path(path).suffix.lower()
+        if ext == ".pdb":
+            debug_type = "pdb"
+        elif ext in {".debug", ".dwarf", ".dbg", ".so", ".dylib", ".o", ".elf"}:
+            debug_type = "dwarf"
+        else:
+            msg = f"{_ERR_UNSUPPORTED_DEBUG_FORMAT}: {path}"
+            raise ToolError(msg)
+
+        _logger.info("debug_info_importing", path=path, debug_type=debug_type)
         path_literal = json.dumps(path)
         try:
             result = await self._execute_remote(f"""
-                import os as _os
+                import java.io.File as _JFile
+                from ghidra.util.task import ConsoleTaskMonitor
+
                 debug_path = {path_literal}
-                ext = _os.path.splitext(debug_path)[1].lower()
+                debug_type = {json.dumps(debug_type)}
                 success = False
-                debug_type = 'unknown'
+                analyzer_used = ''
+                error_msg = None
 
-                if ext == '.pdb':
-                    debug_type = 'pdb'
-                    try:
-                        from ghidra.app.plugin.core.analysis import PdbAnalyzer
-                        from ghidra.util.task import TaskMonitor
-                        opts = currentProgram.getOptions('Analyzers')
-                        opts.setString('PDB Universal/Apply PDB File', debug_path)
-                        mgr = currentProgram.getUsrPropertyManager()
-                        from ghidra.app.services import AutoAnalysisManager
-                        aam = AutoAnalysisManager.getAnalysisManager(currentProgram)
-                        aam.reAnalyzeAll(None)
-                        success = True
-                    except Exception as _e:
-                        success = False
-                elif ext in ('.debug', '.dwarf', '.dbg'):
-                    debug_type = 'dwarf'
-                    try:
-                        from ghidra.app.services import AutoAnalysisManager
-                        aam = AutoAnalysisManager.getAnalysisManager(currentProgram)
-                        aam.reAnalyzeAll(None)
-                        success = True
-                    except Exception as _e:
-                        success = False
+                tx_id = currentProgram.startTransaction('intellicrack.import_debug_info')
+                commit_ok = False
+                try:
+                    tm = ConsoleTaskMonitor()
+                    if debug_type == 'pdb':
+                        try:
+                            from ghidra.app.util.bin.format.pdb import PdbParser
+                            from ghidra.app.util.pdb import PdbProgramAttributes
+                            from ghidra.app.plugin.core.analysis import PdbUniversalAnalyzer
+                            analyzer = PdbUniversalAnalyzer()
+                            analyzer_used = 'PdbUniversalAnalyzer'
+                            opts = currentProgram.getOptions('Analyzers')
+                            opts.setString('PDB Universal.Symbol File', debug_path)
+                            success = bool(analyzer.added(currentProgram, currentProgram.getMemory(), tm, None))
+                        except Exception as _pdb_univ_exc:
+                            try:
+                                from ghidra.app.plugin.core.analysis import PdbAnalyzer
+                                analyzer = PdbAnalyzer()
+                                analyzer_used = 'PdbAnalyzer'
+                                opts = currentProgram.getOptions('Analyzers')
+                                opts.setString('PDB.Symbol File', debug_path)
+                                success = bool(analyzer.added(currentProgram, currentProgram.getMemory(), tm, None))
+                            except Exception as _pdb_exc:
+                                error_msg = 'pdb_univ=' + str(_pdb_univ_exc) + ' pdb=' + str(_pdb_exc)
+                    else:
+                        try:
+                            from ghidra.app.util.bin.format.dwarf4.next import DWARFImportOptions, DWARFProgram
+                            from ghidra.app.util.bin.format.dwarf4.next.sectionprovider import (
+                                BaseSectionProvider,
+                                DSymSectionProvider,
+                                ExternalDebugFileSectionProvider,
+                            )
+                            analyzer_used = 'DWARFProgram'
+                            debug_file = _JFile(debug_path)
+                            opts_dwarf = DWARFImportOptions()
+                            provider = None
+                            try:
+                                provider = ExternalDebugFileSectionProvider(debug_file, currentProgram)
+                            except Exception:
+                                try:
+                                    provider = DSymSectionProvider(debug_file, currentProgram)
+                                except Exception:
+                                    provider = BaseSectionProvider(currentProgram)
+                            dwarf_prog = DWARFProgram(currentProgram, opts_dwarf, tm, provider)
+                            try:
+                                dwarf_prog.checkPreconditions(tm)
+                                from ghidra.app.util.bin.format.dwarf4.next import DWARFParser
+                                parser = DWARFParser(dwarf_prog, currentProgram.getDataTypeManager(), tm)
+                                parser.parse()
+                                success = True
+                            finally:
+                                dwarf_prog.close()
+                        except Exception as _dwarf_next_exc:
+                            try:
+                                from ghidra.app.plugin.core.analysis import DWARFAnalyzer
+                                analyzer = DWARFAnalyzer()
+                                analyzer_used = 'DWARFAnalyzer'
+                                success = bool(analyzer.added(currentProgram, currentProgram.getMemory(), tm, None))
+                            except Exception as _dwarf_exc:
+                                error_msg = 'dwarf_next=' + str(_dwarf_next_exc) + ' dwarf=' + str(_dwarf_exc)
+                    commit_ok = success
+                finally:
+                    currentProgram.endTransaction(tx_id, commit_ok)
 
-                {{'path': debug_path, 'success': success, 'type': debug_type}}
+                {{
+                    'path': debug_path,
+                    'success': bool(success),
+                    'type': debug_type,
+                    'analyzer': analyzer_used,
+                    'error': error_msg,
+                }}
             """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"path": path, "success": False, "type": "unknown"}
-        except Exception:
-            _logger.exception("import_debug_info_failed", path=path)
-            return {"path": path, "success": False, "type": "unknown"}
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_import_debug_info_failed", path=path)
+            msg = f"{_ERR_DEBUG_IMPORT_FAILED}: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        success = bool(info.get("success", False))
+        response: dict[str, Any] = {
+            "path": str(info.get("path", path)),
+            "success": success,
+            "type": str(info.get("type", debug_type)),
+            "analyzer": str(info.get("analyzer", "")),
+            "error": info.get("error"),
+        }
+        if not success:
+            err = info.get("error") or "unknown error"
+            msg = f"{_ERR_DEBUG_IMPORT_FAILED}: {err}"
+            raise ToolError(msg)
+        return response
 
     async def add_reference(self, from_addr: int, to_addr: int, ref_type: str = "DATA") -> dict[str, Any]:
         """Add a memory reference between two addresses.
@@ -4239,50 +4775,119 @@ metadata
         self,
         simplification: str | None = None,
         max_instructions: int | None = None,
+        *,
+        extra: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Configure decompiler simplification style or instruction limit.
+        """Configure decompiler simplification style and/or instruction limit.
+
+        Stores supplied values on the bridge instance so subsequent
+        decompilation calls reuse the same configuration for the life
+        of the session, or until overwritten by another call to this
+        method. Passing ``None`` for a value leaves the previously
+        stored value in place. Additional key/value options can be
+        supplied via ``extra`` and are persisted and applied verbatim
+        to ``DecompileOptions.setOption`` when present.
 
         Args:
-            simplification: Simplification style name (e.g. 'normalize', 'jumptable').
-            max_instructions: Maximum instructions per function for decompiler.
+            simplification: Simplification style name (e.g. 'normalize',
+                'jumptable', 'decompile'). When ``None`` the currently
+                stored value is preserved.
+            max_instructions: Maximum instructions per function for
+                decompiler. When ``None`` the currently stored value is
+                preserved.
+            extra: Optional dict of additional key/value decompiler
+                options. Keys and values are merged into the persisted
+                configuration and then applied to Ghidra.
 
         Returns:
-            dict[str, Any]: Dict with simplification, max_instructions, and success.
+            dict[str, Any]: Dict with simplification, max_instructions,
+            extra options, and success.
 
         Raises:
             ToolError: If Ghidra is not connected or configuration fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
-        _logger.debug("decompiler_options_setting", simplification=simplification, max_instructions=max_instructions)
-        simp_literal = json.dumps(simplification) if simplification else "None"
-        max_instr_literal = str(max_instructions) if max_instructions is not None else "None"
+        if simplification is not None:
+            self._decompiler_simplification = simplification
+        if max_instructions is not None:
+            self._decompiler_max_instructions = max_instructions
+        if extra is not None:
+            self._decompiler_options_extra.update(extra)
+
+        effective_simp = self._decompiler_simplification
+        effective_max = self._decompiler_max_instructions
+        effective_extra = dict(self._decompiler_options_extra)
+
+        _logger.debug(
+            "decompiler_options_setting",
+            simplification=effective_simp,
+            max_instructions=effective_max,
+            extra_keys=list(effective_extra.keys()),
+        )
+        simp_literal = json.dumps(effective_simp) if effective_simp is not None else "None"
+        max_instr_literal = str(effective_max) if effective_max is not None else "None"
+        extra_literal = json.dumps(effective_extra)
         try:
             result = await self._execute_remote(f"""
-                from ghidra.app.decompiler import DecompInterface, DecompileOptions
+                import json as _json
+                from ghidra.app.decompiler import DecompInterface
 
                 ifc = DecompInterface()
                 ifc.openProgram(currentProgram)
                 opts = ifc.getOptions()
                 simp = {simp_literal}
                 max_instr = {max_instr_literal}
+                extra_data = _json.loads({json.dumps(extra_literal)})
+                applied_extra = {{}}
                 if simp is not None:
                     opts.setSimplificationStyle(simp)
                 if max_instr is not None:
                     opts.setMaxInstructions(max_instr)
+                for key, value in extra_data.items():
+                    try:
+                        if hasattr(opts, 'setOption'):
+                            opts.setOption(key, str(value))
+                            applied_extra[key] = value
+                    except Exception:
+                        pass
                 ifc.setOptions(opts)
-                {{'simplification': simp, 'max_instructions': max_instr, 'success': True}}
+                {{
+                    'simplification': simp,
+                    'max_instructions': max_instr,
+                    'extra': applied_extra,
+                    'success': True,
+                }}
             """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"simplification": simplification, "max_instructions": max_instructions, "success": False}
-            )
-        except Exception as e:
-            error_message = f"Set decompiler options failed: {e}"
-            raise ToolError(error_message) from e
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_decompiler_options_failed")
+            msg = f"Set decompiler options failed: {exc}"
+            raise ToolError(msg) from exc
+
+        response = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        return {
+            "simplification": effective_simp,
+            "max_instructions": effective_max,
+            "extra": cast("dict[str, Any]", response.get("extra", effective_extra)),
+            "success": bool(response.get("success", False)),
+        }
+
+    @property
+    def decompiler_options(self) -> dict[str, Any]:
+        """Get the persisted decompiler options configured on this bridge.
+
+        Returns:
+            dict[str, Any]: Dict with simplification, max_instructions,
+            and a copy of the extra options map.
+        """
+        return {
+            "simplification": self._decompiler_simplification,
+            "max_instructions": self._decompiler_max_instructions,
+            "extra": dict(self._decompiler_options_extra),
+        }
 
     async def create_memory_block(
         self,
@@ -4427,35 +5032,98 @@ metadata
     async def get_program_tree(self) -> dict[str, Any]:
         """Get the program tree module and fragment hierarchy.
 
+        Recursively walks every module under every root, returning the
+        complete tree of submodules and fragments, plus each fragment's
+        address ranges so callers can navigate the layout without
+        issuing additional RPC calls. A depth cap prevents runaway
+        recursion on pathological inputs.
+
         Returns:
-            dict[str, Any]: Dict with trees list containing module and fragment information.
+            dict[str, Any]: Dict with ``trees`` list. Each tree has
+            ``name`` and ``root`` (recursive module node). A module
+            node has ``name``, ``type`` ("module"), and ``children``.
+            A fragment node has ``name``, ``type`` ("fragment"), and
+            ``ranges`` (list of ``{start, end}`` offsets).
 
         Raises:
-            ToolError: If Ghidra is not connected.
+            ToolError: If Ghidra is not connected or the RPC fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
         try:
             result = await self._execute_remote("""
+                from ghidra.program.model.listing import ProgramFragment, ProgramModule
+
+                MAX_DEPTH = 64
+
+                def build_fragment(frag):
+                    ranges = []
+                    try:
+                        rng_iter = frag.getAddressRanges()
+                        while rng_iter.hasNext():
+                            rng = rng_iter.next()
+                            ranges.append({
+                                'start': rng.getMinAddress().getOffset(),
+                                'end': rng.getMaxAddress().getOffset(),
+                            })
+                    except Exception:
+                        ranges = []
+                    return {
+                        'name': frag.getName(),
+                        'type': 'fragment',
+                        'ranges': ranges,
+                    }
+
+                def build_module(module, depth, visited):
+                    key = id(module)
+                    if depth >= MAX_DEPTH or key in visited:
+                        return {
+                            'name': module.getName(),
+                            'type': 'module',
+                            'children': [],
+                            'truncated': True,
+                        }
+                    visited = set(visited)
+                    visited.add(key)
+                    children = []
+                    for child in module.getChildren():
+                        if isinstance(child, ProgramFragment):
+                            children.append(build_fragment(child))
+                        elif isinstance(child, ProgramModule):
+                            children.append(build_module(child, depth + 1, visited))
+                        else:
+                            children.append({
+                                'name': child.getName(),
+                                'type': str(child.getClass().getSimpleName()),
+                            })
+                    return {
+                        'name': module.getName(),
+                        'type': 'module',
+                        'children': children,
+                    }
+
                 listing = currentProgram.getListing()
                 tree_names = list(listing.getTreeNames())
                 trees = []
                 for tree_name in tree_names:
                     root_module = listing.getRootModule(tree_name)
-                    modules = []
-                    if root_module is not None:
-                        for child in root_module.getChildren():
-                            child_name = child.getName()
-                            modules.append({'name': child_name, 'type': str(child.getClass().getSimpleName())})
-                    trees.append({'name': tree_name, 'modules': modules})
+                    if root_module is None:
+                        trees.append({'name': tree_name, 'root': None})
+                        continue
+                    trees.append({'name': tree_name, 'root': build_module(root_module, 0, set())})
                 {'trees': trees}
             """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"trees": []}
-        except Exception:
-            _logger.exception("get_program_tree_failed")
-            return {"trees": []}
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_get_program_tree_failed")
+            msg = f"Get program tree failed: {exc}"
+            raise ToolError(msg) from exc
+
+        if isinstance(result, dict):
+            return cast("dict[str, Any]", result)
+        return {"trees": []}
 
     async def get_properties(self, address: int) -> dict[str, Any]:
         """Get user-defined properties stored at an address.
@@ -4543,39 +5211,100 @@ metadata
     async def set_color(self, address: int, color: int) -> dict[str, Any]:
         """Set a background color on a code unit at an address.
 
+        Uses Ghidra's ``ColorizingService`` when available so the color
+        participates in Ghidra's persistent colorization store, falling
+        back to an ``IntPropertyMap`` entry in the user property manager
+        so the color survives reload even when no colorizing service is
+        registered.
+
         Args:
             address: Address to colorize.
             color: RGB color as integer (0xRRGGBB).
 
         Returns:
-            dict[str, Any]: Dict with address, color, and success.
+            dict[str, Any]: Dict with address, color, backend used, and success.
 
         Raises:
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
         _logger.debug("color_setting", address=hex(address), color=hex(color))
         try:
-            await self._execute_remote(f"""
+            result = await self._execute_remote(f"""
                 import java.awt.Color as JColor
 
                 addr = toAddr({address})
-                listing = currentProgram.getListing()
-                cu = listing.getCodeUnitAt(addr)
-                if cu is not None:
-                    r = ({color} >> 16) & 0xFF
-                    g = ({color} >> 8) & 0xFF
-                    b = {color} & 0xFF
-                    col = JColor(r, g, b)
-                    cu.setBackgroundColor(col)
+                color_int = {color}
+                r = (color_int >> 16) & 0xFF
+                g = (color_int >> 8) & 0xFF
+                b = color_int & 0xFF
+                col = JColor(r, g, b)
+                backend = 'none'
+                applied = False
+                error_msg = None
+
+                tx_id = currentProgram.startTransaction('intellicrack.set_color')
+                commit_ok = False
+                try:
+                    try:
+                        from ghidra.app.plugin.core.colorizer import ColorizingService
+                        from ghidra.framework.plugintool import PluginTool
+                        svc = None
+                        try:
+                            tool_obj = state.getTool()
+                            if tool_obj is not None:
+                                svc = tool_obj.getService(ColorizingService)
+                        except Exception:
+                            svc = None
+                        if svc is not None:
+                            svc.setBackgroundColor(addr, addr, col)
+                            backend = 'colorizing_service'
+                            applied = True
+                    except Exception as _svc_exc:
+                        error_msg = str(_svc_exc)
+
+                    if not applied:
+                        try:
+                            upm = currentProgram.getUsrPropertyManager()
+                            prop_name = 'IntellicrackColorMap'
+                            prop_map = upm.getIntPropertyMap(prop_name)
+                            if prop_map is None:
+                                prop_map = upm.createIntPropertyMap(prop_name)
+                            prop_map.add(addr, color_int & 0xFFFFFF)
+                            backend = 'int_property_map'
+                            applied = True
+                            error_msg = None
+                        except Exception as _map_exc:
+                            if error_msg is None:
+                                error_msg = str(_map_exc)
+
+                    commit_ok = applied
+                finally:
+                    currentProgram.endTransaction(tx_id, commit_ok)
+
+                {{'applied': applied, 'backend': backend, 'error': error_msg}}
             """)
-            return {"address": hex(address), "color": hex(color), "success": True}
-        except Exception as e:
-            error_message = f"Set color failed: {e}"
-            raise ToolError(error_message) from e
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_set_color_failed", address=hex(address))
+            msg = f"Set color failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("applied", False)):
+            err = info.get("error") or "color could not be persisted"
+            msg = f"Set color failed: {err}"
+            raise ToolError(msg)
+
+        return {
+            "address": hex(address),
+            "color": hex(color),
+            "backend": str(info.get("backend", "unknown")),
+            "success": True,
+        }
 
     async def set_program_metadata(
         self,
@@ -4767,8 +5496,7 @@ metadata
             ToolError: If Ghidra is not connected or creation fails.
         """
         if self._bridge is None:
-            error_message = "Ghidra not connected"
-            raise ToolError(error_message)
+            raise ToolError(_ERR_NOT_CONNECTED)
 
         _logger.info("overlay_space_creating", overlay_name=name)
         try:
@@ -4779,9 +5507,491 @@ metadata
                 {{'name': overlay_space.getName() if overlay_space is not None else {json.dumps(name)}, 'success': overlay_space is not None}}
             """)
             return cast("dict[str, Any]", result) if isinstance(result, dict) else {"name": name, "success": False}
-        except Exception as e:
-            error_message = f"Create overlay space failed: {e}"
-            raise ToolError(error_message) from e
+        except ToolError:
+            raise
+        except Exception as exc:
+            msg = f"Create overlay space failed: {exc}"
+            raise ToolError(msg) from exc
+
+    async def add_bookmark(
+        self,
+        address: int,
+        category: str,
+        comment: str,
+        bookmark_type: str = "Note",
+    ) -> dict[str, Any]:
+        """Add a bookmark at an address (explicit mutator alias).
+
+        Mirrors :meth:`create_bookmark` while wrapping the call in a
+        Ghidra transaction so the mutation can be rolled back if the
+        bookmark manager rejects the request.
+
+        Args:
+            address: Address to bookmark.
+            category: Bookmark category.
+            comment: Bookmark comment text.
+            bookmark_type: Bookmark type (Note, Analysis, Error, Warning, Info).
+
+        Returns:
+            dict[str, Any]: Dict with address, category, comment,
+            bookmark_type, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the RPC fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.debug(
+            "bookmark_adding",
+            address=hex(address),
+            category=category,
+            bookmark_type=bookmark_type,
+        )
+        try:
+            result = await self._execute_remote(f"""
+                bm = currentProgram.getBookmarkManager()
+                tx_id = currentProgram.startTransaction('intellicrack.add_bookmark')
+                created = False
+                try:
+                    mark = bm.setBookmark(
+                        toAddr({address}),
+                        {json.dumps(bookmark_type)},
+                        {json.dumps(category)},
+                        {json.dumps(comment)},
+                    )
+                    created = mark is not None
+                finally:
+                    currentProgram.endTransaction(tx_id, created)
+                {{'created': created}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_add_bookmark_failed", address=hex(address))
+            msg = f"Add bookmark failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("created", False)):
+            msg = f"Add bookmark failed at {hex(address)}"
+            raise ToolError(msg)
+        return {
+            "address": hex(address),
+            "category": category,
+            "comment": comment,
+            "bookmark_type": bookmark_type,
+            "success": True,
+        }
+
+    async def remove_bookmark(
+        self,
+        address: int,
+        category: str | None = None,
+        bookmark_type: str | None = None,
+    ) -> dict[str, Any]:
+        """Remove one or more bookmarks at an address.
+
+        When ``category`` and/or ``bookmark_type`` are provided, only
+        bookmarks matching those fields are removed. When both are
+        ``None``, every bookmark at the address is removed.
+
+        Args:
+            address: Address whose bookmarks should be removed.
+            category: Optional category filter.
+            bookmark_type: Optional type filter.
+
+        Returns:
+            dict[str, Any]: Dict with address, number of bookmarks
+            removed, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the RPC fails, or
+                no matching bookmark existed.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.debug(
+            "bookmark_removing",
+            address=hex(address),
+            category=category,
+            bookmark_type=bookmark_type,
+        )
+        category_literal = json.dumps(category) if category else "None"
+        type_literal = json.dumps(bookmark_type) if bookmark_type else "None"
+        try:
+            result = await self._execute_remote(f"""
+                bm = currentProgram.getBookmarkManager()
+                addr = toAddr({address})
+                cat_filter = {category_literal}
+                type_filter = {type_literal}
+                removed = 0
+                tx_id = currentProgram.startTransaction('intellicrack.remove_bookmark')
+                try:
+                    existing = bm.getBookmarks(addr)
+                    for bk in list(existing):
+                        if cat_filter is not None and bk.getCategory() != cat_filter:
+                            continue
+                        if type_filter is not None and bk.getTypeString() != type_filter:
+                            continue
+                        bm.removeBookmark(bk)
+                        removed += 1
+                finally:
+                    currentProgram.endTransaction(tx_id, removed > 0)
+                {{'removed': removed}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_remove_bookmark_failed", address=hex(address))
+            msg = f"Remove bookmark failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        removed = int(info.get("removed", 0))
+        if removed <= 0:
+            msg = f"{_ERR_BOOKMARK_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        return {"address": hex(address), "removed": removed, "success": True}
+
+    async def add_label(
+        self,
+        address: int,
+        name: str,
+        *,
+        primary: bool = False,
+    ) -> dict[str, Any]:
+        """Add a new label at an address.
+
+        Args:
+            address: Address for the label.
+            name: Label name.
+            primary: When ``True`` the label is marked primary.
+
+        Returns:
+            dict[str, Any]: Dict with address, name, primary flag, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the label cannot be created.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.debug("label_adding", address=hex(address), label_name=name, primary=primary)
+        primary_literal = "True" if primary else "False"
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.symbol import SourceType
+                addr = toAddr({address})
+                st = currentProgram.getSymbolTable()
+                primary_flag = {primary_literal}
+                created = False
+                tx_id = currentProgram.startTransaction('intellicrack.add_label')
+                try:
+                    sym = st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)
+                    if sym is not None:
+                        created = True
+                        if primary_flag:
+                            sym.setPrimary()
+                finally:
+                    currentProgram.endTransaction(tx_id, created)
+                {{'created': created}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_add_label_failed", address=hex(address))
+            msg = f"Add label failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("created", False)):
+            msg = f"Add label failed: Ghidra refused label {name!r} at {hex(address)}"
+            raise ToolError(msg)
+        return {
+            "address": hex(address),
+            "name": name,
+            "primary": primary,
+            "success": True,
+        }
+
+    async def remove_label(self, address: int, name: str) -> dict[str, Any]:
+        """Remove a named label at an address.
+
+        Args:
+            address: Address whose label should be removed.
+            name: Label name to remove.
+
+        Returns:
+            dict[str, Any]: Dict with address, name, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the RPC fails, or
+                the label is not found.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.debug("label_removing", address=hex(address), label_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                addr = toAddr({address})
+                st = currentProgram.getSymbolTable()
+                target_name = {json.dumps(name)}
+                removed = False
+                tx_id = currentProgram.startTransaction('intellicrack.remove_label')
+                try:
+                    symbols = list(st.getSymbols(addr))
+                    for sym in symbols:
+                        if sym.getName() == target_name:
+                            if sym.delete():
+                                removed = True
+                            break
+                finally:
+                    currentProgram.endTransaction(tx_id, removed)
+                {{'removed': removed}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_remove_label_failed", address=hex(address))
+            msg = f"Remove label failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("removed", False)):
+            msg = f"{_ERR_LABEL_NOT_FOUND}: {name!r} at {hex(address)}"
+            raise ToolError(msg)
+        return {"address": hex(address), "name": name, "success": True}
+
+    async def add_thunk(self, address: int, thunked_address: int) -> dict[str, Any]:
+        """Mark a function as a thunk forwarding to another function.
+
+        Args:
+            address: Address of the thunk function.
+            thunked_address: Address of the target (thunked) function.
+
+        Returns:
+            dict[str, Any]: Dict with address, thunked_address, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, either function
+                does not exist, or the operation fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("thunk_adding", address=hex(address), thunked_address=hex(thunked_address))
+        try:
+            result = await self._execute_remote(f"""
+                fm = currentProgram.getFunctionManager()
+                thunk_func = fm.getFunctionAt(toAddr({address}))
+                target_func = fm.getFunctionAt(toAddr({thunked_address}))
+                ok = False
+                found_thunk = thunk_func is not None
+                found_target = target_func is not None
+                tx_id = currentProgram.startTransaction('intellicrack.add_thunk')
+                try:
+                    if found_thunk and found_target:
+                        thunk_func.setThunkedFunction(target_func)
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'ok': ok, 'thunk_found': found_thunk, 'target_found': found_target}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_add_thunk_failed", address=hex(address))
+            msg = f"Add thunk failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("thunk_found", False)):
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        if not bool(info.get("target_found", False)):
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(thunked_address)}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Add thunk failed at {hex(address)}"
+            raise ToolError(msg)
+        return {
+            "address": hex(address),
+            "thunked_address": hex(thunked_address),
+            "success": True,
+        }
+
+    async def remove_thunk(self, address: int) -> dict[str, Any]:
+        """Clear the thunk relationship on a function.
+
+        Args:
+            address: Address of the thunk function.
+
+        Returns:
+            dict[str, Any]: Dict with address and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the function does
+                not exist, or the function is not a thunk.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("thunk_removing", address=hex(address))
+        try:
+            result = await self._execute_remote(f"""
+                fm = currentProgram.getFunctionManager()
+                func = fm.getFunctionAt(toAddr({address}))
+                found = func is not None
+                was_thunk = found and func.isThunk()
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.remove_thunk')
+                try:
+                    if was_thunk:
+                        func.setThunkedFunction(None)
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'was_thunk': was_thunk, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_remove_thunk_failed", address=hex(address))
+            msg = f"Remove thunk failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        if not bool(info.get("was_thunk", False)):
+            msg = f"Function at {hex(address)} is not a thunk"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Remove thunk failed at {hex(address)}"
+            raise ToolError(msg)
+        return {"address": hex(address), "success": True}
+
+    async def add_external_reference(
+        self,
+        from_addr: int,
+        library: str,
+        name: str,
+    ) -> dict[str, Any]:
+        """Add an external reference from an address to a named symbol.
+
+        Args:
+            from_addr: Source address of the external reference.
+            library: External library name.
+            name: External function or symbol name.
+
+        Returns:
+            dict[str, Any]: Dict with from_addr, library, name, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected or the reference cannot be added.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info(
+            "external_reference_adding",
+            from_addr=hex(from_addr),
+            library=library,
+            external_name=name,
+        )
+        try:
+            result = await self._execute_remote(f"""
+                from ghidra.program.model.symbol import RefType, SourceType
+
+                src = toAddr({from_addr})
+                refMgr = currentProgram.getReferenceManager()
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.add_external_reference')
+                try:
+                    ref = refMgr.addExternalReference(
+                        src,
+                        {json.dumps(library)},
+                        {json.dumps(name)},
+                        None,
+                        SourceType.USER_DEFINED,
+                        0,
+                        RefType.DATA,
+                    )
+                    ok = ref is not None
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_add_external_reference_failed", from_addr=hex(from_addr))
+            msg = f"Add external reference failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("ok", False)):
+            msg = f"Add external reference failed at {hex(from_addr)}"
+            raise ToolError(msg)
+        return {
+            "from_addr": hex(from_addr),
+            "library": library,
+            "name": name,
+            "success": True,
+        }
+
+    async def remove_external_reference(self, from_addr: int) -> dict[str, Any]:
+        """Remove every external reference originating from an address.
+
+        Args:
+            from_addr: Source address whose external references should be removed.
+
+        Returns:
+            dict[str, Any]: Dict with from_addr, removed count, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, the RPC fails, or
+                no external references were present at the address.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("external_reference_removing", from_addr=hex(from_addr))
+        try:
+            result = await self._execute_remote(f"""
+                src = toAddr({from_addr})
+                refMgr = currentProgram.getReferenceManager()
+                removed = 0
+                tx_id = currentProgram.startTransaction('intellicrack.remove_external_reference')
+                try:
+                    for ref in list(refMgr.getReferencesFrom(src)):
+                        if ref.isExternalReference():
+                            refMgr.delete(ref)
+                            removed += 1
+                finally:
+                    currentProgram.endTransaction(tx_id, removed > 0)
+                {{'removed': removed}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_remove_external_reference_failed",
+                from_addr=hex(from_addr),
+            )
+            msg = f"Remove external reference failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        removed = int(info.get("removed", 0))
+        if removed <= 0:
+            msg = f"No external references found at {hex(from_addr)}"
+            raise ToolError(msg)
+        return {"from_addr": hex(from_addr), "removed": removed, "success": True}
 
     async def _execute_remote(self, code: str) -> object:
         """Execute code on the Ghidra bridge.
