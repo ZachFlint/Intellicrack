@@ -22,11 +22,12 @@ import operator
 import os
 import struct
 import tempfile
+import threading
 import uuid
 import zlib
 from itertools import cycle, islice
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, get_args
 
 from intellicrack.bridges.base import BridgeCapabilities, ToolBridgeBase
 from intellicrack.core.logging import get_logger
@@ -257,6 +258,42 @@ _MAX_ELF_SEGMENTS = 64
 _NDB_MIN_FIELDS = 4
 _HDB_MIN_FIELDS = 3
 
+_ERR_NO_DOCUMENT: Final[str] = "no document open"
+_ERR_NO_SELECTION: Final[str] = "no selection active"
+_ERR_UNKNOWN_FORMAT: Final[str] = "unsupported output format"
+_ERR_UNKNOWN_PATCH_FORMAT: Final[str] = "unsupported patch format"
+_ERR_UNKNOWN_PATCH_MAGIC: Final[str] = "unrecognized patch magic"
+_ERR_UNKNOWN_TRANSFORM: Final[str] = "unknown arithmetic transform"
+_ERR_PATCH_EXPORT_UNSUPPORTED: Final[str] = "patch export not supported by backend"
+_ERR_INVALID_IPS: Final[str] = "invalid IPS patch header"
+
+_COPY_AS_FORMATS: Final[frozenset[str]] = frozenset(
+    {
+        "hex",
+        "c_array",
+        "python",
+        "base64",
+        "rust_array",
+        "csharp_array",
+        "java_array",
+        "javascript_array",
+        "go_slice",
+        "hex_string_no_spaces",
+        "nasm_db",
+        "markdown_table",
+    },
+)
+
+ExportPatchFormat = Literal["ips", "ips32", "bps", "ups"]
+_EXPORT_PATCH_FORMATS: Final[frozenset[str]] = frozenset(get_args(ExportPatchFormat))
+_BPS_UPS_FORMATS: Final[frozenset[str]] = frozenset({"bps", "ups"})
+
+_IPS_MAGIC: Final[bytes] = b"PATCH"
+_IPS32_MAGIC: Final[bytes] = b"IPS32"
+_BPS_MAGIC: Final[bytes] = b"BPS1"
+_UPS_MAGIC: Final[bytes] = b"UPS1"
+_IPS_MAGIC_LEN: Final[int] = 5
+
 
 class HexEditorBridge(ToolBridgeBase):
     """Bridge for the built-in hex editor powered by Rust.
@@ -291,6 +328,7 @@ class HexEditorBridge(ToolBridgeBase):
         self._color_mode: str = "none"
         self._alignment_grid_size: int = 0
         self._transform_node_cache: dict[str, Any] | None = None
+        self._state_lock: threading.Lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_patching=True,
@@ -1461,11 +1499,20 @@ class HexEditorBridge(ToolBridgeBase):
         return self._hexcore_available
 
     async def shutdown(self) -> None:
-        """Shutdown the hex editor bridge."""
-        if self.document is not None:
+        """Shutdown the hex editor bridge.
+
+        Releases the active document, resets cursor and selection,
+        drops cached highlight rules, and fully clears the shared
+        ``HexDocumentState`` if one is attached so that downstream
+        observers drop any cached references.
+        """
+        with self._state_lock:
             self.document = None
-        self._cursor_offset = 0
-        self._selection = None
+            self._cursor_offset = 0
+            self._selection = None
+            self._highlight_rules.clear()
+        if self.state_holder is not None:
+            self.state_holder.clear_all(source="bridge")
         _logger.debug("hex_editor_shutdown")
         await super().shutdown()
 
@@ -1904,8 +1951,16 @@ class HexEditorBridge(ToolBridgeBase):
     async def list_templates(self) -> list[dict[str, str]]:
         """List all available struct templates.
 
+        When no document is open the bridge constructs a throwaway
+        ``HexDocument`` just to query the template registry. If that
+        construction fails the method returns the sentinel empty list
+        so callers can distinguish "backend unavailable" from "backend
+        raised while listing", which is propagated to the caller.
+
         Returns:
-            list[dict[str, str]]: List of dicts with name and description.
+            list[dict[str, str]]: List of dicts with name and
+                description, or an empty list when the hexcore backend
+                cannot be instantiated.
         """
         if self.document is None:
             if not self._hexcore_available or _hexcore_mod is None:
@@ -2171,8 +2226,16 @@ class HexEditorBridge(ToolBridgeBase):
     async def list_templates_detailed(self) -> list[dict[str, Any]]:
         """List all templates with detailed metadata.
 
+        Mirrors the error contract of :meth:`list_templates`: the
+        sentinel empty list is returned when the backend cannot be
+        instantiated, while exceptions raised by the template handler
+        itself (e.g. from ``doc.list_templates_detailed()``) propagate
+        to the caller so failures surface explicitly.
+
         Returns:
-            list[dict[str, Any]]: List of dicts with name, description, category, field_count.
+            list[dict[str, Any]]: List of dicts with name, description,
+                category, and field_count, or an empty list when the
+                hexcore backend cannot be instantiated.
         """
         if self.document is None:
             if not self._hexcore_available or _hexcore_mod is None:
@@ -2234,10 +2297,15 @@ class HexEditorBridge(ToolBridgeBase):
 
         Raises:
             RuntimeError: If no document is open.
+            ToolError: If ``fmt`` is not a recognized output format.
         """
         if self.document is None:
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
+
+        if fmt not in _COPY_AS_FORMATS:
+            msg = f"{_ERR_UNKNOWN_FORMAT}: {fmt!r} (supported: {sorted(_COPY_AS_FORMATS)})"
+            raise ToolError(msg)
 
         if self._selection is not None:
             start, end = self._selection
@@ -2293,14 +2361,12 @@ class HexEditorBridge(ToolBridgeBase):
         if fmt == "nasm_db":
             inner = ", ".join(f"0x{b:02X}" for b in data)
             return f"db {inner}"
-        if fmt == "markdown_table":
-            rows: list[str] = ["| Offset | Hex | ASCII |", "| --- | --- | --- |"]
-            for i, b in enumerate(data):
-                hex_val = f"{b:02X}"
-                ascii_val = chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
-                rows.append(f"| {start + i:#010x} | {hex_val} | {ascii_val} |")
-            return "\n".join(rows)
-        return ""
+        rows: list[str] = ["| Offset | Hex | ASCII |", "| --- | --- | --- |"]
+        for i, b in enumerate(data):
+            hex_val = f"{b:02X}"
+            ascii_val = chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
+            rows.append(f"| {start + i:#010x} | {hex_val} | {ascii_val} |")
+        return "\n".join(rows)
 
     async def add_bookmark(
         self,
@@ -3223,57 +3289,132 @@ class HexEditorBridge(ToolBridgeBase):
         return f"{crc:0{hex_width}X}"
 
     async def export_patches(self, patch_format: str = "ips") -> str:
-        """Export document patches as IPS or IPS32 format.
+        """Export document patches in the requested patch format.
+
+        Dispatches on ``patch_format``:
+
+        * ``"ips"`` / ``"ips32"`` use the document's native IPS export
+          when available, falling back to a Python builder.
+        * ``"bps"`` / ``"ups"`` require an original reference file and
+          are not supported through this single-argument API; call
+          :meth:`export_patches_bps` or :meth:`export_patches_ups`
+          directly.
 
         Args:
-            patch_format: Patch format, either "ips" or "ips32".
+            patch_format: Patch format name (``"ips"`` or ``"ips32"``).
 
         Returns:
             str: Base64-encoded patch data.
 
         Raises:
             RuntimeError: If no document is open.
+            ToolError: If ``patch_format`` is not a recognized format or
+                the current backend cannot export the requested format.
         """
         if self.document is None:
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
+        normalized = patch_format.lower()
+        if normalized not in _EXPORT_PATCH_FORMATS:
+            msg = f"{_ERR_UNKNOWN_PATCH_FORMAT}: {patch_format!r} (supported: {sorted(_EXPORT_PATCH_FORMATS)})"
+            raise ToolError(msg)
+        if normalized in _BPS_UPS_FORMATS:
+            msg = f"patch format {normalized!r} requires an original reference file; use export_patches_{normalized}(original_path) instead"
+            raise ToolError(msg)
+
         raw: bytes
-        if patch_format == "ips32" and hasattr(self.document, "export_patches_ips32"):
+        if normalized == "ips32" and hasattr(self.document, "export_patches_ips32"):
             raw = self.document.export_patches_ips32()
-        elif hasattr(self.document, "export_patches_ips"):
+        elif normalized == "ips" and hasattr(self.document, "export_patches_ips"):
             raw = self.document.export_patches_ips()
         elif hasattr(self.document, "get_patches"):
             patches: list[tuple[int, bytes]] = self.document.get_patches()
-            raw = self._build_ips_from_patches(patches, ips32=(patch_format == "ips32"))
+            raw = self._build_ips_from_patches(patches, ips32=(normalized == "ips32"))
         else:
-            msg = f"patch export format '{patch_format}' not supported by backend"
-            raise RuntimeError(msg)
+            msg = f"{_ERR_PATCH_EXPORT_UNSUPPORTED}: {normalized!r}"
+            raise ToolError(msg)
 
-        _logger.debug("patches_exported", patch_format=patch_format, size=len(raw))
+        _logger.debug("patches_exported", patch_format=normalized, size=len(raw))
         return base64.b64encode(raw).decode("ascii")
 
     async def import_patches(self, data_b64: str) -> int:
-        """Import and apply IPS/IPS32 patches from base64-encoded data.
+        """Import and apply a patch blob, dispatching by magic bytes.
+
+        The first bytes of the decoded payload are inspected to select
+        the patch format:
+
+        * ``PATCH`` -> IPS / IPS with RLE runs
+        * ``IPS32`` -> IPS32 (32-bit offsets)
+        * ``BPS1``  -> BPS
+        * ``UPS1``  -> UPS
+
+        BPS and UPS require the original source bytes to reconstruct
+        the target, so they can only be applied when the current
+        document contents match the source referenced by the patch.
+        The current document contents are used as the source when
+        applying those formats through this method.
 
         Args:
-            data_b64: Base64-encoded IPS or IPS32 patch data.
+            data_b64: Base64-encoded patch data.
 
         Returns:
-            int: Number of patches applied.
+            int: Number of patch records applied. For BPS/UPS this is
+                ``1`` when the patch is successfully applied.
 
         Raises:
-            RuntimeError: If no document is open or import is unsupported.
+            RuntimeError: If no document is open.
+            ToolError: If the magic bytes are not recognized or the
+                patch is malformed.
         """
         if self.document is None:
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
         raw = base64.b64decode(data_b64)
-        if hasattr(self.document, "import_patches_ips"):
-            count: int = self.document.import_patches_ips(raw)
+        if len(raw) < _MIN_HEADER_SIZE:
+            msg = f"{_ERR_UNKNOWN_PATCH_MAGIC}: payload shorter than {_MIN_HEADER_SIZE} bytes"
+            raise ToolError(msg)
+
+        magic4 = raw[:_MIN_HEADER_SIZE]
+        magic5 = raw[:_IPS_MAGIC_LEN] if len(raw) >= _IPS_MAGIC_LEN else b""
+
+        count: int
+        if magic5 in {_IPS_MAGIC, _IPS32_MAGIC}:
+            if hasattr(self.document, "import_patches_ips"):
+                try:
+                    count = self.document.import_patches_ips(raw)
+                except (RuntimeError, ValueError, OSError) as exc:
+                    msg = f"{_ERR_INVALID_IPS}: {exc}"
+                    raise ToolError(msg) from exc
+            else:
+                try:
+                    count = self._apply_ips_patches(raw)
+                except (struct.error, ValueError, RuntimeError) as exc:
+                    msg = f"{_ERR_INVALID_IPS}: {exc}"
+                    raise ToolError(msg) from exc
+        elif magic4 == _BPS_MAGIC:
+            source = self._read_all_doc_bytes()
+            try:
+                target = self._apply_bps_patch(raw, source)
+            except (struct.error, ValueError, IndexError) as exc:
+                msg = f"invalid BPS patch: {exc}"
+                raise ToolError(msg) from exc
+            self.document.write_bytes(0, target)
+            count = 1
+        elif magic4 == _UPS_MAGIC:
+            source = self._read_all_doc_bytes()
+            try:
+                target = self._apply_ups_patch(raw, source)
+            except (struct.error, ValueError, IndexError) as exc:
+                msg = f"invalid UPS patch: {exc}"
+                raise ToolError(msg) from exc
+            self.document.write_bytes(0, target)
+            count = 1
         else:
-            count = self._apply_ips_patches(raw)
+            head_hex = raw[: min(len(raw), _IPS_MAGIC_LEN)].hex()
+            msg = f"{_ERR_UNKNOWN_PATCH_MAGIC}: 0x{head_hex}"
+            raise ToolError(msg)
 
         _logger.debug("patches_imported", count=count)
         if count > 0 and self.state_holder is not None:
@@ -3317,26 +3458,31 @@ class HexEditorBridge(ToolBridgeBase):
     def _apply_ips_patches(self, raw: bytes) -> int:
         """Parse and apply IPS/IPS32 patches to the current document.
 
+        Supports the IPS run-length encoding (RLE) extension: a record
+        whose ``size`` field is 0 is followed by a 2-byte run length
+        and a single fill byte, which expands to ``run_length`` copies
+        of the fill byte at ``offset``.
+
         Args:
             raw: Raw IPS or IPS32 binary data.
 
         Returns:
-            int: Number of patches applied.
+            int: Number of patch records applied.
 
         Raises:
             RuntimeError: If the header is invalid.
         """
         pos = 0
-        if raw[:5] == b"IPS32":
+        if raw[:_IPS_MAGIC_LEN] == _IPS32_MAGIC:
             ips32 = True
-            pos = 5
+            pos = _IPS_MAGIC_LEN
             eof_marker = b"EEOF"
-        elif raw[:5] == b"PATCH":
+        elif raw[:_IPS_MAGIC_LEN] == _IPS_MAGIC:
             ips32 = False
-            pos = 5
+            pos = _IPS_MAGIC_LEN
             eof_marker = b"EOF"
         else:
-            msg = "invalid IPS header"
+            msg = _ERR_INVALID_IPS
             raise RuntimeError(msg)
 
         count = 0
@@ -3353,10 +3499,18 @@ class HexEditorBridge(ToolBridgeBase):
                 offset = struct.unpack(">I", b"\x00" + raw[pos : pos + 3])[0]
                 size = struct.unpack(">H", raw[pos + 3 : pos + 5])[0]
                 pos += 5
-            if pos + size > len(raw):
-                break
-            patch_data = raw[pos : pos + size]
-            pos += size
+            if size == 0:
+                if pos + 3 > len(raw):
+                    break
+                run_length = struct.unpack(">H", raw[pos : pos + 2])[0]
+                fill_value = raw[pos + 2]
+                pos += 3
+                patch_data = bytes([fill_value]) * run_length
+            else:
+                if pos + size > len(raw):
+                    break
+                patch_data = raw[pos : pos + size]
+                pos += size
             if self.document is not None:
                 self.document.write_bytes(offset, patch_data)
             count += 1
@@ -3417,6 +3571,7 @@ class HexEditorBridge(ToolBridgeBase):
         needle = self._pack_numeric_needle(value, size, value_type, big_endian=big_endian)
         doc_len: int = self.document.length()
         matches: list[dict[str, int]] = []
+        step = max(alignment, 1)
         pos = 0
         while pos <= doc_len - size and len(matches) < max_results:
             chunk_len = min(65536, doc_len - pos)
@@ -3427,14 +3582,16 @@ class HexEditorBridge(ToolBridgeBase):
                 chunk = bytes(raw)
             else:
                 chunk = bytes(cast("list[int]", raw))
-            idx = 0
+            start_rem = pos % step
+            idx = 0 if start_rem == 0 else step - start_rem
             while idx <= len(chunk) - size and len(matches) < max_results:
                 if chunk[idx : idx + size] == needle:
-                    abs_offset = pos + idx
-                    if (abs_offset % alignment) == 0:
-                        matches.append({"offset": abs_offset, "length": size})
-                idx += alignment
-            pos += chunk_len - size + 1
+                    matches.append({"offset": pos + idx, "length": size})
+                idx += step
+            advance = chunk_len - (size - 1)
+            if advance <= 0:
+                break
+            pos += advance
 
         _logger.debug("search_numeric_completed", matches=len(matches))
         return matches
@@ -3485,22 +3642,27 @@ class HexEditorBridge(ToolBridgeBase):
         fmt = self._build_numeric_format(size, value_type, big_endian=endianness == "big")
         doc_len: int = self.document.length()
         matches: list[dict[str, int]] = []
+        step = max(alignment, 1)
         pos = 0
         while pos <= doc_len - size and len(matches) < max_results:
             read_len = min(65536, doc_len - pos)
             raw = self.document.read(pos, read_len)
             chunk = raw if isinstance(raw, bytes) else bytes(raw)
-            idx = 0
+            start_rem = pos % step
+            idx = 0 if start_rem == 0 else step - start_rem
             while idx <= len(chunk) - size and len(matches) < max_results:
                 try:
                     (val,) = struct.unpack_from(fmt, chunk, idx)
                 except struct.error:
-                    idx += alignment
+                    idx += step
                     continue
-                if ((pos + idx) % alignment) == 0 and min_val <= val <= max_val:
+                if min_val <= val <= max_val:
                     matches.append({"offset": pos + idx, "length": size})
-                idx += alignment
-            pos += read_len - size + 1
+                idx += step
+            advance = read_len - (size - 1)
+            if advance <= 0:
+                break
+            pos += advance
 
         _logger.debug("search_numeric_range_completed", matches=len(matches))
         return matches
@@ -3946,6 +4108,12 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> dict[str, Any]:
         """Apply a bitwise arithmetic operation to the current selection.
 
+        The supported operations and their native Rust backend
+        transform names are defined in the local ``transform_map``.
+        Unknown ``operation`` values are rejected up front with a
+        :class:`ToolError` rather than silently producing identity
+        output.
+
         Args:
             operation: One of xor, and, or, not, shl, shr, rol, ror.
             key_hex: Key/mask as hex string (ignored for NOT).
@@ -3956,18 +4124,15 @@ class HexEditorBridge(ToolBridgeBase):
 
         Raises:
             RuntimeError: If no document is open or no selection.
+            ToolError: If ``operation`` is not a supported transform
+                name.
         """
         if self.document is None:
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
         if self._selection is None:
-            msg = "no selection active"
+            msg = _ERR_NO_SELECTION
             raise RuntimeError(msg)
-
-        start, end = self._selection
-        length = end - start + 1
-        data = bytearray(self._read_doc_bytes(start, length))
-        key = bytes.fromhex(key_hex.replace(" ", "")) if key_hex else b""
 
         transform_map: dict[str, str] = {
             "xor": "xor_repeating",
@@ -3979,9 +4144,17 @@ class HexEditorBridge(ToolBridgeBase):
             "rol": "bit_rotate_left",
             "ror": "bit_rotate_right",
         }
+        if operation not in transform_map:
+            msg = f"{_ERR_UNKNOWN_TRANSFORM}: {operation!r} (supported: {sorted(transform_map)})"
+            raise ToolError(msg)
+
+        start, end = self._selection
+        length = end - start + 1
+        data = bytearray(self._read_doc_bytes(start, length))
+        key = bytes.fromhex(key_hex.replace(" ", "")) if key_hex else b""
 
         used_native = False
-        if hasattr(self.document, "transform_data") and operation in transform_map:
+        if hasattr(self.document, "transform_data"):
             params: dict[str, Any] = {}
             if operation in {"xor", "and", "or"} and key:
                 params["key"] = key
@@ -3997,8 +4170,12 @@ class HexEditorBridge(ToolBridgeBase):
                     result_data = bytes(result_raw)
                 self.document.write_bytes(start, result_data)
                 used_native = True
-            except (TypeError, ValueError, RuntimeError):
-                pass
+            except (TypeError, ValueError, RuntimeError) as exc:
+                _logger.debug(
+                    "native_transform_failed",
+                    operation=operation,
+                    error=str(exc),
+                )
 
         if not used_native:
             result_data = bytes(self._apply_arithmetic_fallback(data, operation, key, count))
@@ -4020,12 +4197,16 @@ class HexEditorBridge(ToolBridgeBase):
 
         Args:
             data: Input byte data.
-            operation: Operation name.
+            operation: Operation name. Must be one of ``xor``, ``and``,
+                ``or``, ``not``, ``shl``, ``shr``, ``rol``, ``ror``.
             key: Key/mask bytes.
             count: Bit count for shift/rotate.
 
         Returns:
             bytearray: Transformed data.
+
+        Raises:
+            ToolError: If ``operation`` is not recognized.
         """
         result = bytearray(len(data))
         byte_mask = 0xFF
@@ -4049,8 +4230,11 @@ class HexEditorBridge(ToolBridgeBase):
             elif operation == "ror":
                 shift = count % bits_per_byte
                 result[i] = ((b >> shift) | (b << (bits_per_byte - shift))) & byte_mask
-            else:
+            elif operation in {"xor", "and", "or"}:
                 result[i] = b
+            else:
+                msg = f"{_ERR_UNKNOWN_TRANSFORM}: {operation!r} has no pure-Python fallback implementation"
+                raise ToolError(msg)
         return result
 
     async def get_bit(self, offset: int, bit_index: int) -> bool:
