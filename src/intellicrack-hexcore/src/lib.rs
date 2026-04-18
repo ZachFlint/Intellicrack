@@ -764,6 +764,7 @@ impl HexDocument {
         let target_len = target.len();
         self.inner = MmapDocument::from_bytes(&target);
         self.undo_mgr = UndoManager::new();
+        self.undo_mgr.mark_unsaved();
         Ok(target_len)
     }
 
@@ -779,6 +780,7 @@ impl HexDocument {
         let target_len = target.len();
         self.inner = MmapDocument::from_bytes(&target);
         self.undo_mgr = UndoManager::new();
+        self.undo_mgr.mark_unsaved();
         Ok(target_len)
     }
 
@@ -869,6 +871,16 @@ impl HexDocument {
         write_b.resize(len_b, 0);
         self.inner.overwrite(offset_a, &write_a);
         self.inner.overwrite(offset_b, &write_b);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset: offset_a,
+            old_data: data_a,
+            new_data: write_a,
+        });
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset: offset_b,
+            old_data: data_b,
+            new_data: write_b,
+        });
         Ok(())
     }
 
@@ -1017,8 +1029,14 @@ impl HexDocument {
         let result = hash::verify_pe_checksum(&data)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e:?}")))?;
         let new_checksum = result.calculated;
+        let old_bytes = result.stored.to_le_bytes().to_vec();
         let checksum_bytes = new_checksum.to_le_bytes();
         self.inner.overwrite(result.offset, &checksum_bytes);
+        self.undo_mgr.record(undo::Operation::Overwrite {
+            offset: result.offset,
+            old_data: old_bytes,
+            new_data: checksum_bytes.to_vec(),
+        });
         Ok(())
     }
 
