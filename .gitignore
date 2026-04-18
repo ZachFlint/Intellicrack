@@ -461,3 +461,8 @@ gha-creds-*.json
 
 # Claude Code /batch worktrees (ephemeral, never tracked)
 .claude/worktrees/
+
+# Auto-regenerated knowledge-graph artifacts (never tracked)
+IntellicrackKnowledgeGraph.html
+scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
+scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml
