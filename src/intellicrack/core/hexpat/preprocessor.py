@@ -41,12 +41,15 @@ _PRAGMA_POINTER_SIZE_RE = re.compile(r"#pragma\s+pointer_size\s+(\d+)")
 _INCLUDE_ANGLE_RE = re.compile(r"#include\s+<([^>]+)>")
 _INCLUDE_QUOTE_RE = re.compile(r'#include\s+"([^"]+)"')
 _IMPORT_RE = re.compile(r"import\s+([\w.]+)\s*;")
-_DEFINE_RE = re.compile(r"#define\s+(\w+)(?:\s+(.*))?")
+_DEFINE_OBJECT_RE = re.compile(r"#define\s+(\w+)(?:\s+(.*))?")
+_DEFINE_FUNC_RE = re.compile(r"#define\s+(\w+)\(([^)]*)\)(?:\s+(.*))?")
 _IFDEF_RE = re.compile(r"#ifdef\s+(\w+)")
 _IFNDEF_RE = re.compile(r"#ifndef\s+(\w+)")
 _ENDIF_RE = re.compile(r"#endif\b")
 _ELSE_RE = re.compile(r"#else\b")
 _ERROR_RE = re.compile(r'#error\s+"([^"]*)"')
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*")
+_MAX_MACRO_EXPANSION_PASSES = 64
 
 
 def _parse_int_value(value_str: str) -> int:
@@ -82,6 +85,7 @@ class HexPatPreprocessor:
         """
         self._include_paths: list[Path] = list(include_paths) if include_paths else []
         self._defines: dict[str, str] = {}
+        self._func_defines: dict[str, tuple[tuple[str, ...], str]] = {}
         self._included_files: set[str] = set()
         self._pragma_once_files: set[str] = set()
 
@@ -101,6 +105,7 @@ class HexPatPreprocessor:
             tuple[str, PragmaInfo]: A tuple of (preprocessed_source, pragma_info).
         """
         self._defines = {}
+        self._func_defines = {}
         self._included_files = set()
 
         endian: str | None = None
@@ -218,18 +223,56 @@ class HexPatPreprocessor:
 
         Raises:
             HexPatPreprocessorError: On circular includes, missing files,
-                or nesting too deep.
+                nesting too deep, or macro expansion exceeding recursion cap.
         """
         if depth > _MAX_INCLUDE_DEPTH:
             msg = f"include nesting depth exceeded (>{_MAX_INCLUDE_DEPTH})"
             raise HexPatPreprocessorError(msg)
 
-        source = self._process_conditionals(source)
-        source = self._process_defines(source)
-
         output_lines: list[str] = []
+        file_str: str = str(file_path) if file_path is not None else ""
+        skip_stack: list[bool] = []
+        else_seen: list[bool] = []
+
         for line_num, line in enumerate(source.splitlines(), start=1):
             stripped = line.strip()
+
+            if m := _IFDEF_RE.match(stripped):
+                name = m.group(1)
+                is_defined: bool = name in self._defines or name in self._func_defines
+                active: bool = not any(skip_stack) and is_defined
+                skip_stack.append(not active)
+                else_seen.append(False)
+                output_lines.append("")
+                continue
+
+            if m := _IFNDEF_RE.match(stripped):
+                name = m.group(1)
+                is_defined = name in self._defines or name in self._func_defines
+                active = not any(skip_stack) and not is_defined
+                skip_stack.append(not active)
+                else_seen.append(False)
+                output_lines.append("")
+                continue
+
+            if _ELSE_RE.match(stripped):
+                if skip_stack and not else_seen[-1]:
+                    parent_skip: bool = any(skip_stack[:-1])
+                    skip_stack[-1] = True if parent_skip else not skip_stack[-1]
+                    else_seen[-1] = True
+                output_lines.append("")
+                continue
+
+            if _ENDIF_RE.match(stripped):
+                if skip_stack:
+                    skip_stack.pop()
+                    else_seen.pop()
+                output_lines.append("")
+                continue
+
+            if any(skip_stack):
+                output_lines.append("")
+                continue
 
             if m := _INCLUDE_ANGLE_RE.match(stripped):
                 include_path = m.group(1)
@@ -270,10 +313,21 @@ class HexPatPreprocessor:
                     output_lines.append(resolved)
                 continue
 
-            if m := _DEFINE_RE.match(stripped):
+            if m := _DEFINE_FUNC_RE.match(stripped):
+                name = m.group(1)
+                params_raw: str = m.group(2) or ""
+                body = (m.group(3) or "").strip()
+                params: tuple[str, ...] = tuple(p.strip() for p in params_raw.split(",") if p.strip())
+                self._func_defines[name] = (params, body)
+                self._defines.pop(name, None)
+                output_lines.append("")
+                continue
+
+            if m := _DEFINE_OBJECT_RE.match(stripped):
                 name = m.group(1)
                 value = m.group(2) or ""
                 self._defines[name] = value.strip()
+                self._func_defines.pop(name, None)
                 output_lines.append("")
                 continue
 
@@ -281,11 +335,13 @@ class HexPatPreprocessor:
                 raise HexPatPreprocessorError(
                     m.group(1),
                     line=line_num,
+                    file=file_str,
                 )
 
             output_lines.append(line)
 
-        return "\n".join(output_lines)
+        joined: str = "\n".join(output_lines)
+        return self._process_defines(joined, file_path)
 
     def _resolve_include(
         self,
@@ -308,6 +364,10 @@ class HexPatPreprocessor:
         Returns:
             str | None: The preprocessed contents of the included file, or None if
             the file was already included with #pragma once.
+
+        Raises:
+            HexPatPreprocessorError: If the include cannot be resolved from any
+                of the configured search paths.
         """
         search_paths: list[Path] = []
 
@@ -337,82 +397,327 @@ class HexPatPreprocessor:
                     depth=depth + 1,
                 )
 
-        _logger.warning(
+        _logger.error(
             "include_not_found",
             include_path=include_path,
             search_paths=[str(p) for p in search_paths],
             line=line,
+            current_file=str(current_file) if current_file is not None else "",
         )
-        return ""
+        msg: str = f"include not found: {include_path}"
+        raise HexPatPreprocessorError(
+            msg,
+            line=line,
+            file=str(current_file) if current_file is not None else "",
+        )
 
-    def _process_conditionals(self, source: str) -> str:
-        """Process #ifdef/#ifndef/#else/#endif conditional blocks.
+    def _process_defines(self, source: str, file_path: Path | None = None) -> str:
+        """Expand object-like and function-like #define macros in source text.
 
-        Args:
-            source: Source code with conditional directives.
-
-        Returns:
-            str: Source with conditional blocks resolved based on current defines.
-        """
-        output_lines: list[str] = []
-        skip_stack: list[bool] = []
-        else_seen: list[bool] = []
-
-        for line in source.splitlines():
-            stripped = line.strip()
-
-            if m := _IFDEF_RE.match(stripped):
-                name = m.group(1)
-                active = not any(skip_stack) and name in self._defines
-                skip_stack.append(not active)
-                else_seen.append(False)
-                output_lines.append("")
-                continue
-
-            if m := _IFNDEF_RE.match(stripped):
-                name = m.group(1)
-                active = not any(skip_stack) and name not in self._defines
-                skip_stack.append(not active)
-                else_seen.append(False)
-                output_lines.append("")
-                continue
-
-            if _ELSE_RE.match(stripped):
-                if skip_stack and not else_seen[-1]:
-                    parent_skip = any(skip_stack[:-1])
-                    skip_stack[-1] = True if parent_skip else not skip_stack[-1]
-                    else_seen[-1] = True
-                output_lines.append("")
-                continue
-
-            if _ENDIF_RE.match(stripped):
-                if skip_stack:
-                    skip_stack.pop()
-                    else_seen.pop()
-                output_lines.append("")
-                continue
-
-            if any(skip_stack):
-                output_lines.append("")
-            else:
-                output_lines.append(line)
-
-        return "\n".join(output_lines)
-
-    def _process_defines(self, source: str) -> str:
-        """Expand #define macros in source text.
+        Performs a token-aware scan that preserves string literals
+        (``"..."`` and ``'...'``) and comments (``//...`` and ``/* ... */``)
+        verbatim. Object-like macros are substituted as whole identifiers.
+        Function-like macros parse balanced-paren argument lists and expand
+        positionally. Expansion iterates to a fixed point, bounded by a
+        recursion cap to prevent runaway self-referential macros.
 
         Args:
             source: Source code with potential macro references.
+            file_path: Path of the source file, used for error context.
 
         Returns:
-            str: Source with all defined macros expanded.
+            str: Source with all defined macros expanded to a fixed point.
+
+        Raises:
+            HexPatPreprocessorError: If macro expansion does not converge
+                within the recursion cap.
         """
-        result = source
-        for name, value in self._defines.items():
-            if name in result:
-                result = re.sub(rf"\b{re.escape(name)}\b", value, result)
-        return result
+        if not self._defines and not self._func_defines:
+            return source
+
+        current: str = source
+        file_str: str = str(file_path) if file_path is not None else ""
+        for _ in range(_MAX_MACRO_EXPANSION_PASSES):
+            expanded: str = self._expand_macros_once(current)
+            if expanded == current:
+                return expanded
+            current = expanded
+
+        msg: str = f"macro expansion exceeded {_MAX_MACRO_EXPANSION_PASSES} passes (possible recursive macro)"
+        raise HexPatPreprocessorError(msg, file=file_str)
+
+    def _expand_macros_once(self, source: str) -> str:
+        """Perform one token-aware macro expansion pass over the source.
+
+        Scans the source character-by-character, skipping string literals and
+        comments, and substitutes identifiers that match a known object-like
+        or function-like macro.
+
+        Args:
+            source: Source text to scan for macro identifiers.
+
+        Returns:
+            str: Source with one pass of macro substitutions applied.
+        """
+        out: list[str] = []
+        i: int = 0
+        n: int = len(source)
+        while i < n:
+            ch: str = source[i]
+
+            if ch in {'"', "'"}:
+                end: int = self._find_string_end(source, i, ch)
+                out.append(source[i:end])
+                i = end
+                continue
+
+            if ch == "/" and i + 1 < n:
+                nxt: str = source[i + 1]
+                if nxt == "/":
+                    end = source.find("\n", i)
+                    if end == -1:
+                        end = n
+                    out.append(source[i:end])
+                    i = end
+                    continue
+                if nxt == "*":
+                    end = source.find("*/", i + 2)
+                    end = n if end == -1 else end + 2
+                    out.append(source[i:end])
+                    i = end
+                    continue
+
+            if ch == "_" or ch.isalpha():
+                match = _IDENTIFIER_RE.match(source, i)
+                if match is None:
+                    out.append(ch)
+                    i += 1
+                    continue
+                ident: str = match.group(0)
+                end = match.end()
+
+                if ident in self._func_defines:
+                    arg_start: int = self._skip_whitespace(source, end)
+                    if arg_start < n and source[arg_start] == "(":
+                        args, after = self._parse_macro_arguments(source, arg_start)
+                        params, body = self._func_defines[ident]
+                        out.append(self._substitute_func_macro(params, body, args))
+                        i = after
+                        continue
+
+                if ident in self._defines:
+                    out.append(self._defines[ident])
+                    i = end
+                    continue
+
+                out.append(ident)
+                i = end
+                continue
+
+            out.append(ch)
+            i += 1
+
+        return "".join(out)
+
+    @staticmethod
+    def _find_string_end(source: str, start: int, quote: str) -> int:
+        """Return the index just past the closing quote of a string literal.
+
+        Handles backslash escapes. If no closing quote is found, returns
+        the end of the source.
+
+        Args:
+            source: Source text containing the string literal.
+            start: Index of the opening quote character.
+            quote: The quote character (``"`` or ``'``).
+
+        Returns:
+            int: The index of the character immediately after the closing quote,
+            or ``len(source)`` if the string is unterminated.
+        """
+        n: int = len(source)
+        j: int = start + 1
+        while j < n:
+            c: str = source[j]
+            if c == "\\" and j + 1 < n:
+                j += 2
+                continue
+            if c == quote:
+                return j + 1
+            j += 1
+        return n
+
+    @staticmethod
+    def _skip_whitespace(source: str, start: int) -> int:
+        """Return the index of the first non-whitespace character at or after ``start``.
+
+        Args:
+            source: Source text to scan.
+            start: Index to begin scanning from.
+
+        Returns:
+            int: Index of the first non-whitespace character, or ``len(source)``
+            if no such character exists.
+        """
+        n: int = len(source)
+        j: int = start
+        while j < n and source[j] in " \t\r\n":
+            j += 1
+        return j
+
+    @staticmethod
+    def _parse_macro_arguments(source: str, start: int) -> tuple[list[str], int]:
+        """Parse a balanced-paren function-like macro argument list.
+
+        Respects nested parentheses, string literals, and comments inside
+        argument expressions. Splits arguments on top-level commas only.
+
+        Args:
+            source: Source text starting at or before the opening paren.
+            start: Index of the opening ``(`` character.
+
+        Returns:
+            tuple[list[str], int]: A tuple of (argument list, index after closing paren).
+            If the argument list is unterminated, returns the arguments parsed so far
+            and an index at end-of-source.
+        """
+        n: int = len(source)
+        args: list[str] = []
+        buf: list[str] = []
+        depth: int = 0
+        j: int = start
+        if j >= n or source[j] != "(":
+            return args, j
+        j += 1
+        depth = 1
+        while j < n and depth > 0:
+            c: str = source[j]
+
+            if c in {'"', "'"}:
+                end: int = HexPatPreprocessor._find_string_end(source, j, c)
+                buf.append(source[j:end])
+                j = end
+                continue
+
+            if c == "/" and j + 1 < n:
+                nxt: str = source[j + 1]
+                if nxt == "/":
+                    end = source.find("\n", j)
+                    if end == -1:
+                        end = n
+                    buf.append(source[j:end])
+                    j = end
+                    continue
+                if nxt == "*":
+                    end = source.find("*/", j + 2)
+                    end = n if end == -1 else end + 2
+                    buf.append(source[j:end])
+                    j = end
+                    continue
+
+            if c == "(":
+                depth += 1
+                buf.append(c)
+                j += 1
+                continue
+            if c == ")":
+                depth -= 1
+                if depth == 0:
+                    args.append("".join(buf).strip())
+                    j += 1
+                    return args, j
+                buf.append(c)
+                j += 1
+                continue
+            if c == "," and depth == 1:
+                args.append("".join(buf).strip())
+                buf = []
+                j += 1
+                continue
+
+            buf.append(c)
+            j += 1
+
+        if buf:
+            args.append("".join(buf).strip())
+        return args, j
+
+    @staticmethod
+    def _substitute_func_macro(
+        params: tuple[str, ...],
+        body: str,
+        args: list[str],
+    ) -> str:
+        """Substitute positional arguments into a function-like macro body.
+
+        Replaces whole-identifier occurrences of each parameter in the body
+        with the corresponding argument expression. Substitution respects
+        string literals and comments in the body. Extra or missing arguments
+        are tolerated: missing parameters expand to the empty string and
+        extra arguments are ignored.
+
+        Args:
+            params: The declared parameter names of the macro.
+            body: The macro body text as written in the ``#define``.
+            args: The actual argument expressions from the invocation.
+
+        Returns:
+            str: The macro body with parameter occurrences replaced by arguments.
+        """
+        if not params:
+            return body
+
+        replacements: dict[str, str] = {}
+        for idx, param in enumerate(params):
+            replacements[param] = args[idx] if idx < len(args) else ""
+
+        out: list[str] = []
+        i: int = 0
+        n: int = len(body)
+        while i < n:
+            ch: str = body[i]
+
+            if ch in {'"', "'"}:
+                end: int = HexPatPreprocessor._find_string_end(body, i, ch)
+                out.append(body[i:end])
+                i = end
+                continue
+
+            if ch == "/" and i + 1 < n:
+                nxt: str = body[i + 1]
+                if nxt == "/":
+                    end = body.find("\n", i)
+                    if end == -1:
+                        end = n
+                    out.append(body[i:end])
+                    i = end
+                    continue
+                if nxt == "*":
+                    end = body.find("*/", i + 2)
+                    end = n if end == -1 else end + 2
+                    out.append(body[i:end])
+                    i = end
+                    continue
+
+            if ch == "_" or ch.isalpha():
+                match = _IDENTIFIER_RE.match(body, i)
+                if match is None:
+                    out.append(ch)
+                    i += 1
+                    continue
+                ident: str = match.group(0)
+                end = match.end()
+                if ident in replacements:
+                    out.append(replacements[ident])
+                else:
+                    out.append(ident)
+                i = end
+                continue
+
+            out.append(ch)
+            i += 1
+
+        return "".join(out)
 
 
 def extract_pragmas_fast(source: str) -> PragmaInfo:
