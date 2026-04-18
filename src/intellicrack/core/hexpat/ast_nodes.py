@@ -354,12 +354,16 @@ class NamedType:
         namespace: Optional namespace qualifier for the type.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        endianness: Optional endianness specifier ("le", "be", or None) applied to the reference.
+        template_args: Tuple of template argument expressions supplied at instantiation.
     """
 
     name: str
     namespace: str | None
     line: int
     column: int
+    endianness: str | None = None
+    template_args: tuple[ExprNode, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -370,11 +374,13 @@ class PointerType:
         pointee: The type that this pointer points to.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        endianness: Optional endianness specifier ("le", "be", or None) applied to the pointer.
     """
 
     pointee: TypeNode
     line: int
     column: int
+    endianness: str | None = None
 
 
 @dataclass(frozen=True)
@@ -387,6 +393,7 @@ class ArrayType:
         while_condition: Optional expression used for while-loop array sizing.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        endianness: Optional endianness specifier ("le", "be", or None) applied to the array.
     """
 
     element: TypeNode
@@ -394,6 +401,7 @@ class ArrayType:
     while_condition: ExprNode | None
     line: int
     column: int
+    endianness: str | None = None
 
 
 @dataclass(frozen=True)
@@ -678,12 +686,33 @@ class FunctionParam:
         default_value: Optional default value expression for this parameter.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        is_varargs: Whether this parameter is a variadic (``...``) trailing parameter.
     """
 
     name: str
     type_node: TypeNode
     is_ref: bool
     default_value: ExprNode | None
+    line: int
+    column: int
+    is_varargs: bool = False
+
+
+@dataclass(frozen=True)
+class TemplateParam:
+    """A single template parameter declared on a generic struct or using alias.
+
+    Attributes:
+        name: The template parameter identifier.
+        is_auto: Whether the parameter is declared with the ``auto`` keyword.
+        type_hint: Optional non-``auto`` type-name hint preceding the parameter name.
+        line: Source line number where this node appears.
+        column: Source column number where this node appears.
+    """
+
+    name: str
+    is_auto: bool
+    type_hint: str | None
     line: int
     column: int
 
@@ -699,6 +728,7 @@ class StructDecl:
         annotations: Tuple of name-value pairs representing struct attributes.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        template_params: Tuple of template parameters declared on the struct.
     """
 
     name: str
@@ -707,6 +737,7 @@ class StructDecl:
     annotations: tuple[tuple[str, ExprNode | None], ...]
     line: int
     column: int
+    template_params: tuple[TemplateParam, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -737,12 +768,14 @@ class EnumEntry:
         value: Optional expression specifying an explicit numeric value for this entry.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        value_end: Optional upper-bound expression when the entry declares an inclusive range.
     """
 
     name: str
     value: ExprNode | None
     line: int
     column: int
+    value_end: ExprNode | None = None
 
 
 @dataclass(frozen=True)
@@ -755,6 +788,7 @@ class EnumDecl:
         entries: The ordered tuple of enum entries.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        annotations: Tuple of name-value pairs representing enum attributes.
     """
 
     name: str
@@ -762,6 +796,7 @@ class EnumDecl:
     entries: tuple[EnumEntry, ...]
     line: int
     column: int
+    annotations: tuple[tuple[str, ExprNode | None], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -773,12 +808,16 @@ class BitfieldEntry:
         width: The expression specifying the number of bits for this entry.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        type_hint: Optional storage or signedness hint (e.g. ``signed``, ``unsigned``, ``u8``).
+        is_padding: Whether this entry is an anonymous ``padding`` bitfield entry.
     """
 
     name: str
     width: ExprNode
     line: int
     column: int
+    type_hint: str | None = None
+    is_padding: bool = False
 
 
 @dataclass(frozen=True)
@@ -847,12 +886,14 @@ class UsingDecl:
         target: The type that the alias refers to.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
+        template_params: Tuple of template parameters declared on the alias.
     """
 
     alias: str
     target: TypeNode
     line: int
     column: int
+    template_params: tuple[TemplateParam, ...] = ()
 
 
 type ExprNode = (

@@ -49,6 +49,7 @@ from intellicrack.core.hexpat.ast_nodes import (
     SizeofExpr,
     StringLiteral,
     StructDecl,
+    TemplateParam,
     TernaryExpr,
     TryStmt,
     TypeNameOfExpr,
@@ -139,37 +140,105 @@ class HexPatParser:
         self._tokens: list[Token] = tokens
         self._pos: int = 0
         self.file_path: str = file_path
+        self._errors: list[HexPatParseError] = []
+
+    @property
+    def errors(self) -> list[HexPatParseError]:
+        """Return all parse errors collected during recovery-mode parsing.
+
+        Returns:
+            list[HexPatParseError]: Errors collected by ``parse()``; empty if none.
+        """
+        return list(self._errors)
 
     def parse(self) -> list[DeclNode | StmtNode]:
         """Parse the token stream into a list of top-level declarations and statements.
 
+        The parser attempts to recover from individual top-level syntax errors by
+        collecting the raised :class:`HexPatParseError` into :attr:`errors` and
+        synchronising to the next top-level boundary (``;`` or ``}``). After the
+        entire token stream has been processed, the first collected error (if any)
+        is re-raised so that callers which expect strict behaviour still observe a
+        failure.
+
         Returns:
-            list[DeclNode | StmtNode]: Ordered list of top-level AST nodes.
+            list[DeclNode | StmtNode]: Ordered list of top-level AST nodes parsed
+                from the token stream.
+
+        Raises:
+            HexPatParseError: When one or more syntax errors were collected.
         """
         nodes: list[DeclNode | StmtNode] = []
         while not self._at_end():
             if self._current().type == TokenType.SEMICOLON:
                 self._advance()
                 continue
-            annotations = self._try_parse_annotations()
-            tt = self._current().type
-            if tt == TokenType.STRUCT:
-                nodes.append(self._parse_struct(annotations))
-            elif tt == TokenType.UNION:
-                nodes.append(self._parse_union(annotations))
-            elif tt == TokenType.ENUM:
-                nodes.append(self._parse_enum())
-            elif tt == TokenType.BITFIELD:
-                nodes.append(self._parse_bitfield(annotations))
-            elif tt == TokenType.FN:
-                nodes.append(self._parse_function())
-            elif tt == TokenType.NAMESPACE:
-                nodes.append(self._parse_namespace())
-            elif tt == TokenType.USING:
-                nodes.append(self._parse_using())
-            else:
-                nodes.append(self._parse_top_level_statement())
+            try:
+                node = self._parse_top_level_node()
+            except HexPatParseError as err:
+                self._errors.append(err)
+                self._synchronise()
+                continue
+            nodes.append(node)
+        if self._errors:
+            first = self._errors[0]
+            raise HexPatParseError(
+                first.message,
+                first.line,
+                first.column,
+                first.file,
+            )
         return nodes
+
+    def _parse_top_level_node(self) -> DeclNode | StmtNode:
+        """Parse a single top-level declaration or statement.
+
+        Returns:
+            DeclNode | StmtNode: The parsed top-level node.
+        """
+        annotations = self._try_parse_annotations()
+        tt = self._current().type
+        if tt == TokenType.STRUCT:
+            return self._parse_struct(annotations)
+        if tt == TokenType.UNION:
+            return self._parse_union(annotations)
+        if tt == TokenType.ENUM:
+            return self._parse_enum(annotations)
+        if tt == TokenType.BITFIELD:
+            return self._parse_bitfield(annotations)
+        if tt == TokenType.FN:
+            return self._parse_function()
+        if tt == TokenType.NAMESPACE:
+            return self._parse_namespace()
+        if tt == TokenType.USING:
+            return self._parse_using()
+        return self._parse_top_level_statement()
+
+    def _synchronise(self) -> None:
+        """Advance the token cursor past the next top-level statement boundary.
+
+        Consumes tokens until a ``;`` is consumed, a closing ``}`` is consumed
+        at brace depth zero, or EOF is reached. Nested braces are tracked so
+        an unterminated body does not cause spurious early exits.
+        """
+        depth = 0
+        while not self._at_end():
+            tt = self._current().type
+            if tt == TokenType.LBRACE:
+                depth += 1
+                self._advance()
+                continue
+            if tt == TokenType.RBRACE:
+                if depth == 0:
+                    self._advance()
+                    return
+                depth -= 1
+                self._advance()
+                continue
+            if tt == TokenType.SEMICOLON and depth == 0:
+                self._advance()
+                return
+            self._advance()
 
     def _current(self) -> Token:
         """Return the current token without consuming it.
@@ -308,7 +377,12 @@ class HexPatParser:
         if tok.type == TokenType.STAR:
             self._advance()
             inner = self._parse_type()
-            return PointerType(pointee=inner, line=tok.line, column=tok.column)
+            return PointerType(
+                pointee=inner,
+                line=tok.line,
+                column=tok.column,
+                endianness=endianness,
+            )
 
         if tok.type == TokenType.AUTO:
             self._advance()
@@ -339,11 +413,21 @@ class HexPatParser:
                 member_tok = self._expect(TokenType.IDENTIFIER)
                 namespace = name
                 name = member_tok.value
+                while self._current().type == TokenType.DOUBLE_COLON:
+                    self._advance()
+                    next_tok = self._expect(TokenType.IDENTIFIER)
+                    namespace = f"{namespace}::{name}"
+                    name = next_tok.value
+            template_args: tuple[ExprNode, ...] = ()
+            if self._current().type == TokenType.LT:
+                template_args = self._parse_template_args()
             base = NamedType(
                 name=name,
                 namespace=namespace,
                 line=tok.line,
                 column=tok.column,
+                endianness=endianness,
+                template_args=template_args,
             )
         else:
             msg = f"Expected type, got '{tok.value}'"
@@ -364,6 +448,7 @@ class HexPatParser:
                     while_condition=while_cond,
                     line=arr_tok.line,
                     column=arr_tok.column,
+                    endianness=endianness,
                 )
             arr_size = self._parse_expression()
             self._expect(TokenType.RBRACKET)
@@ -373,9 +458,83 @@ class HexPatParser:
                 while_condition=None,
                 line=arr_tok.line,
                 column=arr_tok.column,
+                endianness=endianness,
             )
 
         return base
+
+    def _parse_template_args(self) -> tuple[ExprNode, ...]:
+        """Parse a template argument list of the form ``<arg1, arg2, ...>``.
+
+        Returns:
+            tuple[ExprNode, ...]: The parsed template argument expressions.
+        """
+        self._expect(TokenType.LT)
+        args: list[ExprNode] = []
+        if self._current().type != TokenType.GT:
+            args.append(self._parse_template_arg())
+            while self._match(TokenType.COMMA):
+                args.append(self._parse_template_arg())
+        self._expect(TokenType.GT)
+        return tuple(args)
+
+    def _parse_template_arg(self) -> ExprNode:
+        """Parse a single template argument expression.
+
+        Parsed with a minimum binding power above comparison operators so that
+        a trailing ``>`` terminates the argument list rather than being
+        consumed as a greater-than operator.
+
+        Returns:
+            ExprNode: The parsed template argument expression.
+        """
+        return self._parse_expression(min_bp=21)
+
+    def _parse_template_params(self) -> tuple[TemplateParam, ...]:
+        """Parse a template parameter list of the form ``<T, auto N, TypeHint Name>``.
+
+        Each parameter is one of ``IDENTIFIER``, ``auto IDENTIFIER``, or
+        ``IDENTIFIER IDENTIFIER`` (type hint followed by parameter name).
+
+        Returns:
+            tuple[TemplateParam, ...]: The parsed template parameters.
+        """
+        self._expect(TokenType.LT)
+        params: list[TemplateParam] = []
+        if self._current().type != TokenType.GT:
+            params.append(self._parse_template_param())
+            while self._match(TokenType.COMMA):
+                params.append(self._parse_template_param())
+        self._expect(TokenType.GT)
+        return tuple(params)
+
+    def _parse_template_param(self) -> TemplateParam:
+        """Parse a single template parameter declaration.
+
+        Returns:
+            TemplateParam: The parsed template parameter.
+        """
+        start_tok = self._current()
+        is_auto = False
+        type_hint: str | None = None
+        if self._current().type == TokenType.AUTO:
+            self._advance()
+            is_auto = True
+            name_tok = self._expect(TokenType.IDENTIFIER)
+        else:
+            first = self._expect(TokenType.IDENTIFIER)
+            if self._current().type == TokenType.IDENTIFIER:
+                type_hint = first.value
+                name_tok = self._advance()
+            else:
+                name_tok = first
+        return TemplateParam(
+            name=name_tok.value,
+            is_auto=is_auto,
+            type_hint=type_hint,
+            line=start_tok.line,
+            column=start_tok.column,
+        )
 
     def _parse_expression(self, min_bp: int = 0) -> ExprNode:
         """Parse an expression using Pratt-style operator precedence.
@@ -1131,6 +1290,9 @@ class HexPatParser:
         """
         tok = self._expect(TokenType.STRUCT)
         name_tok = self._expect(TokenType.IDENTIFIER)
+        template_params: tuple[TemplateParam, ...] = ()
+        if self._current().type == TokenType.LT:
+            template_params = self._parse_template_params()
         parent: str | None = None
         if self._current().type == TokenType.COLON:
             self._advance()
@@ -1143,6 +1305,7 @@ class HexPatParser:
             annotations=annotations,
             line=tok.line,
             column=tok.column,
+            template_params=template_params,
         )
 
     def _parse_union(
@@ -1168,8 +1331,14 @@ class HexPatParser:
             column=tok.column,
         )
 
-    def _parse_enum(self) -> EnumDecl:
+    def _parse_enum(
+        self,
+        annotations: tuple[tuple[str, ExprNode | None], ...] = (),
+    ) -> EnumDecl:
         """Parse an enum declaration.
+
+        Args:
+            annotations: Pre-parsed annotation pairs collected before the enum keyword.
 
         Returns:
             EnumDecl: An EnumDecl node.
@@ -1184,15 +1353,20 @@ class HexPatParser:
         while self._current().type != TokenType.RBRACE and not self._at_end():
             entry_tok = self._expect(TokenType.IDENTIFIER)
             entry_value: ExprNode | None = None
+            entry_value_end: ExprNode | None = None
             if self._current().type == TokenType.ASSIGN:
                 self._advance()
                 entry_value = self._parse_expression()
+                if self._current().type == TokenType.ELLIPSIS:
+                    self._advance()
+                    entry_value_end = self._parse_expression()
             entries.append(
                 EnumEntry(
                     name=entry_tok.value,
                     value=entry_value,
                     line=entry_tok.line,
                     column=entry_tok.column,
+                    value_end=entry_value_end,
                 ),
             )
             if not self._match(TokenType.COMMA):
@@ -1205,6 +1379,7 @@ class HexPatParser:
             entries=tuple(entries),
             line=tok.line,
             column=tok.column,
+            annotations=annotations,
         )
 
     def _parse_bitfield(
@@ -1225,18 +1400,7 @@ class HexPatParser:
 
         entries: list[BitfieldEntry] = []
         while self._current().type != TokenType.RBRACE and not self._at_end():
-            entry_tok = self._expect(TokenType.IDENTIFIER)
-            self._expect(TokenType.COLON)
-            width = self._parse_expression()
-            self._expect(TokenType.SEMICOLON)
-            entries.append(
-                BitfieldEntry(
-                    name=entry_tok.value,
-                    width=width,
-                    line=entry_tok.line,
-                    column=entry_tok.column,
-                ),
-            )
+            entries.append(self._parse_bitfield_entry())
 
         self._expect(TokenType.RBRACE)
         return BitfieldDecl(
@@ -1245,6 +1409,69 @@ class HexPatParser:
             annotations=annotations,
             line=tok.line,
             column=tok.column,
+        )
+
+    def _parse_bitfield_entry(self) -> BitfieldEntry:
+        """Parse a single bitfield entry line such as ``name : width;`` or ``padding : 4;``.
+
+        Accepts an optional type hint before the entry name. Recognised type
+        hint tokens are ``signed``/``unsigned`` (identifiers) and any
+        primitive integer type token. A leading ``padding`` keyword produces
+        an anonymous padding entry with ``is_padding`` set to True.
+
+        Returns:
+            BitfieldEntry: The parsed bitfield entry.
+
+        Raises:
+            HexPatParseError: If the input is malformed.
+        """
+        tok = self._current()
+        type_hint: str | None = None
+        is_padding = False
+        entry_name: str
+        entry_line = tok.line
+        entry_column = tok.column
+
+        if tok.type == TokenType.PADDING:
+            self._advance()
+            is_padding = True
+            entry_name = "padding"
+        elif tok.type in PRIMITIVE_TYPES:
+            self._advance()
+            type_hint = tok.value
+            name_tok = self._expect(TokenType.IDENTIFIER)
+            entry_name = name_tok.value
+            entry_line = name_tok.line
+            entry_column = name_tok.column
+        elif tok.type == TokenType.IDENTIFIER:
+            self._advance()
+            if tok.value in {"signed", "unsigned"} and self._current().type == TokenType.IDENTIFIER:
+                type_hint = tok.value
+                name_tok = self._advance()
+                entry_name = name_tok.value
+                entry_line = name_tok.line
+                entry_column = name_tok.column
+            elif tok.value in {"signed", "unsigned"} and self._current().type == TokenType.PADDING:
+                type_hint = tok.value
+                self._advance()
+                is_padding = True
+                entry_name = "padding"
+            else:
+                entry_name = tok.value
+        else:
+            msg = f"Expected bitfield entry, got '{tok.value}'"
+            raise HexPatParseError(msg, tok.line, tok.column, self.file_path)
+
+        self._expect(TokenType.COLON)
+        width = self._parse_expression()
+        self._expect(TokenType.SEMICOLON)
+        return BitfieldEntry(
+            name=entry_name,
+            width=width,
+            line=entry_line,
+            column=entry_column,
+            type_hint=type_hint,
+            is_padding=is_padding,
         )
 
     def _parse_function(self) -> FunctionDecl:
@@ -1266,6 +1493,10 @@ class HexPatParser:
                 is_ref = True
 
             param_type = self._parse_type()
+            is_varargs = False
+            if self._current().type == TokenType.ELLIPSIS:
+                self._advance()
+                is_varargs = True
             param_name_tok = self._expect(TokenType.IDENTIFIER)
             default_value: ExprNode | None = None
             if self._current().type == TokenType.ASSIGN:
@@ -1279,9 +1510,10 @@ class HexPatParser:
                     default_value=default_value,
                     line=param_tok.line,
                     column=param_tok.column,
+                    is_varargs=is_varargs,
                 ),
             )
-            if not self._match(TokenType.COMMA):
+            if is_varargs or not self._match(TokenType.COMMA):
                 break
 
         self._expect(TokenType.RPAREN)
@@ -1323,7 +1555,7 @@ class HexPatParser:
             elif tt == TokenType.UNION:
                 body.append(self._parse_union(annotations))
             elif tt == TokenType.ENUM:
-                body.append(self._parse_enum())
+                body.append(self._parse_enum(annotations))
             elif tt == TokenType.BITFIELD:
                 body.append(self._parse_bitfield(annotations))
             elif tt == TokenType.FN:
@@ -1353,6 +1585,9 @@ class HexPatParser:
         """
         tok = self._expect(TokenType.USING)
         alias_tok = self._expect(TokenType.IDENTIFIER)
+        template_params: tuple[TemplateParam, ...] = ()
+        if self._current().type == TokenType.LT:
+            template_params = self._parse_template_params()
         self._expect(TokenType.ASSIGN)
         target = self._parse_type()
         self._expect(TokenType.SEMICOLON)
@@ -1361,4 +1596,5 @@ class HexPatParser:
             target=target,
             line=tok.line,
             column=tok.column,
+            template_params=template_params,
         )
