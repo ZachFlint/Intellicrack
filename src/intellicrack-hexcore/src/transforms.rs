@@ -22,6 +22,44 @@ pub struct TransformInfo {
     pub description: String,
 }
 
+/// Padding mode applied around AES-ECB operations.
+///
+/// When decrypting, the mode determines how trailing bytes are interpreted
+/// after the raw block cipher runs.  When encrypting, the mode determines
+/// how plaintext that is not a multiple of 16 bytes is extended before the
+/// cipher runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaddingMode {
+    /// No padding is added on encrypt and none is stripped on decrypt.
+    /// The input length must already be a multiple of 16 bytes.
+    None,
+    /// PKCS#7 padding: between 1 and 16 bytes appended whose value equals
+    /// the number of padding bytes.  Strictly validated on decrypt.
+    Pkcs7,
+    /// Zero padding: trailing zero bytes are appended on encrypt to reach
+    /// the next block boundary.  Decrypt keeps the plaintext as-is so the
+    /// caller can strip zeros according to their own schema.
+    Zero,
+    /// ISO 10126 padding: random padding bytes with the final byte holding
+    /// the padding length.  Strictly validated on decrypt.
+    Iso10126,
+}
+
+impl PaddingMode {
+    fn parse(value: &[u8]) -> Result<Self, TransformError> {
+        match value {
+            b"none" => Ok(Self::None),
+            b"pkcs7" => Ok(Self::Pkcs7),
+            b"zero" => Ok(Self::Zero),
+            b"iso10126" => Ok(Self::Iso10126),
+            other => Err(TransformError::InvalidParameter(format!(
+                "unknown padding mode: {}",
+                String::from_utf8_lossy(other)
+            ))),
+        }
+    }
+}
+
 fn get_param<'a, S: BuildHasher>(
     params: &'a HashMap<String, Vec<u8>, S>,
     key: &str,
@@ -62,11 +100,13 @@ pub fn apply_transform<S: BuildHasher>(
         "rot_n" => apply_rot_n(data, params),
         "aes_ecb_decrypt" => {
             let key = get_param(params, "key")?;
-            aes_ecb_process(data, key, false)
+            let padding = parse_padding_param(params)?;
+            aes_ecb_process(data, key, false, padding)
         }
         "aes_ecb_encrypt" => {
             let key = get_param(params, "key")?;
-            aes_ecb_process(data, key, true)
+            let padding = parse_padding_param(params)?;
+            aes_ecb_process(data, key, true, padding)
         }
         "base64_encode" | "base64_decode" => apply_base64_transform(name, data),
         "zlib_inflate" | "zlib_deflate" => apply_zlib_transform(name, data),
@@ -184,11 +224,21 @@ fn apply_bit_transform<S: BuildHasher>(
 ) -> Result<Vec<u8>, TransformError> {
     match name {
         "bit_shift_left" => {
-            let count = get_param_u8(params, "count")?.min(7);
+            let count = get_param_u8(params, "count")?;
+            if count > 7 {
+                return Err(TransformError::InvalidParameter(format!(
+                    "shift count {count} exceeds byte width"
+                )));
+            }
             Ok(data.iter().map(|b| b << count).collect())
         }
         "bit_shift_right" => {
-            let count = get_param_u8(params, "count")?.min(7);
+            let count = get_param_u8(params, "count")?;
+            if count > 7 {
+                return Err(TransformError::InvalidParameter(format!(
+                    "shift count {count} exceeds byte width"
+                )));
+            }
             Ok(data.iter().map(|b| b >> count).collect())
         }
         "bit_rotate_left" => {
@@ -275,26 +325,108 @@ fn apply_mask_transform<S: BuildHasher>(
     }
 }
 
-fn aes_ecb_process(data: &[u8], key: &[u8], encrypt: bool) -> Result<Vec<u8>, TransformError> {
-    let padded = if data.len().is_multiple_of(16) {
-        data.to_vec()
-    } else {
-        if encrypt {
-            return Err(TransformError::InvalidParameter(
-                "data length must be multiple of 16 for AES encrypt".to_string(),
-            ));
+fn parse_padding_param<S: BuildHasher>(
+    params: &HashMap<String, Vec<u8>, S>,
+) -> Result<PaddingMode, TransformError> {
+    match params.get("padding") {
+        Some(bytes) => PaddingMode::parse(bytes.as_slice()),
+        None => Ok(PaddingMode::Pkcs7),
+    }
+}
+
+fn pad_plaintext(data: &[u8], padding: PaddingMode) -> Result<Vec<u8>, TransformError> {
+    let len = data.len();
+    match padding {
+        PaddingMode::None => {
+            if !len.is_multiple_of(16) {
+                return Err(TransformError::InvalidParameter(
+                    "data length must be multiple of 16 for AES encrypt".to_string(),
+                ));
+            }
+            Ok(data.to_vec())
         }
-        let mut p = data.to_vec();
-        p.resize(data.len().div_ceil(16) * 16, 0);
-        p
-    };
+        PaddingMode::Pkcs7 => {
+            let pad_len = 16 - (len % 16);
+            let mut out = Vec::with_capacity(len + pad_len);
+            out.extend_from_slice(data);
+            let pad_byte = u8::try_from(pad_len).unwrap_or(16);
+            out.extend(std::iter::repeat_n(pad_byte, pad_len));
+            Ok(out)
+        }
+        PaddingMode::Zero => {
+            let pad_len = if len.is_multiple_of(16) {
+                0
+            } else {
+                16 - (len % 16)
+            };
+            let mut out = Vec::with_capacity(len + pad_len);
+            out.extend_from_slice(data);
+            out.extend(std::iter::repeat_n(0u8, pad_len));
+            Ok(out)
+        }
+        PaddingMode::Iso10126 => {
+            let pad_len = 16 - (len % 16);
+            let mut out = Vec::with_capacity(len + pad_len);
+            out.extend_from_slice(data);
+            // Deterministic filler for reproducibility; the final byte holds
+            // the padding length, which is the only part that matters for
+            // correct stripping.
+            if pad_len > 1 {
+                out.extend(std::iter::repeat_n(0u8, pad_len - 1));
+            }
+            out.push(u8::try_from(pad_len).unwrap_or(16));
+            Ok(out)
+        }
+    }
+}
 
-    let mut result = padded;
+fn strip_plaintext(mut data: Vec<u8>, padding: PaddingMode) -> Result<Vec<u8>, TransformError> {
+    match padding {
+        PaddingMode::None | PaddingMode::Zero => Ok(data),
+        PaddingMode::Pkcs7 => {
+            let Some(&last) = data.last() else {
+                return Err(TransformError::InvalidParameter(
+                    "PKCS#7 padding requires non-empty plaintext".to_string(),
+                ));
+            };
+            let pad_len = last as usize;
+            if pad_len == 0 || pad_len > 16 || pad_len > data.len() {
+                return Err(TransformError::InvalidParameter(
+                    "invalid PKCS#7 padding length".to_string(),
+                ));
+            }
+            let start = data.len() - pad_len;
+            if !data[start..].iter().all(|&b| b as usize == pad_len) {
+                return Err(TransformError::InvalidParameter(
+                    "invalid PKCS#7 padding bytes".to_string(),
+                ));
+            }
+            data.truncate(start);
+            Ok(data)
+        }
+        PaddingMode::Iso10126 => {
+            let Some(&last) = data.last() else {
+                return Err(TransformError::InvalidParameter(
+                    "ISO 10126 padding requires non-empty plaintext".to_string(),
+                ));
+            };
+            let pad_len = last as usize;
+            if pad_len == 0 || pad_len > 16 || pad_len > data.len() {
+                return Err(TransformError::InvalidParameter(
+                    "invalid ISO 10126 padding length".to_string(),
+                ));
+            }
+            data.truncate(data.len() - pad_len);
+            Ok(data)
+        }
+    }
+}
 
+fn aes_ecb_transform_blocks(blocks: &mut [u8], key: &[u8], encrypt: bool) {
     match key.len() {
         16 => {
             let cipher = aes::Aes128::new(GenericArray::from_slice(key));
-            for chunk in result.chunks_exact_mut(16) {
+            for chunk in blocks.chunks_exact_mut(16) {
                 let block = GenericArray::from_mut_slice(chunk);
                 if encrypt {
                     cipher.encrypt_block(block);
@@ -305,7 +437,7 @@ fn aes_ecb_process(data: &[u8], key: &[u8], encrypt: bool) -> Result<Vec<u8>, Tr
         }
         24 => {
             let cipher = aes::Aes192::new(GenericArray::from_slice(key));
-            for chunk in result.chunks_exact_mut(16) {
+            for chunk in blocks.chunks_exact_mut(16) {
                 let block = GenericArray::from_mut_slice(chunk);
                 if encrypt {
                     cipher.encrypt_block(block);
@@ -316,7 +448,7 @@ fn aes_ecb_process(data: &[u8], key: &[u8], encrypt: bool) -> Result<Vec<u8>, Tr
         }
         32 => {
             let cipher = aes::Aes256::new(GenericArray::from_slice(key));
-            for chunk in result.chunks_exact_mut(16) {
+            for chunk in blocks.chunks_exact_mut(16) {
                 let block = GenericArray::from_mut_slice(chunk);
                 if encrypt {
                     cipher.encrypt_block(block);
@@ -325,14 +457,36 @@ fn aes_ecb_process(data: &[u8], key: &[u8], encrypt: bool) -> Result<Vec<u8>, Tr
                 }
             }
         }
-        _ => {
-            return Err(TransformError::InvalidParameter(
-                "AES key must be 16, 24, or 32 bytes".to_string(),
-            ));
-        }
+        _ => unreachable!("caller must validate key length before dispatch"),
+    }
+}
+
+fn aes_ecb_process(
+    data: &[u8],
+    key: &[u8],
+    encrypt: bool,
+    padding: PaddingMode,
+) -> Result<Vec<u8>, TransformError> {
+    if !matches!(key.len(), 16 | 24 | 32) {
+        return Err(TransformError::InvalidParameter(
+            "AES key must be 16, 24, or 32 bytes".to_string(),
+        ));
     }
 
-    Ok(result)
+    if encrypt {
+        let mut buffer = pad_plaintext(data, padding)?;
+        aes_ecb_transform_blocks(&mut buffer, key, true);
+        Ok(buffer)
+    } else {
+        if !data.len().is_multiple_of(16) {
+            return Err(TransformError::InvalidParameter(
+                "data length must be multiple of 16 for AES decrypt".to_string(),
+            ));
+        }
+        let mut buffer = data.to_vec();
+        aes_ecb_transform_blocks(&mut buffer, key, false);
+        strip_plaintext(buffer, padding)
+    }
 }
 
 const TRANSFORM_LIST: &[(&str, &str, &str)] = &[
@@ -502,11 +656,113 @@ mod tests {
     fn test_aes_ecb_roundtrip() {
         let key = [0u8; 16];
         let data = [0x41u8; 16];
-        let encrypt_params = make_params(&[("key", &key)]);
-        let encrypted = apply_transform("aes_ecb_encrypt", &data, &encrypt_params).unwrap();
+        let params = make_params(&[("key", &key), ("padding", b"none")]);
+        let encrypted = apply_transform("aes_ecb_encrypt", &data, &params).unwrap();
         assert_ne!(encrypted, data.to_vec());
-        let decrypted = apply_transform("aes_ecb_decrypt", &encrypted, &encrypt_params).unwrap();
+        let decrypted = apply_transform("aes_ecb_decrypt", &encrypted, &params).unwrap();
         assert_eq!(decrypted, data.to_vec());
+    }
+
+    #[test]
+    fn test_aes_ecb_decrypt_misaligned_none_errors() {
+        let key = [0u8; 16];
+        let ciphertext = [0u8; 15];
+        let params = make_params(&[("key", &key), ("padding", b"none")]);
+        let result = apply_transform("aes_ecb_decrypt", &ciphertext, &params);
+        let err = result.expect_err("expected decrypt to fail for misaligned ciphertext");
+        let message = err.to_string();
+        assert!(
+            message.contains("multiple of 16"),
+            "unexpected error: {message}"
+        );
+    }
+
+    #[test]
+    fn test_aes_ecb_decrypt_pkcs7_strips_padding() {
+        let key = [0u8; 16];
+        let plaintext = b"hello";
+        let encrypt_params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &encrypt_params).unwrap();
+        assert_eq!(ciphertext.len(), 16);
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &encrypt_params).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_aes_ecb_pkcs7_roundtrip_non_multiple() {
+        let key = [0x11u8; 32];
+        let plaintext = b"unaligned payload across blocks!!extra";
+        assert!(!plaintext.len().is_multiple_of(16));
+        let params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &params).unwrap();
+        assert!(ciphertext.len().is_multiple_of(16));
+        assert!(ciphertext.len() > plaintext.len());
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_aes_ecb_default_padding_is_pkcs7() {
+        let key = [0x22u8; 16];
+        let plaintext = b"default padding";
+        let params = make_params(&[("key", &key)]);
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &params).unwrap();
+        assert_eq!(ciphertext.len(), 16);
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_aes_ecb_decrypt_pkcs7_bad_padding_errors() {
+        let key = [0u8; 16];
+        let mut tampered = {
+            let params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
+            apply_transform("aes_ecb_encrypt", b"data", &params).unwrap()
+        };
+        *tampered.last_mut().unwrap() ^= 0x01;
+        let params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
+        let result = apply_transform("aes_ecb_decrypt", &tampered, &params);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_aes_ecb_zero_padding_preserves_bytes() {
+        let key = [0u8; 16];
+        let params = make_params(&[("key", &key), ("padding", b"zero")]);
+        let plaintext = b"zeropad";
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &params).unwrap();
+        assert_eq!(ciphertext.len(), 16);
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted.len(), 16);
+        assert_eq!(&decrypted[..plaintext.len()], plaintext);
+        assert!(decrypted[plaintext.len()..].iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn test_aes_ecb_iso10126_roundtrip() {
+        let key = [0x33u8; 16];
+        let params = make_params(&[("key", &key), ("padding", b"iso10126")]);
+        let plaintext = b"iso message";
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &params).unwrap();
+        assert_eq!(ciphertext.len(), 16);
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_aes_ecb_unknown_padding_errors() {
+        let key = [0u8; 16];
+        let params = make_params(&[("key", &key), ("padding", b"rot13")]);
+        let result = apply_transform("aes_ecb_encrypt", b"data", &params);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_aes_ecb_encrypt_none_misaligned_errors() {
+        let key = [0u8; 16];
+        let params = make_params(&[("key", &key), ("padding", b"none")]);
+        let result = apply_transform("aes_ecb_encrypt", b"nopad", &params);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -530,9 +786,52 @@ mod tests {
     }
 
     #[test]
+    fn test_bit_shift_left_overflow_errors() {
+        let data = [0xFFu8];
+        let params = make_params(&[("count", &[8])]);
+        let result = apply_transform("bit_shift_left", &data, &params);
+        let err = result.expect_err("expected error for shift count 8");
+        let message = err.to_string();
+        assert!(
+            message.contains("shift count 8 exceeds byte width"),
+            "unexpected error: {message}"
+        );
+    }
+
+    #[test]
+    fn test_bit_shift_right_overflow_errors() {
+        let data = [0xFFu8];
+        let params = make_params(&[("count", &[9])]);
+        let result = apply_transform("bit_shift_right", &data, &params);
+        let err = result.expect_err("expected error for shift count 9");
+        let message = err.to_string();
+        assert!(
+            message.contains("shift count 9 exceeds byte width"),
+            "unexpected error: {message}"
+        );
+    }
+
+    #[test]
+    fn test_bit_shift_boundary_counts() {
+        let data = [0b0000_0001u8];
+        let params = make_params(&[("count", &[7])]);
+        let shifted = apply_transform("bit_shift_left", &data, &params).unwrap();
+        assert_eq!(shifted, vec![0b1000_0000]);
+    }
+
+    #[test]
     fn test_bit_rotate() {
         let data = [0b1000_0001];
         let params = make_params(&[("count", &[1])]);
+        let rotated = apply_transform("bit_rotate_left", &data, &params).unwrap();
+        assert_eq!(rotated, vec![0b0000_0011]);
+    }
+
+    #[test]
+    fn test_bit_rotate_still_wraps_modulo_eight() {
+        // Rotations are semantically defined modulo 8, so 9 is equivalent to 1.
+        let data = [0b1000_0001u8];
+        let params = make_params(&[("count", &[9])]);
         let rotated = apply_transform("bit_rotate_left", &data, &params).unwrap();
         assert_eq!(rotated, vec![0b0000_0011]);
     }
