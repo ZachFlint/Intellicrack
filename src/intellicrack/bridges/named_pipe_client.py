@@ -10,6 +10,7 @@ import asyncio
 import ctypes
 import json
 import os
+import sys
 from collections.abc import Callable
 from ctypes import wintypes
 from dataclasses import dataclass
@@ -24,6 +25,54 @@ _logger = get_logger("bridges.namedpipe")
 
 _LENGTH_PREFIX_SIZE = 4
 _CHUNK_SIZE = 65536
+
+_GENERIC_READ = 0x80000000
+_GENERIC_WRITE = 0x40000000
+_OPEN_EXISTING = 3
+_INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+
+if sys.platform == "win32":
+    kernel32: ctypes.WinDLL = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    kernel32.WaitNamedPipeW.restype = wintypes.BOOL
+    kernel32.WaitNamedPipeW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD]
+
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+
+    kernel32.ReadFile.restype = wintypes.BOOL
+    kernel32.ReadFile.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.LPVOID,
+    ]
+
+    kernel32.WriteFile.restype = wintypes.BOOL
+    kernel32.WriteFile.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPCVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.LPVOID,
+    ]
+
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+
+    kernel32.CancelIoEx.restype = wintypes.BOOL
+    kernel32.CancelIoEx.argtypes = [wintypes.HANDLE, wintypes.LPVOID]
+
 
 EventHandler = Callable[[dict[str, Any]], None]
 
@@ -52,10 +101,6 @@ class NamedPipeClient:
     when omitted), the optional event handler used for asynchronous
     plugin events, and sets up the pipe handle slot, the concurrency
     lock serialising I/O, and the request identifier counter.
-
-    Args:
-        config: Pipe configuration.
-        event_handler: Optional event handler.
     """
 
     def __init__(
@@ -292,17 +337,15 @@ class NamedPipeClient:
                 ``WaitNamedPipeW`` fails, or if ``CreateFileW`` returns an
                 invalid handle.
         """
-        if os.name != "nt":
+        if sys.platform != "win32":
             error_message = "Named pipes are only supported on Windows"
             raise ToolError(error_message)
-
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
         pipe_name = self._config.pipe_name
         timeout_ms = int(self._config.connect_timeout * 1000)
 
         wait_ok = kernel32.WaitNamedPipeW(pipe_name, timeout_ms)
-        if wait_ok == 0:
+        if not wait_ok:
             error = ctypes.get_last_error()
             hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
@@ -316,17 +359,17 @@ class NamedPipeClient:
                 error_message = f"{error_message}. {hint}"
             raise ToolError(error_message)
 
-        handle = kernel32.CreateFileW(
+        handle: int | None = kernel32.CreateFileW(
             pipe_name,
-            0x80000000 | 0x40000000,
+            _GENERIC_READ | _GENERIC_WRITE,
             0,
             None,
-            3,
+            _OPEN_EXISTING,
             0,
             None,
         )
 
-        if handle == wintypes.HANDLE(-1).value:
+        if handle is None or handle == _INVALID_HANDLE_VALUE:
             error = ctypes.get_last_error()
             hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
@@ -340,7 +383,7 @@ class NamedPipeClient:
                 error_message = f"{error_message}. {hint}"
             raise ToolError(error_message)
 
-        return int(handle)
+        return handle
 
     def _close_handle(self) -> None:
         """Close the underlying Windows pipe handle, if any.
@@ -351,7 +394,9 @@ class NamedPipeClient:
         """
         if self._handle is None:
             return
-        ctypes.windll.kernel32.CloseHandle(self._handle)
+        if sys.platform != "win32":
+            return
+        kernel32.CloseHandle(self._handle)
 
     def _read_exact_sync(self, size: int) -> bytes:
         """Read exactly ``size`` bytes from the pipe synchronously.
@@ -373,8 +418,10 @@ class NamedPipeClient:
         if self._handle is None:
             error_message = "Pipe not connected"
             raise ToolError(error_message)
+        if sys.platform != "win32":
+            error_message = "Named pipes are only supported on Windows"
+            raise ToolError(error_message)
 
-        kernel32 = ctypes.windll.kernel32
         data = bytearray()
         remaining = size
         _logger.debug("pipe_read_started", requested_bytes=size)
@@ -435,8 +482,10 @@ class NamedPipeClient:
         if self._handle is None:
             error_message = "Pipe not connected"
             raise ToolError(error_message)
+        if sys.platform != "win32":
+            error_message = "Named pipes are only supported on Windows"
+            raise ToolError(error_message)
 
-        kernel32 = ctypes.windll.kernel32
         total = len(data)
         offset = 0
         _logger.debug("pipe_write_started", total_bytes=total)
@@ -480,10 +529,8 @@ class NamedPipeClient:
         """
         if self._handle is None:
             return
-        _logger.debug("pipe_cancelling_io", handle=self._handle)
-        cancel = getattr(ctypes.windll.kernel32, "CancelIoEx", None)
-        if cancel is None:
-            _logger.debug("pipe_cancel_unavailable", function="CancelIoEx")
+        if sys.platform != "win32":
             return
-        cancel(self._handle, None)
+        _logger.debug("pipe_cancelling_io", handle=self._handle)
+        kernel32.CancelIoEx(self._handle, None)
         _logger.debug("pipe_io_cancelled", handle=self._handle)
