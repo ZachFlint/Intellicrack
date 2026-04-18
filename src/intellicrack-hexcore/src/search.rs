@@ -71,13 +71,11 @@ pub fn search_bytes(data: &[u8], pattern: &[u8], max_results: usize) -> Vec<Sear
         return Vec::new();
     }
 
-    let plen = pattern.len();
-    let overlap = plen.saturating_sub(1);
-
     if data.len() <= CHUNK_SIZE {
         return search_bytes_single(data, pattern, max_results, 0);
     }
 
+    let overlap = pattern.len().saturating_sub(1);
     let mut chunks: Vec<(usize, &[u8])> = Vec::new();
     let mut start: usize = 0;
     while start < data.len() {
@@ -216,12 +214,11 @@ pub fn search_hex_with_wildcards(
         return search_bytes(data, &exact, max_results);
     }
 
-    let overlap = plen.saturating_sub(1);
-
     if data.len() <= CHUNK_SIZE {
         return search_masked_single(data, &pattern, max_results, 0);
     }
 
+    let overlap = plen.saturating_sub(1);
     let mut chunks: Vec<(usize, &[u8])> = Vec::new();
     let mut start: usize = 0;
     while start < data.len() {
@@ -285,48 +282,106 @@ pub fn search_text(
     case_sensitive: bool,
     max_results: usize,
 ) -> Vec<SearchResult> {
-    let search_text = if case_sensitive {
-        text.to_string()
-    } else {
-        text.to_lowercase()
-    };
+    if text.is_empty() {
+        return Vec::new();
+    }
 
     let encoded: Vec<u8> = match encoding.to_lowercase().as_str() {
-        "utf-16le" | "utf16le" => search_text
-            .encode_utf16()
-            .flat_map(u16::to_le_bytes)
-            .collect(),
-        "utf-16be" | "utf16be" => search_text
-            .encode_utf16()
-            .flat_map(u16::to_be_bytes)
-            .collect(),
-        _ => search_text.as_bytes().to_vec(),
+        "utf-16le" | "utf16le" => text.encode_utf16().flat_map(u16::to_le_bytes).collect(),
+        "utf-16be" | "utf16be" => text.encode_utf16().flat_map(u16::to_be_bytes).collect(),
+        _ => text.as_bytes().to_vec(),
     };
 
-    if !case_sensitive && matches!(encoding.to_lowercase().as_str(), "ascii" | "utf-8" | "utf8") {
-        let mut results = Vec::new();
-        let plen = encoded.len();
+    if encoded.is_empty() {
+        return Vec::new();
+    }
 
-        for i in 0..=data.len().saturating_sub(plen) {
-            if results.len() >= max_results {
-                break;
+    if case_sensitive {
+        return search_bytes(data, &encoded, max_results);
+    }
+
+    let plen = encoded.len();
+    if data.len() < plen {
+        return Vec::new();
+    }
+
+    let step = match encoding.to_lowercase().as_str() {
+        "utf-16le" | "utf16le" | "utf-16be" | "utf16be" => 2,
+        _ => 1,
+    };
+    let needle_lower = text.to_lowercase();
+    let mut results = Vec::new();
+    let last_start = data.len() - plen;
+    let mut i: usize = 0;
+
+    while i <= last_start && results.len() < max_results {
+        let window = &data[i..i + plen];
+        if window_matches_ci(window, &needle_lower, encoding) {
+            results.push(SearchResult {
+                offset: i,
+                length: plen,
+                matched_bytes: window.to_vec(),
+            });
+            i += plen.max(step);
+        } else {
+            i += step;
+        }
+    }
+    results
+}
+
+fn window_matches_ci(window: &[u8], needle_lower: &str, encoding: &str) -> bool {
+    let lower = encoding.to_lowercase();
+    let decoded: String = match lower.as_str() {
+        "utf-16le" | "utf16le" => {
+            if !window.len().is_multiple_of(2) {
+                return false;
             }
-
-            let window = &data[i..i + plen];
-            let window_lower: Vec<u8> = window.iter().map(u8::to_ascii_lowercase).collect();
-
-            if window_lower == encoded {
-                results.push(SearchResult {
-                    offset: i,
-                    length: plen,
-                    matched_bytes: window.to_vec(),
-                });
+            let units: Vec<u16> = window
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .collect();
+            match String::from_utf16(&units) {
+                Ok(s) => s,
+                Err(_) => return false,
             }
         }
-        results
-    } else {
-        search_bytes(data, &encoded, max_results)
-    }
+        "utf-16be" | "utf16be" => {
+            if !window.len().is_multiple_of(2) {
+                return false;
+            }
+            let units: Vec<u16> = window
+                .chunks_exact(2)
+                .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                .collect();
+            match String::from_utf16(&units) {
+                Ok(s) => s,
+                Err(_) => return false,
+            }
+        }
+        "utf-8" | "utf8" => match std::str::from_utf8(window) {
+            Ok(s) => s.to_string(),
+            Err(_) => return false,
+        },
+        "ascii" => {
+            if window.iter().any(|&b| b & 0x80 != 0) {
+                return false;
+            }
+            window.iter().map(|&b| b as char).collect()
+        }
+        _ => {
+            let Some(enc) = encoding_rs::Encoding::for_label(encoding.as_bytes()) else {
+                return false;
+            };
+            let (cow, had_errors) = enc.decode_without_bom_handling(window);
+            if had_errors {
+                return false;
+            }
+            cow.into_owned()
+        }
+    };
+
+    decoded.to_lowercase() == needle_lower
 }
 
 #[must_use]
@@ -879,6 +934,25 @@ mod tests {
         let data = b"Hello hello HELLO";
         let results = search_text(data, "hello", "utf-8", false, 10);
         assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_search_text_mixed_case_needle() {
+        let data = b"say hello world hello";
+        let results = search_text(data, "HeLLo", "utf-8", false, 10);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].offset, 4);
+        assert_eq!(results[1].offset, 16);
+    }
+
+    #[test]
+    fn test_search_text_mixed_case_cyrillic_utf16le() {
+        let target = "привет";
+        let haystack: Vec<u8> = target.encode_utf16().flat_map(u16::to_le_bytes).collect();
+        let results = search_text(&haystack, "ПрИвЕт", "utf-16le", false, 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 0);
+        assert_eq!(results[0].length, haystack.len());
     }
 
     #[test]
