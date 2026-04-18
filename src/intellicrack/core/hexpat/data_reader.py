@@ -18,6 +18,38 @@ if TYPE_CHECKING:
     from intellicrack.core.types import HexDocumentLike
 
 
+def _resolve_length(document: HexDocumentLike) -> int:
+    """Return the document length, tolerating method or property shapes.
+
+    The :class:`HexDocumentLike` protocol declares ``length`` as a method, but
+    some adapter shims expose it as a plain attribute or property. This helper
+    normalizes both shapes and raises a typed error when the attribute is
+    absent or yields a non-integer value.
+
+    Args:
+        document: A HexDocument-like object exposing ``length`` either as a
+            zero-argument callable or as a property returning ``int``.
+
+    Returns:
+        int: The total number of bytes available in the document.
+
+    Raises:
+        HexPatRuntimeError: If ``document`` does not expose a ``length``
+            attribute, or if the resolved value cannot be interpreted as an
+            integer.
+    """
+    sentinel = object()
+    raw_length: object = getattr(document, "length", sentinel)
+    if raw_length is sentinel:
+        msg = "document does not expose a 'length' attribute"
+        raise HexPatRuntimeError(msg)
+    resolved: object = raw_length() if callable(raw_length) else raw_length
+    if not isinstance(resolved, int) or isinstance(resolved, bool):
+        msg = f"document 'length' must resolve to int, got {type(resolved).__name__}"
+        raise HexPatRuntimeError(msg)
+    return resolved
+
+
 class DataReader:
     """Provides typed byte access to binary data for pattern evaluation.
 
@@ -46,23 +78,25 @@ class DataReader:
         """Create a DataReader from a HexDocument PyO3 object.
 
         The document is expected to expose ``read(offset, length) -> list[int]``
-        and ``length() -> int`` methods as provided by the Rust/PyO3 binding.
+        as provided by the Rust/PyO3 binding. ``length`` may be either a
+        zero-argument callable returning ``int`` or a plain ``int`` attribute
+        or property; both shapes are supported by :func:`_resolve_length`.
 
         Args:
-            document: A HexDocument PyO3 object with ``read`` and ``length``
-                methods.
+            document: A HexDocument PyO3 object with a ``read`` method and a
+                ``length`` attribute (method, property, or plain int).
 
         Returns:
             DataReader: A DataReader backed by the supplied HexDocument.
         """
         doc_read = document.read
-        doc_length = document.length
+        total_length = _resolve_length(document)
 
         def read_fn(offset: int, length: int) -> bytes:
             raw: list[int] = doc_read(offset, length)
             return bytes(raw)
 
-        return DataReader(read_fn, doc_length())
+        return DataReader(read_fn, total_length)
 
     @staticmethod
     def from_bytes(data: bytes) -> DataReader:
