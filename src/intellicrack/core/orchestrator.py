@@ -37,6 +37,7 @@ from intellicrack.core.types import (
     ProviderName,
     ThinkingConfig,
     ToolChoice,
+    ToolChoiceMode,
     ToolError,
     ToolName,
     ToolResult,
@@ -84,6 +85,9 @@ class OrchestratorConfig:
         tool_choice: How the model should select tools.
         thinking: Extended thinking configuration.
         cache: Prompt caching configuration.
+        context_window_override: Optional explicit context window size (in tokens) used when
+            the provider cannot report one for the active model. When ``None`` the provider
+            is required to return a context window; otherwise trimming is skipped.
     """
 
     confirmation_level: ConfirmationLevel = ConfirmationLevel.DESTRUCTIVE
@@ -96,6 +100,7 @@ class OrchestratorConfig:
     tool_choice: ToolChoice | None = None
     thinking: ThinkingConfig | None = None
     cache: CacheConfig | None = None
+    context_window_override: int | None = None
 
 
 @dataclass
@@ -455,6 +460,7 @@ class Orchestrator:
         self._validate_tool_schemas(tool_definitions, provider)
         context_window = await self._get_model_context_window(provider)
         iteration = 0
+        force_no_tools_next = False
 
         while iteration < self._config.max_iterations:
             if self._cancel_event.is_set():
@@ -466,17 +472,24 @@ class Orchestrator:
             messages = self._build_messages()
             messages = self.trim_messages_to_context_window(messages, context_window)
 
+            iteration_tool_choice_override: ToolChoice | None = ToolChoice(mode=ToolChoiceMode.NONE) if force_no_tools_next else None
+
             response, tool_calls = await self._call_llm(
                 provider=provider,
                 messages=messages,
                 tools=tool_definitions,
-                is_final_response=self._is_final_response_expected(),
+                is_final_response=self._is_final_response_expected() or force_no_tools_next,
+                tool_choice_override=iteration_tool_choice_override,
             )
 
             if response.content:
                 self._current_session.messages.append(response)
                 if self._on_message:
                     self._on_message(response)
+
+            if force_no_tools_next:
+                _logger.debug("agent_loop_complete", reason="post_failure_summary_emitted")
+                break
 
             if not tool_calls:
                 _logger.debug("agent_loop_complete", reason="no_tool_calls")
@@ -493,8 +506,8 @@ class Orchestrator:
             self._current_session.messages.append(tool_message)
 
             if all(not r.success for r in tool_results):
-                _logger.warning("agent_loop_stopping", reason="all_tool_calls_failed")
-                break
+                _logger.warning("agent_loop_all_tool_calls_failed", next_turn="summary_with_no_tools")
+                force_no_tools_next = True
 
         if iteration >= self._config.max_iterations:
             _logger.warning("agent_loop_max_iterations", max_iterations=self._config.max_iterations)
@@ -777,46 +790,77 @@ class Orchestrator:
         """
         return len(text) // 4
 
-    async def _get_model_context_window(self, provider: LLMProvider) -> int:
-        """Retrieve the context window for the current model.
+    async def _get_model_context_window(self, provider: LLMProvider) -> int | None:
+        """Resolve the context window for the active model.
 
-        Queries the provider's model list and finds the matching model ID.
-        Falls back to 128000 if the model is not found.
+        Resolution order:
+
+        1. If ``OrchestratorConfig.context_window_override`` is set, that value is used.
+        2. Otherwise the provider's ``list_models()`` result is searched for the active
+           model and its reported ``context_window`` is returned.
+        3. If neither source yields a usable value the method logs a warning identifying
+           the provider and model, and returns ``None`` so callers can skip context-window
+           based trimming rather than operating on a hardcoded assumption.
 
         Args:
             provider: The LLM provider to query.
 
         Returns:
-            int: Context window size in tokens.
+            int | None: Context window size in tokens, or ``None`` when neither an override
+                nor a provider value is available.
         """
+        if self._config.context_window_override is not None:
+            return self._config.context_window_override
+
         if self._current_session is None:
-            return 128000
+            return None
+
+        provider_name = provider.name.value
+        model_id = self._current_session.model
         try:
             models = await provider.list_models()
-            for model_info in models:
-                if model_info.id == self._current_session.model:
-                    return model_info.context_window
         except (OSError, RuntimeError, ValueError) as exc:
-            _logger.debug("context_window_lookup_failed", error=str(exc))
-        return 128000
+            _logger.warning(
+                "context_window_lookup_failed",
+                provider=provider_name,
+                model=model_id,
+                error=str(exc),
+            )
+            return None
+
+        for model_info in models:
+            if model_info.id == model_id:
+                return model_info.context_window
+
+        _logger.warning(
+            "context_window_unknown_model",
+            provider=provider_name,
+            model=model_id,
+        )
+        return None
 
     @staticmethod
     def trim_messages_to_context_window(
         messages: list[Message],
-        context_window: int,
+        context_window: int | None,
     ) -> list[Message]:
         """Remove oldest non-system messages until within context budget.
 
-        Keeps 85% of the context window as the token budget to leave
-        headroom for the response.
+        Keeps 85% of the context window as the token budget to leave headroom for the
+        response. When ``context_window`` is ``None`` the messages are returned unchanged
+        so callers can operate without trimming when the provider does not report a
+        context window and no override is configured.
 
         Args:
             messages: List of messages to trim.
-            context_window: Maximum context window in tokens.
+            context_window: Maximum context window in tokens, or ``None`` to skip trimming.
 
         Returns:
-            list[Message]: Trimmed list of messages.
+            list[Message]: Trimmed list of messages, or the original list when no trimming
+                is applied.
         """
+        if context_window is None:
+            return messages
         budget = int(context_window * 0.85)
         total = sum(Orchestrator._estimate_tokens(m.content) for m in messages)
         while total > budget and len(messages) > 1:
@@ -845,6 +889,7 @@ class Orchestrator:
         tools: list[ToolDefinition],
         *,
         is_final_response: bool = False,
+        tool_choice_override: ToolChoice | None = None,
     ) -> tuple[Message, list[ToolCall] | None]:
         """Call the LLM and handle response.
 
@@ -853,6 +898,10 @@ class Orchestrator:
             messages: Conversation messages.
             tools: Available tool definitions.
             is_final_response: Whether a final response is expected.
+            tool_choice_override: Optional per-call override that replaces
+                ``self._config.tool_choice`` for this single invocation. Used by the agent
+                loop to force a tool-free summarizing turn after every tool call in the
+                prior iteration failed.
 
         Returns:
             tuple[Message, list[ToolCall] | None]: Tuple of (response message, tool calls if any).
@@ -882,6 +931,7 @@ class Orchestrator:
             tool_count=len(tools),
         )
         enable_cache = self._config.cache is not None and self._config.cache.enabled
+        effective_tool_choice: ToolChoice | None = tool_choice_override if tool_choice_override is not None else self._config.tool_choice
 
         result: tuple[Message, list[ToolCall] | None]
         if use_streaming:
@@ -889,7 +939,7 @@ class Orchestrator:
                 provider=provider,
                 messages=messages,
                 tools=tools,
-                tool_choice=self._config.tool_choice,
+                tool_choice=effective_tool_choice,
                 thinking=self._config.thinking,
                 enable_cache=enable_cache,
             )
@@ -898,7 +948,7 @@ class Orchestrator:
                 provider=provider,
                 messages=messages,
                 tools=tools,
-                tool_choice=self._config.tool_choice,
+                tool_choice=effective_tool_choice,
                 thinking=self._config.thinking,
                 enable_cache=enable_cache,
             )
@@ -1157,7 +1207,7 @@ class Orchestrator:
                 duration_ms=elapsed_ms,
             )
 
-        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as e:
+        except (ToolError, OSError, RuntimeError, ValueError) as e:
             elapsed_ms = (time.time() - start_time) * 1000
             self._stats.failed_tool_calls += 1
 
@@ -1571,14 +1621,25 @@ class Orchestrator:
             "cutter": "get_cutter_bridge",
             "x64dbg": "get_x64dbg_bridge",
             "sandbox": "get_sandbox_bridge",
+            "hex_editor": "get_hex_editor_bridge",
         }
         getter_name = getter_map.get(tool_name.lower())
         if getter_name is None:
+            _logger.warning(
+                "typed_bridge_unknown_tool",
+                tool_name=tool_name,
+                known_tools=sorted(getter_map),
+            )
             return None
         try:
             bridge: object | None = getattr(self._tools, getter_name)()
         except (ToolError, OSError, RuntimeError, AttributeError) as exc:
-            _logger.debug("bridge_getter_failed", tool_name=tool_name, getter=getter_name, error=str(exc))
+            _logger.warning(
+                "typed_bridge_getter_failed",
+                tool_name=tool_name,
+                getter=getter_name,
+                error=str(exc),
+            )
             return None
         else:
             return bridge
@@ -1645,7 +1706,12 @@ class Orchestrator:
             self.set_confirmation_callback(on_confirmation)
 
     async def refresh_session_state(self) -> None:
-        """Refresh the session state including bridge analysis."""
+        """Refresh cached bridge analysis for the active session.
+
+        Re-runs :meth:`reanalyze_bridge_analysis` against the current session's active
+        binary so stale bridge results are regenerated. Does not reload the session from
+        disk or refresh any other session state.
+        """
         _logger.debug("session_state_refreshing")
         await self.reanalyze_bridge_analysis()
 
@@ -1706,66 +1772,100 @@ class Orchestrator:
         raise ValueError(error_message)
 
     async def shutdown(self) -> None:
-        """Shutdown the orchestrator and cleanup resources."""
+        """Shutdown the orchestrator and cleanup resources.
+
+        Each teardown step is guarded by ``except Exception`` so one failing stage cannot
+        leave other resources dangling. ``BaseException`` subclasses (notably
+        ``asyncio.CancelledError`` and ``KeyboardInterrupt``) are intentionally not
+        caught and propagate through the ``finally`` clause that clears final state. All
+        caught exceptions are collected and, once every stage has had a chance to run,
+        the first is re-raised (or an ``ExceptionGroup`` is raised when multiple stages
+        fail) so callers learn about every teardown failure.
+
+        Raises:
+            ExceptionGroup: When two or more teardown steps raised non-cancellation
+                exceptions, all collected failures are bundled into an ``ExceptionGroup``.
+                A single failure is re-raised directly rather than wrapped.
+        """
         if self._shutdown_called:
             _logger.debug("orchestrator_shutdown_already_called", state=self._state)
             return
         self._shutdown_called = True
         _logger.info("orchestrator_shutdown_started", state=self._state)
 
-        try:
-            await self.cancel()
-        except (OSError, RuntimeError, asyncio.InvalidStateError) as exc:
-            _logger.warning("shutdown_cancel_failed", state=self._state, error=str(exc))
+        errors: list[Exception] = []
 
         try:
-            await self._tools.shutdown()
-        except (OSError, RuntimeError, ToolError) as exc:
-            _logger.warning("shutdown_tools_cleanup_failed", state=self._state, error=str(exc))
-
-        if self._current_session:
             try:
-                await self._sessions.update(self._current_session)
-            except (OSError, RuntimeError, ValueError) as exc:
-                _logger.warning(
-                    "shutdown_session_save_failed",
-                    session_id=self._current_session.id,
-                    state=self._state,
-                    error=str(exc),
-                )
+                await self.cancel()
+            except Exception as exc:
+                _logger.exception("shutdown_cancel_failed", state=self._state)
+                errors.append(exc)
 
-        for provider_name in self._providers.list_registered():
-            provider = self._providers.get(provider_name)
-            if provider is None:
-                continue
-            unload = getattr(provider, "unload_model", None)
-            if callable(unload):
+            try:
+                await self._tools.shutdown()
+            except Exception as exc:
+                _logger.exception("shutdown_tools_cleanup_failed", state=self._state)
+                errors.append(exc)
+
+            if self._current_session:
                 try:
-                    unload_coro: Coroutine[object, object, None] = cast(
-                        "Coroutine[object, object, None]",
-                        unload(),
+                    await self._sessions.update(self._current_session)
+                except Exception as exc:
+                    _logger.exception(
+                        "shutdown_session_save_failed",
+                        session_id=self._current_session.id,
+                        state=self._state,
                     )
-                    await unload_coro
-                    _logger.debug("shutdown_provider_model_unloaded", provider=provider_name.value)
-                except (OSError, RuntimeError, ValueError) as exc:
-                    _logger.warning("shutdown_provider_unload_failed", provider=provider_name.value, error=str(exc))
+                    errors.append(exc)
 
-        session_cleanup = getattr(self._sessions, "cleanup", None)
-        if callable(session_cleanup):
-            try:
-                cleanup_coro: Coroutine[object, object, int] = cast(
-                    "Coroutine[object, object, int]",
-                    session_cleanup(),
-                )
-                deleted: int = await cleanup_coro
-                _logger.info("shutdown_session_cleanup_completed", deleted=deleted)
-            except (OSError, RuntimeError, ValueError) as exc:
-                _logger.warning("shutdown_session_cleanup_failed", error=str(exc))
+            for provider_name in self._providers.list_registered():
+                provider = self._providers.get(provider_name)
+                if provider is None:
+                    continue
+                unload = getattr(provider, "unload_model", None)
+                if callable(unload):
+                    try:
+                        unload_coro: Coroutine[object, object, None] = cast(
+                            "Coroutine[object, object, None]",
+                            unload(),
+                        )
+                        await unload_coro
+                        _logger.debug("shutdown_provider_model_unloaded", provider=provider_name.value)
+                    except Exception as exc:
+                        _logger.exception(
+                            "shutdown_provider_unload_failed",
+                            provider=provider_name.value,
+                        )
+                        errors.append(exc)
 
-        self._current_session = None
-        self._state = "idle"
-        structlog.contextvars.clear_contextvars()
-        _logger.info("orchestrator_shutdown_completed", state=self._state)
+            session_cleanup = getattr(self._sessions, "cleanup", None)
+            if callable(session_cleanup):
+                try:
+                    cleanup_coro: Coroutine[object, object, int] = cast(
+                        "Coroutine[object, object, int]",
+                        session_cleanup(),
+                    )
+                    deleted: int = await cleanup_coro
+                    _logger.info("shutdown_session_cleanup_completed", deleted=deleted)
+                except Exception as exc:
+                    _logger.exception("shutdown_session_cleanup_failed")
+                    errors.append(exc)
+        finally:
+            self._current_session = None
+            self._state = "idle"
+            structlog.contextvars.clear_contextvars()
+            _logger.info(
+                "orchestrator_shutdown_completed",
+                state=self._state,
+                error_count=len(errors),
+            )
+
+        if len(errors) == 1:
+            raise errors[0]
+        if len(errors) > 1:
+            group_message = "orchestrator shutdown encountered multiple failures"
+            raise ExceptionGroup(group_message, errors)
 
 
 _ARCH_KEYWORDS: dict[str, str] = {
