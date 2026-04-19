@@ -34,7 +34,7 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, create_openai_tool_schema
+from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_openai_tool_schema
 from intellicrack.providers.model_loader import (
     RECOMMENDED_MODELS_B580,
     DtypeOption,
@@ -60,8 +60,24 @@ from intellicrack.providers.xpu_utils import (
 try:
     import torch as _torch
 except ImportError:
-    get_logger("providers.local_transformers").debug("torch_import_unavailable")
+    get_logger("providers.local_transformers").warning(
+        "torch_import_unavailable",
+        impact="local transformer inference is disabled; install pytorch to enable",
+    )
     _torch = None
+
+try:
+    from transformers import (
+        AutoModelForCausalLM as _AutoModelForCausalLM,
+        AutoTokenizer as _AutoTokenizer,
+    )
+except ImportError:
+    get_logger("providers.local_transformers").warning(
+        "transformers_import_unavailable",
+        impact="CUDA model loading is disabled; install the transformers package to enable",
+    )
+    _AutoModelForCausalLM = None
+    _AutoTokenizer = None
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -76,10 +92,12 @@ _logger = get_logger("providers.local_transformers")
 _MSG_NOT_CONNECTED = "Provider not connected"
 _MSG_NO_MODEL_LOADED = "No model loaded"
 _MSG_TORCH_REQUIRED = "torch is required for local model inference"
-_ERR_LOAD_BOTH_FAILED = "Failed to load model on both XPU and CPU: %s"
+_MSG_TRANSFORMERS_REQUIRED = "transformers is required for local model inference"
+_ERR_LOAD_BOTH_FAILED = "Failed to load model on all attempted devices: %s"
 _ERR_LOAD_FAILED = "Failed to load model: %s"
 _ERR_INFERENCE_FAILED = "Local inference failed: %s"
 _ERR_STREAMING_FAILED = "Local streaming failed: %s"
+_ERR_CUDA_NOT_AVAILABLE = "CUDA is not available on this system"
 
 _DEFAULT_MODEL = "microsoft/Phi-3-mini-4k-instruct"
 _DEFAULT_MAX_NEW_TOKENS = 2048
@@ -156,10 +174,6 @@ class LocalTransformersProvider(LLMProviderBase):
     Provides local LLM inference using HuggingFace Transformers models
     with automatic Intel XPU acceleration when available, falling back
     to CPU when XPU is unavailable.
-
-    Args:
-        model_cache: Optional model cache. Uses global cache if None.
-        prefer_xpu: Whether to prefer XPU over CPU when available.
     """
 
     def __init__(
@@ -178,7 +192,8 @@ class LocalTransformersProvider(LLMProviderBase):
         self._model_cache = model_cache or get_global_model_cache()
         self._prefer_xpu = prefer_xpu
         self._loaded_model: LoadedModel | None = None
-        self._device_type: Literal["xpu", "cpu"] = "cpu"
+        self._device_type: Literal["cuda", "xpu", "cpu"] = "cpu"
+        self._cuda_available = False
         self._xpu_available = False
         self._is_arc_b580 = False
         self._windows_warnings: list[str] = []
@@ -198,9 +213,18 @@ class LocalTransformersProvider(LLMProviderBase):
         """Get the current device type.
 
         Returns:
-            str: "xpu" or "cpu" depending on what's being used.
+            str: "cuda", "xpu", or "cpu" depending on what's being used.
         """
         return self._device_type
+
+    @property
+    def cuda_available(self) -> bool:
+        """Check if CUDA is available.
+
+        Returns:
+            bool: True if at least one CUDA-capable GPU is available.
+        """
+        return self._cuda_available
 
     @property
     def xpu_available(self) -> bool:
@@ -232,20 +256,40 @@ class LocalTransformersProvider(LLMProviderBase):
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to the local transformers provider.
 
-        Initializes XPU detection and validates system requirements.
+        Probes available compute backends in deterministic order and
+        selects the first usable one: CUDA, then XPU (when the Intel
+        extension is present and ``prefer_xpu`` is True), then CPU.
         No API key is required for local inference.
 
         Args:
             credentials: Provider credentials (not used for local inference).
+
+        Raises:
+            ProviderError: If ``torch`` is not installed, since local
+                inference cannot proceed without it.
         """
         self._credentials = credentials
 
+        if _torch is None:
+            self._logger.warning(
+                "local_transformers_connect_torch_missing",
+                remedy="install pytorch to enable local transformer inference",
+            )
+            raise ProviderError(_MSG_TORCH_REQUIRED)
+
+        self._cuda_available = await asyncio.to_thread(self._probe_cuda)
         self._xpu_available = await asyncio.to_thread(is_xpu_available)
         self._is_arc_b580 = await asyncio.to_thread(is_arc_b580)
 
-        if self._xpu_available and self._prefer_xpu:
-            self._device_type = "xpu"
+        self._device_type = self._select_device()
 
+        if self._device_type == "cuda":
+            self._logger.info(
+                "cuda_selected",
+                device_type=self._device_type,
+                device_count=self._cuda_device_count(),
+            )
+        elif self._device_type == "xpu":
             _, warnings = await asyncio.to_thread(check_windows_requirements)
             self._windows_warnings = warnings
 
@@ -262,36 +306,124 @@ class LocalTransformersProvider(LLMProviderBase):
                         driver=device_info.driver_version,
                     )
             else:
-                self._logger.info("xpu_connected", device_type=self._device_type)
+                self._logger.info("xpu_selected", device_type=self._device_type)
+        elif self._xpu_available and not self._prefer_xpu:
+            self._logger.info("cpu_selected_preference", device_type="cpu")
+        elif self._cuda_available or self._xpu_available:
+            self._logger.info("cpu_selected_fallback", device_type="cpu")
         else:
-            self._device_type = "cpu"
-            if not self._xpu_available:
-                self._logger.info("xpu_not_available_using_cpu", device_type="cpu")
-            else:
-                self._logger.info("cpu_preferred_over_xpu", device_type="cpu")
+            self._logger.info("cpu_selected_no_accelerator", device_type="cpu")
 
-        self._connected = True
+        self.connected = True
         self._logger.info(
             "local_transformers_connected",
             device_type=self._device_type,
+            cuda_available=self._cuda_available,
             xpu_available=self._xpu_available,
             is_arc_b580=self._is_arc_b580,
         )
 
+    def _select_device(self) -> Literal["cuda", "xpu", "cpu"]:
+        """Choose the target compute backend in deterministic order.
+
+        The selection order is CUDA first, then XPU (when
+        ``prefer_xpu`` is True and the Intel extension exposes
+        ``torch.xpu``), then CPU.  XPU availability is guarded by
+        ``getattr(torch, "xpu", None)`` because the attribute is only
+        present when the Intel extension is installed.
+
+        Returns:
+            Literal["cuda", "xpu", "cpu"]: The selected backend.
+        """
+        if self._cuda_available:
+            return "cuda"
+        if self._xpu_available and self._prefer_xpu and _torch is not None and getattr(_torch, "xpu", None) is not None:
+            return "xpu"
+        return "cpu"
+
+    @staticmethod
+    def _probe_cuda() -> bool:
+        """Safely probe whether CUDA is available.
+
+        Returns:
+            bool: True when ``torch`` is importable and at least one
+            CUDA-capable device is present; False otherwise or on
+            probe failure.
+        """
+        if _torch is None:
+            return False
+        try:
+            cuda_module = getattr(_torch, "cuda", None)
+            if cuda_module is None:
+                return False
+            is_available = cuda_module.is_available()
+            return bool(is_available)
+        except (RuntimeError, OSError, AttributeError) as exc:
+            _logger.debug("cuda_probe_failed", error=str(exc))
+            return False
+
+    @staticmethod
+    def _cuda_device_count() -> int:
+        """Return the number of CUDA devices available.
+
+        Returns:
+            int: The count of CUDA-capable devices, or 0 when CUDA
+            cannot be probed.
+        """
+        if _torch is None:
+            return 0
+        try:
+            cuda_module = getattr(_torch, "cuda", None)
+            if cuda_module is None:
+                return 0
+            count = int(cuda_module.device_count())
+        except (RuntimeError, OSError, AttributeError, ValueError) as exc:
+            _logger.debug("cuda_device_count_failed", error=str(exc))
+            return 0
+        else:
+            return count
+
     async def disconnect(self) -> None:
-        """Disconnect from the provider and cleanup resources."""
+        """Disconnect from the provider and cleanup resources.
+
+        Releases the loaded model, clears any device-side KV caches
+        captured during generation, empties the XPU/CUDA allocator
+        caches when applicable, and finally forwards to the base
+        disconnect implementation.  All errors are logged rather than
+        propagated so the caller always observes a disconnected state.
+        """
         try:
             if self._loaded_model is not None:
                 self._loaded_model = None
 
-            if self._device_type == "xpu":
-                await asyncio.to_thread(clear_xpu_cache)
+            await asyncio.to_thread(self._release_device_caches)
 
             await super().disconnect()
             self._logger.info("local_transformers_disconnected", device_type=self._device_type)
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self._connected = False
+            self.connected = False
+
+    def _release_device_caches(self) -> None:
+        """Drop device-side allocator caches and run a GC pass.
+
+        Clears the XPU allocator cache when the selected device is
+        XPU, the CUDA allocator cache when the device is CUDA, and
+        always triggers a ``gc.collect()`` afterwards so KV-cache
+        tensors referenced by Python objects can be freed.
+        """
+        if self._device_type == "xpu":
+            clear_xpu_cache()
+        elif self._device_type == "cuda" and _torch is not None:
+            try:
+                cuda_module = getattr(_torch, "cuda", None)
+                if cuda_module is not None and cuda_module.is_available():
+                    empty_cache = getattr(cuda_module, "empty_cache", None)
+                    if callable(empty_cache):
+                        empty_cache()
+            except (RuntimeError, OSError, AttributeError) as exc:
+                _logger.debug("cuda_cache_clear_failed", error=str(exc))
+        gc.collect()
 
     async def list_models(self) -> list[ModelInfo]:
         """List local models that fit on the available hardware.
@@ -309,7 +441,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Raises:
             ProviderError: If the provider is not connected.
         """
-        if not self._connected:
+        if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         vram_utilisation_ceiling: float = 0.9
@@ -395,7 +527,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected:
+        if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -419,11 +551,17 @@ class LocalTransformersProvider(LLMProviderBase):
             formatted_messages = self._convert_messages_to_provider_format(messages)
             prompt = self._format_prompt(formatted_messages, tools)
 
-            response_text = await asyncio.to_thread(
+            response_text, prompt_tokens, completion_tokens = await asyncio.to_thread(
                 self._generate_sync,
                 prompt,
                 temperature,
                 max_tokens,
+            )
+
+            self._pending_usage = UsageInfo(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
             )
 
             tool_calls: list[ToolCall] | None = None
@@ -446,6 +584,8 @@ class LocalTransformersProvider(LLMProviderBase):
                 model=model_id,
                 device=self._device_type,
                 duration_ms=duration_ms,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
                 has_tool_calls=tool_calls is not None,
             )
         except (RuntimeError, ImportError, ValueError, OSError) as exc:
@@ -487,7 +627,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
-        if not self._connected:
+        if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
@@ -527,13 +667,18 @@ class LocalTransformersProvider(LLMProviderBase):
                 raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
 
     async def _ensure_model_loaded(self, model_id: str) -> None:
-        """Ensure the specified model is loaded.
+        """Ensure the specified model is loaded on the selected device.
+
+        Uses the device chosen during ``connect()``.  When the
+        selected device fails to load the model, the provider falls
+        back one level at a time: CUDA → XPU (if available) → CPU.
+        Partial allocations are released on failure before retrying.
 
         Args:
             model_id: Model to load.
 
         Raises:
-            ProviderError: If model loading fails.
+            ProviderError: If model loading fails on all attempted devices.
         """
         if self._loaded_model is not None and self._loaded_model.model_id == model_id:
             return
@@ -541,23 +686,11 @@ class LocalTransformersProvider(LLMProviderBase):
         config = ModelConfig(
             model_id=model_id,
             dtype="auto",
-            device="xpu" if self._device_type == "xpu" else "cpu",
+            device=self._config_device_for(self._device_type),
         )
 
         try:
-            if self._device_type == "xpu":
-                self._loaded_model = await asyncio.to_thread(
-                    load_model_for_xpu,
-                    config,
-                    self._model_cache,
-                )
-            else:
-                self._loaded_model = await asyncio.to_thread(
-                    load_model_for_cpu,
-                    config,
-                    self._model_cache,
-                )
-
+            self._loaded_model = await self._load_for_device(self._device_type, config)
             self._logger.info(
                 "model_loaded",
                 model_id=model_id,
@@ -565,32 +698,197 @@ class LocalTransformersProvider(LLMProviderBase):
                 dtype=self._loaded_model.dtype,
                 load_time_s=self._loaded_model.load_time_seconds,
             )
-
         except (RuntimeError, ImportError, ValueError, OSError) as exc:
-            self._logger.exception("model_load_failed", model_id=model_id, error=str(exc))
+            self._logger.warning("model_load_failed", model_id=model_id, error=str(exc))
+            await asyncio.to_thread(self._release_device_caches)
 
-            if self._device_type == "xpu":
-                self._logger.warning("xpu_load_failed_falling_back_to_cpu", model_id=model_id)
-                self._device_type = "cpu"
-                config = dataclass_replace(config, device="cpu")
-                try:
-                    self._loaded_model = await asyncio.to_thread(
-                        load_model_for_cpu,
-                        config,
-                        self._model_cache,
-                    )
-                except (RuntimeError, ImportError, ValueError, OSError) as cpu_exc:
-                    raise ProviderError(_ERR_LOAD_BOTH_FAILED % cpu_exc) from cpu_exc
-            else:
+            fallback_chain = self._fallback_chain_for(self._device_type)
+            if not fallback_chain:
                 raise ProviderError(_ERR_LOAD_FAILED % exc) from exc
+
+            last_error: BaseException = exc
+            for next_device in fallback_chain:
+                self._logger.warning(
+                    "device_fallback",
+                    failed_device=self._device_type,
+                    next_device=next_device,
+                    model_id=model_id,
+                )
+                self._device_type = next_device
+                config = dataclass_replace(config, device=self._config_device_for(next_device))
+                try:
+                    self._loaded_model = await self._load_for_device(next_device, config)
+                except (RuntimeError, ImportError, ValueError, OSError) as fb_exc:
+                    last_error = fb_exc
+                    await asyncio.to_thread(self._release_device_caches)
+                    continue
+                self._logger.info(
+                    "model_loaded_fallback",
+                    model_id=model_id,
+                    device=self._device_type,
+                    dtype=self._loaded_model.dtype,
+                    load_time_s=self._loaded_model.load_time_seconds,
+                )
+                return
+
+            raise ProviderError(_ERR_LOAD_BOTH_FAILED % last_error) from last_error
+
+    @staticmethod
+    def _config_device_for(device: Literal["cuda", "xpu", "cpu"]) -> Literal["xpu", "cpu", "auto"]:
+        """Translate the provider device to the model-loader config device.
+
+        The shared ``ModelConfig`` only understands xpu/cpu/auto values
+        that ``load_model_for_xpu`` and ``load_model_for_cpu`` accept.
+        CUDA is handled entirely inside the provider by
+        ``_load_model_for_cuda``, which reads only the model id, dtype,
+        trust_remote_code, and revision fields from the config; the
+        config's ``device`` field is therefore reported as ``"cpu"``
+        whenever the provider is actually targeting CUDA, so the
+        ``ModelConfig`` dataclass validation succeeds.
+
+        Args:
+            device: The provider's currently selected backend.
+
+        Returns:
+            Literal["xpu", "cpu", "auto"]: The value to place on
+            ``ModelConfig.device``.
+        """
+        if device == "xpu":
+            return "xpu"
+        return "cpu"
+
+    async def _load_for_device(self, device: Literal["cuda", "xpu", "cpu"], config: ModelConfig) -> LoadedModel:
+        """Dispatch to the correct model loader for the given device.
+
+        Args:
+            device: The target device for loading.
+            config: The model configuration to apply.
+
+        Returns:
+            LoadedModel: The loaded model bundle ready for inference.
+        """
+        if device == "xpu":
+            return await asyncio.to_thread(load_model_for_xpu, config, self._model_cache)
+        if device == "cuda":
+            return await asyncio.to_thread(self._load_model_for_cuda, config)
+        return await asyncio.to_thread(load_model_for_cpu, config, self._model_cache)
+
+    @staticmethod
+    def _fallback_chain_for(current: Literal["cuda", "xpu", "cpu"]) -> list[Literal["cuda", "xpu", "cpu"]]:
+        """Return the ordered fallback devices after a load failure.
+
+        Args:
+            current: The device that just failed to load the model.
+
+        Returns:
+            list[Literal["cuda", "xpu", "cpu"]]: Remaining devices to
+            try in order.  CPU is always the terminal fallback.
+        """
+        if current == "cuda":
+            return ["cpu"]
+        if current == "xpu":
+            return ["cpu"]
+        return []
+
+    def _load_model_for_cuda(self, config: ModelConfig) -> LoadedModel:
+        """Load a causal language model onto a CUDA device.
+
+        Mirrors the structure of ``load_model_for_cpu`` in the model
+        loader module but places the model on a CUDA device and
+        participates in the provider's shared model cache.  On failure
+        the partial CUDA allocation is released before re-raising.
+
+        Args:
+            config: Model configuration with ``device`` set to ``"cuda"``.
+
+        Returns:
+            LoadedModel: The loaded model bundle.
+
+        Raises:
+            ImportError: If torch or transformers are unavailable.
+            RuntimeError: If CUDA is not available or loading fails.
+        """
+        if _torch is None:
+            raise ImportError(_MSG_TORCH_REQUIRED)
+
+        cuda_module = getattr(_torch, "cuda", None)
+        if cuda_module is None or not cuda_module.is_available():
+            raise RuntimeError(_ERR_CUDA_NOT_AVAILABLE)
+
+        if _AutoModelForCausalLM is None or _AutoTokenizer is None:
+            raise ImportError(_MSG_TRANSFORMERS_REQUIRED)
+
+        cache = self._model_cache
+        dtype_str = "float16" if config.dtype == "auto" else config.dtype
+        cached = cache.get(config.model_id, dtype_str, "cuda")
+        if cached is not None:
+            return cached
+
+        torch_dtype_map: dict[str, Any] = {
+            "float32": _torch.float32,
+            "float16": _torch.float16,
+            "bfloat16": _torch.bfloat16,
+        }
+        torch_dtype = torch_dtype_map.get(dtype_str, _torch.float16)
+        device = _torch.device("cuda:0")
+
+        start_time = time.perf_counter()
+        tokenizer = _AutoTokenizer.from_pretrained(
+            config.model_id,
+            trust_remote_code=config.trust_remote_code,
+            revision=config.revision,
+        )
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+
+        try:
+            model = _AutoModelForCausalLM.from_pretrained(
+                config.model_id,
+                revision=config.revision,
+                trust_remote_code=config.trust_remote_code,
+                low_cpu_mem_usage=True,
+                torch_dtype=torch_dtype,
+            )
+            model = model.to(device)
+            model.eval()
+        except (RuntimeError, ImportError, ValueError, OSError):
+            try:
+                empty_cache = getattr(cuda_module, "empty_cache", None)
+                if callable(empty_cache):
+                    empty_cache()
+            except (RuntimeError, OSError, AttributeError) as cleanup_exc:
+                _logger.debug("cuda_cache_clear_after_failure", error=str(cleanup_exc))
+            raise
+
+        load_time = time.perf_counter() - start_time
+        memory_usage = estimate_model_memory(config.model_id, cast("DtypeOption", dtype_str), include_activations=False)
+
+        loaded_model = LoadedModel(
+            model=model,
+            tokenizer=tokenizer,
+            device=device,
+            dtype=dtype_str,
+            memory_usage_bytes=memory_usage,
+            model_id=config.model_id,
+            load_time_seconds=load_time,
+        )
+        cache.put(loaded_model)
+        return loaded_model
 
     def _generate_sync(
         self,
         prompt: str,
         temperature: float,
         max_tokens: int,
-    ) -> str:
+    ) -> tuple[str, int, int]:
         """Generate text synchronously.
+
+        Uses ``torch.inference_mode()`` rather than ``no_grad()`` because
+        ``inference_mode`` is applied inside the worker thread that
+        performs the generation call, ensuring the optimization is
+        active for the duration of the forward pass (``no_grad``
+        contexts captured on the caller thread do not propagate to
+        worker threads).
 
         Args:
             prompt: Input prompt.
@@ -598,7 +896,8 @@ class LocalTransformersProvider(LLMProviderBase):
             max_tokens: Maximum new tokens.
 
         Returns:
-            str: Generated text.
+            tuple[str, int, int]: A tuple of ``(generated text,
+            prompt_tokens, completion_tokens)``.
 
         Raises:
             RuntimeError: If no model is currently loaded.
@@ -620,7 +919,9 @@ class LocalTransformersProvider(LLMProviderBase):
         if attention_mask is not None:
             attention_mask = attention_mask.to(device)
 
-        with _torch.no_grad():
+        prompt_tokens = int(input_ids.shape[-1])
+
+        with _torch.inference_mode():
             outputs = model.generate(
                 input_ids,
                 attention_mask=attention_mask,
@@ -632,9 +933,10 @@ class LocalTransformersProvider(LLMProviderBase):
             )
 
         generated_ids = outputs[0][input_ids.shape[1] :]
+        completion_tokens = int(generated_ids.shape[-1])
         response: str = str(tokenizer.decode(generated_ids, skip_special_tokens=True))
 
-        return response.strip()
+        return response.strip(), prompt_tokens, completion_tokens
 
     async def _stream_generate(
         self,
@@ -643,6 +945,13 @@ class LocalTransformersProvider(LLMProviderBase):
         max_tokens: int,
     ) -> AsyncIterator[str]:
         """Stream text generation.
+
+        The per-token forward pass is executed inside
+        ``torch.inference_mode()`` within the worker thread itself,
+        not on the caller thread.  ``torch.no_grad`` and
+        ``inference_mode`` states are thread-local, so they must be
+        entered inside the function handed to ``asyncio.to_thread``
+        for the optimization to take effect.
 
         Args:
             prompt: Input prompt.
@@ -672,34 +981,43 @@ class LocalTransformersProvider(LLMProviderBase):
         if attention_mask is not None:
             attention_mask = attention_mask.to(device)
 
+        prompt_tokens = int(input_ids.shape[-1])
+        completion_tokens = 0
+
         generated_ids = input_ids.clone()
-        past_key_values = None
+        past_key_values: tuple[tuple[torch.Tensor, ...], ...] | None = None
 
-        for _ in range(max_tokens):
-            if self._cancel_requested:
-                break
+        def _forward_pass(
+            fwd_model: PreTrainedModel,
+            fwd_gen_ids: torch.Tensor,
+            fwd_attn_mask: torch.Tensor | None,
+            fwd_past_kv: tuple[tuple[torch.Tensor, ...], ...] | None,
+        ) -> CausalLMOutputWithPast:
+            """Run a single causal language model forward pass.
 
-            def _forward_pass(
-                fwd_model: PreTrainedModel,
-                fwd_gen_ids: torch.Tensor,
-                fwd_attn_mask: torch.Tensor | None,
-                fwd_past_kv: tuple[tuple[torch.Tensor, ...], ...] | None,
-            ) -> CausalLMOutputWithPast:
-                """Run a single causal language model forward pass.
+            The ``torch.inference_mode`` context is entered inside this
+            function so the optimization applies inside the worker
+            thread spawned by ``asyncio.to_thread``.
 
-                Args:
-                    fwd_model: Loaded causal language model to invoke.
-                    fwd_gen_ids: Token ids generated so far for the sequence.
-                    fwd_attn_mask: Optional attention mask aligned with the
-                        generated ids, or ``None`` to skip masking.
-                    fwd_past_kv: Cached key/value tensors from prior steps;
-                        when present, only the latest token id is evaluated.
+            Args:
+                fwd_model: Loaded causal language model to invoke.
+                fwd_gen_ids: Token ids generated so far for the sequence.
+                fwd_attn_mask: Optional attention mask aligned with the
+                    generated ids, or ``None`` to skip masking.
+                fwd_past_kv: Cached key/value tensors from prior steps;
+                    when present, only the latest token id is evaluated.
 
-                Returns:
-                    CausalLMOutputWithPast: The model output including logits
-                    and the updated past key/value cache.
-                """
-                use_ids = fwd_gen_ids[:, -1:] if fwd_past_kv else fwd_gen_ids
+            Returns:
+                CausalLMOutputWithPast: The model output including logits
+                and the updated past key/value cache.
+
+            Raises:
+                ImportError: If ``torch`` is not installed.
+            """
+            if _torch is None:
+                raise ImportError(_MSG_TORCH_REQUIRED)
+            use_ids = fwd_gen_ids[:, -1:] if fwd_past_kv else fwd_gen_ids
+            with _torch.inference_mode():
                 return fwd_model(
                     input_ids=use_ids,
                     attention_mask=fwd_attn_mask,
@@ -707,7 +1025,11 @@ class LocalTransformersProvider(LLMProviderBase):
                     use_cache=True,
                 )
 
-            with _torch.no_grad():
+        try:
+            for _ in range(max_tokens):
+                if self._cancel_requested:
+                    break
+
                 outputs = await asyncio.to_thread(
                     _forward_pass,
                     model,
@@ -716,29 +1038,37 @@ class LocalTransformersProvider(LLMProviderBase):
                     past_key_values,
                 )
 
-            logits = outputs.logits[:, -1, :]
-            past_key_values = outputs.past_key_values
+                logits = outputs.logits[:, -1, :]
+                past_key_values = outputs.past_key_values
 
-            if temperature > 0:
-                probs = _torch.softmax(logits / temperature, dim=-1)
-                next_token = _torch.multinomial(probs, num_samples=1)
-            else:
-                next_token = logits.argmax(dim=-1, keepdim=True)
+                if temperature > 0:
+                    probs = _torch.softmax(logits / temperature, dim=-1)
+                    next_token = _torch.multinomial(probs, num_samples=1)
+                else:
+                    next_token = logits.argmax(dim=-1, keepdim=True)
 
-            if next_token.item() == tokenizer.eos_token_id:
-                break
+                if next_token.item() == tokenizer.eos_token_id:
+                    break
 
-            generated_ids = _torch.cat([generated_ids, next_token], dim=-1)
+                generated_ids = _torch.cat([generated_ids, next_token], dim=-1)
+                completion_tokens += 1
 
-            if attention_mask is not None:
-                attention_mask = _torch.cat(
-                    [attention_mask, _torch.ones((1, 1), device=device)],
-                    dim=-1,
-                )
+                if attention_mask is not None:
+                    attention_mask = _torch.cat(
+                        [attention_mask, _torch.ones((1, 1), device=device)],
+                        dim=-1,
+                    )
 
-            token_text = tokenizer.decode(next_token[0], skip_special_tokens=True)
-            if token_text:
-                yield token_text
+                token_text = tokenizer.decode(next_token[0], skip_special_tokens=True)
+                if token_text:
+                    yield token_text
+        finally:
+            past_key_values = None
+            self._pending_usage = UsageInfo(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
+            )
 
     @override
     def _convert_messages_to_provider_format(
@@ -1015,13 +1345,15 @@ class LocalTransformersProvider(LLMProviderBase):
         """
         info: dict[str, object] = {
             "device_type": self._device_type,
+            "cuda_available": self._cuda_available,
             "xpu_available": self._xpu_available,
             "is_arc_b580": self._is_arc_b580,
             "warnings": self._windows_warnings,
         }
 
         if self._device_type == "xpu" and self._xpu_available:
-            if device_info := get_xpu_device_info(0):
+            device_info = get_xpu_device_info(0)
+            if device_info is not None:
                 info["device_name"] = device_info.device_name
                 info["total_memory_gb"] = device_info.total_memory_bytes / (1024**3)
                 info["driver_version"] = device_info.driver_version
@@ -1030,7 +1362,10 @@ class LocalTransformersProvider(LLMProviderBase):
 
             allocated, total = get_xpu_memory_info(0)
             info["allocated_memory_gb"] = allocated / (1024**3)
-            info["total_memory_gb"] = total / (1024**3) if total > 0 else 12.0
+            if total > 0:
+                info["total_memory_gb"] = total / (1024**3)
+            elif "total_memory_gb" not in info and device_info is not None:
+                info["total_memory_gb"] = device_info.total_memory_bytes / (1024**3)
 
         if self._loaded_model:
             info["loaded_model"] = self._loaded_model.model_id
@@ -1040,7 +1375,13 @@ class LocalTransformersProvider(LLMProviderBase):
         return info
 
     async def unload_model(self) -> None:
-        """Unload the currently loaded model to free memory."""
+        """Unload the currently loaded model to free memory.
+
+        Drops the cached model from the shared ``ModelCache``, clears
+        any device-side KV caches (``torch.xpu.empty_cache`` or
+        ``torch.cuda.empty_cache``), and triggers a GC pass so tensors
+        that still live in Python frames can be reclaimed.
+        """
         if self._loaded_model is not None:
             model_id = self._loaded_model.model_id
             dtype = self._loaded_model.dtype
@@ -1048,10 +1389,7 @@ class LocalTransformersProvider(LLMProviderBase):
             self._model_cache.remove(model_id, dtype, device_type)
             self._loaded_model = None
 
-            if self._device_type == "xpu":
-                await asyncio.to_thread(clear_xpu_cache)
-
-            gc.collect()
+            await asyncio.to_thread(self._release_device_caches)
 
             self._logger.info("model_unloaded", model_id=model_id)
 

@@ -24,7 +24,10 @@ from intellicrack.core.process_manager import ProcessManager
 try:
     import torch as _torch_module
 except ImportError:
-    get_logger("providers.xpu_utils").debug("torch_import_unavailable")
+    get_logger("providers.xpu_utils").warning(
+        "torch_import_unavailable",
+        impact="XPU detection is disabled; install pytorch with XPU support to enable",
+    )
     _torch_module = None
 
 if TYPE_CHECKING:
@@ -561,8 +564,8 @@ def _check_rebar_status() -> tuple[bool, str]:
             check=False,
         )
     except (OSError, ValueError, RuntimeError) as exc:
-        _logger.debug("xpu_rebar_check_failed", error=str(exc))
-        return (True, "")
+        _logger.warning("xpu_rebar_check_failed", error=str(exc))
+        return (False, "Could not verify Resizable BAR status; check system permissions")
     else:
         if result.returncode == 0:
             count = result.stdout.strip().splitlines()[-1].strip() if result.stdout.strip() else ""
