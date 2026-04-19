@@ -6,8 +6,9 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
-from typing import Any, Final, cast, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -20,23 +21,21 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.hex_editor._base import logger
 
 
-_DIFF_CHUNK_SIZE: Final[int] = 65536
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 class DiffWorker(QThread):
-    """Background worker for binary file comparison.
-
-    Computes byte-level differences between two files in a background
-    thread to avoid blocking the GUI on large files.
+    """Background worker that delegates byte-level comparison to HexEditorBridge.
 
     Args:
-        data_a: First file contents.
-        data_b: Second file contents.
-        path_a: Display path for first file.
-        path_b: Display path for second file.
+        bridge: HexEditorBridge instance providing compare_files.
+        path_a: Path to the first file.
+        path_b: Path to the second file.
         parent: Parent QObject.
 
     Attributes:
@@ -49,98 +48,38 @@ class DiffWorker(QThread):
 
     def __init__(
         self,
-        data_a: bytes,
-        data_b: bytes,
+        bridge: HexEditorBridge,
         path_a: str,
         path_b: str,
         parent: QThread | None = None,
     ) -> None:
-        """Initialize the DiffWorker with two file buffers.
+        """Initialize the DiffWorker with bridge + two file paths.
 
         Args:
-            data_a: First file contents.
-            data_b: Second file contents.
-            path_a: Display path for first file.
-            path_b: Display path for second file.
+            bridge: HexEditorBridge instance providing compare_files.
+            path_a: Path to the first file.
+            path_b: Path to the second file.
             parent: Parent QObject.
         """
         super().__init__(parent)
-        self._data_a = data_a
-        self._data_b = data_b
+        self._bridge = bridge
         self._path_a = path_a
         self._path_b = path_b
 
     @override
     def run(self) -> None:
-        """Execute the diff computation in the background thread."""
+        """Delegate byte-diff to HexEditorBridge.compare_files via async bridge."""
         try:
-            result = self._compute_diff()
+            raw: object = run_bridge_coroutine(self._bridge.compare_files(self._path_a, self._path_b))
+            if not isinstance(raw, dict):
+                self.diff_error.emit("compare_files returned non-dict result")
+                return
+            result: dict[str, Any] = raw
+            result.setdefault("path_a", self._path_a)
+            result.setdefault("path_b", self._path_b)
             self.diff_finished.emit(result)
-        except (ValueError, OSError) as exc:
+        except (RuntimeError, OSError, ValueError) as exc:
             self.diff_error.emit(str(exc))
-
-    def _compute_diff(self) -> dict[str, Any]:
-        """Compare two byte sequences and identify differing regions.
-
-        Scans both arrays in parallel, grouping consecutive differing
-        bytes into contiguous regions for efficient display.
-
-        Returns:
-            dict[str, Any]: Dict with regions list, total_differences,
-                files_identical flag, and file paths.
-        """
-        a = self._data_a
-        b = self._data_b
-        min_len = min(len(a), len(b))
-        max_len = max(len(a), len(b))
-
-        regions: list[dict[str, Any]] = []
-        diff_start = -1
-        total_diffs = 0
-
-        for i in range(min_len):
-            if a[i] != b[i]:
-                if diff_start < 0:
-                    diff_start = i
-            elif diff_start >= 0:
-                length = i - diff_start
-                regions.append({
-                    "offset": diff_start,
-                    "length": length,
-                    "type": "modified",
-                })
-                total_diffs += length
-                diff_start = -1
-
-        if diff_start >= 0:
-            length = min_len - diff_start
-            regions.append({
-                "offset": diff_start,
-                "length": length,
-                "type": "modified",
-            })
-            total_diffs += length
-
-        if len(a) != len(b):
-            extra_start = min_len
-            extra_len = max_len - min_len
-            region_type = "extra_in_a" if len(a) > len(b) else "extra_in_b"
-            regions.append({
-                "offset": extra_start,
-                "length": extra_len,
-                "type": region_type,
-            })
-            total_diffs += extra_len
-
-        return {
-            "regions": regions,
-            "total_differences": total_diffs,
-            "files_identical": total_diffs == 0,
-            "path_a": self._path_a,
-            "path_b": self._path_b,
-            "size_a": len(a),
-            "size_b": len(b),
-        }
 
 
 class ComparisonMixin:
@@ -199,41 +138,50 @@ class ComparisonMixin:
         if self.document is None:
             return
 
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            logger.warning("diff_bridge_unavailable")
+            return
+
         parent = self if isinstance(self, QWidget) else None
-        result = QFileDialog.getOpenFileName(parent, "Compare With", "", "All Files (*)")
-        compare_path = result[0] if result else ""
+        dialog_result = QFileDialog.getOpenFileName(parent, "Compare With", "", "All Files (*)")
+        compare_path = dialog_result[0] if dialog_result else ""
         if not compare_path:
-            return
-
-        try:
-            data_b = Path(compare_path).read_bytes()
-        except OSError as exc:
-            logger.warning("diff_file_read_failed", path=compare_path, error=str(exc))
-            return
-
-        try:
-            doc_len: int = self.document.length()
-            raw_a: object = self.document.read(0, doc_len)
-            if isinstance(raw_a, list):
-                data_a = bytes(cast("list[int]", raw_a))
-            elif isinstance(raw_a, bytearray):
-                data_a = bytes(raw_a)
-            elif isinstance(raw_a, bytes):
-                data_a = raw_a
-            else:
-                return
-        except (AttributeError, ValueError) as exc:
-            logger.warning("diff_doc_read_failed", error=str(exc))
             return
 
         if self._diff_worker is not None and self._diff_worker.isRunning():
             return
 
+        if self.file_path is not None and Path(self.file_path).exists():
+            path_a = str(self.file_path)
+        else:
+            try:
+                doc_len: int = self.document.length()
+                raw_a: object = self.document.read(0, doc_len)
+                if isinstance(raw_a, list):
+                    data_a = bytes(cast("list[int]", raw_a))
+                elif isinstance(raw_a, bytearray):
+                    data_a = bytes(raw_a)
+                elif isinstance(raw_a, bytes):
+                    data_a = raw_a
+                else:
+                    return
+            except (AttributeError, ValueError) as exc:
+                logger.warning("diff_doc_read_failed", error=str(exc))
+                return
+
+            try:
+                with tempfile.NamedTemporaryFile(prefix="intellicrack_diff_", delete=False) as tmp:
+                    tmp.write(data_a)
+                    path_a = tmp.name
+            except OSError as exc:
+                logger.warning("diff_temp_write_failed", error=str(exc))
+                return
+
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText("Computing diff...")
 
-        path_a = str(self.file_path) if self.file_path else "current"
-        worker = DiffWorker(data_a, data_b, path_a, compare_path)
+        worker = DiffWorker(bridge, path_a, compare_path)
         worker.diff_finished.connect(self._on_diff_finished)
         worker.diff_error.connect(self._on_diff_error)
         self._diff_worker = worker
