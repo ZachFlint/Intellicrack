@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Live thread-safety tests for the provider registry singleton (Unit 6, C25a)."""
+"""Live thread-safety tests for the provider registry singleton."""
 
 from __future__ import annotations
 

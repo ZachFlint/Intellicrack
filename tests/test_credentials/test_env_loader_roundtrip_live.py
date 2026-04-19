@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Live round-trip tests for the .env loader/writer (Unit 9, C34).
+"""Live round-trip tests for the .env loader/writer.
 
 Verifies the round-trip property
 ``parse(write({key: value})) == {key: value}`` across a wide range of value

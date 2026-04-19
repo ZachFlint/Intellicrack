@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Live end-to-end tests for the OAuth manager (Group C unit 8).
+"""Live end-to-end tests for the OAuth manager.
 
 These tests cover:
 

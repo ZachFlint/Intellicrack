@@ -2,11 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Live end-to-end tests for the Unit 1 Anthropic usage/thinking buffers.
+"""Live end-to-end tests for the Anthropic usage and extended-thinking buffers.
 
 These tests exercise :class:`AnthropicProvider` against the real
 Anthropic API to confirm the streaming usage buffer and the extended
-thinking buffer added in Group C / Unit 1 are populated correctly.
+thinking buffer populated by the provider are observable via
+``get_pending_usage()`` and ``get_pending_thinking()``.
 
 The tests skip automatically when ``ANTHROPIC_API_KEY`` is not
 available from the credential store.
@@ -41,11 +42,11 @@ _ENV_PATH = _PROJECT_ROOT / ".env"
 
 _SKIP_REASON_NO_KEY = (
     "ANTHROPIC_API_KEY not available in credential store (keyring or .env). "
-    "Live Unit 1 batch test skipped."
+    "Live Anthropic buffers test skipped."
 )
 _SKIP_REASON_NO_CREDIT = (
     "Anthropic API returned a credit / payment error before the live buffers "
-    "could be validated. Live Unit 1 batch test skipped."
+    "could be validated. Live Anthropic buffers test skipped."
 )
 
 
@@ -111,7 +112,7 @@ async def _resolve_anthropic_credentials() -> ProviderCredentials | None:
 
 
 async def _pick_chat_model(provider: AnthropicProvider) -> str:
-    """Select a live model identifier usable for the batch tests.
+    """Select a live model identifier usable for the chat tests.
 
     Prefers a Haiku-class model when available because it is cheapest
     for smoke-testing; otherwise falls back to the first model the API
@@ -154,7 +155,7 @@ async def _pick_thinking_model(provider: AnthropicProvider) -> str | None:
 
 
 @pytest.mark.asyncio
-async def test_unit1_live_anthropic_usage_and_thinking_buffers() -> None:
+async def test_anthropic_chat_and_stream_populate_usage_and_thinking() -> None:
     """Validate chat() and chat_stream() populate usage + thinking buffers.
 
     The test asserts that ``get_pending_usage()`` returns a populated
@@ -254,7 +255,7 @@ async def test_unit1_live_anthropic_usage_and_thinking_buffers() -> None:
         await provider.disconnect()
 
 
-def test_unit1_live_smoke_module_importable() -> None:
+def test_live_module_importable() -> None:
     """Smoke-check that the module imports and event loop can be created.
 
     Provides a non-skipped test so the file is still collected when

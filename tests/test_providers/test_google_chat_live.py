@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Group C Unit 2 live end-to-end tests for GoogleProvider.
+"""Live end-to-end tests for GoogleProvider chat and streaming.
 
 These tests exercise ``chat()`` and ``chat_stream()`` against the live
 Google Gemini API using ``gemini-1.5-flash``. They are skipped when no
-``GOOGLE_API_KEY`` is configured in the project ``.env`` so the batch
-pipeline remains runnable offline.
+``GOOGLE_API_KEY`` is configured in the project ``.env`` so the suite
+remains runnable offline.
 
 Tests also assert that usage metadata is populated on the provider's
 ``_pending_usage`` attribute and retrievable via ``get_pending_usage()``.

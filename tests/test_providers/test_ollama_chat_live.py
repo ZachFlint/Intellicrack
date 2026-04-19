@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Live end-to-end integration tests for the Ollama provider (Unit 3).
+"""Live end-to-end integration tests for the Ollama provider.
 
 These tests exercise a running local Ollama daemon via HTTP. They probe
 ``/api/tags`` to pick the first installed model and then perform one

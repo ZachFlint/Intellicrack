@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Live end-to-end tests for Unit 7 credential store fixes.
+"""Live end-to-end tests for the credential store against the real OS keyring.
 
 These tests exercise the real Windows Credential Manager backend where
 available. Each test reloads the credential store module via
@@ -11,14 +11,14 @@ without touching private attributes directly.
 
 The tests verify:
 
-* ``list_providers()`` does not deadlock when called with an ``asyncio.Lock``
-  held (C26 fix verification).
+* ``list_providers()`` does not deadlock when the internal ``asyncio.Lock``
+  would otherwise be re-entered.
 * ``get_credential_store()`` is thread-safe under concurrent access from
-  many threads (C25b fix verification).
+  many threads.
 * A credential can be round-tripped through the real OS keyring backend.
 * Simulated keyring failures raise ``KeyringError`` and are mapped into
   :class:`CredentialStoreError` or :class:`KeyringUnavailableError` as
-  appropriate (C27-C29 fix verification).
+  appropriate.
 """
 
 from __future__ import annotations
