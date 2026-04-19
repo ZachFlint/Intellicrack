@@ -61,11 +61,25 @@ rules:
     severity: ERROR
     languages: [python]
     pattern-either:
-      - pattern: $L.$LVL(str($E), ...)
-      - pattern: $L.$LVL(repr($E), ...)
-      - pattern: $L.$LVL(type($E).__name__, ...)
-      - pattern: $L.$LVL($E.args, ...)
-      - pattern: $L.$LVL($E.message, ...)
+      - pattern: _logger.$LVL(str($E), ...)
+      - pattern: _logger.$LVL(repr($E), ...)
+      - pattern: _logger.$LVL(type($E).__name__, ...)
+      - pattern: _logger.$LVL($E.args, ...)
+      - pattern: _logger.$LVL($E.message, ...)
+      - pattern: self._logger.$LVL(str($E), ...)
+      - pattern: self._logger.$LVL(repr($E), ...)
+      - pattern: self._logger.$LVL(type($E).__name__, ...)
+      - pattern: self._logger.$LVL($E.args, ...)
+      - pattern: self._logger.$LVL($E.message, ...)
+      - pattern: logger.$LVL(str($E), ...)
+      - pattern: logger.$LVL(repr($E), ...)
+      - pattern: logger.$LVL(type($E).__name__, ...)
+      - pattern: self.logger.$LVL(str($E), ...)
+      - pattern: self.logger.$LVL(repr($E), ...)
+      - pattern: self.logger.$LVL(type($E).__name__, ...)
+      - pattern: cls._logger.$LVL(str($E), ...)
+      - pattern: cls._logger.$LVL(repr($E), ...)
+      - pattern: cls._logger.$LVL(type($E).__name__, ...)
 
   - id: intellicrack-logging-g4-fstring-in-kwarg-value
     message: >-
@@ -166,7 +180,12 @@ rules:
       consumer can distinguish "absent" from "actually None".
     severity: INFO
     languages: [python]
-    pattern: $L.$LVL(..., $K=None, ...)
+    pattern-either:
+      - pattern: _logger.$LVL(..., $K=None, ...)
+      - pattern: self._logger.$LVL(..., $K=None, ...)
+      - pattern: logger.$LVL(..., $K=None, ...)
+      - pattern: self.logger.$LVL(..., $K=None, ...)
+      - pattern: cls._logger.$LVL(..., $K=None, ...)
 
   - id: intellicrack-logging-g9-kwarg-value-is-empty-collection
     message: >-

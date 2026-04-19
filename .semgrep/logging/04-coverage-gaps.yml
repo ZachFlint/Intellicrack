@@ -200,9 +200,13 @@ rules:
     severity: WARNING
     languages: [python]
     patterns:
-      - pattern: |
-          def $M(self, ...):
-              ...
+      - pattern-either:
+          - pattern: |
+              def $M(self, ...):
+                  ...
+          - pattern: |
+              async def $M(self, ...):
+                  ...
       - pattern-inside: |
           class $C(...):
               ...
@@ -211,7 +215,7 @@ rules:
           regex: '.*Bridge.*'
       - metavariable-regex:
           metavariable: $M
-          regex: '^(?!_|__init__|__enter__|__exit__|__aenter__|__aexit__|__del__|__repr__|__str__).+'
+          regex: '^(?!_|__init__|__enter__|__exit__|__aenter__|__aexit__|__del__|__repr__|__str__|name$|tool_definition$|capabilities$).+'
       - pattern-not: |
           def $M(self, ...):
               ...
@@ -222,6 +226,54 @@ rules:
               ...
               _logger.$LVL(...)
               ...
+      - pattern-not: |
+          async def $M(self, ...):
+              ...
+              self._logger.$LVL(...)
+              ...
+      - pattern-not: |
+          async def $M(self, ...):
+              ...
+              _logger.$LVL(...)
+              ...
+      - pattern-not: |
+          @property
+          def $M(self, ...):
+              ...
+      - pattern-not: |
+          @staticmethod
+          def $M(self, ...):
+              ...
+      - pattern-not: |
+          @classmethod
+          def $M(self, ...):
+              ...
+      - pattern-not: |
+          def $M(self, ...) -> $RT:
+              return $X
+      - pattern-not: |
+          def $M(self, ...):
+              return $X
+      - pattern-not: |
+          async def $M(self, ...) -> $RT:
+              return $X
+      - pattern-not: |
+          async def $M(self, ...):
+              return $X
+      - pattern-not: |
+          def $M(self, $P) -> $RT:
+              self.$A = $P
+      - pattern-not: |
+          def $M(self, $P):
+              self.$A = $P
+      - pattern-not: |
+          def $M(self, $P) -> $RT:
+              self.$A = $P
+              return $X
+      - pattern-not: |
+          def $M(self, $P):
+              self.$A = $P
+              return $X
 
   - id: intellicrack-logging-d7-subprocess-without-log
     message: >-
