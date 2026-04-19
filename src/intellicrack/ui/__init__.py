@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from intellicrack.ui.app import AsyncWorker, MainWindow
 from intellicrack.ui.chat import ChatInput, ChatPanel, MessageBubble
+from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs import SplashScreen
 from intellicrack.ui.highlighter import (
     AssemblySyntaxHighlighter,
@@ -21,6 +22,7 @@ from intellicrack.ui.highlighter import (
     PythonSyntaxHighlighter,
     get_highlighter_for_language,
 )
+from intellicrack.ui.preferences import PreferencesDialog
 from intellicrack.ui.provider_config import (
     ModelSelectionDialog,
     ProviderConfigDialog,
@@ -65,6 +67,7 @@ __all__: list[str] = [
     "MessageBubble",
     "ModelSelectionDialog",
     "NewSessionDialog",
+    "PreferencesDialog",
     "ProviderConfigDialog",
     "ProviderSettingsWidget",
     "PythonSyntaxHighlighter",
@@ -74,6 +77,7 @@ __all__: list[str] = [
     "SplashScreen",
     "ThemeManager",
     "ToolConfigDialog",
+    "ToolConfirmationDialog",
     "ToolOutputPanel",
     "ToolSettingsWidget",
     "ToolStatusDialog",

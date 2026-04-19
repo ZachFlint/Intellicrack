@@ -1,0 +1,329 @@
+rules:
+
+  - id: intellicrack-logging-i1-tool-dispatch-without-context
+    message: >-
+      Tool-dispatch entry point (`execute_tool_call`,
+      `invoke_tool`, `_dispatch_tool`, `run_tool`,
+      `handle_tool_call`) must log the tool name, arguments, and
+      ultimately the result/duration. Without this, the orchestration
+      layer cannot show users which tool was invoked, with what
+      arguments, or how long it took.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def execute_tool_call(self, ...):
+                  ...
+          - pattern: |
+              def invoke_tool(self, ...):
+                  ...
+          - pattern: |
+              def _dispatch_tool(self, ...):
+                  ...
+          - pattern: |
+              def run_tool(self, ...):
+                  ...
+          - pattern: |
+              def handle_tool_call(self, ...):
+                  ...
+          - pattern: |
+              async def execute_tool_call(self, ...):
+                  ...
+          - pattern: |
+              async def invoke_tool(self, ...):
+                  ...
+          - pattern: |
+              async def _dispatch_tool(self, ...):
+                  ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(..., tool_name=$T, ...)
+              ...
+      - pattern-not: |
+          async def $FN(self, ...):
+              ...
+              $L.$LVL(..., tool_name=$T, ...)
+              ...
+
+  - id: intellicrack-logging-i2-memory-patch-without-audit-log
+    message: >-
+      Memory write / patch operation
+      (`WriteProcessMemory`, `VirtualProtectEx`, `NtWriteVirtualMemory`,
+      `write_process_memory`, `patch_bytes`, `apply_patch`,
+      `write_memory`, `poke`, `frida Memory.writeByteArray`) without
+      an adjacent log. Patches are the single most security-relevant
+      action this platform performs - every one MUST be recorded with
+      target, address, size, and outcome.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: WriteProcessMemory(...)
+          - pattern: VirtualProtectEx(...)
+          - pattern: NtWriteVirtualMemory(...)
+          - pattern: $O.write_process_memory(...)
+          - pattern: $O.write_memory(...)
+          - pattern: $O.patch_bytes(...)
+          - pattern: $O.apply_patch(...)
+          - pattern: $O.poke(...)
+          - pattern: Memory.writeByteArray(...)
+          - pattern: Memory.writeU8(...)
+          - pattern: Memory.writeU16(...)
+          - pattern: Memory.writeU32(...)
+          - pattern: Memory.writeU64(...)
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+
+  - id: intellicrack-logging-i3-frida-script-load-without-id-log
+    message: >-
+      Frida `session.create_script(...)` / `script.load()` must log
+      the resulting `script_id` - without it, failed-script events
+      cannot be correlated to the script that triggered them, and the
+      unified workspace loses the Frida-side execution record.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $S.create_script(...)
+          - pattern: $S.load()
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.$LVL(..., script_id=$X, ...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.$LVL(..., script_id=$X, ...)
+              ...
+
+  - id: intellicrack-logging-i4-disassembler-call-missing-binary-context
+    message: >-
+      Bridge call to an external disassembler/debugger (IDA, Ghidra,
+      Radare2, r2, rizin, x64dbg, WinDbg, gdb) without logging the
+      target binary and address/offset. Disassembler outputs without
+      this context cannot be reconciled with what the user was
+      analysing.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $O.run_ida(...)
+          - pattern: $O.run_ghidra(...)
+          - pattern: $O.run_r2(...)
+          - pattern: $O.run_radare2(...)
+          - pattern: $O.run_rizin(...)
+          - pattern: $O.run_x64dbg(...)
+          - pattern: $O.run_windbg(...)
+          - pattern: $O.run_gdb(...)
+          - pattern: $O.analyze_binary(...)
+          - pattern: $O.disassemble(...)
+          - pattern: $O.decompile(...)
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.$LVL(..., binary_path=$B, ...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.$LVL(..., binary_path=$B, ...)
+              ...
+
+  - id: intellicrack-logging-i5-provider-completion-without-model
+    message: >-
+      AI provider `generate` / `stream` / `chat` / `complete` /
+      `create_completion` call without a log that includes the
+      `model` kwarg. The shared workspace's AI event stream is
+      indexed by model - completions without it become untraceable.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def generate(self, ...):
+                  ...
+          - pattern: |
+              def stream(self, ...):
+                  ...
+          - pattern: |
+              def chat(self, ...):
+                  ...
+          - pattern: |
+              def complete(self, ...):
+                  ...
+          - pattern: |
+              def create_completion(self, ...):
+                  ...
+          - pattern: |
+              async def generate(self, ...):
+                  ...
+          - pattern: |
+              async def stream(self, ...):
+                  ...
+          - pattern: |
+              async def chat(self, ...):
+                  ...
+          - pattern: |
+              async def complete(self, ...):
+                  ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(..., model=$M, ...)
+              ...
+      - pattern-not: |
+          async def $FN(self, ...):
+              ...
+              $L.$LVL(..., model=$M, ...)
+              ...
+
+  - id: intellicrack-logging-i6-credential-op-missing-key-id
+    message: >-
+      Credential store operation (`.save`, `.load`, `.delete`,
+      `.rotate`, `.get`, `.put`) on a credential store without a log
+      that includes a `key_id` / `name` kwarg. NEVER log the
+      credential VALUE, but DO log the key identifier so operators
+      can audit which secrets were accessed.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def save(self, ...):
+                  ...
+          - pattern: |
+              def load(self, ...):
+                  ...
+          - pattern: |
+              def delete(self, ...):
+                  ...
+          - pattern: |
+              def rotate(self, ...):
+                  ...
+          - pattern: |
+              def get(self, ...):
+                  ...
+          - pattern: |
+              def put(self, ...):
+                  ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              self._logger.$LVL(..., key_id=$K, ...)
+              ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              _logger.$LVL(..., key_id=$K, ...)
+              ...
+
+  - id: intellicrack-logging-i7-session-state-change-without-session-id
+    message: >-
+      Mutating a session's active target / state / binding without
+      logging with the `session_id` kwarg. Session correlation is
+      the backbone of the unified workspace; every state change
+      must carry its session id.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $S.active_target = $V
+          - pattern: $S.current_binary = $V
+          - pattern: $S.active_bridge = $V
+          - pattern: $S.active_provider = $V
+          - pattern: $S.attached_pid = $V
+      - pattern-not-inside: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(..., session_id=$SID, ...)
+              ...
+
+  - id: intellicrack-logging-i8-sandbox-lifecycle-without-log
+    message: >-
+      Sandbox lifecycle transitions (`start`, `stop`, `reset`,
+      `snapshot`, `restore`, `launch`) must be logged - sandbox
+      execution is one of the most security-sensitive boundaries
+      the platform crosses. Emit entry and result logs.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def start(self, ...):
+                  ...
+          - pattern: |
+              def stop(self, ...):
+                  ...
+          - pattern: |
+              def reset(self, ...):
+                  ...
+          - pattern: |
+              def snapshot(self, ...):
+                  ...
+          - pattern: |
+              def restore(self, ...):
+                  ...
+          - pattern: |
+              def launch(self, ...):
+                  ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(...)
+              ...
+
+  - id: intellicrack-logging-i9-unpack-without-packer-log
+    message: >-
+      Unpacker / unprotector routine (`unpack`, `unpack_binary`,
+      `unprotect`, `remove_protection`, `deobfuscate`, `decrypt_binary`)
+      without a log that reports the detected packer/protection and
+      the outcome. Operators must be able to see which protections
+      were encountered and how each was handled.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def unpack(self, ...):
+                  ...
+          - pattern: |
+              def unpack_binary(self, ...):
+                  ...
+          - pattern: |
+              def unprotect(self, ...):
+                  ...
+          - pattern: |
+              def remove_protection(self, ...):
+                  ...
+          - pattern: |
+              def deobfuscate(self, ...):
+                  ...
+          - pattern: |
+              def decrypt_binary(self, ...):
+                  ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(..., packer=$P, ...)
+              ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(..., packer_detected=$P, ...)
+              ...
+      - pattern-not: |
+          def $FN(self, ...):
+              ...
+              $L.$LVL(..., protection=$P, ...)
+              ...

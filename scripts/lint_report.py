@@ -24,7 +24,7 @@ import sys
 from collections import defaultdict
 from html import escape as html_escape
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 
 if TYPE_CHECKING:
@@ -290,6 +290,187 @@ def process_semgrep(data: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]
         })
     cnt = sum(len(v) for v in grouped.values())
     return grouped, cnt
+
+
+_SEMGREP_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+_SEMGREP_RULE_RE = re.compile(r"^\s*[^\w\s]+\s+([\w\.\-]+)\s*$")
+_SEMGREP_FINDING_RE = re.compile(r"^\s+(\d+)\S*\s*[\u2506\u2502\|]\s(.*)$")
+_SEMGREP_SEPARATOR_RE = re.compile(r"^\s+\u22ee\S*\s*[\u2506\u2502\|]")
+_SEMGREP_FILE_RE = re.compile(r"^\s+(\S.+?\.(?:py|pyi|js|ts|tsx|jsx|go|java|rb|rs|c|cpp|h|hpp|cs|php|sh|yaml|yml|json|sol))\s*$")
+_SEMGREP_SEVERITY_RE = re.compile(r"\b(Blocking|Error|High|Critical|Warning|Medium|Info|Low|Note)\b", re.IGNORECASE)
+_SEMGREP_BANNER_LINES = ("Code Findings", "Scan Summary", "findings", "Scanning", "Ran ", "Findings:")
+
+
+class _SemgrepLineInfo(NamedTuple):
+    """Classification result for a single Semgrep text-output line.
+
+    Attributes:
+        kind: One of ``"banner"``, ``"separator"``, ``"file"``, ``"rule"``,
+            ``"severity"``, ``"finding"``, ``"message"``, or ``"ignore"``.
+        str_payload: String capture for file/rule/severity/message kinds.
+        finding_line: Source line number for ``"finding"`` kind.
+        finding_excerpt: Code excerpt for ``"finding"`` kind.
+
+    """
+
+    kind: str
+    str_payload: str
+    finding_line: int
+    finding_excerpt: str
+
+
+def _classify_semgrep_line(
+    line: str,
+    current_file: str | None,
+    current_rule: str | None,
+    current_message_parts: list[str],
+) -> _SemgrepLineInfo:
+    """Classify a single Semgrep text-output line.
+
+    Args:
+        line: The cleaned (ANSI-stripped) text line.
+        current_file: The file header most recently observed, or None.
+        current_rule: The rule header most recently observed, or None.
+        current_message_parts: The accumulated message lines so far.
+
+    Returns:
+        A :class:`_SemgrepLineInfo` describing how to interpret the
+        line.
+
+    """
+    if not line.strip() or any(marker in line for marker in _SEMGREP_BANNER_LINES):
+        return _SemgrepLineInfo("banner", "", 0, "")
+    if _SEMGREP_SEPARATOR_RE.match(line):
+        return _SemgrepLineInfo("separator", "", 0, "")
+    file_match = _SEMGREP_FILE_RE.match(line)
+    if file_match is not None and not line.lstrip().startswith(("\u276f", ">")):
+        return _SemgrepLineInfo(
+            "file", file_match.group(1).strip().replace("\\", "/"), 0, "",
+        )
+    rule_match = _SEMGREP_RULE_RE.match(line)
+    if rule_match is not None and current_file is not None:
+        candidate = rule_match.group(1)
+        if "." in candidate or candidate.startswith(
+            ("intellicrack-", "semgrep-", "python.", "generic."),
+        ):
+            return _SemgrepLineInfo("rule", candidate, 0, "")
+    severity_marker = _SEMGREP_SEVERITY_RE.search(line)
+    if severity_marker is not None and current_rule is not None and not current_message_parts:
+        return _SemgrepLineInfo(
+            "severity", _normalize_semgrep_severity(severity_marker.group(1)), 0, "",
+        )
+    finding_match = _SEMGREP_FINDING_RE.match(line)
+    if finding_match is not None and current_file is not None and current_rule is not None:
+        return _SemgrepLineInfo(
+            "finding",
+            "",
+            int(finding_match.group(1)),
+            finding_match.group(2).strip(),
+        )
+    if current_rule is not None and line.lstrip().startswith(
+        ("`", "The ", "A ", "An ", "Use ", "Never ", "Do ", "Avoid ", "Prefer ", "Ensure ", "Require ", "`_"),
+    ):
+        return _SemgrepLineInfo("message", line.strip(), 0, "")
+    return _SemgrepLineInfo("ignore", "", 0, "")
+
+
+def process_semgrep_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process Semgrep's `--text` CLI output into grouped findings.
+
+    The native `semgrep scan --json` pipeline is unreliable on Windows
+    (semgrep 1.159 semgrep-core RPC writes ``<ERROR: missing output>``
+    to stdout when multiple `--config` flags are combined). Parsing
+    the human-readable text output bypasses the JSON formatter entirely
+    while preserving every finding Semgrep emitted.
+
+    Supported text lines:
+      - Indented file paths ending in a source extension.
+      - Rule headers of the form ``<arrows> <rule-id>``.
+      - Severity markers like ``<< Blocking >>`` or ``<< High >>``.
+      - Finding lines ``    NN<sep> <code excerpt>`` where ``<sep>`` is
+        ``\u2506`` (box drawing), ``\u2502`` (vertical), or ``|``.
+
+    Args:
+        text_output: Raw stdout from ``semgrep scan --text``.
+
+    Returns:
+        A tuple of ``(grouped findings by file, total count)`` matching
+        the contract used by :func:`process_semgrep` so the CSV / JSON /
+        XML / SARIF / SQL writers downstream treat native-JSON and text
+        runs identically.
+
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    current_file: str | None = None
+    current_rule: str | None = None
+    current_severity: str = "warning"
+    current_message_parts: list[str] = []
+    in_match_block = False
+    for raw_line in text_output.splitlines():
+        line = _SEMGREP_ANSI_RE.sub("", raw_line).rstrip()
+        info = _classify_semgrep_line(
+            line, current_file, current_rule, current_message_parts,
+        )
+        if info.kind in {"banner", "ignore"}:
+            continue
+        if info.kind == "separator":
+            in_match_block = False
+            continue
+        if info.kind == "file":
+            current_file = info.str_payload
+            current_rule = None
+            current_message_parts = []
+            in_match_block = False
+            continue
+        if info.kind == "rule":
+            current_rule = info.str_payload
+            current_severity = "warning"
+            current_message_parts = []
+            in_match_block = False
+            continue
+        if info.kind == "severity":
+            current_severity = info.str_payload
+            continue
+        if info.kind == "message":
+            current_message_parts.append(info.str_payload)
+            continue
+        if info.kind == "finding" and current_file and current_rule:
+            if in_match_block:
+                continue
+            in_match_block = True
+            message = " ".join(current_message_parts).strip() or info.finding_excerpt
+            grouped[current_file].append({
+                "line": info.finding_line,
+                "column": None,
+                "severity": current_severity,
+                "rule": current_rule,
+                "message": message,
+                "raw": (
+                    f"{current_file}:{info.finding_line}: "
+                    f"[{current_severity}] {current_rule}: {message}"
+                ),
+            })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def _normalize_semgrep_severity(marker: str) -> str:
+    """Normalize a Semgrep CLI severity marker to the report taxonomy.
+
+    Args:
+        marker: Raw severity label found in text output (e.g. ``"Blocking"``,
+            ``"High"``, ``"Warning"``).
+
+    Returns:
+        One of ``"error"``, ``"warning"``, ``"info"``.
+
+    """
+    lower = marker.lower()
+    if lower in {"blocking", "error", "high", "critical"}:
+        return "error"
+    if lower in {"info", "low", "note"}:
+        return "info"
+    return "warning"
 
 
 def process_biome_json(data: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], int]:
@@ -2567,6 +2748,7 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "jsonlint": process_jsonlint_text,
     "psscriptanalyzer": process_psscriptanalyzer_text,
     "biome": process_biome_text,
+    "semgrep": process_semgrep_text,
     "flake8": process_flake8_text,
     "wemake": process_wemake_text,
     "mccabe": process_mccabe_text,

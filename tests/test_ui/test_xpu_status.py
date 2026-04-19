@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 
 _LIVE_REFRESH_MS: int = 2000
-_PROVIDER_MEM_REFRESH_MS: int = 3000
+_PROVIDER_MEM_REFRESH_MS: int = 15000
 _CACHE_DEFAULT_MB: int = 10240
 _CACHE_MIN_MB: int = 512
 _CACHE_MAX_MB: int = 65536
@@ -504,15 +504,23 @@ class TestProviderConfigXPUGroupBox:
 
     @staticmethod
     def test_memory_refresh_timer_active(provider_widget: ProviderSettingsWidget) -> None:
-        """XPU memory refresh timer starts on widget creation.
+        """XPU memory refresh timer runs only when an XPU device is present.
+
+        When an XPU is available the widget schedules periodic memory refreshes
+        at the ``_PROVIDER_MEM_REFRESH_MS`` cadence; when XPU is unavailable the
+        widget stops the timer and hides the group box to avoid a hot polling
+        loop on idle systems.
 
         Args:
             provider_widget: ProviderSettingsWidget fixture configured for local_transformers.
         """
         timer: QTimer | None = getattr(provider_widget, "_xpu_mem_timer", None)
         assert timer is not None
-        assert timer.isActive()
-        assert timer.interval() == _PROVIDER_MEM_REFRESH_MS
+        if is_xpu_available():
+            assert timer.isActive()
+            assert timer.interval() == _PROVIDER_MEM_REFRESH_MS
+        else:
+            assert not timer.isActive()
 
 
 @pytest.mark.usefixtures("qapp")

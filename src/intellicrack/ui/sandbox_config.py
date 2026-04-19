@@ -10,12 +10,13 @@ This module provides the UI for configuring Windows Sandbox settings, including 
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -42,8 +43,16 @@ from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen, Subproc
 from intellicrack.core.config import get_config_dir, get_config_file
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.sandbox.base import SandboxConfig
 
+from .panels.async_bridge import run_bridge_coroutine
 from .resources import IconManager
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from intellicrack.sandbox.manager import SandboxManager
 
 
 _logger = get_logger("ui.sandbox_config")
@@ -52,9 +61,7 @@ _DIALOG_WIDTH: Final[int] = 550
 _DIALOG_HEIGHT: Final[int] = 500
 _OUTPUT_MAX_HEIGHT: Final[int] = 150
 _IS_WIN32: bool = os.name == "nt"
-
-if TYPE_CHECKING:
-    from intellicrack.sandbox.manager import SandboxManager
+_DEFAULT_CONFIG_ATTR: Final[str] = "_default_config"
 
 
 class SandboxTestWorker(QThread):
@@ -682,7 +689,7 @@ class SandboxConfigDialog(QDialog):
         self._save_settings()
 
     def _save_settings(self) -> None:
-        """Save current settings to config file."""
+        """Save current settings to config file and apply to the sandbox manager."""
         self.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
         settings = self.get_settings()
@@ -704,8 +711,6 @@ class SandboxConfigDialog(QDialog):
                 settings_count=len(settings),
             )
 
-            self.settings_updated.emit()
-
         except OSError as e:
             _logger.exception(
                 "sandbox_config_error",
@@ -718,6 +723,143 @@ class SandboxConfigDialog(QDialog):
                 "Save Error",
                 f"Failed to save sandbox settings:\n{e}",
             )
+            return
+
+        new_config = self._build_sandbox_config()
+        self._apply_config_to_manager(new_config)
+        self.settings_updated.emit()
+
+    def _build_sandbox_config(self) -> SandboxConfig:
+        """Construct a SandboxConfig dataclass from the dialog's widget state.
+
+        Returns:
+            SandboxConfig: Backend-ready configuration object.
+        """
+        shared_folder_str = self._shared_folder_input.text()
+        read_only = self._read_only_checkbox.isChecked()
+        shared_folders: list[tuple[Path, str, bool]] = []
+        if shared_folder_str:
+            shared_folders.append((Path(shared_folder_str), "C:\\Shared", read_only))
+
+        return SandboxConfig(
+            timeout_seconds=self._timeout_spin.value(),
+            memory_limit_mb=self._memory_spin.value(),
+            network_enabled=self._network_enabled_checkbox.isChecked(),
+            shared_folders=shared_folders,
+        )
+
+    def _apply_config_to_manager(self, new_config: SandboxConfig) -> None:
+        """Apply the new configuration to the sandbox manager.
+
+        Invokes ``update_default_config`` or ``load_from_file`` via introspection when
+        the back-end exposes them. When neither is available, executes the documented
+        fallback: tear down running sandboxes whose live configuration no longer matches
+        the newly supplied one and mutate the manager's internal default configuration
+        so subsequent sandbox creations use the new settings.
+
+        Args:
+            new_config: The SandboxConfig built from the dialog state.
+        """
+        manager = self._manager
+        if manager is None:
+            _logger.debug(
+                "sandbox_manager_not_attached",
+                timeout_seconds=new_config.timeout_seconds,
+                memory_limit_mb=new_config.memory_limit_mb,
+                network_enabled=new_config.network_enabled,
+            )
+            return
+
+        if self._invoke_backend_method(manager, "update_default_config", new_config):
+            return
+
+        if self._invoke_backend_method(manager, "load_from_file", self.CONFIG_FILE):
+            return
+
+        self._fallback_rebuild_manager(manager, new_config)
+
+    @staticmethod
+    def _invoke_backend_method(manager: SandboxManager, method_name: str, argument: object) -> bool:
+        """Invoke a sandbox-manager backend method if it exists on the manager.
+
+        Uses :func:`inspect.signature` to decide whether the method expects the
+        supplied argument or takes no parameters, and routes coroutine return
+        values through :func:`run_bridge_coroutine`.
+
+        Args:
+            manager: The active sandbox manager.
+            method_name: The attribute name to resolve on the manager.
+            argument: Positional argument passed when the method's signature
+                advertises one or more parameters.
+
+        Returns:
+            bool: ``True`` if the method was resolved and invoked successfully,
+                ``False`` otherwise.
+        """
+        raw_method: object = getattr(manager, method_name, None)
+        if not callable(raw_method):
+            return False
+        method = cast("Callable[..., object]", raw_method)
+
+        try:
+            signature = inspect.signature(method)
+        except (TypeError, ValueError):
+            _logger.debug("backend_method_signature_unavailable", method=method_name, exc_info=True)
+            signature = None
+
+        try:
+            result: object = method() if signature is not None and len(signature.parameters) == 0 else method(argument)
+            if inspect.iscoroutine(result):
+                run_bridge_coroutine(result)
+        except (RuntimeError, TypeError, ValueError, OSError) as exc:
+            _logger.warning("backend_method_invocation_failed", method=method_name, error=str(exc))
+            return False
+
+        _logger.info("sandbox_manager_config_updated_via_backend", method=method_name)
+        return True
+
+    @staticmethod
+    def _fallback_rebuild_manager(manager: SandboxManager, new_config: SandboxConfig) -> None:
+        """Tear down mismatched sandboxes and swap the manager's default config.
+
+        Iterates every managed sandbox instance, compares the live sandbox's
+        ``config`` against ``new_config``, and destroys instances whose
+        configuration no longer matches. Afterwards, overwrites the manager's
+        private ``_default_config`` so subsequent ``create()`` calls pick up the
+        new settings.
+
+        Args:
+            manager: The active sandbox manager.
+            new_config: The SandboxConfig to apply as the new default.
+        """
+        destroyed_ids: list[str] = []
+        skipped_ids: list[str] = []
+
+        for instance in list(manager.instances):
+            if instance.sandbox.config == new_config:
+                skipped_ids.append(instance.id)
+                continue
+
+            try:
+                run_bridge_coroutine(manager.destroy(instance.id))
+                destroyed_ids.append(instance.id)
+            except (RuntimeError, OSError) as exc:
+                _logger.warning(
+                    "sandbox_rebuild_destroy_failed",
+                    instance_id=instance.id,
+                    error=str(exc),
+                )
+
+        setattr(manager, _DEFAULT_CONFIG_ATTR, new_config)
+
+        _logger.info(
+            "sandbox_manager_rebuilt_fallback",
+            destroyed_count=len(destroyed_ids),
+            kept_count=len(skipped_ids),
+            timeout_seconds=new_config.timeout_seconds,
+            memory_limit_mb=new_config.memory_limit_mb,
+            network_enabled=new_config.network_enabled,
+        )
 
     def get_settings(self) -> dict[str, object]:
         """Get current settings as a dictionary.

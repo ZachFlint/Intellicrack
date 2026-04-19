@@ -1,0 +1,214 @@
+rules:
+
+  - id: intellicrack-logging-b1-no-fstring-event-name
+    message: >-
+      The first argument to a structlog logger call is the EVENT NAME
+      and must be a constant snake_case literal such as
+      `"process_attached"` or `"memory_write_failed"`. Using an f-string
+      bakes variable data into the event key, which breaks log
+      aggregation (every invocation produces a unique event key) and
+      hides the values you care about. Move variable data into keyword
+      arguments instead: `_logger.info("process_attached", pid=pid)`.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info(f"...", ...)
+      - pattern: $L.warning(f"...", ...)
+      - pattern: $L.error(f"...", ...)
+      - pattern: $L.debug(f"...", ...)
+      - pattern: $L.exception(f"...", ...)
+      - pattern: $L.critical(f"...", ...)
+
+  - id: intellicrack-logging-b2-no-format-call-event-name
+    message: >-
+      Do not build the event name with `.format(...)`. The event name
+      must be a constant snake_case literal so log aggregators can
+      count/filter occurrences. Use structured kwargs for variable
+      data: `_logger.info("script_loaded", script_id=sid)`.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info("...".format(...), ...)
+      - pattern: $L.warning("...".format(...), ...)
+      - pattern: $L.error("...".format(...), ...)
+      - pattern: $L.debug("...".format(...), ...)
+      - pattern: $L.exception("...".format(...), ...)
+      - pattern: $L.critical("...".format(...), ...)
+
+  - id: intellicrack-logging-b3-no-percent-format-event-name
+    message: >-
+      Do not use `%`-style string formatting for the event name. Keep
+      the event name a constant literal and attach variable data as
+      kwargs. Stdlib-style lazy `%s` interpolation is also disallowed
+      because structlog does not use it - the event is emitted as-is.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info("..." % ..., ...)
+      - pattern: $L.warning("..." % ..., ...)
+      - pattern: $L.error("..." % ..., ...)
+      - pattern: $L.debug("..." % ..., ...)
+      - pattern: $L.exception("..." % ..., ...)
+      - pattern: $L.critical("..." % ..., ...)
+
+  - id: intellicrack-logging-b4-no-concat-event-name
+    message: >-
+      Do not build the event name with string concatenation
+      (`"prefix_" + variable`). Event names must be constant literals.
+      Put the dynamic part in a kwarg.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info("..." + $X, ...)
+      - pattern: $L.warning("..." + $X, ...)
+      - pattern: $L.error("..." + $X, ...)
+      - pattern: $L.debug("..." + $X, ...)
+      - pattern: $L.exception("..." + $X, ...)
+      - pattern: $L.critical("..." + $X, ...)
+      - pattern: $L.info($X + "...", ...)
+      - pattern: $L.warning($X + "...", ...)
+      - pattern: $L.error($X + "...", ...)
+      - pattern: $L.debug($X + "...", ...)
+      - pattern: $L.exception($X + "...", ...)
+      - pattern: $L.critical($X + "...", ...)
+
+  - id: intellicrack-logging-b5-no-sentence-event-name
+    message: >-
+      The event name looks like a free-form sentence. Structlog event
+      names must be terse snake_case verb_object keys such as
+      `"frida_attach_failed"` or `"memory_scan_started"`, not
+      `"Failed to attach to process because the pid was invalid"`.
+      Sentences vary by author, cannot be counted in log aggregators,
+      and duplicate information that belongs in kwargs.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info("$MSG", ...)
+          - pattern: $L.warning("$MSG", ...)
+          - pattern: $L.error("$MSG", ...)
+          - pattern: $L.debug("$MSG", ...)
+          - pattern: $L.exception("$MSG", ...)
+          - pattern: $L.critical("$MSG", ...)
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^(?=.*\s).{25,}$'
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^[^_]*$'
+
+  - id: intellicrack-logging-b6-no-generic-event-name
+    message: >-
+      Generic event names like `"error"`, `"failed"`, `"done"`, `"ok"`,
+      `"start"`, or `"something_went_wrong"` are zero-information -
+      they do not say WHAT failed or started. Name the event after the
+      operation and outcome: `"frida_attach_failed"`,
+      `"memory_scan_started"`, `"patch_applied"`. The level is already
+      conveyed by the method name, so the event should not repeat it.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info("$MSG", ...)
+          - pattern: $L.warning("$MSG", ...)
+          - pattern: $L.error("$MSG", ...)
+          - pattern: $L.debug("$MSG", ...)
+          - pattern: $L.exception("$MSG", ...)
+          - pattern: $L.critical("$MSG", ...)
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^(error|warning|info|debug|exception|failed|failure|succeeded|success|done|ok|okay|complete|completed|finish|finished|finishing|start|started|starting|begin|beginning|end|ending|ended|running|processing|executing|handling|handled|error_occurred|something_went_wrong|something_failed|unknown|unknown_error|oops|unexpected|unexpected_error|problem|issue|bad|bug|wtf|todo|fixme|hmm|note|test|tmp|temp|debug_log|trace|msg|message|log|record|event)$'
+
+  - id: intellicrack-logging-b7-no-dynamic-event-name
+    message: >-
+      The event name is a variable or expression rather than a string
+      literal. Log aggregators index and count events by this key - if
+      it varies at runtime you cannot count how many times an event
+      occurred. Allowed exceptions are ALL_CAPS module-level constants
+      (e.g. `_EVT_ATTACH`); use one if you need to reuse the name.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info($NAME, ...)
+          - pattern: $L.warning($NAME, ...)
+          - pattern: $L.error($NAME, ...)
+          - pattern: $L.debug($NAME, ...)
+          - pattern: $L.exception($NAME, ...)
+          - pattern: $L.critical($NAME, ...)
+      - metavariable-pattern:
+          metavariable: $NAME
+          patterns:
+            - pattern-not: "\"...\""
+            - pattern-not: "'...'"
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: '^(?!_?[A-Z][A-Z0-9_]+$).*$'
+
+  - id: intellicrack-logging-b8-no-format-markers-in-event-name
+    message: >-
+      The event name contains format markers (`{...}`, `%s`, `%d`) that
+      are not substituted anywhere. Event names must be literal
+      snake_case keys - put the values in kwargs:
+      `_logger.info("memory_write", address=hex(addr), size=n)`.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info("$MSG")
+          - pattern: $L.warning("$MSG")
+          - pattern: $L.error("$MSG")
+          - pattern: $L.debug("$MSG")
+          - pattern: $L.exception("$MSG")
+          - pattern: $L.critical("$MSG")
+          - pattern: $L.info("$MSG", ...)
+          - pattern: $L.warning("$MSG", ...)
+          - pattern: $L.error("$MSG", ...)
+          - pattern: $L.debug("$MSG", ...)
+          - pattern: $L.exception("$MSG", ...)
+          - pattern: $L.critical("$MSG", ...)
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^.*(\{[^}]*\}|%[sdifor]).*$'
+
+  - id: intellicrack-logging-b9-event-name-redundant-with-level
+    message: >-
+      The event name starts with the level word (`error_...`,
+      `warning_...`, `debug_...`). The level is already conveyed by the
+      method you called, so repeating it wastes the key. Drop the
+      prefix: `_logger.error("attach_failed", ...)` not
+      `_logger.error("error_attach_failed", ...)`.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info("$MSG", ...)
+          - pattern: $L.warning("$MSG", ...)
+          - pattern: $L.error("$MSG", ...)
+          - pattern: $L.debug("$MSG", ...)
+          - pattern: $L.exception("$MSG", ...)
+          - pattern: $L.critical("$MSG", ...)
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^(error|warn|warning|info|debug|exception|critical|fatal)_'
+
+  - id: intellicrack-logging-b10-event-name-single-noun
+    message: >-
+      The event name is a single noun (`"process"`, `"file"`, `"memory"`)
+      with no verb. Event keys should describe an action or outcome:
+      `"process_attached"`, `"file_opened"`, `"memory_write_failed"`.
+      This makes the key self-documenting and the log searchable by
+      operation.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info("$MSG", ...)
+          - pattern: $L.warning("$MSG", ...)
+          - pattern: $L.error("$MSG", ...)
+          - pattern: $L.debug("$MSG", ...)
+          - pattern: $L.exception("$MSG", ...)
+          - pattern: $L.critical("$MSG", ...)
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^[a-z][a-z0-9]{2,}$'

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import inspect
 import json
 import os
 import sys
@@ -50,7 +51,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.script_gen import ScriptManager
 from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
 from intellicrack.providers.discovery import ModelDiscovery
-from intellicrack.sandbox import SandboxManager
+from intellicrack.sandbox import SandboxConfig, SandboxManager
 from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
 from intellicrack.ui.chat import ChatPanel
 from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
@@ -141,18 +142,34 @@ class AsyncWorker(QThread):
         self._coro: Coroutine[object, object, object] = coro
 
     def run(self) -> None:
-        """Run the coroutine in a new event loop."""
+        """Run the coroutine in a new event loop.
+
+        Cancels any still-pending tasks and awaits their completion before
+        closing the loop so ``asyncio.CancelledError`` cannot leak and orphan
+        tasks are not abandoned.
+        """
         loop: asyncio.AbstractEventLoop | None = None
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             result: object = loop.run_until_complete(self._coro)
             self.finished.emit(result)
-        except (RuntimeError, OSError, ValueError, TypeError, AttributeError, KeyError) as e:
+        except asyncio.CancelledError:
+            _logger.info("async_worker_cancelled")
+            self.error.emit(RuntimeError("async operation cancelled"))
+        except Exception as e:
             _logger.exception("async_worker_failed")
             self.error.emit(e)
         finally:
             if loop is not None:
+                try:
+                    pending = asyncio.all_tasks(loop=loop)
+                    for task in pending:
+                        task.cancel()
+                    if pending:
+                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                except (RuntimeError, OSError):
+                    _logger.debug("async_worker_pending_cancel_failed", exc_info=True)
                 loop.close()
 
 
@@ -1137,15 +1154,27 @@ class MainWindow(QMainWindow):
             )
 
     def _on_new_session(self) -> None:
-        """Handle new session action."""
+        """Handle new session action.
+
+        Collects optional name and description from NewSessionDialog and forwards
+        them to the orchestrator if its ``start_session`` signature accepts those
+        keyword arguments. Falls back to the legacy two-argument call otherwise.
+        """
         session_mgr_mod = importlib.import_module(".session_manager", "intellicrack.ui")
         new_session_cls = getattr(session_mgr_mod, "NewSessionDialog", None)
+        session_name: str = ""
+        description: str = ""
         if new_session_cls is not None:
             dialog = new_session_cls(parent=self)
             if not dialog.exec():
                 return
-            description = dialog.get_description()
-            _logger.debug("new_session_dialog", description=description)
+            get_name = getattr(dialog, "get_session_name", None)
+            if callable(get_name):
+                session_name = str(get_name()).strip()
+            get_desc = getattr(dialog, "get_description", None)
+            if callable(get_desc):
+                description = str(get_desc()).strip()
+            _logger.debug("new_session_dialog", session_name=session_name, description=description)
 
         provider_data: object = self._provider_combo.currentData()
         model = self.model_combo.currentText()
@@ -1156,8 +1185,22 @@ class MainWindow(QMainWindow):
 
         provider: str | ProviderName = provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
 
+        start_params = inspect.signature(self._orchestrator.start_session).parameters
+        extra_kwargs: dict[str, str] = {}
+        if "name" in start_params and session_name:
+            extra_kwargs["name"] = session_name
+        if "description" in start_params and description:
+            extra_kwargs["description"] = description
+
+        if (session_name or description) and not extra_kwargs:
+            _logger.info(
+                "new_session_metadata_unforwarded",
+                reason="orchestrator_signature_missing_name_description",
+                extension_pending="group_b",
+            )
+
         async def create_session() -> None:
-            await self._orchestrator.start_session(provider, model)
+            await self._orchestrator.start_session(provider, model, **extra_kwargs)
 
         self._chat_panel.clear_messages()
         self.tool_panel.clear_all()
@@ -1210,7 +1253,12 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Export", f"Chat exported to {path}")
 
     def _on_export_session(self) -> None:
-        """Export the current session to a JSON file."""
+        """Export the current session to a JSON file.
+
+        Success and failure dialogs are only shown after the async export
+        coroutine completes so the user is not told the file was saved
+        before it has actually been written.
+        """
         session = self._orchestrator.current_session
         if session is None:
             QMessageBox.information(self, "Export", "No active session to export.")
@@ -1222,42 +1270,145 @@ class MainWindow(QMainWindow):
             "",
             "JSON Files (*.json);;All Files (*)",
         )
-        if path:
-            session_mgr = getattr(self._orchestrator, "_sessions", None)
-            if session_mgr is not None:
-                export_current = getattr(session_mgr, "export_current", None)
-                if callable(export_current):
-                    coro = export_current(Path(path))
-                    self._run_async(cast("Coroutine[object, object, object]", coro))
-                elif hasattr(session_mgr, "export_json"):
-                    coro2 = session_mgr.export_json(session.id, Path(path))
-                    self._run_async(cast("Coroutine[object, object, object]", coro2))
-                else:
-                    QMessageBox.warning(self, "Export", "Session manager unavailable.")
-                    return
-                QMessageBox.information(self, "Export", f"Session exported to {path}")
-            else:
-                QMessageBox.warning(self, "Export", "Session manager unavailable.")
+        if not path:
+            return
+
+        session_mgr = getattr(self._orchestrator, "_sessions", None)
+        if session_mgr is None:
+            QMessageBox.warning(self, "Export", "Session manager unavailable.")
+            return
+
+        export_current = getattr(session_mgr, "export_current", None)
+        if callable(export_current):
+            coro = export_current(Path(path))
+        elif hasattr(session_mgr, "export_json"):
+            coro = session_mgr.export_json(session.id, Path(path))
+        else:
+            QMessageBox.warning(self, "Export", "Session manager unavailable.")
+            return
+
+        def _on_export_done(_result: object) -> None:
+            self.status_update.emit("Session exported")
+            QMessageBox.information(self, "Export", f"Session exported to {path}")
+
+        def _on_export_failed(err: Exception) -> None:
+            _logger.warning("session_export_failed", path=path, error=str(err))
+            self.status_update.emit("Session export failed")
+            QMessageBox.warning(self, "Export", f"Failed to export session: {err}")
+
+        worker = AsyncWorker(cast("Coroutine[object, object, object]", coro), self)
+        worker.finished.connect(_on_export_done)
+        worker.error.connect(_on_export_failed)
+        self._current_worker = worker
+        self.status_update.emit("Exporting session...")
+        worker.start()
 
     def _on_import_session(self) -> None:
-        """Import a session from a JSON file."""
+        """Import a session from a JSON file.
+
+        The import coroutine runs on an ``AsyncWorker`` so the success dialog
+        only appears after the import actually completes. Duplicate-session
+        errors surface a replace-and-retry prompt and malformed JSON files
+        surface a friendly parse-error dialog.
+        """
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Import Session",
             "",
             "JSON Files (*.json);;All Files (*)",
         )
-        if path:
-            session_mgr = getattr(self._orchestrator, "_session_manager", None)
-            if session_mgr is not None:
-                imported = session_mgr.import_json(Path(path))
-                if imported is not None:
-                    QMessageBox.information(self, "Import", "Session imported successfully.")
-                    self.status_update.emit("Session imported")
-                else:
-                    QMessageBox.warning(self, "Import", "Failed to import session.")
-            else:
-                QMessageBox.warning(self, "Import", "Session manager unavailable.")
+        if not path:
+            return
+
+        session_mgr = getattr(self._orchestrator, "_sessions", None)
+        if session_mgr is None:
+            QMessageBox.warning(self, "Import", "Session manager unavailable.")
+            return
+
+        import_json_attr = getattr(session_mgr, "import_json", None)
+        if not callable(import_json_attr):
+            QMessageBox.warning(self, "Import", "Session manager does not support import.")
+            return
+
+        self._start_session_import(
+            cast("Callable[..., Coroutine[object, object, object]]", import_json_attr),
+            Path(path),
+            replace=False,
+        )
+
+    def _start_session_import(
+        self,
+        import_json: Callable[..., Coroutine[object, object, object]],
+        source_path: Path,
+        *,
+        replace: bool,
+    ) -> None:
+        """Schedule ``SessionManager.import_json`` on an async worker.
+
+        Args:
+            import_json: Bound ``import_json`` coroutine function from the
+                session manager.
+            source_path: Path to the session JSON file.
+            replace: Whether to overwrite an existing session with the same id.
+        """
+        coro = import_json(source_path, replace=replace)
+
+        def _on_import_done(_result: object) -> None:
+            self.status_update.emit("Session imported")
+            QMessageBox.information(self, "Import", "Session imported successfully.")
+
+        def _on_import_failed(err: Exception) -> None:
+            self._handle_session_import_error(err, import_json, source_path)
+
+        worker = AsyncWorker(coro, self)
+        worker.finished.connect(_on_import_done)
+        worker.error.connect(_on_import_failed)
+        self._current_worker = worker
+        self.status_update.emit("Importing session...")
+        worker.start()
+
+    def _handle_session_import_error(
+        self,
+        err: Exception,
+        import_json: Callable[..., Coroutine[object, object, object]],
+        source_path: Path,
+    ) -> None:
+        """Classify an import failure and surface an appropriate dialog.
+
+        Args:
+            err: Exception raised by the async import worker.
+            import_json: Bound ``import_json`` coroutine function, reused if the
+                user chooses to replace an existing session.
+            source_path: Path of the file that failed to import.
+        """
+        _logger.warning("session_import_failed", path=str(source_path), error=str(err), error_type=type(err).__name__)
+        self.status_update.emit("Session import failed")
+
+        if isinstance(err, json.JSONDecodeError):
+            QMessageBox.warning(
+                self,
+                "Import",
+                f"Invalid session file: could not parse JSON.\n\n{err}",
+            )
+            return
+
+        if isinstance(err, ValueError):
+            message = str(err)
+            if "already exists" in message.lower():
+                reply = QMessageBox.question(
+                    self,
+                    "Import",
+                    "A session with the same identifier already exists.\n\nReplace the existing session?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._start_session_import(import_json, source_path, replace=True)
+                return
+            QMessageBox.warning(self, "Import", f"Failed to import session: {message}")
+            return
+
+        QMessageBox.warning(self, "Import", f"Failed to import session: {err}")
 
     def _on_save_patched_binary(self) -> None:
         """Save the currently loaded binary with applied patches via the hex editor."""
@@ -1627,17 +1778,125 @@ class MainWindow(QMainWindow):
             self._apply_sandbox_settings(settings)
 
     def _apply_sandbox_settings(self, settings: dict[str, object]) -> None:
-        """Apply sandbox configuration settings.
+        """Apply sandbox configuration settings to the runtime manager.
 
-        The SandboxConfigDialog handles persistence via its own JSON config file.
-        This method is called after the dialog saves settings to update any
-        runtime state if needed.
+        Tears down every active sandbox instance whose configuration no longer
+        matches the dialog-selected isolation parameters and rebuilds the
+        ``SandboxManager`` so subsequent sandboxes honour the new defaults.
+        This is the documented fallback pattern used while
+        ``SandboxManager.update_default_config`` is pending on the sandbox
+        back end (Group D scope).
 
         Args:
-            settings: Sandbox settings dictionary.
+            settings: Sandbox settings dictionary produced by
+                :class:`~intellicrack.ui.sandbox_config.SandboxConfigDialog`.
         """
-        del settings
-        self.status_update.emit("Sandbox settings saved")
+        new_config = self._build_sandbox_config(settings)
+
+        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+
+        try:
+            instances = list(self.sandbox_manager.instances)
+        except (RuntimeError, AttributeError):
+            _logger.debug("sandbox_instances_listing_failed", exc_info=True)
+            instances = []
+
+        stale_count = 0
+        for inst in instances:
+            existing_cfg = getattr(inst.sandbox, "_config", None)
+            if not isinstance(existing_cfg, SandboxConfig) or not self._sandbox_configs_match(existing_cfg, new_config):
+                stale_count += 1
+
+        try:
+            run_bridge_coroutine(self.sandbox_manager.destroy_all())
+        except (RuntimeError, OSError) as e:
+            _logger.warning("sandbox_manager_teardown_failed", error=str(e))
+
+        self.sandbox_manager = SandboxManager(default_config=new_config)
+        _logger.info(
+            "sandbox_manager_rebuilt",
+            timeout_seconds=new_config.timeout_seconds,
+            memory_limit_mb=new_config.memory_limit_mb,
+            network_enabled=new_config.network_enabled,
+            stale_instances=stale_count,
+            total_instances=len(instances),
+        )
+        if instances:
+            self.status_update.emit(
+                f"Sandbox settings applied ({stale_count} of {len(instances)} instance(s) had stale config)",
+            )
+        else:
+            self.status_update.emit("Sandbox settings applied")
+
+    @staticmethod
+    def _build_sandbox_config(settings: dict[str, object]) -> SandboxConfig:
+        """Translate a dialog settings dict into a :class:`SandboxConfig`.
+
+        Args:
+            settings: Raw settings dictionary from the sandbox config dialog.
+
+        Returns:
+            SandboxConfig: Config built from the provided settings, falling back
+            to dataclass defaults for any missing or wrongly typed fields.
+        """
+        defaults = SandboxConfig()
+        timeout_seconds = MainWindow._coerce_int(settings.get("timeout_seconds"), defaults.timeout_seconds)
+        memory_limit_mb = MainWindow._coerce_int(settings.get("memory_limit_mb"), defaults.memory_limit_mb)
+        network_enabled = bool(settings.get("network_enabled", defaults.network_enabled))
+
+        shared_folder_raw = settings.get("shared_folder", "")
+        read_only_raw = settings.get("shared_folder_read_only", False)
+        shared_folders: list[tuple[Path, str, bool]] = []
+        if isinstance(shared_folder_raw, str) and shared_folder_raw:
+            shared_folders.append((Path(shared_folder_raw), "C:\\Shared", bool(read_only_raw)))
+
+        return SandboxConfig(
+            timeout_seconds=timeout_seconds,
+            memory_limit_mb=memory_limit_mb,
+            network_enabled=network_enabled,
+            shared_folders=shared_folders,
+        )
+
+    @staticmethod
+    def _coerce_int(value: object, default: int) -> int:
+        """Coerce a setting value to int, returning the default on failure.
+
+        Args:
+            value: Raw value from a settings dictionary.
+            default: Fallback integer when ``value`` is not coercible.
+
+        Returns:
+            int: Parsed integer or ``default`` when coercion is not possible.
+        """
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, (int, float)):
+            return int(value)
+        if isinstance(value, str) and value.strip():
+            try:
+                return int(value.strip())
+            except ValueError:
+                return default
+        return default
+
+    @staticmethod
+    def _sandbox_configs_match(existing: SandboxConfig, incoming: SandboxConfig) -> bool:
+        """Return True if the two configs describe equivalent isolation.
+
+        Args:
+            existing: Currently installed sandbox config.
+            incoming: Newly requested sandbox config.
+
+        Returns:
+            bool: True when all fields controlled by the dialog agree, False
+            otherwise.
+        """
+        return (
+            existing.timeout_seconds == incoming.timeout_seconds
+            and existing.memory_limit_mb == incoming.memory_limit_mb
+            and existing.network_enabled == incoming.network_enabled
+            and list(existing.shared_folders) == list(incoming.shared_folders)
+        )
 
     def _get_or_create_sandbox_bridge(self) -> SandboxBridge:
         """Get an existing SandboxBridge from the tool registry or create a new one.
@@ -1765,8 +2024,7 @@ class MainWindow(QMainWindow):
 
         about_text = (
             "Intellicrack\n\n"
-            "AI-powered reverse engineering platform for analyzing\n"
-            "software licensing protections.\n\n"
+            "Unified workspace that bridges binary-analysis tools and AI providers.\n\n"
             f"Version {__version__}\n"
             f"License: {__license__}\n"
             f"{__copyright__}\n\n"
@@ -1892,7 +2150,7 @@ class MainWindow(QMainWindow):
         signal = getattr(panel, "process_attached", None)
         if signal is not None and not getattr(self, "_process_attached_wired", False):
             signal.connect(self._on_process_attached)
-            self.process_attached_wired = True
+            self._process_attached_wired = True
 
     def _on_process_attached(self, pid: int) -> None:
         """Handle process attachment by showing a memory region picker.

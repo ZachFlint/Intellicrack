@@ -1,0 +1,241 @@
+rules:
+
+  - id: intellicrack-logging-g1-print-in-src
+    message: >-
+      `print(...)` writes to stdout/stderr outside the structured
+      logging pipeline. It carries no timestamp, no level, no module
+      context, and cannot be filtered or routed. Use
+      `_logger.info("event_name", ...)` (or the appropriate level).
+    severity: ERROR
+    languages: [python]
+    paths:
+      exclude:
+        - "**/intellicrack/cli/"
+    pattern-either:
+      - pattern: print(...)
+      - pattern: sys.stdout.write(...)
+      - pattern: sys.stderr.write(...)
+
+  - id: intellicrack-logging-g2-traceback-as-kwarg
+    message: >-
+      Passing `traceback.format_exc()` / `traceback.print_exc()` /
+      `traceback.format_exception(...)` as a kwarg bakes a multi-line
+      string into a single log field. Use `_logger.exception(...)`
+      inside the `except:` block - structlog will attach the
+      traceback via `exc_info` so it can be rendered or forwarded
+      separately from the structured payload.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info(..., $K=traceback.format_exc(), ...)
+      - pattern: $L.warning(..., $K=traceback.format_exc(), ...)
+      - pattern: $L.error(..., $K=traceback.format_exc(), ...)
+      - pattern: $L.debug(..., $K=traceback.format_exc(), ...)
+      - pattern: $L.exception(..., $K=traceback.format_exc(), ...)
+      - pattern: $L.critical(..., $K=traceback.format_exc(), ...)
+      - pattern: $L.info(..., $K=traceback.format_exception(...), ...)
+      - pattern: $L.warning(..., $K=traceback.format_exception(...), ...)
+      - pattern: $L.error(..., $K=traceback.format_exception(...), ...)
+      - pattern: $L.debug(..., $K=traceback.format_exception(...), ...)
+      - pattern: $L.exception(..., $K=traceback.format_exception(...), ...)
+      - pattern: $L.critical(..., $K=traceback.format_exception(...), ...)
+      - pattern: $L.info(..., $K=traceback.format_stack(...), ...)
+      - pattern: $L.warning(..., $K=traceback.format_stack(...), ...)
+      - pattern: $L.error(..., $K=traceback.format_stack(...), ...)
+      - pattern: $L.debug(..., $K=traceback.format_stack(...), ...)
+      - pattern: $L.exception(..., $K=traceback.format_stack(...), ...)
+      - pattern: $L.critical(..., $K=traceback.format_stack(...), ...)
+      - pattern: $L.info(..., $K=format_exc(), ...)
+      - pattern: $L.warning(..., $K=format_exc(), ...)
+      - pattern: $L.error(..., $K=format_exc(), ...)
+      - pattern: $L.debug(..., $K=format_exc(), ...)
+      - pattern: $L.exception(..., $K=format_exc(), ...)
+      - pattern: $L.critical(..., $K=format_exc(), ...)
+  - id: intellicrack-logging-g3-exception-string-as-event-name
+    message: >-
+      `str(e)` / `repr(e)` / `type(e).__name__` used as the EVENT
+      NAME. The event name must be a constant literal describing the
+      operation; the exception data belongs in kwargs
+      (`error=str(e), error_type=type(e).__name__`) or is captured
+      automatically by `_logger.exception()`.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $L.$LVL(str($E), ...)
+      - pattern: $L.$LVL(repr($E), ...)
+      - pattern: $L.$LVL(type($E).__name__, ...)
+      - pattern: $L.$LVL($E.args, ...)
+      - pattern: $L.$LVL($E.message, ...)
+
+  - id: intellicrack-logging-g4-fstring-in-kwarg-value
+    message: >-
+      A kwarg value is an f-string (e.g. `f"pid={pid} addr={addr}"`).
+      This re-invents a string-log instead of using structure. Split
+      the values into separate kwargs: `pid=pid, address=hex(addr)`.
+      The log pipeline will render them however the formatter
+      dictates, and downstream tools can query individual fields.
+    severity: INFO
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info(..., $K=f"...", ...)
+      - pattern: $L.warning(..., $K=f"...", ...)
+      - pattern: $L.error(..., $K=f"...", ...)
+      - pattern: $L.debug(..., $K=f"...", ...)
+      - pattern: $L.exception(..., $K=f"...", ...)
+      - pattern: $L.critical(..., $K=f"...", ...)
+
+  - id: intellicrack-logging-g5-dynamic-log-level
+    message: >-
+      `_logger.log(level_variable, ...)` makes the severity
+      unpredictable from static inspection - readers and log filters
+      cannot tell whether the call is informational or a failure.
+      Call the named method directly
+      (`_logger.info(...)` / `_logger.error(...)`); if you genuinely
+      need conditional severity, branch on the condition and call the
+      explicit method in each arm.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: $L.log($LVL, ...)
+      - metavariable-pattern:
+          metavariable: $LVL
+          patterns:
+            - pattern-not: logging.DEBUG
+            - pattern-not: logging.INFO
+            - pattern-not: logging.WARNING
+            - pattern-not: logging.WARN
+            - pattern-not: logging.ERROR
+            - pattern-not: logging.CRITICAL
+            - pattern-not: logging.FATAL
+
+  - id: intellicrack-logging-g6-info-in-bare-except
+    message: >-
+      `try: ... except: _logger.info(...)` - catching bare
+      `Exception`/all and then logging at INFO is near-always wrong:
+      the condition is exceptional by definition. Either promote to
+      `_logger.exception()` (recommended) or narrow the `except:` so
+      INFO actually reflects an expected occurrence.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except:
+              ...
+              $L.info(...)
+      - pattern: |
+          try:
+              ...
+          except Exception:
+              ...
+              $L.info(...)
+      - pattern: |
+          try:
+              ...
+          except BaseException:
+              ...
+              $L.info(...)
+      - pattern: |
+          try:
+              ...
+          except Exception as $X:
+              ...
+              $L.info(...)
+
+  - id: intellicrack-logging-g7-bare-except-with-log
+    message: >-
+      A bare `except:` (no exception type) catches EVERYTHING,
+      including `KeyboardInterrupt`, `SystemExit`, and
+      `MemoryError`. Even with a log call, this is still wrong
+      because it silently defeats shutdown and OOM handling. Narrow
+      the clause to the exception types you actually handle.
+    severity: WARNING
+    languages: [python]
+    pattern: |
+      try:
+          ...
+      except:
+          ...
+
+  - id: intellicrack-logging-g8-kwarg-value-is-none-literal
+    message: >-
+      A log kwarg value is the literal `None`. This records no
+      information - it is dead data. Either remove the kwarg, or
+      pass a meaningful default (`"missing"`, `"unset"`) so the log
+      consumer can distinguish "absent" from "actually None".
+    severity: INFO
+    languages: [python]
+    pattern: $L.$LVL(..., $K=None, ...)
+
+  - id: intellicrack-logging-g9-kwarg-value-is-empty-collection
+    message: >-
+      A log kwarg value is a literal empty collection (`[]`, `{}`,
+      `""`, `()`). This adds noise without information. Drop the
+      kwarg if there is nothing to report, or capture a richer
+      summary (e.g. `matched_rules_count=0` rather than
+      `matched_rules=[]`).
+    severity: INFO
+    languages: [python]
+    pattern-either:
+      - pattern: $L.info(..., $K=[], ...)
+      - pattern: $L.warning(..., $K=[], ...)
+      - pattern: $L.error(..., $K=[], ...)
+      - pattern: $L.debug(..., $K=[], ...)
+      - pattern: $L.exception(..., $K=[], ...)
+      - pattern: $L.critical(..., $K=[], ...)
+      - pattern: $L.info(..., $K={}, ...)
+      - pattern: $L.warning(..., $K={}, ...)
+      - pattern: $L.error(..., $K={}, ...)
+      - pattern: $L.debug(..., $K={}, ...)
+      - pattern: $L.exception(..., $K={}, ...)
+      - pattern: $L.critical(..., $K={}, ...)
+      - pattern: $L.info(..., $K="", ...)
+      - pattern: $L.warning(..., $K="", ...)
+      - pattern: $L.error(..., $K="", ...)
+      - pattern: $L.debug(..., $K="", ...)
+      - pattern: $L.exception(..., $K="", ...)
+      - pattern: $L.critical(..., $K="", ...)
+      - pattern: $L.info(..., $K=(), ...)
+      - pattern: $L.warning(..., $K=(), ...)
+      - pattern: $L.error(..., $K=(), ...)
+      - pattern: $L.debug(..., $K=(), ...)
+      - pattern: $L.exception(..., $K=(), ...)
+      - pattern: $L.critical(..., $K=(), ...)
+      - pattern: $L.info(..., $K=list(), ...)
+      - pattern: $L.warning(..., $K=list(), ...)
+      - pattern: $L.error(..., $K=list(), ...)
+      - pattern: $L.debug(..., $K=list(), ...)
+      - pattern: $L.exception(..., $K=list(), ...)
+      - pattern: $L.critical(..., $K=list(), ...)
+      - pattern: $L.info(..., $K=dict(), ...)
+      - pattern: $L.warning(..., $K=dict(), ...)
+      - pattern: $L.error(..., $K=dict(), ...)
+      - pattern: $L.debug(..., $K=dict(), ...)
+      - pattern: $L.exception(..., $K=dict(), ...)
+      - pattern: $L.critical(..., $K=dict(), ...)
+      - pattern: $L.info(..., $K=tuple(), ...)
+      - pattern: $L.warning(..., $K=tuple(), ...)
+      - pattern: $L.error(..., $K=tuple(), ...)
+      - pattern: $L.debug(..., $K=tuple(), ...)
+      - pattern: $L.exception(..., $K=tuple(), ...)
+      - pattern: $L.critical(..., $K=tuple(), ...)
+      - pattern: $L.info(..., $K=set(), ...)
+      - pattern: $L.warning(..., $K=set(), ...)
+      - pattern: $L.error(..., $K=set(), ...)
+      - pattern: $L.debug(..., $K=set(), ...)
+      - pattern: $L.exception(..., $K=set(), ...)
+      - pattern: $L.critical(..., $K=set(), ...)
+  - id: intellicrack-logging-g10-print-exc-before-log
+    message: >-
+      `traceback.print_exc()` writes to stderr outside the structured
+      pipeline, then any following log call emits a separate record.
+      Replace the `print_exc` with `_logger.exception(...)` - the
+      traceback will flow through the logging pipeline as
+      `exc_info`, keeping structure and destination consistent.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: traceback.print_exc(...)
+      - pattern: traceback.print_exception(...)
+      - pattern: traceback.print_stack(...)

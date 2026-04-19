@@ -43,7 +43,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import get_config_file
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import AuthenticationError, ProviderCredentials, ProviderError, ProviderName
 from intellicrack.credentials.env_loader import (
     create_env_template,
     get_api_key_env_var_mapping,
@@ -55,7 +55,7 @@ from intellicrack.credentials.oauth import (
     get_oauth_manager,
 )
 from intellicrack.credentials.store import CredentialStore
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -77,6 +77,12 @@ try:
 except ImportError:
     get_logger("ui.provider_config").debug("openrouter_provider_unavailable")
     OpenRouterProvider = None
+
+try:
+    from intellicrack.providers.grok import GrokProvider
+except ImportError:
+    get_logger("ui.provider_config").debug("grok_provider_unavailable")
+    GrokProvider = None
 
 try:
     from intellicrack.providers.xpu_utils import (
@@ -353,6 +359,8 @@ class ConnectionTestWorker(QThread):
             return self._test_openrouter(timeout)
         if self.provider_id == "huggingface":
             return self._test_huggingface(timeout)
+        if self.provider_id == "grok":
+            return self._test_grok(timeout)
         return False, f"Unknown provider: {self.provider_id}"
 
     def _test_anthropic(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -520,6 +528,69 @@ class ConnectionTestWorker(QThread):
             _logger.warning("provider_test_failed", provider="huggingface", error=str(e))
             return False, str(e)
 
+    def _test_grok(self, timeout: httpx.Timeout) -> tuple[bool, str]:
+        """Test X.AI Grok API connection.
+
+        Prefers routing through a live GrokProvider instance so provider-level
+        validation (SDK auth handling, base URL handling) is exercised end-to-end.
+        Falls back to a direct ``GET https://api.x.ai/v1/models`` call when the
+        Grok provider module is unavailable.
+
+        Args:
+            timeout: HTTP timeout configuration.
+
+        Returns:
+            tuple[bool, str]: Tuple of (success, message).
+        """
+        if not self._api_key:
+            return False, "Grok API key required"
+
+        if GrokProvider is not None:
+            provider = GrokProvider()
+            creds = ProviderCredentials(api_key=self._api_key, api_base=self._api_base)
+
+            async def _probe() -> tuple[bool, str]:
+                try:
+                    await provider.connect(creds)
+                except AuthenticationError as exc:
+                    _logger.warning("provider_test_failed", provider="grok", error=str(exc))
+                    return False, "Invalid API key"
+                except ProviderError as exc:
+                    _logger.warning("provider_test_failed", provider="grok", error=str(exc))
+                    return False, str(exc)
+                try:
+                    return True, "Connected to Grok API"
+                finally:
+                    await provider.disconnect()
+
+            try:
+                result = run_bridge_coroutine(_probe())
+            except (RuntimeError, OSError, ValueError) as exc:
+                _logger.warning("provider_test_failed", provider="grok", error=str(exc))
+                return False, str(exc)
+            if result is None:
+                return False, "Grok test scheduled on running loop"
+            return result
+
+        base_url = (self._api_base or "https://api.x.ai/v1").rstrip("/")
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                response = client.get(
+                    f"{base_url}/models",
+                    headers={"Authorization": f"Bearer {self._api_key}"},
+                )
+                if response.status_code == HTTP_OK:
+                    return True, "Connected to Grok API"
+                if response.status_code == HTTP_UNAUTHORIZED:
+                    return False, "Invalid API key"
+                return False, f"API error: {response.status_code}"
+        except httpx.ConnectError:
+            _logger.debug("provider_connect_failed", provider="grok")
+            return False, "Could not connect to Grok API"
+        except (httpx.HTTPError, OSError, ValueError) as e:
+            _logger.warning("provider_test_failed", provider="grok", error=str(e))
+            return False, str(e)
+
 
 class ModelRefreshWorker(QThread):
     """Worker thread for refreshing model lists from provider APIs.
@@ -602,6 +673,8 @@ class ModelRefreshWorker(QThread):
             return self._fetch_openrouter_models(timeout)
         if self.provider_id == "huggingface":
             return self._fetch_huggingface_models(timeout)
+        if self.provider_id == "grok":
+            return self._fetch_grok_models(timeout)
         return False, [], f"Unknown provider: {self.provider_id}"
 
     def _fetch_anthropic_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -814,6 +887,75 @@ class ModelRefreshWorker(QThread):
                 return False, [], f"API error: {response.status_code}"
         except (httpx.HTTPError, OSError, KeyError) as e:
             _logger.warning("model_fetch_failed", provider="huggingface", error=str(e))
+            return False, [], str(e)
+
+    def _fetch_grok_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
+        """Fetch X.AI Grok models.
+
+        Prefers routing through a live GrokProvider instance (connect + list_models)
+        so the same code path the main application uses is exercised. Falls back to a
+        direct ``GET https://api.x.ai/v1/models`` call when the Grok provider module
+        is unavailable.
+
+        Args:
+            timeout: HTTP timeout configuration.
+
+        Returns:
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
+        """
+        if not self._api_key:
+            return False, [], "No Grok API key configured"
+
+        if GrokProvider is not None:
+            provider = GrokProvider()
+            creds = ProviderCredentials(api_key=self._api_key, api_base=self._api_base)
+
+            async def _list() -> tuple[bool, list[str], str]:
+                try:
+                    await provider.connect(creds)
+                except AuthenticationError as exc:
+                    _logger.warning("model_fetch_failed", provider="grok", error=str(exc))
+                    return False, [], "Invalid API key"
+                except ProviderError as exc:
+                    _logger.warning("model_fetch_failed", provider="grok", error=str(exc))
+                    return False, [], str(exc)
+                try:
+                    model_infos = await provider.list_models()
+                except ProviderError as exc:
+                    _logger.warning("model_fetch_failed", provider="grok", error=str(exc))
+                    return False, [], str(exc)
+                finally:
+                    await provider.disconnect()
+                model_ids = sorted(m.id for m in model_infos)
+                if model_ids:
+                    return True, model_ids, f"Found {len(model_ids)} Grok models"
+                return False, [], "No models returned"
+
+            try:
+                result = run_bridge_coroutine(_list())
+            except (RuntimeError, OSError, ValueError) as exc:
+                _logger.warning("model_fetch_failed", provider="grok", error=str(exc))
+                return False, [], str(exc)
+            if result is None:
+                return False, [], "Grok fetch scheduled on running loop"
+            return result
+
+        base_url = (self._api_base or "https://api.x.ai/v1").rstrip("/")
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                response = client.get(
+                    f"{base_url}/models",
+                    headers={"Authorization": f"Bearer {self._api_key}"},
+                )
+                if response.status_code == HTTP_UNAUTHORIZED:
+                    return False, [], "Invalid API key"
+                if response.status_code != HTTP_OK:
+                    return False, [], f"API error: {response.status_code}"
+                data = response.json()
+                models = sorted(m["id"] for m in data.get("data", []) if m.get("id"))
+                return True, models, f"Found {len(models)} Grok models"
+        except (httpx.HTTPError, OSError, KeyError, ValueError) as e:
+            _logger.warning("model_fetch_failed", provider="grok", error=str(e))
             return False, [], str(e)
 
 
@@ -1392,9 +1534,15 @@ class ProviderSettingsWidget(QFrame):
 
     Attributes:
         connection_tested: Signal emitted after connection test.
+        ollama_pull_progress: Signal emitted per ``pull_model`` status chunk
+            with ``(model_name, status)``.
+        ollama_pull_finished: Signal emitted on ``pull_model`` completion with
+            ``(success, model_name, message)``.
     """
 
     connection_tested: ClassVar[pyqtSignal] = pyqtSignal(bool, str)
+    ollama_pull_progress: ClassVar[pyqtSignal] = pyqtSignal(str, str)
+    ollama_pull_finished: ClassVar[pyqtSignal] = pyqtSignal(bool, str, str)
 
     def __init__(
         self,
@@ -1596,13 +1744,59 @@ class ProviderSettingsWidget(QFrame):
         if model_name := model_input.text().strip():
             self.pull_ollama_model(model_name)
 
+    def _set_status(self, message: str) -> None:
+        """Update the provider status label text.
+
+        Args:
+            message: Human-readable status string to display.
+        """
+        status_label: QLabel | None = getattr(self, "_status_label", None)
+        if status_label is not None:
+            status_label.setText(message)
+
+    def _on_ollama_pull_progress(self, model_name: str, status: str) -> None:
+        """Forward Ollama pull progress to the status label.
+
+        Args:
+            model_name: The model being pulled.
+            status: Current progress status message.
+        """
+        self._set_status(f"Pulling {model_name}: {status}")
+
+    def _on_ollama_pull_finished(self, success: bool, model_name: str, message: str) -> None:
+        """Finalize UI state when an Ollama pull completes.
+
+        Args:
+            success: Whether the pull succeeded.
+            model_name: The model that was pulled.
+            message: Outcome message.
+        """
+        icon_manager = IconManager.get_instance()
+        if success:
+            _logger.info("ollama_model_pulled", model=model_name)
+            self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
+            self._set_status(message or f"Pulled {model_name}")
+            QMessageBox.information(self, "Ollama Pull", message or f"Pulled {model_name}")
+            QTimer.singleShot(500, self._auto_refresh_models)
+        else:
+            _logger.warning("ollama_pull_failed", model=model_name, error=message)
+            self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
+            self._set_status(message or f"Failed to pull {model_name}")
+            QMessageBox.warning(self, "Ollama Pull Failed", message or f"Failed to pull {model_name}")
+
     def _setup_xpu_settings(self, layout: QVBoxLayout) -> None:
         """Build the XPU / Device Settings group box for Local Transformers.
+
+        When XPU is unavailable on the host, the periodic memory-refresh timer
+        is stopped after the first sample and the group box is hidden so idle
+        systems do not run a hot polling loop forever. When available, memory
+        is refreshed at a 15s cadence.
 
         Args:
             layout: Parent layout to add the group box to.
         """
         xpu_group = QGroupBox("XPU / Device Settings")
+        self._xpu_group = xpu_group
         form = QFormLayout()
 
         self._prefer_xpu_cb = QCheckBox("Prefer XPU over CPU")
@@ -1665,8 +1859,30 @@ class ProviderSettingsWidget(QFrame):
 
         self._xpu_mem_timer = QTimer(self)
         self._xpu_mem_timer.timeout.connect(self._refresh_xpu_memory)
-        self._xpu_mem_timer.start(3000)
         self._refresh_xpu_memory()
+
+        if self._is_xpu_available():
+            self._xpu_mem_timer.start(15000)
+        else:
+            self._xpu_mem_timer.stop()
+            xpu_group.hide()
+            _logger.debug("xpu_unavailable_ui_hidden", provider=self.provider_id)
+
+    @staticmethod
+    def _is_xpu_available() -> bool:
+        """Probe whether an Intel XPU device is usable on this host.
+
+        Returns:
+            bool: True when ``is_xpu_available`` reports a usable device,
+            False when the utility is missing or raises during the probe.
+        """
+        if is_xpu_available is None:
+            return False
+        try:
+            return bool(is_xpu_available())
+        except (RuntimeError, OSError):
+            _logger.debug("xpu_availability_probe_failed", exc_info=True)
+            return False
 
     def _populate_device_combo(self) -> None:
         """Populate the device selection combo with available XPU devices."""
@@ -2328,21 +2544,69 @@ class ProviderSettingsWidget(QFrame):
             return None
 
     def pull_ollama_model(self, model_name: str) -> None:
-        """Pull an Ollama model.
+        """Pull an Ollama model, streaming progress to the status label.
+
+        Executes ``OllamaProvider.pull_model`` — an async generator yielding
+        server-sent status lines — on the persistent bridge event loop via
+        ``run_bridge_coroutine_async``. Each status chunk is forwarded to the
+        Qt main thread through the ``ollama_pull_progress`` signal, and the
+        terminal outcome via ``ollama_pull_finished``.
 
         Args:
             model_name: Name of the model to pull.
         """
-        if self.provider_id != "ollama":
+        if self.provider_id != "ollama" or OllamaProvider is None:
             return
-        if OllamaProvider is None:
-            return
+
         try:
-            provider = OllamaProvider()
-            provider.pull_model(model_name)
-            _logger.info("ollama_model_pulled", model=model_name)
-        except (RuntimeError, OSError, ValueError):
-            _logger.debug("ollama_pull_failed", model=model_name)
+            self.ollama_pull_progress.disconnect(self._on_ollama_pull_progress)
+        except (TypeError, RuntimeError):
+            _logger.debug("ollama_pull_progress_slot_not_connected", provider=self.provider_id)
+        try:
+            self.ollama_pull_finished.disconnect(self._on_ollama_pull_finished)
+        except (TypeError, RuntimeError):
+            _logger.debug("ollama_pull_finished_slot_not_connected", provider=self.provider_id)
+        self.ollama_pull_progress.connect(self._on_ollama_pull_progress)
+        self.ollama_pull_finished.connect(self._on_ollama_pull_finished)
+
+        api_base = self._api_base_input.text().strip() if self._api_base_input else ""
+        creds = ProviderCredentials(
+            api_key=self._api_key_input.text().strip(),
+            api_base=api_base or None,
+        )
+        provider = OllamaProvider()
+
+        async def _pull() -> tuple[bool, str]:
+            try:
+                await provider.connect(creds)
+            except ProviderError as exc:
+                _logger.warning("ollama_pull_connect_failed", model=model_name, error=str(exc))
+                return False, f"Connect failed: {exc}"
+            try:
+                last_status = ""
+                async for status in provider.pull_model(model_name):
+                    last_status = status
+                    self.ollama_pull_progress.emit(model_name, status)
+                return True, last_status or f"Pulled {model_name}"
+            except ProviderError as exc:
+                _logger.warning("ollama_pull_failed", model=model_name, error=str(exc))
+                return False, str(exc)
+            finally:
+                await provider.disconnect()
+
+        def _on_success(result: object) -> None:
+            if isinstance(result, tuple) and len(result) == 2:
+                ok = bool(result[0])
+                msg = result[1] if isinstance(result[1], str) else ""
+                self.ollama_pull_finished.emit(ok, model_name, msg)
+            else:
+                self.ollama_pull_finished.emit(False, model_name, "Unexpected pull result")
+
+        def _on_error(exc: object) -> None:
+            self.ollama_pull_finished.emit(False, model_name, str(exc))
+
+        self._set_status(f"Pulling {model_name}...")
+        run_bridge_coroutine_async(_pull(), on_success=_on_success, on_error=_on_error, parent=self)
 
     def get_openrouter_generation(self, generation_id: str) -> dict[str, Any] | None:
         """Get OpenRouter generation info for cost tracking.

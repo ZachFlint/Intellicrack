@@ -295,6 +295,7 @@ extend-exclude = '''/(
   | \.vscode
   | \.idea
   | \.claude
+  | \.semgrep
   | \.serena
   | build
   | dist
@@ -320,6 +321,7 @@ exclude = [
   ".pixi/",
   ".pytest_cache/",
   ".ruff_cache/",
+  ".semgrep/",
   ".serena/",
   ".venv/",
   ".vscode/",
@@ -476,6 +478,7 @@ exclude = [
   ".vscode",
   ".idea",
   ".claude",
+  ".semgrep",
   ".serena",
   "build",
   "dist",

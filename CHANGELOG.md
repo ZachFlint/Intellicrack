@@ -9,6 +9,77 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **hexpat:** Parser — templates, varargs, padding, enum ranges, endianness, recovery (B27-B31, B37, B38)  (`f64500b`)
+
+- **hexpat:** Add optional span fields on parse/runtime errors (B36)  (`d324291`)
+
+- **hexpat:** Stdlib — math/hash/time/file/random/env/reflection + fixes (B39-B44)  (`f21568d`)
+Implements 18+ math fns (sin, cos, tan, asin, acos, atan, atan2, sinh, cosh,
+tanh, asinh, acosh, atanh, exp, log/ln, log10, cbrt, round, trunc, fmod,
+accumulate), hash fns (crc8/16/32/64 via generic CRC engine), time fns
+(epoch, to_local, to_utc, format), sandboxed file fns (open, close, read,
+write, seek, size, resize, flush, remove, create_directories), random fns
+(set_seed, generate with Distribution enum), env, sizeof_pack, and core
+reflection fns wired through an _ReflectionProvider dataclass.
+
+- **hexcore:** Big-endian ELF support and Sym/Rel/Rela/Dyn/Nhdr templates  (`0f2027d`)
+F13 — add FieldType::EndiannessSwitch { peek_offset, big_value }.
+Evaluator tracks base_offset for struct references and flips
+default_endian by peeking e_ident[EI_DATA] (offset 5, value 2 == MSB).
+Elf32_Ehdr and Elf64_Ehdr embed the marker immediately after e_ident so
+all subsequent fields use correct endianness. BE ELF binaries
+(PowerPC/SPARC/MIPS-BE/s390) now parse correctly.
+F21 — add Elf32_Sym, Elf64_Sym, Elf32_Rel, Elf64_Rel, Elf32_Rela,
+Elf64_Rela, Elf32_Dyn, Elf64_Dyn, Elf_Nhdr. Elf_Nhdr uses Computed
+fields to round n_namesz/n_descsz to 4-byte alignment before
+DynamicArray payloads per ELF note layout.
+
+- **hexcore:** Add fat/universal Mach-O and 32-bit + common load commands  (`6072d51`)
+Adds FAT_HEADER / FAT_ARCH for universal binary headers, MACH_HEADER_BE /
+MACH_HEADER_64_BE for big-endian headers, SEGMENT_COMMAND + SECTION for
+32-bit LC_SEGMENT, SECTION_64 for 64-bit section descriptors,
+SYMTAB_COMMAND, DYLIB_COMMAND, DYLD_INFO_COMMAND, and MAIN_COMMAND.
+
+- **hexcore:** Add ZIP64 structures and data descriptor templates  (`aa2ca49`)
+Adds ZIP64 EOCD record (0x06064B50), ZIP64 EOCD locator (0x07064B50),
+ZIP64 extra field (header ID 0x0001), and standard/ZIP64 variants of
+the data descriptor (0x08074B50) so large archives and streaming-flag
+entries parse correctly.
+
+- **hexcore:** Strict AES-ECB padding modes and bit_shift overflow guard  (`ea1bda9`)
+F8 — AES-ECB: add PaddingMode {None, Pkcs7, Zero, Iso10126}. Decrypt
+requires data.len() % 16 == 0 in all modes (no more silent zero-pad).
+PKCS#7 validates length + every pad byte; bad padding errors. Encrypt
+pads plaintext per mode; None mode errors on misaligned input.
+transform_data dispatch parses `padding` key from params dict; default
+is Pkcs7.
+F11 — bit_shift_left/right validate count <= 7 and return
+TransformError::InvalidParameter for out-of-range counts, replacing the
+silent `count & 7` clamp. bit_rotate_left/right retain modulo-8.
+
+- **hexcore:** Patch export COD/JSON + fix IPS/IPS32 terminator collisions  (`60019ce`)
+F20 — adds two new patch-export formats:
+- export_cod: 4-byte BE offset + 4-byte BE length + data per record.
+- export_patches_json: serde_json-pretty serialization of the patch
+list (offset + data).
+Wired into HexDocument PyO3 as export_patches_cod and
+export_patches_json, with matching stubs in intellicrack_hexcore.pyi.
+F22 — in export_ips, when a record's offset equals or spans the byte
+0x454F46 ("EOF"), splits/shifts the emitted header so the 3-byte BE
+offset field can never match the IPS terminator. Adds regression test
+for a record sitting exactly on the collision offset and another that
+spans it.
+F23 — same treatment for export_ips32 around 0x45454F46 ("EEOF"), the
+IPS32 terminator. Reachable in >1 GiB binaries. Adds regression tests
+for a record at and spanning the collision offset.
+
+- **hexcore:** Support full Unicode in UTF-16LE string extractor  (`5f860a5`)
+Generalize the printable test to operate on decoded Unicode scalar values,
+accepting any non-control character plus TAB/LF/CR. Handle UTF-16 surrogate
+pairs so supplementary-plane code points (emoji, CJK extension blocks, etc.)
+are recovered, with dangling or mismatched surrogates gracefully terminating
+the current candidate instead of being silently dropped.
+
 - Overhaul binary analysis architecture and expand tool bridges (`0a541ff`)
 This massive update represents a significant architectural pivot, transitioning from a process-centric model to a centralized, state-managed binary analysis framework. The core of the application has been refactored to prioritize advanced hex editing, deep static analysis, and comprehensive sandbox orchestration. By moving logic out of the legacy bridge layers and into a robust core orchestrator, the system now supports more complex, multi-tool workflows with improved thread safety and state synchronization.
 The Rust-based hex engine has been significantly enhanced to support large-file operations, patch formats, and granular memory manipulation, while the UI has been decomposed into modular mixins to manage the increased complexity of the new analysis panels. The tool bridges for Frida, Ghidra, Cutter, and x64dbg have been expanded from basic wrappers into full-featured instrumentation and analysis interfaces. This restructuring also introduces a sophisticated sandbox monitoring subsystem capable of behavioral analysis, network capture, and automated IOC extraction, providing a unified environment for both static and dynamic malware research.
@@ -75,6 +146,35 @@ Introduces a comprehensive Hex Editor
 
 
 ### Changed
+
+- **hexcore:** Replace naive byte/block diff with real edit script  (`65bc654`)
+Rewrite diff_data_byte_level and diff_data_block to use similar's
+Myers-algorithm edit script (Equal/Delete/Insert/Replace) instead of the
+previous prefix/suffix/single-modified-span and positional-compare
+heuristics that desynced on any insertion.
+For inputs over 1 MiB, compute rsync-style rolling Adler-32 anchors
+(1 KiB window, 10-bit mask) to bucket the data into aligned segments,
+then run the byte-level diff between each anchor pair and stitch the
+edit scripts together. Falls back to fixed-size block diff with the
+same edit-script algorithm when no anchors align.
+Preserves the existing public API and the PyO3 dict shape returned by
+diff_result_to_py (offset_a, offset_b, length, diff_type, regions,
+total_differences, files_identical).
+Pre-commit bypassed with --no-verify because the repository's
+intellicrack-launcher cargo-check/clippy hooks reference a manifest
+path that does not exist (intellicrack-launcher/Cargo.toml), which
+pre-dates this change. Locally verified with cargo build, cargo test,
+cargo fmt --check, and cargo clippy --lib --no-deps; all 230 tests
+(including 15 in the diff module) pass and clippy reports zero new
+findings.
+
+- Fail loudly in piece_table delete when find_piece(end) returns None  (`69d6bdd`)
+The delete() method previously silenced a None return from find_piece(end)
+with a fallback arm that masked internal state corruption. Replace the
+match fallback with an expect() that names the invariant: when
+end < total_length (enforced by the earlier guard), find_piece(end) must
+return Some(_). A None return under that condition indicates the piece
+list no longer sums to total_length and is unrecoverable in-place.
 
 - Add docstrings and improve type safety in hexcore (`574fe2b`)
 Standardized documentation across the Python UI and core modules by adding missing docstrings to class constructors and methods. Updated the Rust hexcore library to improve integer type safety, add CRC validation logic for patching, and refine string extraction routines.
@@ -181,19 +281,288 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
-- **hexcore:** Normalize-at-comparison case-insensitive search, strict ASCII encoder (`a1586b5`)
+- **installer:** Unit 9 A76 follow-up — remove DOC304 class-docstring Args (`50afea1`)
+The ToolInstaller class docstring carried an Args: block describing
+tools_directory which belongs on the __init__ docstring (pydoclint DOC304).
+__init__ already has its own Args block, so removing the duplicate from
+the class docstring fixes the finding without dropping any information.
+Validators (bridges/installer.py): ruff clean, basedpyright 0/0/0,
+pydocstyle clean.
+
+- **sandbox:** Deep-review follow-ups on units 1-7 (D1-D19) (`52c5311`)
+Line-by-line re-audit of the seven merged sandbox commits surfaced real
+issues that automated review missed. Fixes applied on main.
+
+- **frida:** Unit 5 A32 — hook/replace code delivery via script.post + recv (`9ce204d`)
+Replaces direct Python-to-JS string interpolation of user-supplied hook
+code (on_enter / on_leave / replacement_code) with runtime RPC delivery:
+- hook_function / replace_function emit a *_ready send and register a
+recv('install_hook' | 'install_replacement') handler. Python posts the
+user code as data after load; the JS side compiles it via
+new Function(...) and installs the hook or replacement.
+- Install completion gated by a per-call asyncio.Event, eliminating
+the prior asyncio.sleep(0.1) guess.
+- Extracted _make_install_waiter (message buffer + terminal-event setter)
+and _resolve_install_address (post-install message scan) to keep both
+call sites under the per-function local-variable budget.
+Side fix: add missing cast import in tests/test_bridges/test_frida_bridge.py
+so the e2e tests can import and run (pre-existing NameError blocked the
+whole suite at collection).
+Also gitignore reports/tests/_sandbox_* (test-run artifacts).
+Validators (bridges/frida_bridge.py): ruff clean, basedpyright 0/0/0,
+pydocstyle clean. Frida tests: 37/37 pass with INTELLICRACK_LOCAL_TESTS=1.
+
+- **sandbox:** Unit 1 — Windows Sandbox full rewrite (D1-D6, D12/D14/D19 Windows)  (`1cc9ed1`)
+- D3: WindowsSandboxClient.exe launcher; vmwp.exe worker tracked via
+Win32_Process polling. Stop sends WM_CLOSE with taskkill fallback.
+- D1/D2/D6: Permanent in-guest PowerShell dispatcher via LogonCommand.
+run_command() writes trigger/exec.cmd, waits for result/out/err triple.
+- D4: dump_memory() uses dbghelp.MiniDumpWriteDump with procdump64
+fallback; runs yara_scan on dump.
+- D5: network log parsed as 10-field pipe-delimited record with
+protocol, state, bytes, pid, process name.
+- D14/D19: _create_monitor_scripts copies all 7 bundled .ps1 files plus
+new start_monitors.cmd into monitor folder; launcher runs each with
+-LogDir set to guest logs path.
+- D12: run_binary attaches every _parse_*_log parser to ExecutionReport
+(file, registry, network, process, service, kernel_object, dll,
+injection, resource, clipboard, api_trace).
+
+- **sandbox:** Unit 5 — api_trace.ps1 rewrite (D16)  (`52038e7`)
+Replace fabricated *-EtwTraceSession cmdlets with real logman + TraceEventSession.
+- Add -LogDir / -TargetPid parameters; filter events by PID when non-zero.
+- Locate Microsoft.Diagnostics.Tracing.TraceEvent.dll under %USERPROFILE%\.nuget,
+C:\Program Files\TraceEvent, and script dir; log ERROR + exit cleanly when missing.
+- Create ETL-backed logman trace IntApiTrace via logman create/start.
+- Start realtime parsing via TraceEventSession (IntApiTraceRT) loaded with
+Add-Type, subscribed to Microsoft-Windows-Kernel-Audit-API-Calls provider.
+- Emit pipe-delimited records ts|proc|pid|api|module|args|rv to api_trace.log.
+- Clean shutdown via try/finally: dispose session, logman stop + delete.
+
+- **sandbox:** Unit 2 — QEMU sandbox full rewrite (D7-D11, D12/D14/D19 QEMU)  (`d783455`)
+Addresses all QEMU-side deltas from the sandbox-fix-d plan.
+See PR body for full detail on D7/D8/D9/D10/D11/D12/D14/D19.
+ruff, basedpyright, pydocstyle — 0 findings on qemu.py.
+
+- **sandbox:** Rewrite kernel_object_monitor.ps1 with NT handle enumeration (D15)  (`f3a1489`)
+
+- **sandbox:** Unit 7 — injection_monitor.ps1 (D18)  (`4b68546`)
+Replace fabricated Win32_Thread/parent-PID heuristic with ETW-based detection
+via TraceEventSession (NT Kernel Logger Thread/VirtualAlloc/VAMap plus
+Microsoft-Windows-Kernel-Process provider {22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}
+ThreadStart keyword 0x20).
+Resolves each ThreadStart StartAddr against target process loaded module ranges;
+flags out-of-module addresses as shellcode_injection and \Temp\/\AppData\Local\Tempmodules as dll_injection. Correlates kernel VirtualAlloc events by ThreadID.
+Accepts LogDir/TargetPid params, writes pipe-delimited records to
+injection_monitor.log, filters by TargetPid when non-zero. Graceful
+ERROR record when TraceEvent.dll missing (no fabricated fallback).
+try/finally guarantees Stop/Dispose + logman stop/delete cleanup.
+0 PSScriptAnalyzer findings at all severities.
+
+- **sandbox:** Unit 6 — dll_monitor.ps1 (D17)  (`08f75f9`)
+Replace fabricated *-EtwTraceSession cmdlets with real logman-based
+ETW tracing for kernel image-load events.
+- Accept LogDir and TargetPid parameters.
+- Primary path: logman create trace + TraceEventSession consumes
+ImageLoad events, emitting real BaseAddress and ImageSize from
+the event payload.
+- Fallback path: Register-CimIndicationEvent on Win32_ModuleLoadTrace
+(real WMI/CIM event class).
+- Pipe-delimited output: ts|pid|procName|imagePath|baseAddr|imageSize.
+- Filter by TargetPid when non-zero.
+- Guaranteed logman stop/delete cleanup via try/finally.
+- Passes PSScriptAnalyzer with 0 warnings/errors.
+
+- **sandbox:** Unit 3 - manager idleness tracking (D13)  (`9b4dc91`)
+Add is_busy flag on SandboxInstance to distinguish a sandbox actively
+executing a binary from one that is running but idle.
+- SandboxInstance: new is_busy: bool attribute (default False).
+- SandboxManager.run_binary: set is_busy=True before sandbox.run_binary
+and clear it in a finally block so failures still release the flag.
+- _find_idle_instance: only returns instances where status=="running"
+AND not is_busy, preventing reuse of a sandbox mid-run.
+- _find_oldest_idle: same gating; only evicts truly idle instances.
+- create() at capacity: when _find_oldest_idle returns None, raise
+"All {max} sandboxes busy" so callers can distinguish saturation
+from misconfiguration.
+Hooks bypassed: pre-existing generate-structure-files and
+generate-knowledge-graph hooks fail under worktrees (they git-add
+files located in the main repo directory). Code-quality hooks
+(ruff check, ruff format, basedpyright, pydocstyle) all pass when
+invoked directly against this file.
+
+- **bridges/ghidra:** Production-readiness remediation A1-A10 (#unit-1)  (`98d0e9f`)
+- A1: load_binary re-raises ToolError on importFile failure; no swallowed
+exceptions or hardcoded returns.
+- A2: _detect_architecture now covers PE (x86/x86_64/ARM/ARM64/MIPS/PPC/
+RISC-V), ELF (x86/x86_64/ARM/AArch64/MIPS/PPC/PPC64/RISC-V), and Mach-O
+(x86/x86_64/ARM/ARM64/PPC/PPC64); adds _query_ghidra_arch + _resolve_
+architecture RPC fallback.
+- A3: write_bytes sign-folds bytes, wraps the write in a Ghidra
+transaction, reads back, and raises ToolError on readback mismatch.
+- A4: set_color routes through ColorizingService when available, falling
+back to an IntPropertyMap so colors persist; wrapped in a transaction.
+- A5: Decompiler options persist on the bridge instance (simplification,
+max_instructions, extra) and are applied inside decompile() and
+set_decompiler_options(); exposed via decompiler_options property.
+- A6: import_debug_info dispatches to PdbUniversalAnalyzer/PdbAnalyzer
+for PDB and the DWARFProgram/DWARFAnalyzer pipeline for DWARF, under a
+transaction; rejects unsupported extensions.
+- A7: get_call_graph traverses both callees and callers and raises
+ToolError when the root function cannot be located.
+- A8: delete_function raises ToolError when the target function does
+not exist (no silent no-op) and verifies Ghidra actually removed it.
+- A9: Adds explicit mutator methods (add_bookmark/remove_bookmark,
+add_label/remove_label, add_thunk/remove_thunk, add_external_reference/
+remove_external_reference) with matching ToolFunction entries; keeps
+existing get_bookmarks/get_labels method bindings intact.
+- A10: get_program_tree recurses into sub-modules and fragments with a
+depth cap, returning the full tree + fragment address ranges.
+Tool function count updated to 81. tests/test_bridges/test_ghidra.py
+expectations updated and disconnected-behavior tests added for each of
+the new mutators.
+ruff / ruff format / basedpyright / pydoclint / pydocstyle: 0 findings.
+
+- **hexpat:** Preprocessor include failure + function-like macro expansion (B34, B45, B46)  (`ff380db`)
+
+- **hexpat:** Evaluator — pointer deref, bitfield order, sizeof, cast, members, cleanup (B47,B49-B54)  (`180d767`)
+
+- **hexpat:** Cache max_magic_end in pattern registry (B55)  (`e3aecb7`)
+
+- **core:** Enforce tool capability via explicit map (B2)  (`b58cd5d`)
+
+- **hexpat:** Lexer raises on stray '#' with directive hint (B33)  (`112b8d8`)
+
+- **hexpat:** Preserve pragma fields on base_address replace (B32, B48)  (`e906abe`)
+
+- **core:** Orchestrator teardown, tool dispatch, context window (B3-B7, B10)  (`4841e11`)
+
+- **core:** Script validators fail loud and typed API (B22, B26)  (`18638a1`)
+- B22: Stabilize ScriptGenerator public API with Google-style docstrings on
+prepare_ai_prompt and typed generate_frida/ghidra/python/cutter/x64dbg
+helpers. Document the expected integration pattern for Group E wiring.
+- B26: JavaScript validator distinguishes tempfile-write failure, node-not-
+installed, subprocess timeout, and actual node --check failure; only
+returns (True, None) on real success. Java validator replaces substring
+match with a compiled regex so that the word "class" inside strings or
+comments no longer triggers a false positive.
+
+- **core:** Template bootstrap error aggregation (B21, B25)  (`24e8dc9`)
+- B21: TemplateManager API stabilized with explicit docstrings; bootstrap
+iteration uses a helper (`_bootstrap_single_template`) so top-level logic
+stays readable.
+- B25: Introduce TemplateBootstrapError carrying failed_templates list;
+bootstrap_builtins skips work only when the full expected set already
+exists on disk, logs failures at warning, and raises after processing if
+any templates failed. `_parse_template_file` logs at warning and records
+the failure instead of silently returning None.
+
+- **core:** Persist bridge_analyses and guard session store (B1, B8, B9)  (`b38ee77`)
+- B1: cleanup_old switches from julianday-comparable ISO-8601 to a precomputed
+"%Y-%m-%d %H:%M:%S" cutoff used with WHERE updated_at < ?, avoiding the
+silent zero-row delete when SQLite rejects tz-aware ISO timestamps.
+- B8: bridge_analyses is now serialized into session_data on save, reconstructed
+on load via BridgeAnalysisSummary(...) with nested StringInfo/ImportInfo/
+ExportInfo/SectionInfo/FunctionInfo/ParameterInfo/VariableInfo rebuilt
+correctly, and round-tripped through export_to_json / import_from_json.
+- B9: save() opens an autocommit connection and wraps the upsert +
+session_tags rewrite in an explicit BEGIN IMMEDIATE transaction, preventing
+interleaving with a concurrent auto_save.
+
+- **hexpat:** Compiler const-expr and conditional inversion (B23, B24)  (`c069787`)
+- B23: HexPatCodegen._eval_const_expr now raises HexPatError for every
+unsupported compile-time expression (shifts, bitwise ops, identifier
+references, sizeof, addressof, current-offset marker, string literals,
+division-by-zero, modulo-by-zero) instead of fabricating 0. Unsupported
+patterns are reserved for the runtime interpreter.
+- B24: _gen_conditional's BitAnd else-branch inversion was impossible to
+express with the current Rust primitive set without introducing a new
+BitAndZero opcode; the case now raises HexPatError with the underlying
+reason instead of emitting an incorrect `field == 0` guard.
+
+- **core:** Harden process tracking and cleanup (B11, B13, B14, B16)  (`9f58c60`)
+- B11: run_tracked decodes communicate() results only when not None;
+empty_text ("" for text=True, b"" for text=False) is returned when
+capture_output=False so .decode() no longer raises on (None, None).
+- B13: _terminate_tree_with_psutil wraps psutil.Process(pid) and
+parent.children(recursive=True) with psutil.NoSuchProcess / AccessDenied
+handlers so atexit cleanup can proceed past dead or privileged processes.
+- B14: TrackedProcess.registered_at uses datetime.now(tz=UTC) to align with
+_external_pids.
+- B16: Introduce ProcessStateError(RuntimeError) and raise it when
+communicate() returns without setting returncode instead of fabricating
+returncode=-1.
+
+- **core:** Config port fallback and unprefix parsers (B17, B19)  (`d4984eb`)
+- B17: parse_tools wraps int(port_val) in try/except (ValueError, TypeError)
+logging a warning with tool/field/value and falling back to tool_base.port.
+Non-string path_raw also logs + falls back instead of raising.
+- B19: Un-prefix internal parser methods so the public API and tests call them
+directly (from_dict, parse_providers, parse_tools, parse_sub_configs); the
+old thin wrapper methods are removed. All internal callers updated.
+
+- **core:** Portable log directory (B12)  (`7216748`)
+- B12: Replace hardcoded `D:/Intellicrack/logs` with a `_default_log_dir()`
+helper returning `Path.cwd() / "logs"`; add optional `log_dir: Path | None`
+parameter to `setup_logging`. Additive/backwards-compatible so existing
+callers continue to work and Group E can pass `config.logs_directory` from
+main.py.
+- B18: `get_structlog_logger` is retained as a thin delegator to `get_logger`
+(tests still import it; the symbol is preserved so cross-scope test
+compatibility is maintained while the implementation forwards to the
+current API).
+
+- **core:** Platform-guard subprocess constants (B15)  (`56c11c1`)
+Guard Windows-only subprocess constants (CREATE_NEW_CONSOLE,
+CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, STARTF_USESHOWWINDOW,
+STARTUPINFO) behind sys.platform == "win32" and provide int-0 fallbacks
+plus a _StartupInfoFallback class on non-Windows so the module imports
+successfully on Linux/macOS.
+
+- **core:** Make TransformNode abstract (B20)  (`8ac75b5`)
+Convert TransformNode into an abc.ABC so the base class no longer silently
+returns input unchanged. process, name, and category are marked
+abstractmethod / abstractproperty, forcing concrete subclasses to implement
+them. All existing concrete subclasses already satisfy the interface.
+
+- **hexpat:** Normalize document.length callable/property (B35)  (`ee6a60c`)
+HexDocumentLike declares length() as a method, but some adapter shims
+expose it as a plain attribute or property. DataReader.from_document
+now routes through a new _resolve_length helper that tolerates both
+shapes, validates the result is an int, and raises HexPatRuntimeError
+with a clear message when the attribute is missing or the resolved
+value cannot be coerced.
+
+- **hexcore:** Case-insensitive search handles mixed-case; strict ASCII encoder  (`5160a21`)
+* fix(hexcore): normalize-at-comparison case-insensitive search, strict ASCII encoder
 Replace variant-generation case-insensitive search (which missed mixed-case
 inputs like "HeLLo") with normalize-at-comparison: decode each sliding window
 via encoding_rs and compare via str::to_lowercase. Reject non-ASCII input in
 the ASCII encoder instead of silently truncating. Move unused pattern-length
 locals out of the early-return branch in search_bytes and search_hex_with_wildcards.
 
-- Improve UTF-16LE string extraction and piece table safety (``)
-Refactored the UTF-16LE string extraction logic to correctly handle surrogate pairs and non-ASCII printable characters. Updated the piece table implementation to use more explicit panics with descriptive messages for invariant violations during deletion operations.
-- Support full Unicode range in UTF-16LE extraction instead of just ASCII
-- Add robust handling for dangling high/low surrogates in byte streams
-- Strengthen internal invariants in `piece_table.rs` with explicit error messages
-- Update project documentation and knowledge graph visualization
-- Add comprehensive test suite for UTF-16LE edge cases including emojis and Cyrillic script
+- **hexcore/bps:** Fail loud on OOB and emit SourceCopy/TargetCopy  (`804b8ee`)
+- import_bps: replace silent-skip OOB guards in SourceRead, TargetRead,
+SourceCopy, and TargetCopy with InvalidData errors that name the
+action and offset, so malformed patches surface the real cause instead
+of a misleading CRC mismatch.
+- export_bps: index source and already-written target bytes with a
+4-byte rolling window so the encoder can emit SourceCopy (cmd 2) and
+TargetCopy (cmd 3) when those are cheaper than SourceRead/TargetRead,
+shrinking patches for inputs with shared patterns and in-target
+repeats.
+- Add round-trip tests that assert at least one SourceCopy or
+TargetCopy command is emitted and decoded back to the exact target,
+plus OOB-failure tests for SourceRead, SourceCopy, and TargetCopy.
+
+- **hexcore:** Align .pyi stubs with PyO3 signatures  (`3ce8fbe`)
+Correct 3 signature-drift findings in intellicrack_hexcore.pyi: search_numeric_range takes (int,int) tuple; compute_hash_custom_crc takes byte_range tuple and reflect tuple; replace_bytes and fill_block use bytes instead of list[int].
+
+- **hexcore:** Record undo entries for swap_blocks, repair_pe_checksum, BPS/UPS imports  (`6d00a5a`)
+Both swap_blocks and repair_pe_checksum mutated bytes without pushing
+Operation::Overwrite records, so undo/redo and is_modified() were wrong.
+Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
+is_modified() return false despite the document being altered. Add
+UndoManager::mark_unsaved() and call it after the import resets.
 
 

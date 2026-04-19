@@ -1,0 +1,170 @@
+rules:
+
+  - id: intellicrack-logging-e1-info-inside-except
+    message: >-
+      `_logger.info(...)` inside an `except:` block under-reports a
+      failure as routine progress. Aggregators and alert rules that
+      trigger on WARNING/ERROR will silently miss the event. Use
+      `_logger.exception(...)` to capture the traceback, or at minimum
+      `_logger.warning(...)` / `_logger.error(...)` with structured
+      error kwargs.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except $E:
+              ...
+              $L.info(...)
+      - pattern: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              $L.info(...)
+      - pattern: |
+          try:
+              ...
+          except:
+              ...
+              $L.info(...)
+
+  - id: intellicrack-logging-e2-debug-inside-except
+    message: >-
+      `_logger.debug(...)` inside an `except:` block hides failures
+      below the default log level. In production, where the threshold
+      is typically INFO or WARNING, the failure record disappears
+      entirely. Use `_logger.exception(...)` or at least
+      `_logger.warning(...)`.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except $E:
+              ...
+              $L.debug(...)
+      - pattern: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              $L.debug(...)
+      - pattern: |
+          try:
+              ...
+          except:
+              ...
+              $L.debug(...)
+
+  - id: intellicrack-logging-e3-error-on-reraise
+    message: >-
+      Calling `_logger.error(...)` immediately before re-raising is
+      the classic TRY400 anti-pattern. Either log the traceback via
+      `_logger.exception(...)` and then re-raise, OR use
+      `_logger.warning(...)` and re-raise (so the caller's handler
+      owns the authoritative error log). Emitting both error and the
+      propagating exception produces duplicate records.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except $E:
+              ...
+              $L.error(...)
+              raise
+      - pattern: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              $L.error(...)
+              raise
+      - pattern: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              $L.error(...)
+              raise $Y(...) from $X
+      - pattern: |
+          try:
+              ...
+          except $E:
+              ...
+              $L.error(...)
+              raise $Y(...)
+
+  - id: intellicrack-logging-e4-critical-outside-allowlist
+    message: >-
+      `_logger.critical(...)` is reserved for truly fatal, process-
+      ending conditions (unrecoverable initialization failure, fatal
+      platform misconfiguration). Outside of session lifecycle and
+      core startup code, use `_logger.error(...)` or
+      `_logger.exception(...)`. CRITICAL is an alerting signal - do
+      not desensitize it.
+    severity: WARNING
+    languages: [python]
+    paths:
+      exclude:
+        - "**/intellicrack/__main__.py"
+        - "**/intellicrack/cli/"
+        - "**/intellicrack/core/session.py"
+        - "**/intellicrack/core/orchestrator.py"
+    pattern-either:
+      - pattern: $L.critical(...)
+      - pattern: $L.fatal(...)
+
+  - id: intellicrack-logging-e5-warning-announces-success
+    message: >-
+      `_logger.warning(...)` is being used to announce a successful
+      operation (event name contains `success`, `ok`, `completed`,
+      `done`, `ready`). WARNING is a problem indicator - using it for
+      successes desensitizes operators to real warnings. Use
+      `_logger.info(...)` for success events.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.warning("$EVENT")
+          - pattern: $L.warning("$EVENT", ...)
+      - metavariable-regex:
+          metavariable: $EVENT
+          regex: '^(.*_)?(success|succeeded|ok|okay|completed|complete|done|ready|finished|installed|loaded|attached|resumed|spawned|written|patched|applied)(_.*)?$'
+
+  - id: intellicrack-logging-e6-debug-on-destructive-op
+    message: >-
+      `_logger.debug(...)` on an event name that describes a
+      destructive or state-changing operation (patch, delete, unlink,
+      kill, write, overwrite) buries the audit trail below the default
+      log level. Destructive ops must log at INFO or higher so they
+      remain visible in production.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.debug("$EVENT")
+          - pattern: $L.debug("$EVENT", ...)
+      - metavariable-regex:
+          metavariable: $EVENT
+          regex: '^(.*_)?(patch|patched|applied|delete|deleted|unlink|unlinked|remove|removed|rmtree|kill|killed|terminate|terminated|overwrite|overwritten|wiped|wipe|truncate|truncated|written|write|destroy|destroyed|clear|cleared|drop|dropped|revert|reverted|rollback|rolled_back|detach|detached|close|closed|shutdown)(_.*)?$'
+
+  - id: intellicrack-logging-e7-info-on-error-event
+    message: >-
+      The event name describes a failure/denial/error but the call is
+      `_logger.info(...)`. INFO implies normal operation; errors
+      belong at WARNING/ERROR/EXCEPTION. Either rename the event (if
+      it is actually a non-error occurrence) or upgrade the level.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $L.info("$EVENT")
+          - pattern: $L.info("$EVENT", ...)
+      - metavariable-regex:
+          metavariable: $EVENT
+          regex: '^(.*_)?(error|err|failed|failure|failing|denied|refused|rejected|invalid|unauthorized|forbidden|timeout|timed_out|crashed|broken|abort|aborted|cannot|could_not|missing|not_found|unreachable|unavailable)(_.*)?$'

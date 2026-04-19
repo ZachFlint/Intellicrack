@@ -1,0 +1,118 @@
+rules:
+
+  - id: intellicrack-logging-a1-no-stdlib-getlogger
+    message: >-
+      Use `from intellicrack.core.logging import get_logger` then
+      `_logger = get_logger(__name__)` instead of `logging.getLogger(...)`.
+      The project wraps stdlib logging in structlog via a central factory
+      so every logger participates in the shared processor pipeline
+      (timestamps, JSON rendering, context binding). Direct
+      `logging.getLogger` bypasses that pipeline and emits unstructured
+      records that cannot be correlated with the rest of the workspace.
+    severity: ERROR
+    languages: [python]
+    paths:
+      exclude:
+        - "**/intellicrack/core/logging.py"
+        - "**/intellicrack/core/logging/**"
+    pattern-either:
+      - pattern: logging.getLogger(...)
+      - pattern: getLogger(...)
+
+  - id: intellicrack-logging-a2-no-root-logger-calls
+    message: >-
+      Never call `logging.info/warning/error/debug/exception/critical/log`
+      at module scope. These emit on the ROOT logger, which carries no
+      module context, cannot be filtered per-component, and produces
+      records indistinguishable from dependency output. Acquire a named
+      logger via `_logger = get_logger(__name__)` and call
+      `_logger.info("event_name", key=value)`.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: logging.info(...)
+      - pattern: logging.warning(...)
+      - pattern: logging.warn(...)
+      - pattern: logging.error(...)
+      - pattern: logging.debug(...)
+      - pattern: logging.exception(...)
+      - pattern: logging.critical(...)
+      - pattern: logging.fatal(...)
+      - pattern: logging.log(...)
+
+  - id: intellicrack-logging-a3-get-logger-requires-dunder-name
+    message: >-
+      `get_logger()` must be called with `__name__` so the logger
+      participates in the hierarchy
+      `intellicrack.<subpackage>.<module>`. Passing a hand-written
+      literal string (e.g. `get_logger("mybridge")`) breaks parent-child
+      log-level propagation and makes per-module filtering unreliable.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: get_logger("...")
+      - pattern: get_logger('...')
+
+  - id: intellicrack-logging-a4-module-uses-undefined-self-logger
+    message: >-
+      `self._logger` is referenced inside a class that has no
+      `self._logger = ...` assignment and whose module has no
+      `_logger = get_logger(...)` binding. This will raise
+      AttributeError the first time the method is called. Either assign
+      `self._logger = get_logger(__name__)` in `__init__`, or switch to
+      a module-level `_logger`.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: self._logger.info(...)
+          - pattern: self._logger.warning(...)
+          - pattern: self._logger.error(...)
+          - pattern: self._logger.debug(...)
+          - pattern: self._logger.exception(...)
+          - pattern: self._logger.critical(...)
+      - pattern-not-inside: |
+          class $C(...):
+              ...
+              def __init__(self, ...):
+                  ...
+                  self._logger = ...
+                  ...
+      - pattern-not-inside: |
+          class $C(...):
+              ...
+              def __init__(self, ...):
+                  ...
+                  self._logger: $T = ...
+                  ...
+
+  - id: intellicrack-logging-a5-multiple-module-loggers
+    message: >-
+      More than one `_logger = get_logger(...)` appears in this module.
+      A single canonical module-level logger avoids mismatched event
+      streams and makes it obvious which logger is active in any call.
+      Delete the duplicate(s).
+    severity: WARNING
+    languages: [python]
+    pattern: |
+      _logger = get_logger(...)
+      ...
+      _logger = get_logger(...)
+
+  - id: intellicrack-logging-a6-logger-must-be-private-module-attr
+    message: >-
+      Module loggers must be named `_logger` (single leading underscore)
+      so they are not re-exported as part of the public module API and
+      do not collide with `logging` or `logger` names used by third-party
+      packages. Rename `logger = get_logger(__name__)` to
+      `_logger = get_logger(__name__)`.
+    severity: WARNING
+    languages: [python]
+    paths:
+      exclude:
+        - "**/intellicrack/core/logging.py"
+        - "**/intellicrack/core/logging/**"
+    pattern-either:
+      - pattern: logger = get_logger(...)
+      - pattern: log = get_logger(...)
+      - pattern: LOGGER = get_logger(...)
