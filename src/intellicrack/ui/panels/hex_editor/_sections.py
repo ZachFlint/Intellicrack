@@ -13,8 +13,6 @@ from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem
 
 from intellicrack.ui.panels.hex_editor._base import (
     PREVIEW_BYTES,
-    PRINTABLE_MAX,
-    PRINTABLE_MIN,
     DataReaderCls,
     PatternRegistryCls,
     hexpat_interpreter_available,
@@ -158,58 +156,35 @@ class SectionsMixin:
             pe.close()
 
     def _populate_strings(self) -> None:
-        """Scan the document for printable ASCII strings and populate the strings tab."""
+        """Populate the strings tab using hexcore's extract_strings RPC."""
         if self._strings_tree is None or self.document is None:
             return
 
         self._strings_tree.clear()
-        chunk_size = 65536
-        min_string_len = 4
-        max_strings = 5000
         max_display_len = PREVIEW_BYTES
 
-        doc_len: int = self.document.length()
-        string_count = 0
-        current_string_start = -1
-        current_chars: list[str] = []
-        offset = 0
+        try:
+            results = self.document.extract_strings(
+                min_length=4,
+                include_ascii=True,
+                include_utf16=True,
+                max_results=5000,
+            )
+        except (RuntimeError, OSError, ValueError) as exc:
+            logger.debug("strings_extract_failed", error=str(exc))
+            return
 
-        while offset < doc_len and string_count < max_strings:
-            chunk_len = min(chunk_size, doc_len - offset)
-            raw = self.document.read(offset, chunk_len)
-            if isinstance(raw, (list, bytearray)):
-                raw = bytes(raw)
-
-            for i, byte_val in enumerate(raw):
-                abs_offset = offset + i
-                if PRINTABLE_MIN <= byte_val <= PRINTABLE_MAX:
-                    if current_string_start < 0:
-                        current_string_start = abs_offset
-                    current_chars.append(chr(byte_val))
-                else:
-                    if len(current_chars) >= min_string_len:
-                        string_val = "".join(current_chars)
-                        display = string_val[:max_display_len]
-                        item = QTreeWidgetItem([
-                            f"0x{current_string_start:08X}",
-                            str(len(string_val)),
-                            display,
-                        ])
-                        self._strings_tree.addTopLevelItem(item)
-                        string_count += 1
-                        if string_count >= max_strings:
-                            break
-                    current_string_start = -1
-                    current_chars.clear()
-
-            offset += chunk_len
-
-        if len(current_chars) >= min_string_len and string_count < max_strings:
-            string_val = "".join(current_chars)
-            display = string_val[:max_display_len]
+        for entry in results:
+            offset_val = entry.get("offset")
+            text_val = entry.get("text") or entry.get("value")
+            if offset_val is None or text_val is None:
+                continue
+            offset_int = int(offset_val)
+            text_str = str(text_val)
+            display = text_str[:max_display_len]
             item = QTreeWidgetItem([
-                f"0x{current_string_start:08X}",
-                str(len(string_val)),
+                f"0x{offset_int:08X}",
+                str(len(text_str)),
                 display,
             ])
             self._strings_tree.addTopLevelItem(item)
