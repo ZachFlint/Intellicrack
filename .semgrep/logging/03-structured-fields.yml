@@ -92,139 +92,28 @@ rules:
       (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`,
       `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`,
       `relativeCreated`, `thread`, `threadName`, `processName`,
-      `process`, `args`, `exc_info`, `exc_text`, `stack_info`, or
-      `asctime`). structlog/stdlib will either silently drop the kwarg
-      or raise at format time. Rename to a project-specific key
-      (e.g. `"name"` -> `"process_name"` or `"tool_name"`).
+      `process`, `args`, or `asctime`). structlog/stdlib will either
+      silently drop the kwarg or raise at format time. Rename to a
+      project-specific key (e.g. `"name"` -> `"process_name"` or
+      `"tool_name"`). `exc_info` / `exc_text` / `stack_info` are
+      excluded because they are documented stdlib-logging kwargs
+      consumed by the handler, not stored as fields.
     severity: ERROR
     languages: [python]
-    pattern-either:
-      - pattern: $L.info(..., name=$X, ...)
-      - pattern: $L.warning(..., name=$X, ...)
-      - pattern: $L.error(..., name=$X, ...)
-      - pattern: $L.debug(..., name=$X, ...)
-      - pattern: $L.exception(..., name=$X, ...)
-      - pattern: $L.critical(..., name=$X, ...)
-      - pattern: $L.info(..., message=$X, ...)
-      - pattern: $L.warning(..., message=$X, ...)
-      - pattern: $L.error(..., message=$X, ...)
-      - pattern: $L.debug(..., message=$X, ...)
-      - pattern: $L.exception(..., message=$X, ...)
-      - pattern: $L.critical(..., message=$X, ...)
-      - pattern: $L.info(..., msg=$X, ...)
-      - pattern: $L.warning(..., msg=$X, ...)
-      - pattern: $L.error(..., msg=$X, ...)
-      - pattern: $L.debug(..., msg=$X, ...)
-      - pattern: $L.exception(..., msg=$X, ...)
-      - pattern: $L.critical(..., msg=$X, ...)
-      - pattern: $L.info(..., levelname=$X, ...)
-      - pattern: $L.warning(..., levelname=$X, ...)
-      - pattern: $L.error(..., levelname=$X, ...)
-      - pattern: $L.debug(..., levelname=$X, ...)
-      - pattern: $L.exception(..., levelname=$X, ...)
-      - pattern: $L.critical(..., levelname=$X, ...)
-      - pattern: $L.info(..., levelno=$X, ...)
-      - pattern: $L.warning(..., levelno=$X, ...)
-      - pattern: $L.error(..., levelno=$X, ...)
-      - pattern: $L.debug(..., levelno=$X, ...)
-      - pattern: $L.exception(..., levelno=$X, ...)
-      - pattern: $L.critical(..., levelno=$X, ...)
-      - pattern: $L.info(..., pathname=$X, ...)
-      - pattern: $L.warning(..., pathname=$X, ...)
-      - pattern: $L.error(..., pathname=$X, ...)
-      - pattern: $L.debug(..., pathname=$X, ...)
-      - pattern: $L.exception(..., pathname=$X, ...)
-      - pattern: $L.critical(..., pathname=$X, ...)
-      - pattern: $L.info(..., filename=$X, ...)
-      - pattern: $L.warning(..., filename=$X, ...)
-      - pattern: $L.error(..., filename=$X, ...)
-      - pattern: $L.debug(..., filename=$X, ...)
-      - pattern: $L.exception(..., filename=$X, ...)
-      - pattern: $L.critical(..., filename=$X, ...)
-      - pattern: $L.info(..., module=$X, ...)
-      - pattern: $L.warning(..., module=$X, ...)
-      - pattern: $L.error(..., module=$X, ...)
-      - pattern: $L.debug(..., module=$X, ...)
-      - pattern: $L.exception(..., module=$X, ...)
-      - pattern: $L.critical(..., module=$X, ...)
-      - pattern: $L.info(..., lineno=$X, ...)
-      - pattern: $L.warning(..., lineno=$X, ...)
-      - pattern: $L.error(..., lineno=$X, ...)
-      - pattern: $L.debug(..., lineno=$X, ...)
-      - pattern: $L.exception(..., lineno=$X, ...)
-      - pattern: $L.critical(..., lineno=$X, ...)
-      - pattern: $L.info(..., funcName=$X, ...)
-      - pattern: $L.warning(..., funcName=$X, ...)
-      - pattern: $L.error(..., funcName=$X, ...)
-      - pattern: $L.debug(..., funcName=$X, ...)
-      - pattern: $L.exception(..., funcName=$X, ...)
-      - pattern: $L.critical(..., funcName=$X, ...)
-      - pattern: $L.info(..., created=$X, ...)
-      - pattern: $L.warning(..., created=$X, ...)
-      - pattern: $L.error(..., created=$X, ...)
-      - pattern: $L.debug(..., created=$X, ...)
-      - pattern: $L.exception(..., created=$X, ...)
-      - pattern: $L.critical(..., created=$X, ...)
-      - pattern: $L.info(..., msecs=$X, ...)
-      - pattern: $L.warning(..., msecs=$X, ...)
-      - pattern: $L.error(..., msecs=$X, ...)
-      - pattern: $L.debug(..., msecs=$X, ...)
-      - pattern: $L.exception(..., msecs=$X, ...)
-      - pattern: $L.critical(..., msecs=$X, ...)
-      - pattern: $L.info(..., relativeCreated=$X, ...)
-      - pattern: $L.warning(..., relativeCreated=$X, ...)
-      - pattern: $L.error(..., relativeCreated=$X, ...)
-      - pattern: $L.debug(..., relativeCreated=$X, ...)
-      - pattern: $L.exception(..., relativeCreated=$X, ...)
-      - pattern: $L.critical(..., relativeCreated=$X, ...)
-      - pattern: $L.info(..., thread=$X, ...)
-      - pattern: $L.warning(..., thread=$X, ...)
-      - pattern: $L.error(..., thread=$X, ...)
-      - pattern: $L.debug(..., thread=$X, ...)
-      - pattern: $L.exception(..., thread=$X, ...)
-      - pattern: $L.critical(..., thread=$X, ...)
-      - pattern: $L.info(..., threadName=$X, ...)
-      - pattern: $L.warning(..., threadName=$X, ...)
-      - pattern: $L.error(..., threadName=$X, ...)
-      - pattern: $L.debug(..., threadName=$X, ...)
-      - pattern: $L.exception(..., threadName=$X, ...)
-      - pattern: $L.critical(..., threadName=$X, ...)
-      - pattern: $L.info(..., processName=$X, ...)
-      - pattern: $L.warning(..., processName=$X, ...)
-      - pattern: $L.error(..., processName=$X, ...)
-      - pattern: $L.debug(..., processName=$X, ...)
-      - pattern: $L.exception(..., processName=$X, ...)
-      - pattern: $L.critical(..., processName=$X, ...)
-      - pattern: $L.info(..., args=$X, ...)
-      - pattern: $L.warning(..., args=$X, ...)
-      - pattern: $L.error(..., args=$X, ...)
-      - pattern: $L.debug(..., args=$X, ...)
-      - pattern: $L.exception(..., args=$X, ...)
-      - pattern: $L.critical(..., args=$X, ...)
-      - pattern: $L.info(..., exc_info=$X, ...)
-      - pattern: $L.warning(..., exc_info=$X, ...)
-      - pattern: $L.error(..., exc_info=$X, ...)
-      - pattern: $L.debug(..., exc_info=$X, ...)
-      - pattern: $L.exception(..., exc_info=$X, ...)
-      - pattern: $L.critical(..., exc_info=$X, ...)
-      - pattern: $L.info(..., exc_text=$X, ...)
-      - pattern: $L.warning(..., exc_text=$X, ...)
-      - pattern: $L.error(..., exc_text=$X, ...)
-      - pattern: $L.debug(..., exc_text=$X, ...)
-      - pattern: $L.exception(..., exc_text=$X, ...)
-      - pattern: $L.critical(..., exc_text=$X, ...)
-      - pattern: $L.info(..., stack_info=$X, ...)
-      - pattern: $L.warning(..., stack_info=$X, ...)
-      - pattern: $L.error(..., stack_info=$X, ...)
-      - pattern: $L.debug(..., stack_info=$X, ...)
-      - pattern: $L.exception(..., stack_info=$X, ...)
-      - pattern: $L.critical(..., stack_info=$X, ...)
-      - pattern: $L.info(..., asctime=$X, ...)
-      - pattern: $L.warning(..., asctime=$X, ...)
-      - pattern: $L.error(..., asctime=$X, ...)
-      - pattern: $L.debug(..., asctime=$X, ...)
-      - pattern: $L.exception(..., asctime=$X, ...)
-      - pattern: $L.critical(..., asctime=$X, ...)
+    patterns:
+      - pattern-either:
+          - pattern: _logger.$LVL(..., $K=$X, ...)
+          - pattern: self._logger.$LVL(..., $K=$X, ...)
+          - pattern: logger.$LVL(..., $K=$X, ...)
+          - pattern: self.logger.$LVL(..., $K=$X, ...)
+          - pattern: cls._logger.$LVL(..., $K=$X, ...)
+      - metavariable-regex:
+          metavariable: $LVL
+          regex: '^(info|warning|warn|error|debug|exception|critical|fatal|log)$'
+      - metavariable-regex:
+          metavariable: $K
+          regex: '^(name|message|msg|levelname|levelno|pathname|filename|module|lineno|funcName|created|msecs|relativeCreated|thread|threadName|processName|args|asctime)$'
+
   - id: intellicrack-logging-c4-redundant-error-on-exception
     message: >-
       `_logger.exception(...)` already attaches the active traceback
@@ -256,7 +145,12 @@ rules:
     severity: ERROR
     languages: [python]
     patterns:
-      - pattern: $L.exception(...)
+      - pattern-either:
+          - pattern: _logger.exception(...)
+          - pattern: self._logger.exception(...)
+          - pattern: logger.exception(...)
+          - pattern: self.logger.exception(...)
+          - pattern: cls._logger.exception(...)
       - pattern-not-inside: |
           try:
               ...
@@ -271,6 +165,46 @@ rules:
           try:
               ...
           except:
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2):
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2) as $X:
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2, $E3):
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2, $E3) as $X:
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4):
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4) as $X:
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4, $E5):
+              ...
+      - pattern-not-inside: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4, $E5) as $X:
               ...
 
   - id: intellicrack-logging-c6-raw-exception-as-kwarg-value
