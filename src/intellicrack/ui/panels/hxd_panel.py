@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.win32_embed import poll_and_embed
 
 
 if sys.platform == "win32" or TYPE_CHECKING:
@@ -223,6 +224,7 @@ class HxDPanel(QWidget):
 
             self.embed_info_label.setText(f"HxD: {file_path.name}")
             self.tool_started.emit()
+            self._schedule_embed()
             _logger.info("hxd_file_loaded", path=str(file_path))
         except (OSError, RuntimeError) as e:
             _logger.warning("hxd_launch_failed", error=str(e))
@@ -254,12 +256,50 @@ class HxDPanel(QWidget):
 
             self.embed_info_label.setText("HxD running")
             self.tool_started.emit()
+            self._schedule_embed()
         except (OSError, RuntimeError) as e:
             _logger.warning("hxd_start_failed", error=str(e))
             self.process = None
             return False
         else:
             return True
+
+    def _schedule_embed(self) -> None:
+        """Reparent the HxD top-level window into ``_embed_host`` on Windows.
+
+        Starts a short polling loop that enumerates top-level windows owned
+        by the HxD process and wraps the main HWND in a Qt window container
+        so HxD renders inside the panel rather than as a separate top-level.
+        No-op on non-Windows platforms or when the process has already exited.
+        """
+        if sys.platform != "win32" or self.process is None:
+            return
+        pid = self.process.processId()
+        if pid <= 0:
+            return
+
+        def _on_embedded(container: QWidget) -> None:
+            if self.embedded_container is not None:
+                try:
+                    self.embedded_container.setParent(None)
+                    self.embedded_container.deleteLater()
+                except RuntimeError:
+                    pass
+            self.embedded_container = container
+            layout = self._embed_host.layout()
+            if layout is None:
+                layout = QVBoxLayout(self._embed_host)
+                layout.setContentsMargins(0, 0, 0, 0)
+            layout.addWidget(container)
+            _logger.info("hxd_window_embedded", pid=pid)
+
+        poll_and_embed(
+            pid,
+            self._embed_host,
+            _on_embedded,
+            max_retries=_EMBED_MAX_RETRIES,
+            interval_ms=_EMBED_POLL_INTERVAL_MS,
+        )
 
     def stop_tool(self) -> bool:
         """Stop HxD and clean up.
