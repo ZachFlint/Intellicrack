@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Final, cast, override
 
 from google import genai
 from google.genai import types
-from google.genai.errors import ClientError
+from google.genai.errors import APIError
 
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
@@ -35,7 +35,7 @@ from intellicrack.core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, create_google_tool_schema
+from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_google_tool_schema
 
 
 if TYPE_CHECKING:
@@ -52,8 +52,22 @@ _MSG_REQUEST_FAILED = "Request failed"
 _MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Google API"
 _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
+_MSG_CONTENT_BLOCKED = "Response blocked by safety filters"
+_MSG_PROHIBITED_CONTENT = "Response blocked for prohibited content"
 
 _STREAM_SENTINEL: Final = object()
+
+_AUTH_STATUS_CODES: Final = frozenset({401, 403})
+_RATE_LIMIT_STATUS_CODES: Final = frozenset({429})
+
+_BLOCKING_FINISH_REASONS: Final = frozenset({
+    "SAFETY",
+    "PROHIBITED_CONTENT",
+    "BLOCKLIST",
+    "SPII",
+    "IMAGE_SAFETY",
+    "IMAGE_PROHIBITED_CONTENT",
+})
 
 
 class GoogleProvider(LLMProviderBase):
@@ -87,6 +101,7 @@ class GoogleProvider(LLMProviderBase):
         Raises:
             AuthenticationError: If the API key is invalid or missing.
             ProviderError: If connection to the API fails.
+            RateLimitError: If the API rate limit is exceeded during the probe.
         """
         if not credentials.api_key:
             raise AuthenticationError(_MSG_API_KEY_REQUIRED)
@@ -105,17 +120,23 @@ class GoogleProvider(LLMProviderBase):
                 has_custom_base=credentials.api_base is not None,
             )
 
-        except ClientError as e:
-            self._logger.exception(
+        except APIError as e:
+            self.connected = False
+            self.client = None
+            self._logger.warning(
                 "google_connect_failed",
                 error=str(e),
                 code=e.code,
             )
-            if e.code in {401, 403}:
+            if e.code in _AUTH_STATUS_CODES:
                 raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            if e.code in _RATE_LIMIT_STATUS_CODES:
+                raise RateLimitError(_MSG_RATE_LIMITED) from e
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError) as e:
-            self._logger.exception(
+            self.connected = False
+            self.client = None
+            self._logger.warning(
                 "google_connect_failed",
                 error=str(e),
             )
@@ -133,6 +154,7 @@ class GoogleProvider(LLMProviderBase):
             await super().disconnect()
             self.client = None
             self._current_task = None
+            self._pending_usage = None
             self._logger.info("google_disconnected")
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
@@ -148,6 +170,8 @@ class GoogleProvider(LLMProviderBase):
             list[ModelInfo]: List of ModelInfo objects describing available models.
 
         Raises:
+            AuthenticationError: If credentials are rejected by the API.
+            RateLimitError: If the API rate limit is exceeded.
             ProviderError: If not connected or the request fails.
         """
         if not self.connected or self.client is None:
@@ -196,7 +220,18 @@ class GoogleProvider(LLMProviderBase):
                 "google_models_listed",
                 count=len(sorted_models),
             )
-        except (ConnectionError, TimeoutError, OSError, ClientError, ValueError) as e:
+        except APIError as e:
+            self._logger.warning(
+                "google_list_models_api_failed",
+                error=str(e),
+                code=e.code,
+            )
+            if e.code in _AUTH_STATUS_CODES:
+                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            if e.code in _RATE_LIMIT_STATUS_CODES:
+                raise RateLimitError(_MSG_RATE_LIMITED) from e
+            raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             self._logger.warning(
                 "google_list_models_api_failed",
                 error=str(e),
@@ -233,13 +268,15 @@ class GoogleProvider(LLMProviderBase):
             tuple[Message, list[ToolCall] | None]: A tuple containing the assistant message and optional tool calls.
 
         Raises:
-            ProviderError: If not connected or the request fails.
+            AuthenticationError: If credentials are rejected by the API.
+            ProviderError: If not connected, the request fails, or the response is blocked.
             RateLimitError: If the API rate limit is exceeded.
         """
         if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         self._logger.debug(
             "google_chat_started",
             model=model,
@@ -295,7 +332,11 @@ class GoogleProvider(LLMProviderBase):
             response = await asyncio.to_thread(_generate)
 
             duration_ms = (time.perf_counter() - start_time) * 1000
+
+            self._check_safety_block(response)
+
             content, tool_calls = self._parse_response(response)
+            self._pending_usage = self._extract_usage(response)
 
             for tc in tool_calls:
                 self._logger.debug(
@@ -326,15 +367,26 @@ class GoogleProvider(LLMProviderBase):
                 content_length=len(content),
             )
 
-        except (ConnectionError, TimeoutError, OSError, ClientError, ValueError) as e:
-            self._logger.exception(
+        except (AuthenticationError, ProviderError, RateLimitError):
+            raise
+        except APIError as e:
+            self._logger.warning(
+                "google_chat_failed",
+                model=model,
+                error=str(e),
+                code=e.code,
+            )
+            if e.code in _AUTH_STATUS_CODES:
+                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            if e.code in _RATE_LIMIT_STATUS_CODES:
+                raise RateLimitError(_MSG_RATE_LIMITED) from e
+            raise ProviderError(_MSG_REQUEST_FAILED) from e
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            self._logger.warning(
                 "google_chat_failed",
                 model=model,
                 error=str(e),
             )
-            error_msg = str(e).lower()
-            if "quota" in error_msg or "rate" in error_msg or "429" in error_msg:
-                raise RateLimitError(_MSG_RATE_LIMITED) from e
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         else:
             return message, tool_calls or None
@@ -368,12 +420,15 @@ class GoogleProvider(LLMProviderBase):
             str: Text chunks as they arrive from the API.
 
         Raises:
-            ProviderError: If not connected or the stream fails.
+            AuthenticationError: If credentials are rejected by the API.
+            ProviderError: If not connected, the stream fails, or the response is blocked.
+            RateLimitError: If the API rate limit is exceeded.
         """
         if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         self._logger.debug(
             "google_chat_stream_started",
             model=model,
@@ -429,12 +484,15 @@ class GoogleProvider(LLMProviderBase):
                     )
                     break
                 last_chunk = chunk
+                self._check_safety_block(chunk)
                 if hasattr(chunk, "text") and chunk.text:
                     chunk_count += 1
                     yield chunk.text
 
-            if not self._cancel_requested:
-                if last_chunk is not None and hasattr(last_chunk, "function_calls") and last_chunk.function_calls:
+            if not self._cancel_requested and last_chunk is not None:
+                self._pending_usage = self._extract_usage(last_chunk)
+
+                if hasattr(last_chunk, "function_calls") and last_chunk.function_calls:
                     tool_calls: list[ToolCall] = []
                     for idx, fc in enumerate(last_chunk.function_calls):
                         func_name = fc.name or ""
@@ -456,8 +514,26 @@ class GoogleProvider(LLMProviderBase):
                     chunks_received=chunk_count,
                 )
 
-        except (ConnectionError, TimeoutError, OSError, ClientError, ValueError) as e:
-            self._logger.exception(
+        except (AuthenticationError, ProviderError, RateLimitError):
+            if not self._cancel_requested:
+                raise
+        except APIError as e:
+            self._logger.warning(
+                "google_chat_stream_failed",
+                model=model,
+                error=str(e),
+                code=e.code,
+                chunks_received=chunk_count,
+            )
+            if self._cancel_requested:
+                return
+            if e.code in _AUTH_STATUS_CODES:
+                raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            if e.code in _RATE_LIMIT_STATUS_CODES:
+                raise RateLimitError(_MSG_RATE_LIMITED) from e
+            raise ProviderError(_MSG_STREAM_FAILED) from e
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            self._logger.warning(
                 "google_chat_stream_failed",
                 model=model,
                 error=str(e),
@@ -479,6 +555,80 @@ class GoogleProvider(LLMProviderBase):
             "google_request_cancelled",
             had_active_task=had_active_task,
         )
+
+    @staticmethod
+    def _extract_usage(
+        response: GenerateContentResponse,
+    ) -> UsageInfo | None:
+        """Extract usage information from a Gemini response or stream chunk.
+
+        Args:
+            response: A Gemini response object that may carry
+                ``usage_metadata`` with token counts.
+
+        Returns:
+            UsageInfo | None: Parsed usage information, or None when the
+            response does not carry usable metadata.
+        """
+        metadata = getattr(response, "usage_metadata", None)
+        if metadata is None:
+            return None
+
+        prompt_tokens = getattr(metadata, "prompt_token_count", None) or 0
+        completion_tokens = getattr(metadata, "candidates_token_count", None) or 0
+        total_tokens = getattr(metadata, "total_token_count", None)
+        if total_tokens is None:
+            total_tokens = prompt_tokens + completion_tokens
+
+        if prompt_tokens == 0 and completion_tokens == 0 and total_tokens == 0:
+            return None
+
+        return UsageInfo(
+            prompt_tokens=int(prompt_tokens),
+            completion_tokens=int(completion_tokens),
+            total_tokens=int(total_tokens),
+        )
+
+    @staticmethod
+    def _check_safety_block(
+        response: GenerateContentResponse,
+    ) -> None:
+        """Inspect a response or stream chunk for safety or policy blocks.
+
+        Raises ``ProviderError`` when the response indicates that generation
+        was halted for safety, prohibited content, blocklist, SPII, or image
+        safety reasons.
+
+        Args:
+            response: A Gemini response object.
+
+        Raises:
+            ProviderError: If the response was blocked by Google's safety or
+                policy filters.
+        """
+        prompt_feedback = getattr(response, "prompt_feedback", None)
+        if prompt_feedback is not None:
+            block_reason = getattr(prompt_feedback, "block_reason", None)
+            if block_reason is not None:
+                reason_name = getattr(block_reason, "name", str(block_reason))
+                msg = f"{_MSG_CONTENT_BLOCKED}: prompt {reason_name}"
+                raise ProviderError(msg)
+
+        candidates = getattr(response, "candidates", None)
+        if not candidates:
+            return
+
+        for candidate in candidates:
+            finish_reason = getattr(candidate, "finish_reason", None)
+            if finish_reason is None:
+                continue
+            reason_name = getattr(finish_reason, "name", str(finish_reason))
+            if reason_name in _BLOCKING_FINISH_REASONS:
+                if reason_name == "PROHIBITED_CONTENT":
+                    msg = f"{_MSG_PROHIBITED_CONTENT}: {reason_name}"
+                    raise ProviderError(msg)
+                msg = f"{_MSG_CONTENT_BLOCKED}: {reason_name}"
+                raise ProviderError(msg)
 
     @staticmethod
     def _extract_system_instruction(
@@ -703,3 +853,6 @@ class GoogleProvider(LLMProviderBase):
             google_schemas = create_google_tool_schema(tool)
             result.extend(dict(schema) for schema in google_schemas)
         return result
+
+
+__all__ = ["GoogleProvider", "UsageInfo"]
