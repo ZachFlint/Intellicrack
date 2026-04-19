@@ -258,6 +258,7 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
             if end_match.hasMatch():
                 end_index = end_match.capturedEnd()
                 comment_length = end_index - start_index
+                self.setCurrentBlockState(0)
             else:
                 self.setCurrentBlockState(1)
                 comment_length = len(text) - start_index
@@ -398,6 +399,80 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         "xadd",
         "cmpxchg",
         "lock",
+        "movaps",
+        "movups",
+        "movapd",
+        "movupd",
+        "movdqa",
+        "movdqu",
+        "movss",
+        "movsd",
+        "addps",
+        "addpd",
+        "addss",
+        "addsd",
+        "subps",
+        "subpd",
+        "subss",
+        "subsd",
+        "mulps",
+        "mulpd",
+        "mulss",
+        "mulsd",
+        "divps",
+        "divpd",
+        "divss",
+        "divsd",
+        "sqrtps",
+        "sqrtss",
+        "pand",
+        "por",
+        "pxor",
+        "pshufb",
+        "pshufd",
+        "punpcklbw",
+        "punpckhbw",
+        "vmovaps",
+        "vmovups",
+        "vaddps",
+        "vsubps",
+        "vmulps",
+        "vdivps",
+        "vpand",
+        "vpor",
+        "vpxor",
+        "vzeroupper",
+        "vzeroall",
+        "vbroadcastss",
+        "vbroadcastsd",
+        "vextractf128",
+        "vinsertf128",
+        "vperm2f128",
+        "vpermilps",
+        "kandw",
+        "korw",
+        "kxorw",
+        "kmovw",
+        "kunpckbw",
+        "fld",
+        "fst",
+        "fstp",
+        "fadd",
+        "fsub",
+        "fmul",
+        "fdiv",
+        "fxch",
+        "fcom",
+        "fcomp",
+        "fcompp",
+        "fucom",
+        "fucomi",
+        "fldcw",
+        "fnstcw",
+        "finit",
+        "fninit",
+        "fwait",
+        "fnclex",
     )
 
     REGISTERS: ClassVar[tuple[str, ...]] = (
@@ -501,6 +576,63 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         "ymm5",
         "ymm6",
         "ymm7",
+        "ymm8",
+        "ymm9",
+        "ymm10",
+        "ymm11",
+        "ymm12",
+        "ymm13",
+        "ymm14",
+        "ymm15",
+        "zmm0",
+        "zmm1",
+        "zmm2",
+        "zmm3",
+        "zmm4",
+        "zmm5",
+        "zmm6",
+        "zmm7",
+        "zmm8",
+        "zmm9",
+        "zmm10",
+        "zmm11",
+        "zmm12",
+        "zmm13",
+        "zmm14",
+        "zmm15",
+        "zmm16",
+        "zmm17",
+        "zmm18",
+        "zmm19",
+        "zmm20",
+        "zmm21",
+        "zmm22",
+        "zmm23",
+        "zmm24",
+        "zmm25",
+        "zmm26",
+        "zmm27",
+        "zmm28",
+        "zmm29",
+        "zmm30",
+        "zmm31",
+        "k0",
+        "k1",
+        "k2",
+        "k3",
+        "k4",
+        "k5",
+        "k6",
+        "k7",
+        "st",
+        "st0",
+        "st1",
+        "st2",
+        "st3",
+        "st4",
+        "st5",
+        "st6",
+        "st7",
     )
 
     MEMORY_KEYWORDS: ClassVar[tuple[str, ...]] = (
@@ -563,6 +695,10 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         for mem_kw in self.MEMORY_KEYWORDS:
             pattern = rf"\b{mem_kw}\b"
             self._rules.append(HighlightRule(pattern, mem_format))
+
+        directive_format = AssemblySyntaxHighlighter._create_format("#C586C0")
+        self._rules.append(HighlightRule(r"^\s*\.(text|data|bss|section|globl?|extern)\b", directive_format))
+        self._rules.append(HighlightRule(r"\b(db|dw|dd|dq|resb|resw|resd|resq)\b", directive_format))
 
         addr_format = AssemblySyntaxHighlighter._create_format("#B5CEA8")
         self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", addr_format))
@@ -1062,6 +1198,7 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
             if end_match.hasMatch():
                 end_index = end_match.capturedEnd()
                 comment_length = end_index - start_index
+                self.setCurrentBlockState(0)
             else:
                 self.setCurrentBlockState(1)
                 comment_length = len(text) - start_index
@@ -1260,6 +1397,7 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
             if end_match.hasMatch():
                 end_index = end_match.capturedEnd()
                 comment_length = end_index - start_index
+                self.setCurrentBlockState(0)
             else:
                 self.setCurrentBlockState(1)
                 comment_length = len(text) - start_index

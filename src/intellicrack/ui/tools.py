@@ -1629,7 +1629,7 @@ class ToolOutputPanel(QFrame):
             ("_hex_editor_panel", None),
             ("_frida_panel", "frida_bridge"),
             ("_process_panel", "process_bridge"),
-            ("_sandbox_panel", None),
+            ("sandbox_panel", None),
             ("analysis_panel", None),
             ("script_panel", None),
             ("stack_panel", None),
@@ -1796,6 +1796,7 @@ class ToolOutputPanel(QFrame):
         window = self._detached_windows.pop(title, None)
         if window is not None:
             window.hide()
+            window.deleteLater()
 
         self.tab_widget.addTab(widget, title)
         self.tab_widget.setCurrentWidget(widget)
@@ -2011,7 +2012,9 @@ class ToolOutputPanel(QFrame):
         """Get the syntax highlighter from the current tab's code display.
 
         Traverses the active tab widget to find a QPlainTextEdit child
-        and retrieves its document's syntax highlighter.
+        and retrieves its document's syntax highlighter. Returns None
+        when no active tab, no QPlainTextEdit descendant, or no document
+        is available.
 
         Returns:
             QSyntaxHighlighter | None: Syntax highlighter or None if not available.
@@ -2019,9 +2022,13 @@ class ToolOutputPanel(QFrame):
         current_widget = self.tab_widget.currentWidget()
         if current_widget is None:
             return None
-        code_display = current_widget.findChild(QPlainTextEdit)
+        code_display = cast("QPlainTextEdit | None", current_widget.findChild(QPlainTextEdit))
+        if code_display is None:
+            return None
         doc = code_display.document()
-        return None if doc is None else doc.findChild(QSyntaxHighlighter)
+        if doc is None:
+            return None
+        return doc.findChild(QSyntaxHighlighter)
 
     def _wire_hex_editor_state(self, panel_widget: HexEditorPanel) -> None:
         """Create a shared HexDocumentState and wire it to the bridge and panel.
