@@ -23,6 +23,189 @@ from intellicrack.core.types import ProviderCredentials, ProviderName
 _logger = get_logger("credentials.env_loader")
 
 
+_ENV_LINE_PATTERN: re.Pattern[str] = re.compile(
+    r"^(?:export\s+)?"
+    r"([A-Za-z_][A-Za-z0-9_]*)"
+    r"\s*=\s*"
+    r"(.*)$",
+)
+
+_SAFE_VALUE_PATTERN: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._/\-]+$")
+
+
+def _decode_double_quoted(value: str) -> str:
+    r"""Decode escape sequences inside a double-quoted .env value.
+
+    Supports backslash-escapes for ``\\``, ``"``, ``$``, ``n``, ``r``, and
+    ``t``. Unknown escapes are preserved as the escaped character (dropping
+    the leading backslash) to mirror common dotenv parser behavior.
+
+    Args:
+        value: The raw string content between the surrounding double quotes.
+
+    Returns:
+        str: The decoded value with escape sequences resolved.
+    """
+    result: list[str] = []
+    index = 0
+    length = len(value)
+    while index < length:
+        char = value[index]
+        if char == "\\" and index + 1 < length:
+            nxt = value[index + 1]
+            if nxt == "n":
+                result.append("\n")
+            elif nxt == "r":
+                result.append("\r")
+            elif nxt == "t":
+                result.append("\t")
+            elif nxt == "\\":
+                result.append("\\")
+            elif nxt == '"':
+                result.append('"')
+            elif nxt == "$":
+                result.append("$")
+            else:
+                result.append(nxt)
+            index += 2
+            continue
+        result.append(char)
+        index += 1
+    return "".join(result)
+
+
+def _strip_unquoted_inline_comment(value: str) -> str:
+    """Remove an inline ``#`` comment from an unquoted .env value.
+
+    A ``#`` starts a comment only when it is preceded by whitespace or is at
+    the start of the value. This mirrors typical dotenv semantics and avoids
+    corrupting values that legitimately contain ``#`` (for example URLs with
+    fragments, which callers should quote, but we still handle the unquoted
+    case conservatively).
+
+    Args:
+        value: The unquoted value text following the ``=`` sign.
+
+    Returns:
+        str: The value with any trailing inline comment removed.
+    """
+    length = len(value)
+    for i in range(length):
+        if value[i] == "#" and (i == 0 or value[i - 1] in {" ", "\t"}):
+            return value[:i]
+    return value
+
+
+def _parse_env_value(raw: str) -> str:
+    """Parse the right-hand side of a ``KEY=VALUE`` .env entry.
+
+    Handles double-quoted, single-quoted, and unquoted values. Double-quoted
+    values have their escape sequences decoded; single-quoted values are
+    treated as literal; unquoted values are trimmed and have inline comments
+    stripped.
+
+    Args:
+        raw: The raw text following the ``=`` sign, before any trailing
+            newline characters.
+
+    Returns:
+        str: The decoded value string.
+    """
+    stripped = raw.strip()
+    if not stripped:
+        return ""
+
+    if stripped.startswith('"'):
+        end = len(stripped) - 1
+        while end > 0 and stripped[end] != '"':
+            end -= 1
+        if end > 0:
+            inner = stripped[1:end]
+            return _decode_double_quoted(inner)
+        return _decode_double_quoted(stripped[1:])
+
+    if stripped.startswith("'"):
+        end = len(stripped) - 1
+        while end > 0 and stripped[end] != "'":
+            end -= 1
+        if end > 0:
+            return stripped[1:end]
+        return stripped[1:]
+
+    cleaned = _strip_unquoted_inline_comment(stripped)
+    return cleaned.rstrip()
+
+
+def _parse_env_text(text: str) -> dict[str, str]:
+    r"""Parse .env file content into a ``dict`` of key to value.
+
+    Accepts both ``\n`` and ``\r\n`` line endings. Blank lines and comment
+    lines starting with ``#`` are ignored.
+
+    Args:
+        text: The raw .env file content.
+
+    Returns:
+        dict[str, str]: Mapping of variable names to their parsed values.
+    """
+    result: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        stripped_line = raw_line.strip()
+        if not stripped_line or stripped_line.startswith("#"):
+            continue
+        match = _ENV_LINE_PATTERN.match(stripped_line)
+        if not match:
+            continue
+        key = match[1]
+        raw_value = match[2]
+        result[key] = _parse_env_value(raw_value)
+    return result
+
+
+def _quote_env_value(value: str) -> str:
+    r"""Serialize a value into its .env representation with minimal quoting.
+
+    Rules:
+        * Empty string becomes ``""`` (no quotes, bare ``=``).
+        * Value made only of ASCII alphanumerics plus ``.``, ``_``, ``/``,
+          and ``-`` is emitted unquoted.
+        * Any other value is wrapped in double quotes with these escape
+          sequences applied in order: ``\\`` becomes ``\\\\``, ``"`` becomes
+          ``\"``, ``$`` becomes ``\$``, literal newline becomes ``\n``,
+          carriage return becomes ``\r``, and tab becomes ``\t``.
+
+    Args:
+        value: The value to serialize.
+
+    Returns:
+        str: The .env-safe textual representation (without the ``KEY=``
+            prefix and without a trailing newline).
+    """
+    if not value:
+        return ""
+    if _SAFE_VALUE_PATTERN.match(value):
+        return value
+    escaped = (
+        value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    )
+    return f'"{escaped}"'
+
+
+def _detect_eol(text: str) -> str:
+    r"""Detect the dominant end-of-line marker in a text blob.
+
+    Args:
+        text: The text to examine.
+
+    Returns:
+        str: ``"\r\n"`` if CRLF line endings appear anywhere, otherwise
+            ``"\n"``.
+    """
+    if "\r\n" in text:
+        return "\r\n"
+    return "\n"
+
+
 @dataclass
 class ProviderCredentialMapping:
     """Mapping of environment variable names for a provider.
@@ -104,10 +287,6 @@ class CredentialLoader:
     This class parses .env files and provides credentials for each
     supported LLM provider.
 
-    Args:
-        env_path: Path to the .env file. If None, searches for .env
-                 in current directory and parent directories.
-
     Attributes:
         PROVIDER_MAPPINGS: Mapping of provider names to their credential environment variable configuration.
     """
@@ -173,34 +352,16 @@ class CredentialLoader:
             )
             return
 
-        env_pattern = re.compile(
-            r"^(?:export\s+)?"
-            r"([A-Za-z_][A-Za-z0-9_]*)"
-            r"\s*=\s*"
-            r'(?:"([^"]*)"|\'([^\']*)\'|(.*))'
-            r"\s*$",
-        )
-
-        loaded_count = 0
-        with self.env_path.open("r", encoding="utf-8") as f:
-            for raw_line in f:
-                stripped_line = raw_line.strip()
-
-                if not stripped_line or stripped_line.startswith("#"):
-                    continue
-
-                if match := env_pattern.match(stripped_line):
-                    key = match[1]
-                    value = match[2] or match[3] or match[4] or ""
-                    value = value.strip()
-                    self._env_vars[key] = value
-                    os.environ[key] = value
-                    loaded_count += 1
+        text = self.env_path.read_text(encoding="utf-8")
+        parsed = _parse_env_text(text)
+        for key, value in parsed.items():
+            self._env_vars[key] = value
+            os.environ[key] = value
 
         _logger.info(
             "env_variables_loaded",
             path=str(self.env_path),
-            count=loaded_count,
+            count=len(parsed),
         )
 
     def reload(self) -> None:
@@ -400,10 +561,13 @@ class CredentialLoader:
         return value if value is not None else os.environ.get(name, default)
 
     def save_to_env_file(self, name: str, value: str) -> None:
-        """Save an environment variable to the .env file.
+        r"""Save an environment variable to the .env file.
 
         Updates an existing variable or adds a new one at the end of the file.
-        Preserves comments and file structure.
+        Preserves comments and file structure, and preserves the existing
+        end-of-line style. Uses ``\n`` for newly created files. Values are
+        quoted and escaped per :func:`_quote_env_value` rules to guarantee a
+        lossless round-trip with the parser.
 
         Args:
             name: The environment variable name.
@@ -412,27 +576,51 @@ class CredentialLoader:
         self.set_env_var(name, value)
         _logger.debug("env_file_write_started", path=str(self.env_path), variable=name)
 
-        lines: list[str] = []
-        key_found = False
+        quoted = _quote_env_value(value)
+        new_line_body = f"{name}={quoted}"
         key_pattern = re.compile(rf"^(?:export\s+)?{re.escape(name)}\s*=.*$")
 
+        existing_text = ""
         if self.env_path.exists():
-            with self.env_path.open("r", encoding="utf-8") as f:
-                for line in f:
-                    stripped = line.rstrip("\n\r")
-                    if key_pattern.match(stripped):
-                        lines.append(f"{name}={value}\n")
-                        key_found = True
-                    else:
-                        lines.append(line if line.endswith("\n") else line + "\n")
+            with self.env_path.open("r", encoding="utf-8", newline="") as f:
+                existing_text = f.read()
+
+        eol = _detect_eol(existing_text) if existing_text else "\n"
+
+        lines: list[str] = []
+        key_found = False
+
+        if existing_text:
+            raw_lines = existing_text.splitlines(keepends=True)
+            for raw_line in raw_lines:
+                content = raw_line
+                line_eol = ""
+                if content.endswith("\r\n"):
+                    line_eol = "\r\n"
+                    content = content[:-2]
+                elif content.endswith("\n"):
+                    line_eol = "\n"
+                    content = content[:-1]
+                elif content.endswith("\r"):
+                    line_eol = "\r"
+                    content = content[:-1]
+
+                if key_pattern.match(content.strip()):
+                    replacement_eol = line_eol or eol
+                    lines.append(f"{new_line_body}{replacement_eol}")
+                    key_found = True
+                else:
+                    lines.append(f"{content}{line_eol}")
 
         if not key_found:
-            if lines and not lines[-1].endswith("\n"):
-                lines.append("\n")
-            lines.append(f"{name}={value}\n")
+            if lines:
+                last = lines[-1]
+                if not last.endswith(("\n", "\r")):
+                    lines[-1] = f"{last}{eol}"
+            lines.append(f"{new_line_body}{eol}")
 
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
-        with self.env_path.open("w", encoding="utf-8") as f:
+        with self.env_path.open("w", encoding="utf-8", newline="") as f:
             f.writelines(lines)
 
         _logger.info(
