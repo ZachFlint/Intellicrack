@@ -39,25 +39,98 @@ rules:
       `_logger.warning(...)`.
     severity: WARNING
     languages: [python]
-    pattern-either:
-      - pattern: |
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try:
+                  ...
+              except $E:
+                  ...
+                  $L.debug(...)
+          - pattern: |
+              try:
+                  ...
+              except $E as $X:
+                  ...
+                  $L.debug(...)
+          - pattern: |
+              try:
+                  ...
+              except:
+                  ...
+                  $L.debug(...)
+      - pattern-not: |
+          try:
+              import $M
+              ...
+          except ImportError:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import $X
+              ...
+          except ImportError:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import $X as $Y
+              ...
+          except ImportError:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              import $M
+              ...
+          except (ImportError, $E2):
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import $X
+              ...
+          except (ImportError, $E2):
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import $X
+              ...
+          except (ImportError, $E2) as $EXC:
+              ...
+              $L.debug(...)
+      - pattern-not: |
           try:
               ...
           except $E:
               ...
-              $L.debug(...)
-      - pattern: |
+              $L.debug(..., exc_info=True)
+      - pattern-not: |
           try:
               ...
           except $E as $X:
               ...
-              $L.debug(...)
-      - pattern: |
+              $L.debug(..., exc_info=True)
+      - pattern-not: |
           try:
               ...
-          except:
+          except ($E1, $E2):
               ...
-              $L.debug(...)
+              $L.debug(..., exc_info=True)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3):
+              ...
+              $L.debug(..., exc_info=True)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4):
+              ...
+              $L.debug(..., exc_info=True)
 
   - id: intellicrack-logging-e3-error-on-reraise
     message: >-
