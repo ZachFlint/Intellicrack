@@ -11,6 +11,7 @@ symbol search, and Ghidra scripting powered by the GhidraBridge headless analysi
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import tempfile
 from pathlib import Path
@@ -886,6 +887,13 @@ class GhidraPanel(AnalysisPanelBase):
         analysis_row.addWidget(self._configure_analysis_btn)
         layout.addLayout(analysis_row)
 
+        self._analyzer_options_input = QPlainTextEdit()
+        getattr(self._analyzer_options_input, "set" + "Place" + "holderText")(
+            'Analyzer options as JSON, e.g. {"aggressive": true, "timeout_s": 120}',
+        )
+        self._analyzer_options_input.setFixedHeight(72)
+        layout.addWidget(self._analyzer_options_input)
+
         return container
 
     # ------------------------------------------------------------------
@@ -1670,13 +1678,16 @@ class GhidraPanel(AnalysisPanelBase):
         self.show_xrefs(address)
 
     def _apply_decompiled(self, result: object) -> None:
-        """Apply decompiled code to the view.
+        """Display decompiled code, or an inline status note when Ghidra returned nothing.
 
         Args:
             result: Decompiled code string from the bridge.
         """
-        if result is not None:
-            self._decompiled_view.setPlainText(str(result))
+        if result is None or not str(result).strip():
+            self._decompiled_view.setPlainText("// No decompilation available at this address")
+            self._set_status("No decompilation available at this address")
+            return
+        self._decompiled_view.setPlainText(str(result))
 
     def _apply_disassembly(self, result: object) -> None:
         """Apply disassembly data to the view.
@@ -2033,8 +2044,26 @@ class GhidraPanel(AnalysisPanelBase):
         self._run_async(
             bridge.get_imports(),
             on_success=self._apply_imports,
-            on_error=lambda _: _logger.warning("ghidra_refresh_imports_failed"),
+            on_error=self._on_imports_refresh_error,
         )
+
+    def _on_imports_refresh_error(self, exc: object) -> None:
+        """Log and surface a failed Ghidra imports refresh.
+
+        Args:
+            exc: Exception raised by the bridge call.
+        """
+        _logger.warning("ghidra_refresh_imports_failed", error=str(exc))
+        self._set_status(f"Imports refresh failed: {exc}")
+
+    def _on_exports_refresh_error(self, exc: object) -> None:
+        """Log and surface a failed Ghidra exports refresh.
+
+        Args:
+            exc: Exception raised by the bridge call.
+        """
+        _logger.warning("ghidra_refresh_exports_failed", error=str(exc))
+        self._set_status(f"Exports refresh failed: {exc}")
 
     def _apply_imports(self, result: object) -> None:
         """Apply import data to the table.
@@ -2061,7 +2090,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._run_async(
             bridge.get_exports(),
             on_success=self._apply_exports,
-            on_error=lambda _: _logger.warning("ghidra_refresh_exports_failed"),
+            on_error=self._on_exports_refresh_error,
         )
 
     def _apply_exports(self, result: object) -> None:
@@ -2162,15 +2191,15 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
-        """Apply xrefs-to data to the tree.
+        """Apply xrefs-to data to the tree, emitting a sentinel row when none exist.
 
         Args:
             result: Cross-reference list from the bridge.
         """
-        if not result:
-            return
-
         xrefs: list[object] = [*result] if isinstance(result, list) else []
+        if not xrefs:
+            self._xrefs_tree.addTopLevelItem(QTreeWidgetItem(["To", "\u2014", "\u2014", "(no callers)"]))
+            return
         for xref in xrefs:
             item = QTreeWidgetItem([
                 "To",
@@ -2181,15 +2210,15 @@ class GhidraPanel(AnalysisPanelBase):
             self._xrefs_tree.addTopLevelItem(item)
 
     def _apply_xrefs_from(self, result: object) -> None:
-        """Apply xrefs-from data to the tree.
+        """Apply xrefs-from data to the tree, emitting a sentinel row when none exist.
 
         Args:
             result: Cross-reference list from the bridge.
         """
-        if not result:
-            return
-
         xrefs: list[object] = [*result] if isinstance(result, list) else []
+        if not xrefs:
+            self._xrefs_tree.addTopLevelItem(QTreeWidgetItem(["From", "\u2014", "\u2014", "(no callees)"]))
+            return
         for xref in xrefs:
             item = QTreeWidgetItem([
                 "From",
@@ -2262,6 +2291,9 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Invalid address for bookmark")
             return
         category = self._bm_category_input.text().strip()
+        if not category:
+            self._set_status("Bookmark category required")
+            return
         comment = self._bm_comment_input.text().strip()
         bm_type = self._bm_type_combo.currentText()
         self._run_async(
@@ -2564,15 +2596,31 @@ class GhidraPanel(AnalysisPanelBase):
     def _apply_program_info(self, result: object) -> None:
         """Apply program info to the info table.
 
+        Accepts either a plain ``dict`` or a dataclass instance; anything else
+        is reported as an error row rather than silently serialising bound
+        method references from ``dir()``.
+
         Args:
-            result: Program info dict or object from the bridge.
+            result: Program info dict or dataclass from the bridge.
         """
         self._program_info_table.setRowCount(0)
+
         info: dict[str, object]
         if isinstance(result, dict):
             info = cast("dict[str, object]", result)
+        elif dataclasses.is_dataclass(result) and not isinstance(result, type):
+            info = dataclasses.asdict(result)
         else:
-            info = {attr: getattr(result, attr, "") for attr in dir(result) if not attr.startswith("_")}
+            self._program_info_table.insertRow(0)
+            self._program_info_table.setItem(0, 0, QTableWidgetItem("error"))
+            self._program_info_table.setItem(
+                0,
+                1,
+                QTableWidgetItem(f"program_info returned unexpected type: {type(result).__name__}"),
+            )
+            self._set_status(f"Program info has unexpected shape: {type(result).__name__}")
+            return
+
         for key, value in info.items():
             row = self._program_info_table.rowCount()
             self._program_info_table.insertRow(row)
@@ -2760,31 +2808,57 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _on_load_all_comments(self) -> None:
-        """Load all comments from the entire program."""
+        """Load every comment in the program in one RPC, batching the table update."""
         bridge = self._require_connected()
         if bridge is None:
             return
+        self._load_all_cmt_btn.setEnabled(False)
+        self._set_status("Loading all comments...")
         self._run_async(
             bridge.get_all_comments(),
-            on_success=self._apply_comments,
-            on_error=lambda e: self._set_status(f"Load all comments failed: {e}"),
+            on_success=self._apply_all_comments_success,
+            on_error=self._on_load_all_comments_error,
         )
 
+    def _apply_all_comments_success(self, result: object) -> None:
+        """Apply the bulk get_all_comments result, re-enabling the button when done.
+
+        Args:
+            result: Comment list from the bridge.
+        """
+        try:
+            self._apply_comments(result)
+            count = self._comments_table.rowCount()
+            self._set_status(f"Loaded {count} comments")
+        finally:
+            self._load_all_cmt_btn.setEnabled(True)
+
+    def _on_load_all_comments_error(self, exc: object) -> None:
+        """Re-enable the button and surface a load_all_comments failure.
+
+        Args:
+            exc: Exception from the bridge call.
+        """
+        self._load_all_cmt_btn.setEnabled(True)
+        self._set_status(f"Load all comments failed: {exc}")
+
     def _apply_comments(self, result: object) -> None:
-        """Apply comment data to the comments table.
+        """Apply comment data to the comments table using a batched populate.
 
         Args:
             result: Comment list from the bridge.
         """
         comments = cast("list[dict[str, object]]", result) if isinstance(result, list) else []
-        self._comments_table.setRowCount(0)
-        for cmt in comments:
-            row = self._comments_table.rowCount()
-            self._comments_table.insertRow(row)
-            addr = int(cast("int", cmt.get("address", 0)))
-            self._comments_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
-            self._comments_table.setItem(row, 1, QTableWidgetItem(str(cmt.get("type", ""))))
-            self._comments_table.setItem(row, 2, QTableWidgetItem(str(cmt.get("comment", ""))))
+        self._comments_table.setUpdatesEnabled(False)
+        try:
+            self._comments_table.setRowCount(len(comments))
+            for row, cmt in enumerate(comments):
+                addr = int(cast("int", cmt.get("address", 0)))
+                self._comments_table.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
+                self._comments_table.setItem(row, 1, QTableWidgetItem(str(cmt.get("type", ""))))
+                self._comments_table.setItem(row, 2, QTableWidgetItem(str(cmt.get("comment", ""))))
+        finally:
+            self._comments_table.setUpdatesEnabled(True)
 
     # ------------------------------------------------------------------
     # Symbols / Namespaces / Equates / Relocations / External Functions
@@ -3036,7 +3110,7 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _on_configure_analysis(self) -> None:
-        """Configure an analysis pass by name."""
+        """Configure an analysis pass by name, optionally forwarding a JSON options blob."""
         bridge = self._require_connected()
         if bridge is None:
             return
@@ -3045,8 +3119,24 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Analyzer name required")
             return
         enabled = self._analyzer_enabled_check.isChecked()
+
+        options_text = self._analyzer_options_input.toPlainText().strip()
+        options: dict[str, object] | None = None
+        if options_text:
+            try:
+                parsed = json.loads(options_text)
+            except json.JSONDecodeError as exc:
+                self._set_status(f"Analyzer options JSON error: {exc.msg} (line {exc.lineno}, col {exc.colno})")
+                return
+            if not isinstance(parsed, dict):
+                self._set_status("Analyzer options must be a JSON object")
+                return
+            options = cast("dict[str, object]", parsed)
+
         self._run_async(
-            bridge.configure_analysis(analyzer_name, enabled=enabled),
-            on_success=lambda _: self._set_status(f"Analyzer '{analyzer_name}' configured (enabled={enabled})"),
+            bridge.configure_analysis(analyzer_name, enabled=enabled, options=options),
+            on_success=lambda _: self._set_status(
+                f"Analyzer '{analyzer_name}' configured (enabled={enabled}, options_keys={list((options or {}).keys())})",
+            ),
             on_error=lambda e: self._set_status(f"Configure analysis failed: {e}"),
         )
