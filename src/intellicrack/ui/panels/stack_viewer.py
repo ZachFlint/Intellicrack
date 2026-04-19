@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass
-from typing import Any, Final, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor
@@ -29,8 +29,14 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.frida_bridge import FridaBridge
+    from intellicrack.bridges.x64dbg import X64DbgBridge
 
 
 _logger = get_logger("ui.panels.stack_viewer")
@@ -102,35 +108,38 @@ class StackFrame:
 class StackDataSource(Protocol):
     """Protocol for stack frame data sources.
 
-    Implementations should provide methods to retrieve current stack frames from debugging sessions.
+    Implementations provide methods to retrieve current stack frames from
+    debugging sessions. All members are instance methods that dispatch
+    through a concrete bridge attached via ``set_bridge``. The default
+    bodies return empty/disconnected values so that a partially-initialised
+    subclass degrades gracefully.
     """
 
-    @staticmethod
-    def get_stack_frames() -> list[StackFrame]:
+    def get_stack_frames(self) -> list[StackFrame]:
         """Get current stack frames from the data source.
 
         Returns:
             list[StackFrame]: List of StackFrame objects representing the call stack.
         """
+        _logger.debug("stack_source_default_get_stack_frames", source=type(self).__name__)
         return []
 
-    @staticmethod
-    def is_connected() -> bool:
+    def is_connected(self) -> bool:
         """Check if the data source is connected.
 
         Returns:
             bool: True if connected and can provide stack data.
         """
+        _logger.debug("stack_source_default_is_connected", source=type(self).__name__)
         return False
 
-    @staticmethod
-    def get_source_name() -> str:
+    def get_source_name(self) -> str:
         """Get the name of this data source.
 
         Returns:
             str: Human-readable source name.
         """
-        return "Unknown"
+        return type(self).__name__
 
 
 class X64DbgStackSource:
@@ -139,11 +148,13 @@ class X64DbgStackSource:
     Retrieves stack frames from an active x64dbg debugging session using the bridge interface.
     """
 
+    _source_name: ClassVar[str] = "x64dbg"
+
     def __init__(self) -> None:
         """Initialize the X64DbgStackSource instance."""
-        self._bridge: object | None = None
+        self._bridge: X64DbgBridge | None = None
 
-    def set_bridge(self, bridge: object) -> None:
+    def set_bridge(self, bridge: X64DbgBridge) -> None:
         """Set the X64DbgBridge instance.
 
         Args:
@@ -152,34 +163,37 @@ class X64DbgStackSource:
         self._bridge = bridge
 
     def get_stack_frames(self) -> list[StackFrame]:
-        """Get stack frames from x64dbg.
+        """Get stack frames from x64dbg via the async bridge.
 
         Returns:
             list[StackFrame]: List of StackFrame objects.
         """
-        if not self._bridge:
+        if self._bridge is None:
             return []
 
         try:
-            empty_trace: list[dict[str, Any]] = []
-            raw_frames: list[dict[str, Any]] = getattr(self._bridge, "get_stack_trace", lambda: empty_trace)()
-            frames: list[StackFrame] = []
-            for i, raw in enumerate(raw_frames):
-                frame = StackFrame(
-                    index=i,
-                    return_address=raw.get("return_address", 0),
-                    function_name=raw.get("function", "unknown"),
-                    module_name=raw.get("module", "unknown"),
-                    offset=raw.get("offset", 0),
-                    frame_pointer=raw.get("frame_pointer", 0),
-                    stack_pointer=raw.get("stack_pointer", 0),
-                )
-                frames.append(frame)
+            raw = run_bridge_coroutine(self._bridge.get_stack_trace())
         except (RuntimeError, ConnectionError, OSError):
             _logger.exception("x64dbg_stack_frames_failed", bridge_type="x64dbg")
             return []
-        else:
+
+        frames: list[StackFrame] = []
+        if not isinstance(raw, list):
             return frames
+        raw_list = cast("list[Any]", raw)
+        for i, item in enumerate(raw_list):
+            frames.append(
+                StackFrame(
+                    index=i,
+                    return_address=int(getattr(item, "return_address", 0) or 0),
+                    function_name=str(getattr(item, "function_name", "") or getattr(item, "name", "") or "unknown"),
+                    module_name=str(getattr(item, "module_name", "") or getattr(item, "module", "") or "unknown"),
+                    offset=int(getattr(item, "offset", 0) or 0),
+                    frame_pointer=int(getattr(item, "frame_pointer", 0) or 0),
+                    stack_pointer=int(getattr(item, "stack_pointer", 0) or 0),
+                ),
+            )
+        return frames
 
     def is_connected(self) -> bool:
         """Check if x64dbg bridge is connected.
@@ -187,22 +201,21 @@ class X64DbgStackSource:
         Returns:
             bool: True if bridge is attached and connected.
         """
-        if not self._bridge:
+        if self._bridge is None:
             return False
         try:
-            return getattr(self._bridge, "is_connected", lambda: False)()
-        except (RuntimeError, ConnectionError, OSError):
+            return bool(self._bridge.state.is_ready())
+        except (RuntimeError, ConnectionError, OSError, AttributeError):
             _logger.debug("x64dbg_connection_check_failed", exc_info=True)
             return False
 
-    @staticmethod
-    def get_source_name() -> str:
+    def get_source_name(self) -> str:
         """Get the source name.
 
         Returns:
             str: 'x64dbg' string.
         """
-        return "x64dbg"
+        return self._source_name
 
 
 class FridaStackSource:
@@ -211,12 +224,14 @@ class FridaStackSource:
     Retrieves stack frames from an active Frida instrumentation session using the bridge interface.
     """
 
+    _source_name: ClassVar[str] = "Frida"
+
     def __init__(self) -> None:
         """Initialize the FridaStackSource instance."""
-        self._bridge: object | None = None
+        self._bridge: FridaBridge | None = None
         self._cached_frames: list[StackFrame] = []
 
-    def set_bridge(self, bridge: object) -> None:
+    def set_bridge(self, bridge: FridaBridge) -> None:
         """Set the FridaBridge instance.
 
         Args:
@@ -225,42 +240,37 @@ class FridaStackSource:
         self._bridge = bridge
 
     def get_stack_frames(self) -> list[StackFrame]:
-        """Get stack frames from Frida.
+        """Get stack frames from Frida via the async bridge.
 
         Returns:
-            list[StackFrame]: List of StackFrame objects.
+            list[StackFrame]: List of StackFrame objects derived from the bridge's
+            SymbolInfo backtrace entries.
         """
-        if not self._bridge:
+        if self._bridge is None:
             return self._cached_frames
 
         try:
-            empty_bt: list[Any] = []
-            raw_frames: list[Any] = getattr(self._bridge, "get_backtrace", lambda: empty_bt)()
-            frames: list[StackFrame] = []
-            for i, raw in enumerate(raw_frames):
-                if isinstance(raw, dict):
-                    raw_dict: dict[str, Any] = cast("dict[str, Any]", raw)
-                    frame = StackFrame(
-                        index=i,
-                        return_address=raw_dict.get("address", 0),
-                        function_name=raw_dict.get("name", "unknown"),
-                        module_name=raw_dict.get("moduleName", "unknown"),
-                        offset=raw_dict.get("offset", 0),
-                    )
-                else:
-                    frame = StackFrame(
-                        index=i,
-                        return_address=getattr(raw, "address", 0),
-                        function_name=getattr(raw, "name", "unknown"),
-                        module_name=getattr(raw, "moduleName", "unknown"),
-                    )
-                frames.append(frame)
-            self._cached_frames = frames
+            raw = run_bridge_coroutine(self._bridge.get_backtrace())
         except (RuntimeError, ConnectionError, OSError):
             _logger.exception("frida_stack_frames_failed", bridge_type="frida")
             return self._cached_frames
-        else:
-            return frames
+
+        if not isinstance(raw, list):
+            return self._cached_frames
+
+        raw_list = cast("list[Any]", raw)
+        frames: list[StackFrame] = []
+        for i, item in enumerate(raw_list):
+            frames.append(
+                StackFrame(
+                    index=i,
+                    return_address=int(getattr(item, "address", 0) or 0),
+                    function_name=str(getattr(item, "name", "") or "unknown"),
+                    module_name=str(getattr(item, "module_name", "") or getattr(item, "moduleName", "") or "unknown"),
+                ),
+            )
+        self._cached_frames = frames
+        return frames
 
     def is_connected(self) -> bool:
         """Check if Frida bridge is connected.
@@ -268,22 +278,21 @@ class FridaStackSource:
         Returns:
             bool: True if bridge is attached and session is active.
         """
-        if not self._bridge:
+        if self._bridge is None:
             return False
         try:
-            return getattr(self._bridge, "is_attached", lambda: False)()
-        except (RuntimeError, ConnectionError, OSError):
+            return bool(self._bridge.state.process_attached)
+        except (RuntimeError, ConnectionError, OSError, AttributeError):
             _logger.debug("frida_connection_check_failed", exc_info=True)
             return False
 
-    @staticmethod
-    def get_source_name() -> str:
+    def get_source_name(self) -> str:
         """Get the source name.
 
         Returns:
             str: 'Frida' string.
         """
-        return "Frida"
+        return self._source_name
 
 
 class StackFrameTable(QTableWidget):
@@ -600,7 +609,7 @@ class StackViewerPanel(QWidget):
         now = datetime.datetime.now(tz=datetime.UTC)
         self._last_update_label.setText(f"Updated: {now.strftime('%H:%M:%S')}")
 
-    def set_x64dbg_bridge(self, bridge: object) -> None:
+    def set_x64dbg_bridge(self, bridge: X64DbgBridge) -> None:
         """Set the x64dbg bridge for stack retrieval.
 
         Args:
@@ -611,7 +620,7 @@ class StackViewerPanel(QWidget):
             source.set_bridge(bridge)
             _logger.info("bridge_attached", source="x64dbg", component="stack_viewer")
 
-    def set_frida_bridge(self, bridge: object) -> None:
+    def set_frida_bridge(self, bridge: FridaBridge) -> None:
         """Set the Frida bridge for stack retrieval.
 
         Args:
