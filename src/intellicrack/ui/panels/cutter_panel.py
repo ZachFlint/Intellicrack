@@ -701,14 +701,42 @@ class CutterPanel(AnalysisPanelBase):
         address = tree_item_data(items[0], 0, Qt.ItemDataRole.UserRole)
         return address if isinstance(address, int) else None
 
+    @staticmethod
+    def _parse_address(text: str) -> int | None:
+        """Parse an address string in hex (``0x``/``0X`` prefix) or decimal form.
+
+        Accepts leading/trailing whitespace. Returns ``None`` when the input is empty
+        or cannot be parsed as a non-negative integer.
+
+        Args:
+            text: User-supplied address string.
+
+        Returns:
+            int | None: The parsed integer address, or ``None`` on invalid input.
+        """
+        if not text:
+            return None
+        stripped = text.strip()
+        if not stripped:
+            return None
+        lowered = stripped.lower()
+        try:
+            if lowered.startswith("0x"):
+                return int(stripped, 16)
+            return int(stripped)
+        except ValueError:
+            return None
+
     def _apply_decompiled(self, result: object) -> None:
         """Apply decompiled code to the view.
 
         Args:
             result: Decompiled code string from the bridge.
         """
-        if result is not None:
-            self._decompiled_view.setPlainText(str(result))
+        if result is None or not str(result).strip():
+            self._decompiled_view.setPlainText("// No decompilation available at this address")
+            return
+        self._decompiled_view.setPlainText(str(result))
 
     def _apply_disassembly(self, result: object) -> None:
         """Apply disassembly data to the view.
@@ -745,8 +773,17 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_imports(),
             on_success=self._apply_imports,
-            on_error=lambda _: _logger.warning("cutter_refresh_imports_failed"),
+            on_error=self._on_refresh_imports_error,
         )
+
+    def _on_refresh_imports_error(self, exc: object) -> None:
+        """Handle imports refresh failure with logging and status update.
+
+        Args:
+            exc: Exception object raised by the bridge call.
+        """
+        _logger.warning("cutter_refresh_imports_failed", error=str(exc))
+        self._set_status(f"Imports refresh failed: {exc}")
 
     def _apply_imports(self, result: object) -> None:
         """Apply import data to the table.
@@ -772,8 +809,17 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_exports(),
             on_success=self._apply_exports,
-            on_error=lambda _: _logger.warning("cutter_refresh_exports_failed"),
+            on_error=self._on_refresh_exports_error,
         )
+
+    def _on_refresh_exports_error(self, exc: object) -> None:
+        """Handle exports refresh failure with logging and status update.
+
+        Args:
+            exc: Exception object raised by the bridge call.
+        """
+        _logger.warning("cutter_refresh_exports_failed", error=str(exc))
+        self._set_status(f"Exports refresh failed: {exc}")
 
     def _apply_exports(self, result: object) -> None:
         """Apply export data to the table.
@@ -799,8 +845,17 @@ class CutterPanel(AnalysisPanelBase):
         self._run_async(
             self._bridge.get_sections(),
             on_success=self._apply_sections,
-            on_error=lambda _: _logger.warning("cutter_refresh_sections_failed"),
+            on_error=self._on_refresh_sections_error,
         )
+
+    def _on_refresh_sections_error(self, exc: object) -> None:
+        """Handle sections refresh failure with logging and status update.
+
+        Args:
+            exc: Exception object raised by the bridge call.
+        """
+        _logger.warning("cutter_refresh_sections_failed", error=str(exc))
+        self._set_status(f"Sections refresh failed: {exc}")
 
     def _apply_sections(self, result: object) -> None:
         """Apply section data to the table.
@@ -918,10 +973,8 @@ class CutterPanel(AnalysisPanelBase):
         Args:
             result: Cross-reference list from the bridge.
         """
-        if not result:
-            return
-
         xrefs: list[object] = [*result] if isinstance(result, list) else []
+        added = 0
         for xref in xrefs:
             item = QTreeWidgetItem([
                 "To",
@@ -930,6 +983,9 @@ class CutterPanel(AnalysisPanelBase):
                 getattr(xref, "from_function", "") or "",
             ])
             self._xrefs_tree.addTopLevelItem(item)
+            added += 1
+        if added == 0:
+            self._xrefs_tree.addTopLevelItem(QTreeWidgetItem(["To", "—", "—", "(no callers)"]))
 
     def _apply_xrefs_from(self, result: object) -> None:
         """Apply xrefs-from data to the tree.
@@ -937,10 +993,8 @@ class CutterPanel(AnalysisPanelBase):
         Args:
             result: Cross-reference list from the bridge.
         """
-        if not result:
-            return
-
         xrefs: list[object] = [*result] if isinstance(result, list) else []
+        added = 0
         for xref in xrefs:
             item = QTreeWidgetItem([
                 "From",
@@ -949,6 +1003,9 @@ class CutterPanel(AnalysisPanelBase):
                 getattr(xref, "to_function", "") or "",
             ])
             self._xrefs_tree.addTopLevelItem(item)
+            added += 1
+        if added == 0:
+            self._xrefs_tree.addTopLevelItem(QTreeWidgetItem(["From", "—", "—", "(no callees)"]))
 
     def _on_run_command(self) -> None:
         """Execute a raw r2 command from the console input."""
@@ -1041,9 +1098,8 @@ class CutterPanel(AnalysisPanelBase):
         if not ok or not addr_str:
             return
 
-        try:
-            address = int(addr_str, 16) if addr_str.startswith("0x") else int(addr_str)
-        except ValueError:
+        address = self._parse_address(addr_str)
+        if address is None:
             self._set_status("Invalid address")
             return
 
@@ -1067,9 +1123,8 @@ class CutterPanel(AnalysisPanelBase):
         if not addr_text:
             return
 
-        try:
-            address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text)
-        except ValueError:
+        address = self._parse_address(addr_text)
+        if address is None:
             self._set_status("Invalid address")
             return
 
