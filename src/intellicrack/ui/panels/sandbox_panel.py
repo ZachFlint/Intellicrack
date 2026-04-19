@@ -9,6 +9,7 @@ Provides sandbox creation, configuration, binary execution, snapshot management,
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast, override
 
@@ -88,6 +89,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_binary: Path = Path()
         self._pending_args: list[str] = []
         self._pending_snapshot_id: str = "unknown"
+        self._pending_snapshot_label: str | None = None
         self._vnc_widget: VNCWidget | None = None
         self._pcap_capture_id: str | None = None
         self._pending_copy_in_dest: str = ""
@@ -890,9 +892,21 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
 
+        default_label = f"snapshot_{datetime.now(tz=UTC).strftime('%Y%m%dT%H%M%SZ')}"
+        label, ok = QInputDialog.getText(
+            self,
+            "Take Snapshot",
+            "Snapshot label:",
+            text=default_label,
+        )
+        if not ok:
+            return
+        snapshot_label = str(label).strip() or default_label
+        self._pending_snapshot_label = snapshot_label
+
         self.snapshot_btn.setEnabled(False)
         self._run_async(
-            self._bridge.snapshot_create(self.sandbox_id, "manual_snapshot"),
+            self._bridge.snapshot_create(self.sandbox_id, snapshot_label),
             on_success=self._on_take_snapshot_success,
             on_error=self._on_take_snapshot_error,
         )
@@ -901,19 +915,28 @@ class SandboxPanel(AnalysisPanelBase):
         """Handle successful snapshot creation.
 
         Args:
-            result: Dictionary with snapshot_id from bridge.
+            result: Dictionary with snapshot_id (and optional created_at) from bridge.
         """
         snapshot_id = "unknown"
+        created_at = ""
+        label = self._pending_snapshot_label or "snapshot"
         if isinstance(result, dict):
             typed = cast("dict[str, object]", result)
             snapshot_id = str(typed.get("snapshot_id", "unknown"))
+            created_at = str(typed.get("created_at", ""))
+            bridge_label = typed.get("label")
+            if isinstance(bridge_label, str) and bridge_label:
+                label = bridge_label
         elif result is not None:
             snapshot_id = str(result)
+        if not created_at:
+            created_at = datetime.now(tz=UTC).isoformat()
         self._log(f"[+] Snapshot taken: {snapshot_id}")
-        item = QTreeWidgetItem([snapshot_id, "manual_snapshot", "now"])
+        item = QTreeWidgetItem([snapshot_id, label, created_at])
         self._snapshots_tree.addTopLevelItem(item)
         self.snapshot_btn.setEnabled(True)
-        _logger.info("sandbox_snapshot_taken", snapshot_id=snapshot_id)
+        self._pending_snapshot_label = None
+        _logger.info("sandbox_snapshot_taken", snapshot_id=snapshot_id, label=label)
 
     def _on_take_snapshot_error(self, exc: object) -> None:
         """Handle snapshot failure.
@@ -1557,8 +1580,55 @@ class SandboxPanel(AnalysisPanelBase):
             typed = cast("dict[str, object]", result)
             active = typed.get("active_count", 0)
             self._status_indicator.setText(f"Active ({active} instances)")
+            instances = typed.get("instances")
+            if isinstance(instances, list):
+                self._populate_instances_tree(cast("list[object]", instances))
         else:
             self._status_indicator.setText("Active")
+
+    def _populate_instances_tree(self, instances: list[object]) -> None:
+        """Refresh the Instances tab with incremental row updates keyed by instance_id.
+
+        Args:
+            instances: List of per-instance status dicts from the bridge poll result.
+        """
+        existing: dict[str, QTreeWidgetItem] = {}
+        for idx in range(self._instances_tree.topLevelItemCount()):
+            item = self._instances_tree.topLevelItem(idx)
+            if item is None:
+                continue
+            existing[item.text(0)] = item
+
+        seen_ids: set[str] = set()
+        for raw in instances:
+            if not isinstance(raw, dict):
+                continue
+            entry = cast("dict[str, object]", raw)
+            instance_id = str(entry.get("instance_id") or entry.get("id") or "")
+            if not instance_id:
+                continue
+            seen_ids.add(instance_id)
+            columns = [
+                instance_id,
+                str(entry.get("type") or entry.get("isolation_level") or ""),
+                str(entry.get("status") or ""),
+                str(entry.get("created_at") or ""),
+                str(entry.get("last_used") or entry.get("updated_at") or ""),
+                str(entry.get("binary") or entry.get("binary_path") or ""),
+            ]
+            item = existing.get(instance_id)
+            if item is None:
+                self._instances_tree.addTopLevelItem(QTreeWidgetItem(columns))
+            else:
+                for col_idx, value in enumerate(columns):
+                    item.setText(col_idx, value)
+
+        for stale_id, stale_item in existing.items():
+            if stale_id in seen_ids:
+                continue
+            row = self._instances_tree.indexOfTopLevelItem(stale_item)
+            if row >= 0:
+                self._instances_tree.takeTopLevelItem(row)
 
     def _on_poll_status_error(self, _exc: object) -> None:
         """Handle status poll failure.
