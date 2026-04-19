@@ -369,6 +369,7 @@ class HexEditorWidget(QAbstractScrollArea):
     data_changed: pyqtSignal = pyqtSignal()
     edit_mode_changed: pyqtSignal = pyqtSignal(str)
     about_to_modify: pyqtSignal = pyqtSignal(int)
+    status_message: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the HexEditorWidget instance.
@@ -419,6 +420,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._minimap = EntropyMiniMap(self)
         self._minimap.navigation_requested.connect(self.goto_offset)
         self._minimap.hide()
+
+        self.data_changed.connect(self._invalidate_color_caches)
 
     def _setup_font(self) -> None:
         """Configure monospace font for rendering."""
@@ -487,31 +490,58 @@ class HexEditorWidget(QAbstractScrollArea):
     def set_color_mode(self, mode: str) -> None:
         """Change the byte color-mapping mode.
 
-        Precomputes any required caches (e.g. entropy data) when the
-        mode requires per-byte coloring.
+        Invalidates any cached per-byte colour data so that the next paint
+        recomputes from the current document. The actual recomputation is
+        lazy and happens inside paint handlers when the mode requires it.
 
         Args:
             mode: Color mode string (``"none"``, ``"entropy"``,
                 ``"byte_value"``, ``"content_type"``).
         """
         self._color_mode = mode
-        if mode == "entropy" and self._document is not None:
-            entropy_fn = getattr(self._document, "entropy_map", None)
-            if callable(entropy_fn):
-                try:
-                    raw_ent: Any = entropy_fn(256)
-                    self._entropy_cache = [float(v) for v in raw_ent]
-                except (ValueError, TypeError, AttributeError):
-                    self._entropy_cache = []
-        elif mode == "content_type" and self._document is not None:
-            class_fn = getattr(self._document, "content_classification", None)
-            if callable(class_fn):
-                try:
-                    raw_cls: Any = class_fn(256)
-                    self._content_class_cache = [int(v) for v in raw_cls]
-                except (ValueError, TypeError, AttributeError):
-                    self._content_class_cache = []
+        self._invalidate_color_caches()
         self.update()
+
+    def _invalidate_color_caches(self) -> None:
+        """Drop cached entropy/content-type data computed from the document."""
+        self._entropy_cache = []
+        self._content_class_cache = []
+
+    def _ensure_entropy_cache(self) -> list[float]:
+        """Populate the entropy cache lazily from the current document.
+
+        Returns:
+            list[float]: Per-bucket entropy values (empty when unavailable).
+        """
+        if self._entropy_cache or self._document is None:
+            return self._entropy_cache
+        entropy_fn = getattr(self._document, "entropy_map", None)
+        if callable(entropy_fn):
+            try:
+                raw_ent: Any = entropy_fn(256)
+                self._entropy_cache = [float(v) for v in raw_ent]
+            except (ValueError, TypeError, AttributeError) as exc:
+                _logger.warning("entropy_map_failed", error=str(exc))
+                self._entropy_cache = []
+        return self._entropy_cache
+
+    def _ensure_content_class_cache(self) -> list[int]:
+        """Populate the content-classification cache lazily from the current document.
+
+        Returns:
+            list[int]: Per-bucket content-class codes (empty when unavailable).
+        """
+        if self._content_class_cache or self._document is None:
+            return self._content_class_cache
+        class_fn = getattr(self._document, "content_classification", None)
+        if callable(class_fn):
+            try:
+                raw_cls: Any = class_fn(256)
+                self._content_class_cache = [int(v) for v in raw_cls]
+            except (ValueError, TypeError, AttributeError) as exc:
+                _logger.warning("content_classification_failed", error=str(exc))
+                self._content_class_cache = []
+        return self._content_class_cache
 
     def _visible_row_count(self) -> int:
         """Calculate the number of rows visible in the viewport.
@@ -562,6 +592,7 @@ class HexEditorWidget(QAbstractScrollArea):
         self._highlights.clear()
         self._highlight_sources.clear()
         self._nibble_index = 0
+        self._invalidate_color_caches()
 
         total = self._total_rows()
         vbar = self.verticalScrollBar()
@@ -1282,14 +1313,20 @@ class HexEditorWidget(QAbstractScrollArea):
                 self._handle_ascii_input(text)
 
     def _move_cursor(self, new_offset: int, *, extend_selection: bool = False) -> None:
-        """Move the cursor to a new offset.
+        """Move the cursor to a new offset, clamping to the document range.
+
+        Emits ``status_message`` when the requested offset fell outside the
+        document so callers can surface the condition to the user.
 
         Args:
             new_offset: Target offset.
             extend_selection: Whether to extend the current selection.
         """
         doc_len = self._doc_length()
+        requested = new_offset
         new_offset = max(0, min(new_offset, doc_len - 1)) if doc_len > 0 else 0
+        if requested != new_offset:
+            self.status_message.emit(f"Offset 0x{requested:X} is beyond EOF (0x{max(0, doc_len - 1):X}); clamped.")
 
         if extend_selection:
             if self._selection_start < 0:
