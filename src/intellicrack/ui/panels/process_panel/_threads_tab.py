@@ -33,6 +33,7 @@ from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
     from intellicrack.core.types import ThreadInfo
+    from intellicrack.ui.panels.process_panel._system_tab import SystemTab
 
 _logger = get_logger("ui.panels.process.threads_tab")
 
@@ -61,7 +62,16 @@ class ThreadsTab(QWidget):
         self._bridge: ProcessBridge | None = None
         self._attached_pid: int | None = None
         self._threads: list[ThreadInfo] = []
+        self._system_tab: SystemTab | None = None
         self._setup_ui()
+
+    def attach_system_tab(self, system_tab: SystemTab) -> None:
+        """Register the sibling SystemTab so the TEB thread combo can be refreshed.
+
+        Args:
+            system_tab: SystemTab instance owned by the same ProcessPanel.
+        """
+        self._system_tab = system_tab
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
         """Set the process bridge.
@@ -133,13 +143,15 @@ class ThreadsTab(QWidget):
         refresh_btn.clicked.connect(self._refresh_threads)
         toolbar.addWidget(refresh_btn)
 
-        suspend_btn = QPushButton("Suspend Selected")
+        suspend_btn = QPushButton("Suspend Process")
         suspend_btn.setObjectName("tool_button")
+        suspend_btn.setToolTip("Suspend the attached process (all threads)")
         suspend_btn.clicked.connect(self._on_suspend_thread)
         toolbar.addWidget(suspend_btn)
 
-        resume_btn = QPushButton("Resume Selected")
+        resume_btn = QPushButton("Resume Process")
         resume_btn.setObjectName("tool_button")
+        resume_btn.setToolTip("Resume the attached process (all threads)")
         resume_btn.clicked.connect(self._on_resume_thread)
         toolbar.addWidget(resume_btn)
 
@@ -368,18 +380,21 @@ class ThreadsTab(QWidget):
                 start_addr = start_raw if isinstance(start_raw, int) else 0
                 self._thread_table.setItem(row, 3, QTableWidgetItem(f"0x{start_addr:X}"))
             self._thread_count.setText(f"{len(typed_result)} threads")
-            self.update_thread_list(cast("list[ThreadInfo]", result))
+            thread_list = cast("list[ThreadInfo]", result)
+            self.update_thread_list(thread_list)
+            if self._system_tab is not None:
+                self._system_tab.update_thread_list(thread_list)
 
         run_bridge_coroutine_async(self._bridge.get_threads(self._attached_pid), _on_success, None, self)
 
     def _on_suspend_thread(self) -> None:
-        """Suspend the selected thread's owning process."""
+        """Suspend every thread in the attached process."""
         if self._bridge is None or self._attached_pid is None:
             return
         run_bridge_coroutine_async(self._bridge.suspend(self._attached_pid), None, None, self)
 
     def _on_resume_thread(self) -> None:
-        """Resume the selected thread's owning process."""
+        """Resume every thread in the attached process."""
         if self._bridge is None or self._attached_pid is None:
             return
         run_bridge_coroutine_async(self._bridge.resume(self._attached_pid), None, None, self)
