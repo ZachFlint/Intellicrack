@@ -37,7 +37,12 @@ from intellicrack.core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, create_anthropic_tool_schema, serialize_tool_result
+from intellicrack.providers.base import (
+    LLMProviderBase,
+    UsageInfo,
+    create_anthropic_tool_schema,
+    serialize_tool_result,
+)
 
 
 if TYPE_CHECKING:
@@ -53,6 +58,8 @@ _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
 _MSG_NO_MODELS_AVAILABLE = "No models available from Anthropic API"
 _MSG_FETCH_MODELS_FAILED = "Failed to fetch models from Anthropic API"
+
+_HTTP_SERVER_ERROR_MIN = 500
 
 
 class AnthropicProvider(LLMProviderBase):
@@ -104,7 +111,7 @@ class AnthropicProvider(LLMProviderBase):
             raise ProviderError(_MSG_CONNECTION_FAILED) from e
         else:
             self._credentials = credentials
-            self._connected = True
+            self.connected = True
             self._logger.info(
                 "anthropic_connected",
                 has_custom_base=credentials.api_base is not None,
@@ -119,7 +126,7 @@ class AnthropicProvider(LLMProviderBase):
             self._logger.info("anthropic_disconnected")
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
-            self._connected = False
+            self.connected = False
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available Claude models from Anthropic API.
@@ -133,7 +140,7 @@ class AnthropicProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or the request fails.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self._client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         try:
@@ -267,6 +274,28 @@ class AnthropicProvider(LLMProviderBase):
             ]
         return kwargs
 
+    @staticmethod
+    def _build_usage_from_message(response: AnthropicMessage) -> UsageInfo | None:
+        """Extract token-usage statistics from an Anthropic message.
+
+        Args:
+            response: The Anthropic API response message.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present on
+            the response, otherwise ``None``.
+        """
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return None
+        input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
+        output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
+        return UsageInfo(
+            prompt_tokens=input_tokens,
+            completion_tokens=output_tokens,
+            total_tokens=input_tokens + output_tokens,
+        )
+
     def _parse_response_blocks(
         self,
         response: AnthropicMessage,
@@ -306,6 +335,11 @@ class AnthropicProvider(LLMProviderBase):
     async def _make_anthropic_api_call(self, api_kwargs: dict[str, Any]) -> AnthropicMessage:
         """Execute the Anthropic messages API call with exception translation.
 
+        Rate-limit errors and 5xx server errors are translated to
+        :class:`intellicrack.core.types.RateLimitError` so the retry
+        wrapper treats them as transient.  Other ``APIStatusError``
+        instances propagate unchanged to the caller.
+
         Args:
             api_kwargs: Keyword arguments to pass to messages.create.
 
@@ -314,7 +348,10 @@ class AnthropicProvider(LLMProviderBase):
 
         Raises:
             ProviderError: If the client is not initialized.
-            RateLimitError: If the API returns a rate limit response.
+            RateLimitError: If the API returns a rate limit (429) or 5xx
+                server error response.
+            anthropic.APIStatusError: If the API returns a non-retryable
+                4xx status code other than 401/429.
         """
         if self._client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
@@ -323,6 +360,16 @@ class AnthropicProvider(LLMProviderBase):
         except anthropic.RateLimitError as e:
             self._logger.warning("anthropic_rate_limited", error=str(e))
             raise RateLimitError(_MSG_RATE_LIMITED) from e
+        except anthropic.APIStatusError as e:
+            status_code = int(getattr(e, "status_code", 0) or 0)
+            if status_code >= _HTTP_SERVER_ERROR_MIN:
+                self._logger.warning(
+                    "anthropic_server_error_retryable",
+                    status_code=status_code,
+                    error=str(e),
+                )
+                raise RateLimitError(_MSG_REQUEST_FAILED) from e
+            raise
 
     async def chat(
         self,
@@ -355,10 +402,12 @@ class AnthropicProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self._client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
+        self._pending_thinking.clear()
 
         system_prompt = self.get_system_prompt(messages)
         anthropic_messages = self.convert_messages_to_provider_format(messages)
@@ -391,7 +440,9 @@ class AnthropicProvider(LLMProviderBase):
             response = await self._retry_with_backoff(lambda: self._make_anthropic_api_call(api_kwargs))
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls, thinking_text = self._parse_response_blocks(response)
+            self._pending_usage = self._build_usage_from_message(response)
             if thinking_text:
+                self._pending_thinking.append(thinking_text)
                 message = Message(
                     role="assistant",
                     content=content,
@@ -449,10 +500,12 @@ class AnthropicProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited.
         """
-        if not self._connected or self._client is None:
+        if not self.connected or self._client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
+        self._pending_thinking.clear()
 
         log_provider_request("anthropic", model, len(messages), len(tools or []))
         system_prompt = self.get_system_prompt(messages)
@@ -485,6 +538,7 @@ class AnthropicProvider(LLMProviderBase):
                 if not self._cancel_requested:
                     final_message = await stream.get_final_message()
                     tool_calls: list[ToolCall] = []
+                    thinking_blocks: list[str] = []
                     for block in final_message.content:
                         if block.type == "tool_use":
                             args: dict[str, object] = dict(block.input)
@@ -497,15 +551,36 @@ class AnthropicProvider(LLMProviderBase):
                                 ),
                             )
                         elif block.type == "thinking" and hasattr(block, "thinking"):
+                            thinking_text = block.thinking
+                            thinking_blocks.append(thinking_text)
                             self._logger.debug(
                                 "stream_thinking_captured",
-                                length=len(block.thinking),
+                                length=len(thinking_text),
                             )
                     self._pending_tool_calls = tool_calls
+                    if thinking_blocks:
+                        self._pending_thinking.extend(thinking_blocks)
+                    self._pending_usage = self._build_usage_from_message(final_message)
 
         except anthropic.RateLimitError as e:
             self._logger.warning("anthropic_stream_rate_limited", error=str(e))
             raise RateLimitError(_MSG_RATE_LIMITED) from e
+        except anthropic.APIStatusError as e:
+            status_code = int(getattr(e, "status_code", 0) or 0)
+            if status_code >= _HTTP_SERVER_ERROR_MIN:
+                self._logger.warning(
+                    "anthropic_stream_server_error",
+                    status_code=status_code,
+                    error=str(e),
+                )
+                raise RateLimitError(_MSG_STREAM_FAILED) from e
+            if not self._cancel_requested:
+                self._logger.warning(
+                    "anthropic_stream_status_error",
+                    status_code=status_code,
+                    error=str(e),
+                )
+                raise ProviderError(_MSG_STREAM_FAILED) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
             if not self._cancel_requested:
                 self._logger.warning("anthropic_stream_failed", error=str(e))
