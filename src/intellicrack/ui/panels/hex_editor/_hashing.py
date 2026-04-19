@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import Any, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -18,22 +18,17 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import compute_hash, logger
+from intellicrack.ui.panels.hex_editor._base import logger
 from intellicrack.ui.panels.hex_editor._widgets import CustomCrcDialog
 
 
-_PE_MIN_HEADER_SIZE: Final[int] = 0x40
-_PE_LFANEW_OFFSET: Final[int] = 0x3C
-_PE_CHECKSUM_RELATIVE_OFFSET: Final[int] = 0x58
-_PE_CHECKSUM_FIELD_SIZE: Final[int] = 4
-_PE_CHECKSUM_MASK_16: Final[int] = 0xFFFF
-_PE_CHECKSUM_MASK_32: Final[int] = 0xFFFFFFFF
-_PE_WORD_SHIFT: Final[int] = 16
-_PE_WORD_SIZE: Final[int] = 2
-
-
 class HashingMixin:
-    """Mixin providing hash computation for the hex editor panel."""
+    """Mixin providing hash computation for the hex editor panel.
+
+    All hash and PE-checksum work is delegated to the hexcore document
+    so that the UI thread never has to materialise the full file in
+    Python. The mixin only formats the returned values for display.
+    """
 
     _document: Any | None
     document: Any | None
@@ -45,16 +40,13 @@ class HashingMixin:
     _pe_checksum_status: QLabel | None
 
     def _on_calculate_hash(self) -> None:
-        """Calculate the hash of the current document and display the result."""
+        """Calculate the hash of the current document via hexcore document.compute_hash."""
         if self.document is None or self._hash_algo_combo is None or self._hash_result_label is None:
             return
         algo = self._hash_algo_combo.currentText()
         try:
-            doc_len: int = self.document.length()
-            raw: bytes | bytearray | list[int] = self.document.read(0, doc_len)
-            data = raw if isinstance(raw, bytes) else bytes(raw)
-            result = compute_hash(algo, data)
-        except (ValueError, AttributeError, TypeError) as exc:
+            result = self.document.compute_hash(algo)
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
             logger.debug("hash_calculate_failed", error=str(exc))
         else:
@@ -96,7 +88,7 @@ class HashingMixin:
         return box
 
     def _on_hash_selection(self) -> None:
-        """Calculate the hash of the current selection range."""
+        """Hash the current selection range via hexcore document.compute_hash_range."""
         if self.document is None or self._hash_algo_combo is None or self._hash_result_label is None:
             return
 
@@ -108,10 +100,8 @@ class HashingMixin:
 
         algo = self._hash_algo_combo.currentText()
         try:
-            raw: bytes | bytearray | list[int] = self.document.read(sel_start, sel_end - sel_start)
-            data = raw if isinstance(raw, bytes) else bytes(raw)
-            result = compute_hash(algo, data)
-        except (ValueError, AttributeError, TypeError) as exc:
+            result = self.document.compute_hash_range(sel_start, sel_end, algo)
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
             logger.debug("hash_selection_failed", error=str(exc))
         else:
@@ -120,46 +110,44 @@ class HashingMixin:
             )
 
     def _on_verify_pe_checksum(self) -> None:
-        """Verify the PE checksum of the current document."""
+        """Verify the PE checksum via hexcore document.verify_pe_checksum."""
         if self.document is None:
             return
 
         try:
-            doc_len: int = self.document.length()
-            raw: bytes | bytearray | list[int] = self.document.read(0, doc_len)
-            data = raw if isinstance(raw, bytes) else bytes(raw)
-        except (ValueError, AttributeError, TypeError) as exc:
+            info = self.document.verify_pe_checksum()
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             if self._pe_checksum_status is not None:
                 self._pe_checksum_status.setText(f"Error: {exc}")
+            logger.debug("pe_checksum_verify_failed", error=str(exc))
             return
 
-        if len(data) < _PE_MIN_HEADER_SIZE or data[:2] != b"MZ":
-            if self._pe_checksum_status is not None:
-                self._pe_checksum_status.setText("Not a PE file")
+        if self._pe_checksum_status is None:
             return
 
-        e_lfanew = int.from_bytes(data[_PE_LFANEW_OFFSET:_PE_MIN_HEADER_SIZE], "little")
-        if e_lfanew + _PE_CHECKSUM_RELATIVE_OFFSET + _PE_CHECKSUM_FIELD_SIZE > len(data):
-            if self._pe_checksum_status is not None:
-                self._pe_checksum_status.setText("Invalid PE header")
+        if not isinstance(info, dict):
+            self._pe_checksum_status.setText("Verification unavailable")
+            return
+        info_dict = cast("dict[str, Any]", info)
+        if info_dict.get("valid") is False and info_dict.get("reason"):
+            self._pe_checksum_status.setText(str(info_dict["reason"]))
             return
 
-        checksum_offset = e_lfanew + _PE_CHECKSUM_RELATIVE_OFFSET
-        stored = int.from_bytes(data[checksum_offset : checksum_offset + _PE_CHECKSUM_FIELD_SIZE], "little")
-        calculated = self._compute_pe_checksum(data, checksum_offset)
+        stored = info_dict.get("stored")
+        calculated = info_dict.get("calculated", info_dict.get("expected"))
+        if not isinstance(stored, int) or not isinstance(calculated, int):
+            self._pe_checksum_status.setText("Verification unavailable")
+            return
 
-        if self._pe_checksum_status is not None:
-            if stored == calculated:
-                self._pe_checksum_status.setText(
-                    f"Valid: 0x{stored:08X}",
-                )
-            else:
-                self._pe_checksum_status.setText(
-                    f"Invalid: stored=0x{stored:08X}, expected=0x{calculated:08X}",
-                )
+        if stored == calculated:
+            self._pe_checksum_status.setText(f"Valid: 0x{stored:08X}")
+        else:
+            self._pe_checksum_status.setText(
+                f"Invalid: stored=0x{stored:08X}, expected=0x{calculated:08X}",
+            )
 
     def _on_repair_pe_checksum(self) -> None:
-        """Repair the PE checksum of the current document."""
+        """Repair the PE checksum via hexcore document.repair_pe_checksum."""
         if self.document is None:
             return
 
@@ -173,75 +161,31 @@ class HashingMixin:
             return
 
         try:
-            doc_len: int = self.document.length()
-            raw: bytes | bytearray | list[int] = self.document.read(0, doc_len)
-            data = raw if isinstance(raw, bytes) else bytes(raw)
-        except (ValueError, AttributeError, TypeError) as exc:
+            self.document.repair_pe_checksum()
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Repair Failed", str(exc))
-            return
-
-        if len(data) < _PE_MIN_HEADER_SIZE or data[:2] != b"MZ":
-            QMessageBox.warning(parent, "Repair Failed", "Not a PE file.")
-            return
-
-        e_lfanew = int.from_bytes(data[_PE_LFANEW_OFFSET:_PE_MIN_HEADER_SIZE], "little")
-        checksum_offset = e_lfanew + _PE_CHECKSUM_RELATIVE_OFFSET
-        if checksum_offset + _PE_CHECKSUM_FIELD_SIZE > len(data):
-            QMessageBox.warning(parent, "Repair Failed", "Invalid PE header.")
-            return
-
-        calculated = self._compute_pe_checksum(data, checksum_offset)
-        checksum_bytes = calculated.to_bytes(_PE_CHECKSUM_FIELD_SIZE, "little")
-        try:
-            self.document.write_bytes(checksum_offset, checksum_bytes)
-        except (AttributeError, ValueError) as exc:
-            QMessageBox.warning(parent, "Repair Failed", str(exc))
+            logger.warning("pe_checksum_repair_failed", error=str(exc))
             return
 
         if self._pe_checksum_status is not None:
-            self._pe_checksum_status.setText(f"Repaired: 0x{calculated:08X}")
+            try:
+                info = self.document.verify_pe_checksum()
+            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+                self._pe_checksum_status.setText(f"Repaired (verify failed: {exc})")
+            else:
+                if isinstance(info, dict):
+                    info_dict = cast("dict[str, Any]", info)
+                    calculated = info_dict.get("calculated", info_dict.get("stored"))
+                    if isinstance(calculated, int):
+                        self._pe_checksum_status.setText(f"Repaired: 0x{calculated:08X}")
+                    else:
+                        self._pe_checksum_status.setText("Repaired")
+                else:
+                    self._pe_checksum_status.setText("Repaired")
 
         if self._hex_widget is not None:
             update_fn = getattr(self._hex_widget, "_update_viewport", None)
             if callable(update_fn):
                 update_fn()
 
-        logger.info("pe_checksum_repaired", value=calculated)
-
-    @staticmethod
-    def _compute_pe_checksum(data: bytes, checksum_offset: int) -> int:
-        """Compute the PE file checksum using the Windows algorithm.
-
-        Sums all 16-bit words in the file, skipping the 4-byte CheckSum
-        field, folding carries into the lower 16 bits, and adding the
-        file length to the final result.
-
-        Args:
-            data: Complete file contents.
-            checksum_offset: Byte offset of the PE CheckSum field.
-
-        Returns:
-            int: Computed PE checksum value.
-        """
-        checksum = 0
-        size = len(data)
-        skip_start = checksum_offset
-        skip_end = checksum_offset + _PE_CHECKSUM_FIELD_SIZE
-
-        i = 0
-        while i < size - 1:
-            if skip_start <= i < skip_end:
-                i += _PE_WORD_SIZE
-                continue
-            word = data[i] | (data[i + 1] << 8)
-            checksum += word
-            checksum = (checksum & _PE_CHECKSUM_MASK_16) + (checksum >> _PE_WORD_SHIFT)
-            i += _PE_WORD_SIZE
-
-        if i < size and i not in range(skip_start, skip_end):
-            checksum += data[i]
-            checksum = (checksum & _PE_CHECKSUM_MASK_16) + (checksum >> _PE_WORD_SHIFT)
-
-        checksum = (checksum & _PE_CHECKSUM_MASK_16) + (checksum >> _PE_WORD_SHIFT)
-        checksum += size
-        return checksum & _PE_CHECKSUM_MASK_32
+        logger.info("pe_checksum_repaired")
