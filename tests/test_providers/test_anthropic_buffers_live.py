@@ -12,7 +12,7 @@ The tests skip automatically when ``ANTHROPIC_API_KEY`` is not
 available from the credential store.
 
 Run locally with ``INTELLICRACK_LOCAL_TESTS=1 pixi run pytest
-tests/test_providers/_batch_live_unit1.py -x``.
+tests/test_providers/test_anthropic_buffers_live.py -x``.
 """
 
 from __future__ import annotations
