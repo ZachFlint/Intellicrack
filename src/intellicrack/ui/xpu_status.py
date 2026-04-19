@@ -32,6 +32,8 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 if TYPE_CHECKING:
     from PyQt6.QtGui import QCloseEvent
 
+    from intellicrack.providers.xpu_utils import XPUDeviceInfo
+
 
 try:
     from intellicrack.providers.xpu_utils import (
@@ -261,7 +263,7 @@ class XPUStatusDialog(QDialog):
             return
 
         try:
-            info: object = get_xpu_device_info(0)
+            info: XPUDeviceInfo | None = get_xpu_device_info(0)
         except (RuntimeError, OSError):
             _logger.debug("xpu_device_info_failed", exc_info=True)
             return
