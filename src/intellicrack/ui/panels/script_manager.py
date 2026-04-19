@@ -34,11 +34,18 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.script_gen import Script, ScriptLanguage, ScriptType
+from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from PyQt6.QtGui import QSyntaxHighlighter
+
     from intellicrack.core.script_gen import ScriptManager, ScriptValidator
+
+    ScriptExecutor = Callable[[str, str, str], str | None]
 
 _logger = get_logger("ui.panels.script_manager")
 
@@ -48,6 +55,9 @@ _PANEL_SPACING: Final[int] = 8
 _LEFT_PANEL_MAX_WIDTH: Final[int] = 250
 _SPLITTER_LEFT_SIZE: Final[int] = 200
 _SPLITTER_RIGHT_SIZE: Final[int] = 600
+_RESULT_PANE_MIN_HEIGHT: Final[int] = 80
+_EXECUTION_TIMEOUT_MS: Final[int] = 30000
+_STATUS_RESET_MS: Final[int] = 3000
 
 
 def _restyle(widget: QWidget) -> None:
@@ -295,9 +305,6 @@ if __name__ == "__main__":
 class ScriptListWidget(QListWidget):
     """List widget for displaying and filtering scripts.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         script_selected: Qt signal for script selected.
     """
@@ -387,9 +394,6 @@ class ScriptListWidget(QListWidget):
 class ScriptEditor(QPlainTextEdit):
     """Code editor widget for script editing with basic styling.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         content_changed: Qt signal for content changed.
     """
@@ -404,6 +408,8 @@ class ScriptEditor(QPlainTextEdit):
             parent: Parent widget.
         """
         super().__init__(parent=parent)
+        self._highlighter: QSyntaxHighlighter | None = None
+        self._current_language: str = ""
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -415,14 +421,39 @@ class ScriptEditor(QPlainTextEdit):
 
         self.textChanged.connect(self.content_changed.emit)
 
-    @staticmethod
-    def set_language(language: str) -> None:
+    def set_language(self, language: str) -> None:
         """Set the syntax highlighting language.
 
+        Tears down any previously attached highlighter and instantiates a new
+        one attached to this editor's document for the requested language.
+        A no-op when the language is unchanged.
+
         Args:
-            language: Language identifier.
+            language: Language identifier (e.g. ``"python"``, ``"javascript"``, ``"c"``).
         """
-        _ = language
+        if language == self._current_language and self._highlighter is not None:
+            return
+
+        if self._highlighter is not None:
+            self._highlighter.setDocument(None)
+            self._highlighter.setParent(None)
+            self._highlighter.deleteLater()
+            self._highlighter = None
+
+        self._current_language = language
+        document = self.document()
+        if document is None:
+            _logger.debug("script_editor_no_document", language=language)
+            return
+
+        highlighter = get_highlighter_for_language(language, document)
+        if highlighter is None:
+            _logger.debug("script_editor_no_highlighter", language=language)
+            return
+
+        self._highlighter = highlighter
+        highlighter.rehighlight()
+        _logger.debug("script_editor_highlighter_attached", language=language)
 
     def get_content(self) -> str:
         """Get the current editor content.
@@ -447,14 +478,13 @@ class ScriptManagerPanel(QWidget):
     Provides a split view with script list and editor, plus controls
     for script management and execution.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
-        script_execute: Qt signal for script execute.
+        script_execute: Qt signal emitted with ``(name, script_type, content)`` when Execute is pressed.
+        script_execution_completed: Qt signal emitted with ``(name, result)`` after acknowledge_execution.
     """
 
     script_execute = pyqtSignal(str, str, str)
+    script_execution_completed = pyqtSignal(str, str)
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -466,8 +496,14 @@ class ScriptManagerPanel(QWidget):
         super().__init__(parent)
         self._backend: ScriptManager | None = None
         self._validator: ScriptValidator | None = None
+        self._executor: ScriptExecutor | None = None
         self._current_script_id: str | None = None
         self._modified = False
+        self._execution_in_progress: bool = False
+        self._execution_timer: QTimer = QTimer(self)
+        self._execution_timer.setSingleShot(True)
+        self._execution_timer.setInterval(_EXECUTION_TIMEOUT_MS)
+        self._execution_timer.timeout.connect(self._on_execution_timeout)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -526,7 +562,15 @@ class ScriptManagerPanel(QWidget):
 
         self._editor = ScriptEditor()
         self._editor.content_changed.connect(self._on_content_changed)
-        right_layout.addWidget(self._editor)
+        right_layout.addWidget(self._editor, 1)
+
+        self._result_pane = QPlainTextEdit()
+        self._result_pane.setObjectName("script_result_pane")
+        self._result_pane.setReadOnly(True)
+        self._result_pane.setMinimumHeight(_RESULT_PANE_MIN_HEIGHT)
+        self._result_pane.setFont(FontManager.get_instance().get_code_font(10))
+        self._result_pane.setPlaceholderText("Script execution results will appear here.")
+        right_layout.addWidget(self._result_pane)
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(_PANEL_SPACING)
@@ -570,6 +614,9 @@ class ScriptManagerPanel(QWidget):
         _restyle(self._status_bar)
         self._status_bar.showMessage("Ready")
         layout.addWidget(self._status_bar)
+
+        initial_type = str(self._type_combo.currentData() or "frida")
+        self._editor.set_language(ScriptTypeInfo.get_language(initial_type))
 
     def _on_filter_changed(self, _index: int) -> None:
         """Handle filter combo change.
@@ -702,7 +749,12 @@ class ScriptManagerPanel(QWidget):
         _logger.debug("script_new_created", script_type=script_type)
 
     def _on_save(self) -> None:
-        """Handle save button."""
+        """Handle save button.
+
+        On successful backend add, detects rename (``current_script_id`` differs
+        from the entered name) and removes the old backend entry and list item
+        so the same script does not appear twice under two identities.
+        """
         name = self._name_edit.text().strip()
         if not name:
             QMessageBox.warning(self, "Error", "Please enter a script name.")
@@ -710,16 +762,28 @@ class ScriptManagerPanel(QWidget):
 
         script_type = str(self._type_combo.currentData() or "frida")
         content = self._editor.get_content()
+        previous_id = self._current_script_id
 
         if self._backend:
             script = self._build_script(name, script_type, content)
-            if self._backend.add_script(script, validate=False):
-                if not self._current_script_id:
-                    self._current_script_id = name
-                    self._script_list.add_script(name, name, script_type)
-            else:
+            if not self._backend.add_script(script, validate=False):
                 self._status_bar.showMessage("Failed to save script")
                 return
+
+            if previous_id and previous_id != name:
+                self._backend.delete_script(previous_id)
+                self._script_list.remove_script(previous_id)
+                self._script_list.add_script(name, name, script_type)
+                _logger.info(
+                    "script_renamed",
+                    old_script_id=previous_id,
+                    new_script_id=name,
+                    script_type=script_type,
+                )
+            elif not previous_id:
+                self._script_list.add_script(name, name, script_type)
+
+            self._current_script_id = name
 
         self._modified = False
 
@@ -819,12 +883,25 @@ class ScriptManagerPanel(QWidget):
         def reset_status() -> None:
             self._set_status_style("info")
 
-        QTimer.singleShot(3000, reset_status)
+        QTimer.singleShot(_STATUS_RESET_MS, reset_status)
 
     def _on_execute(self) -> None:
-        """Handle execute button."""
+        """Handle execute button.
+
+        Dispatches execution through the injected executor when available
+        (preferred path), otherwise emits the ``script_execute`` signal for
+        an external owner to handle. In both cases the panel enters an
+        "executing" state: the Execute button is disabled, a persistent
+        spinner message is shown on the status bar, and a timeout timer is
+        armed. The state is cleared by ``acknowledge_execution`` or by
+        timeout, never implicitly.
+        """
+        if self._execution_in_progress:
+            _logger.debug("script_execute_ignored_busy")
+            return
+
         name = self._name_edit.text().strip() or "Unnamed"
-        script_type = self._type_combo.currentData() or "frida"
+        script_type = str(self._type_combo.currentData() or "frida")
         content = self._editor.get_content()
 
         if not content.strip():
@@ -832,24 +909,106 @@ class ScriptManagerPanel(QWidget):
             return
 
         _logger.info("script_execute_requested", script_name=name, script_type=script_type)
-        self._status_bar.showMessage(f"Executing: {name}...")
+        self._begin_execution(name)
+        self._result_pane.setPlainText(f"Executing {name} ({script_type})...")
+
+        if self._executor is not None:
+            try:
+                result = self._executor(name, script_type, content)
+            except (RuntimeError, OSError, ValueError, TypeError) as exc:
+                _logger.exception("script_execute_failed", script_name=name, script_type=script_type)
+                self.acknowledge_execution(name, f"Execution error: {exc}")
+                return
+            if result is not None:
+                self.acknowledge_execution(name, result)
+            return
+
         self.script_execute.emit(name, script_type, content)
 
-    def set_backend(self, manager: ScriptManager, validator: ScriptValidator | None = None) -> None:
-        """Set the script manager backend.
+    def _begin_execution(self, name: str) -> None:
+        """Enter the "executing" UI state.
+
+        Args:
+            name: Script name currently being executed.
+        """
+        self._execution_in_progress = True
+        self._execute_btn.setEnabled(False)
+        self._status_bar.showMessage(f"Executing: {name}...")
+        self._set_status_style("info")
+        self._execution_timer.start()
+
+    def _end_execution(self) -> None:
+        """Leave the "executing" UI state."""
+        self._execution_in_progress = False
+        self._execute_btn.setEnabled(True)
+        self._execution_timer.stop()
+
+    def _on_execution_timeout(self) -> None:
+        """Handle execution timeout by clearing the busy state with a warning."""
+        if not self._execution_in_progress:
+            return
+        _logger.warning("script_execute_timeout", timeout_ms=_EXECUTION_TIMEOUT_MS)
+        self._end_execution()
+        self._status_bar.showMessage("Execution timed out (no acknowledgement received)")
+        self._set_status_style("error")
+        self._result_pane.appendPlainText("\n[timeout] No acknowledgement received from executor.")
+
+    def acknowledge_execution(self, name: str, result: str) -> None:
+        """Clear the executing state and display a script's execution result.
+
+        Owners that wire the ``script_execute`` signal must call this method
+        once the external execution completes so the persistent spinner is
+        turned off and the result pane is updated.
+
+        Args:
+            name: Script name that was executed.
+            result: Textual result or error message to display.
+        """
+        self._end_execution()
+        self._result_pane.setPlainText(result)
+        self._status_bar.showMessage(f"Executed: {name}")
+        self._set_status_style("success")
+        _logger.info("script_execute_acknowledged", script_name=name, result_length=len(result))
+
+        def reset_status() -> None:
+            self._set_status_style("info")
+
+        QTimer.singleShot(_STATUS_RESET_MS, reset_status)
+        self.script_execution_completed.emit(name, result)
+
+    def set_backend(
+        self,
+        manager: ScriptManager,
+        validator: ScriptValidator | None = None,
+        executor: ScriptExecutor | None = None,
+    ) -> None:
+        """Set the script manager backend and optional executor.
 
         Args:
             manager: The ScriptManager instance.
             validator: Optional ScriptValidator instance.
+            executor: Optional callable ``(name, script_type, content) -> str | None``
+                that dispatches script execution to the appropriate bridge for
+                the given ``script_type``. When provided, execution is routed
+                through this callable instead of only emitting the
+                ``script_execute`` signal. A non-``None`` return value
+                acknowledges execution synchronously; returning ``None``
+                indicates the executor will call ``acknowledge_execution``
+                later.
         """
         self._backend = manager
         self._validator = validator
+        self._executor = executor
 
         for script_id in manager.list_scripts():
             if script := manager.get_script(script_id):
                 self._script_list.add_script(script_id, script.name, script.script_type)
 
-        _logger.info("script_manager_backend_attached", script_count=len(manager.list_scripts()))
+        _logger.info(
+            "script_manager_backend_attached",
+            script_count=len(manager.list_scripts()),
+            executor_attached=executor is not None,
+        )
 
     def get_current_script(self) -> tuple[str, str, str] | None:
         """Get the current script data.
