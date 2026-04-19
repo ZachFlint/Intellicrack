@@ -12,11 +12,13 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import platform
+import re
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 
 import httpx
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -55,8 +57,22 @@ if TYPE_CHECKING:
 
 
 HTTP_OK = 200
+HTTP_FORBIDDEN = 403
+HTTP_NOT_FOUND = 404
 EXPECTED_TOOL_COUNT = 6
 _RETURNCODE_SUCCESS = 0
+
+_GITHUB_API_TIMEOUT: Final[float] = 30.0
+_GITHUB_API_HEADERS: Final[dict[str, str]] = {
+    "Accept": "application/vnd.github+json",
+    "User-Agent": "Intellicrack-ToolInstaller",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
+
+_X64DBG_ASSET_PATTERN: Final[str] = r".*\.zip$"
+_CUTTER_ASSET_PATTERN_WINDOWS: Final[str] = r".*[Ww]indows.*x86[_-]?64.*\.zip$"
+_CUTTER_ASSET_PATTERN_LINUX: Final[str] = r".*[Ll]inux.*x86[_-]?64.*\.(zip|AppImage|tar\.gz|tar\.xz)$"
+_CUTTER_ASSET_PATTERN_MACOS: Final[str] = r".*(macOS|[Dd]arwin).*x86[_-]?64.*\.(zip|dmg)$"
 
 _logger = get_logger("ui.tool_config")
 
@@ -98,11 +114,12 @@ class ToolInstallWorker(QThread):
             "name": "Ghidra 11.2.1",
         },
         "x64dbg": {
-            "url": "https://github.com/x64dbg/x64dbg/releases/download/snapshot/snapshot_2024-01-01_00-00.zip",
+            "api_url": "https://api.github.com/repos/x64dbg/x64dbg/releases/tags/snapshot",
             "name": "x64dbg Snapshot",
         },
         "cutter": {
-            "url": "https://github.com/rizinorg/cutter/releases/latest",
+            "api_url": "https://api.github.com/repos/rizinorg/cutter/releases/latest",
+            "fallback_html": "https://github.com/rizinorg/cutter/releases/latest",
             "name": "Cutter",
         },
     }
@@ -141,8 +158,15 @@ class ToolInstallWorker(QThread):
             return
 
         tool_info = self.DOWNLOAD_URLS[self._tool_id]
-        url = tool_info["url"]
         name = tool_info["name"]
+
+        self.progress.emit(3)
+
+        url, resolve_error = self._resolve_download_url(tool_info)
+        if url is None:
+            success = False
+            self.install_finished.emit(success, resolve_error)
+            return
 
         self.progress.emit(5)
 
@@ -210,6 +234,152 @@ class ToolInstallWorker(QThread):
             self.progress.emit(100)
             success = True
             self.install_finished.emit(success, f"{name} installed successfully")
+
+    def _resolve_download_url(self, tool_info: dict[str, str]) -> tuple[str | None, str]:
+        """Resolve the download URL for a tool, querying the GitHub API when needed.
+
+        For tools with a pre-known direct URL (``url`` key) the URL is returned
+        as-is. For tools backed by a GitHub release (``api_url`` key) the
+        release metadata is fetched and the matching asset is selected.
+
+        Args:
+            tool_info: Dict entry from ``DOWNLOAD_URLS`` for the tool being installed.
+
+        Returns:
+            tuple[str | None, str]: Tuple of (download_url, status_or_error_message).
+                When resolution succeeds the first element is the download URL and the
+                second element is empty. When resolution fails the first element is
+                ``None`` and the second element describes the failure for the user.
+        """
+        if direct_url := tool_info.get("url"):
+            return direct_url, ""
+
+        api_url = tool_info.get("api_url")
+        if not api_url:
+            return None, f"No download URL configured for {self._tool_id}"
+
+        fallback_html = tool_info.get("fallback_html", "")
+
+        release_data, release_error = self._fetch_github_release(api_url)
+        if release_data is None:
+            return None, self._with_fallback(release_error, fallback_html)
+
+        assets: list[dict[str, Any]] = cast("list[dict[str, Any]]", release_data.get("assets", []))
+        if not assets:
+            return None, self._with_fallback(f"No release assets found for {self._tool_id}", fallback_html)
+
+        asset_url = self._select_asset_url(assets)
+        if asset_url is None:
+            return None, self._with_fallback(f"No compatible asset found for {self._tool_id} on this platform", fallback_html)
+
+        return asset_url, ""
+
+    @staticmethod
+    def _with_fallback(message: str, fallback_html: str) -> str:
+        """Append a manual-download hint to an error message when a fallback URL exists.
+
+        Args:
+            message: The base error message.
+            fallback_html: The user-facing HTML releases URL, or an empty string when no fallback exists.
+
+        Returns:
+            str: The message with a "Download manually from: ..." suffix when a fallback is provided.
+        """
+        if fallback_html:
+            return f"{message}. Download manually from: {fallback_html}"
+        return message
+
+    @staticmethod
+    def _fetch_github_release(api_url: str) -> tuple[dict[str, Any] | None, str]:
+        """Fetch GitHub release metadata JSON.
+
+        Args:
+            api_url: The GitHub REST API endpoint returning release metadata.
+
+        Returns:
+            tuple[dict[str, Any] | None, str]: Tuple of (parsed_json, error_message).
+                Returns the parsed JSON object and an empty string on success, or
+                ``None`` and a human-readable error message on failure.
+        """
+        try:
+            with httpx.Client(timeout=httpx.Timeout(_GITHUB_API_TIMEOUT, connect=_GITHUB_API_TIMEOUT)) as client:
+                response = client.get(api_url, headers=_GITHUB_API_HEADERS, follow_redirects=True)
+        except httpx.TimeoutException as exc:
+            _logger.exception("github_release_fetch_timeout", api_url=api_url, error=str(exc))
+            return None, "GitHub API request timed out"
+        except httpx.ConnectError as exc:
+            _logger.exception("github_release_fetch_connect_error", api_url=api_url, error=str(exc))
+            return None, "Could not connect to GitHub API"
+        except httpx.HTTPError as exc:
+            _logger.exception("github_release_fetch_http_error", api_url=api_url, error=str(exc))
+            return None, f"GitHub API request failed: {exc}"
+
+        if response.status_code == HTTP_FORBIDDEN:
+            rate_limit_remaining = response.headers.get("x-ratelimit-remaining", "")
+            if rate_limit_remaining == "0":
+                return None, "GitHub API rate limit exceeded; try again later"
+            return None, "GitHub API request forbidden (HTTP 403)"
+
+        if response.status_code == HTTP_NOT_FOUND:
+            return None, "GitHub release not found (HTTP 404)"
+
+        if response.status_code != HTTP_OK:
+            return None, f"GitHub API returned HTTP {response.status_code}"
+
+        try:
+            data = cast("dict[str, Any]", response.json())
+        except ValueError as exc:
+            _logger.exception("github_release_json_parse_failed", api_url=api_url, error=str(exc))
+            return None, "Failed to parse GitHub API response"
+
+        return data, ""
+
+    def _select_asset_url(self, assets: list[dict[str, Any]]) -> str | None:
+        """Select the best-matching asset download URL for the current tool and platform.
+
+        Args:
+            assets: List of asset dictionaries from a GitHub release payload.
+
+        Returns:
+            str | None: The selected ``browser_download_url`` or ``None`` if no asset matches.
+        """
+        patterns = self._asset_patterns_for_tool()
+        for pattern in patterns:
+            regex = re.compile(pattern)
+            for asset in assets:
+                name = str(asset.get("name", ""))
+                download_url = asset.get("browser_download_url")
+                if isinstance(download_url, str) and download_url and regex.match(name):
+                    _logger.debug(
+                        "asset_selected",
+                        tool_id=self._tool_id,
+                        asset_name=name,
+                        pattern=pattern,
+                    )
+                    return download_url
+        return None
+
+    def _asset_patterns_for_tool(self) -> list[str]:
+        """Return ordered asset name regex patterns for the current tool and platform.
+
+        Windows-compatible patterns are preferred; Linux and macOS variants are
+        returned as fallbacks when running on those platforms.
+
+        Returns:
+            list[str]: Ordered regex patterns to try when selecting a release asset.
+        """
+        system = platform.system()
+        if self._tool_id == "x64dbg":
+            return [_X64DBG_ASSET_PATTERN]
+        if self._tool_id == "cutter":
+            if system == "Windows":
+                return [_CUTTER_ASSET_PATTERN_WINDOWS]
+            if system == "Linux":
+                return [_CUTTER_ASSET_PATTERN_LINUX, _CUTTER_ASSET_PATTERN_WINDOWS]
+            if system == "Darwin":
+                return [_CUTTER_ASSET_PATTERN_MACOS, _CUTTER_ASSET_PATTERN_WINDOWS]
+            return [_CUTTER_ASSET_PATTERN_WINDOWS, _CUTTER_ASSET_PATTERN_LINUX, _CUTTER_ASSET_PATTERN_MACOS]
+        return []
 
     def _post_install_ghidra(self) -> None:
         """Post-installation setup for Ghidra.

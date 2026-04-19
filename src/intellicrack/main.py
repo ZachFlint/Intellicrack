@@ -56,11 +56,20 @@ _SHUTDOWN_PROCESS_TIMEOUT: float = 10.0
 
 @dataclass(frozen=True)
 class _CLIOptions:
-    """Parsed CLI options that override configuration values."""
+    """Parsed CLI options that override configuration values.
+
+    Attributes:
+        log_level: Explicit log level override, or None to use config value.
+        disable_console_log: When True, disable the console log sink.
+        disable_file_log: When True, disable the file log sink.
+        config_path: Explicit path to a TOML configuration file, or None to
+            use the project-local config directory.
+    """
 
     log_level: str | None = None
     disable_console_log: bool = False
     disable_file_log: bool = False
+    config_path: Path | None = None
 
 
 def _parse_args() -> tuple[_CLIOptions, list[str]]:
@@ -115,6 +124,13 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
         default=False,
         help="Disable file log output",
     )
+    _ = parser.add_argument(
+        "--config",
+        dest="config",
+        default=None,
+        metavar="PATH",
+        help="Path to a TOML configuration file (overrides the default project-local location)",
+    )
 
     namespace, remaining = parser.parse_known_args()
     ns_dict: dict[str, object] = vars(namespace)
@@ -127,11 +143,15 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
     elif ns_dict.get("log_level") is not None:
         resolved_level = str(ns_dict["log_level"])
 
+    raw_config = ns_dict.get("config")
+    resolved_config_path: Path | None = Path(str(raw_config)).expanduser() if raw_config is not None else None
+
     return (
         _CLIOptions(
             log_level=resolved_level,
             disable_console_log=bool(ns_dict.get("no_console_log")),
             disable_file_log=bool(ns_dict.get("no_file_log")),
+            config_path=resolved_config_path,
         ),
         remaining,
     )
@@ -150,16 +170,22 @@ def _apply_cli_overrides(config: Config, cli: _CLIOptions) -> None:
         config.log.console_enabled = False
     if cli.disable_file_log:
         config.log.file_enabled = False
+    if not config.log.console_enabled and not config.log.file_enabled:
+        sys.stderr.write("Warning: all log output disabled\n")
 
 
-def _import_config_class() -> type[Config]:
-    """Import the Config class dynamically.
+def _import_config_module() -> tuple[type[Config], Callable[[], Path]]:
+    """Import the Config class and ``get_config_dir`` helper dynamically.
 
     Returns:
-        type[Config]: The Config class.
+        tuple[type[Config], Callable[[], Path]]: Tuple of (Config class,
+            callable returning the project-local configuration directory).
     """
     mod = importlib.import_module("intellicrack.core.config")
-    return cast("type[Config]", mod.Config)
+    return (
+        cast("type[Config]", mod.Config),
+        cast("Callable[[], Path]", mod.get_config_dir),
+    )
 
 
 def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]:
@@ -313,6 +339,10 @@ def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
             QApplication as _QApp,
             QSplashScreen as _QSplash,
         )
+
+        if _QApp.instance() is None:
+            _QApp.setHighDpiScaleFactorRoundingPolicy(_Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+            _QApp.setAttribute(_Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
 
         app = _QApp(sys.argv)
         _QApp.setApplicationName("Intellicrack")
@@ -471,11 +501,14 @@ def main() -> int:
         return 1
     app, early_splash = early_result
 
-    config_cls = _import_config_class()
+    config_cls, get_config_dir = _import_config_module()
     get_logger, setup_logging = _import_logging_funcs()
     pm_cls = _import_process_manager()
 
-    config_path = Path("config.toml")
+    config_path = cli_options.config_path if cli_options.config_path is not None else get_config_dir() / "config.toml"
+    if cli_options.config_path is not None and not config_path.exists():
+        sys.stderr.write(f"Error: --config path does not exist: {config_path}\n")
+        return 1
     config = config_cls.load(config_path) if config_path.exists() else config_cls.default()
 
     _apply_cli_overrides(config, cli_options)

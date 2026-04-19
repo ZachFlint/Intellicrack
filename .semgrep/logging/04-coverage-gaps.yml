@@ -1,0 +1,452 @@
+rules:
+
+  - id: intellicrack-logging-d1-silent-except-block
+    message: >-
+      `except:` block contains no log call. Silently swallowing
+      exceptions hides failures from the operational record and makes
+      incidents unreproducible. Add `_logger.exception("event_name",
+      <context kwargs>)` to capture the traceback, or let the exception
+      propagate.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try:
+                  ...
+              except $E:
+                  ...
+          - pattern: |
+              try:
+                  ...
+              except $E as $X:
+                  ...
+          - pattern: |
+              try:
+                  ...
+              except:
+                  ...
+      - pattern-not: |
+          try:
+              ...
+          except $E:
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except:
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except $E:
+              raise
+      - pattern-not: |
+          try:
+              ...
+          except $E as $X:
+              raise
+      - pattern-not: |
+          try:
+              ...
+          except $E:
+              raise $X
+      - pattern-not: |
+          try:
+              ...
+          except $E as $X:
+              raise $Y(...) from $X
+      - pattern-not: |
+          with contextlib.suppress(...):
+              ...
+
+  - id: intellicrack-logging-d2-except-pass
+    message: >-
+      `except: pass` is the textbook silent swallow - the exception is
+      caught and discarded with no audit trail. Add
+      `_logger.exception("event_name")` before the `pass`, or remove
+      the handler entirely if the error is truly irrelevant (which is
+      rarely true in a cracking/analysis tool).
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except $E:
+              pass
+      - pattern: |
+          try:
+              ...
+          except $E as $X:
+              pass
+      - pattern: |
+          try:
+              ...
+          except:
+              pass
+
+  - id: intellicrack-logging-d3-except-continue
+    message: >-
+      `except: continue` discards the exception inside a loop with no
+      record of which iteration failed. Log the iteration context
+      (`_logger.exception("event_name", item=item, index=i)`) before
+      continuing so failures can be counted and diagnosed.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except $E:
+              continue
+      - pattern: |
+          try:
+              ...
+          except $E as $X:
+              continue
+      - pattern: |
+          try:
+              ...
+          except:
+              continue
+
+  - id: intellicrack-logging-d4-except-returns-silent
+    message: >-
+      `except:` block returns without logging. The caller sees a normal
+      (possibly falsy) return value and has no signal that an exception
+      was suppressed. Add `_logger.exception(...)` before the return,
+      or let the exception propagate so the caller can decide.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try:
+                  ...
+              except $E:
+                  return $R
+          - pattern: |
+              try:
+                  ...
+              except $E as $X:
+                  return $R
+          - pattern: |
+              try:
+                  ...
+              except $E:
+                  return
+          - pattern: |
+              try:
+                  ...
+              except $E as $X:
+                  return
+
+  - id: intellicrack-logging-d5-raise-without-preceding-log
+    message: >-
+      `raise SomeError(...)` is invoked without any preceding log call
+      in the same function. The stack trace alone is not enough - the
+      operational record needs the OPERATION'S context (what
+      binary/pid/address were being handled) which the exception
+      message usually does not carry. Emit a `_logger.error` or
+      `_logger.warning` with structured kwargs immediately before the
+      raise, or raise from an `except:` where `_logger.exception()`
+      has already captured the context.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          def $FN(...):
+              ...
+              raise $ERR(...)
+      - pattern-not: |
+          def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+              raise $ERR(...)
+      - pattern-not: |
+          def $FN(...):
+              ...
+              try:
+                  ...
+              except $E:
+                  $L.$LVL(...)
+                  raise $ERR(...)
+      - pattern-not: |
+          def $FN(...):
+              ...
+              try:
+                  ...
+              except $E as $X:
+                  $L.$LVL(...)
+                  raise $ERR(...) from $X
+
+  - id: intellicrack-logging-d6-bridge-method-no-entry-log
+    message: >-
+      A public method on a Bridge class has no log call at all. Every
+      bridge method crosses the boundary between Intellicrack and an
+      external tool - that boundary is exactly what the unified log
+      stream is supposed to capture. Add at least an entry log:
+      `self._logger.info("bridge_op_started", <context kwargs>)`.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          def $M(self, ...):
+              ...
+      - pattern-inside: |
+          class $C(...):
+              ...
+      - metavariable-regex:
+          metavariable: $C
+          regex: '.*Bridge.*'
+      - metavariable-regex:
+          metavariable: $M
+          regex: '^(?!_|__init__|__enter__|__exit__|__aenter__|__aexit__|__del__|__repr__|__str__).+'
+      - pattern-not: |
+          def $M(self, ...):
+              ...
+              self._logger.$LVL(...)
+              ...
+      - pattern-not: |
+          def $M(self, ...):
+              ...
+              _logger.$LVL(...)
+              ...
+
+  - id: intellicrack-logging-d7-subprocess-without-log
+    message: >-
+      Launching an external process (`subprocess.Popen`,
+      `subprocess.run`, `subprocess.check_output`, `os.system`,
+      `os.popen`, `asyncio.create_subprocess_exec`,
+      `asyncio.create_subprocess_shell`) is a major orchestration
+      event - it is the whole point of a tool bridge. Emit a log with
+      the command and argv BEFORE the call and with the exit code /
+      duration AFTER, so the unified workspace records what was run.
+      Confirm a surrounding `_logger.info("subprocess_spawning",
+      argv=...)` exists - if so this finding is a reviewable
+      non-issue.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: subprocess.Popen(...)
+      - pattern: subprocess.run(...)
+      - pattern: subprocess.call(...)
+      - pattern: subprocess.check_call(...)
+      - pattern: subprocess.check_output(...)
+      - pattern: os.system(...)
+      - pattern: os.popen(...)
+      - pattern: asyncio.create_subprocess_exec(...)
+      - pattern: asyncio.create_subprocess_shell(...)
+
+  - id: intellicrack-logging-d8-binary-write-without-log
+    message: >-
+      Writing to a file. For an analysis/cracking platform, every
+      write is potentially a patch or artifact emission that must be
+      recorded. Confirm an adjacent
+      `_logger.info("file_written", path=str(path), size=len(data))`
+      call exists - if so this finding is a reviewable non-issue.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: $P.write_bytes(...)
+      - pattern: $P.write_text(...)
+      - pattern: open($P, "wb").write(...)
+      - pattern: open($P, "w").write(...)
+      - pattern: open($P, "ab").write(...)
+      - pattern: open($P, "a").write(...)
+
+  - id: intellicrack-logging-d9-destructive-op-without-log
+    message: >-
+      Destructive filesystem operation (`os.remove`, `os.unlink`,
+      `shutil.rmtree`, `pathlib.Path.unlink`, `pathlib.Path.rmdir`).
+      Destructive ops MUST leave an audit trail - confirm a log with
+      the target path is emitted before/after the op.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: os.remove(...)
+      - pattern: os.unlink(...)
+      - pattern: os.rmdir(...)
+      - pattern: os.removedirs(...)
+      - pattern: shutil.rmtree(...)
+      - pattern: $P.unlink(...)
+      - pattern: $P.rmdir(...)
+
+  - id: intellicrack-logging-d10-network-call-without-log
+    message: >-
+      Network call (`requests.*`, `httpx.*`, `urllib.request.urlopen`,
+      `socket.create_connection`). Network I/O crosses a trust and
+      latency boundary that must be recorded (URL/host, method,
+      status, duration). Confirm an adjacent log call exists.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: requests.get(...)
+      - pattern: requests.post(...)
+      - pattern: requests.put(...)
+      - pattern: requests.delete(...)
+      - pattern: requests.patch(...)
+      - pattern: requests.request(...)
+      - pattern: httpx.get(...)
+      - pattern: httpx.post(...)
+      - pattern: httpx.request(...)
+      - pattern: urllib.request.urlopen(...)
+      - pattern: socket.create_connection(...)
+
+  - id: intellicrack-logging-d11-retry-loop-without-per-attempt-log
+    message: >-
+      Retry loop (`for attempt in range(...):` / `while retries < ...:`)
+      has no log call inside the loop body. Without a per-attempt log
+      you cannot tell whether an operation succeeded on first try or
+      only after backoff. Log the attempt number and the error each
+      iteration.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              for $I in range($N):
+                  ...
+          - pattern: |
+              while $I < $N:
+                  ...
+      - metavariable-regex:
+          metavariable: $I
+          regex: '^(attempt|attempts|retry|retries|try_num|tries|iteration|attempt_num)$'
+      - pattern-not: |
+          for $I in range($N):
+              ...
+              $L.$LVL(...)
+              ...
+      - pattern-not: |
+          while $I < $N:
+              ...
+              $L.$LVL(...)
+              ...
+
+  - id: intellicrack-logging-d12-async-function-zero-logs
+    message: >-
+      This `async def` function contains no log calls at all. Async
+      units cross context boundaries (event loop tasks) and must emit
+      at least entry, error, and completion telemetry so distributed
+      workflows can be traced. If the function is a trivial pure-async
+      wrapper (<=10 lines), add at minimum an entry log.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern: |
+          async def $FN(...):
+              ...
+      - pattern-not: |
+          async def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+
+  - id: intellicrack-logging-d13-context-manager-no-entry-exit-log
+    message: >-
+      Context manager (`@contextmanager` / `@asynccontextmanager`) has
+      no log before the `yield` and no log after. Resources managed
+      through a context manager typically represent sessions,
+      transactions, or external handles that should emit acquired/
+      released pairs for correlation.
+    severity: INFO
+    languages: [python]
+    pattern-either:
+      - patterns:
+          - pattern: |
+              @contextmanager
+              def $FN(...):
+                  ...
+                  yield $X
+                  ...
+          - pattern-not: |
+              @contextmanager
+              def $FN(...):
+                  ...
+                  $L.$LVL(...)
+                  ...
+                  yield $X
+                  ...
+      - patterns:
+          - pattern: |
+              @asynccontextmanager
+              async def $FN(...):
+                  ...
+                  yield $X
+                  ...
+          - pattern-not: |
+              @asynccontextmanager
+              async def $FN(...):
+                  ...
+                  $L.$LVL(...)
+                  ...
+                  yield $X
+                  ...
+
+  - id: intellicrack-logging-d14-large-function-zero-logs
+    message: >-
+      This function exceeds a practical size threshold but contains
+      zero log calls. Functions that long necessarily perform multiple
+      operations; at least one of them should emit a log. Either add
+      logging for the key steps or break the function up.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def $FN(...):
+                  $S1
+                  $S2
+                  $S3
+                  $S4
+                  $S5
+                  $S6
+                  $S7
+                  $S8
+                  $S9
+                  $S10
+                  $S11
+                  $S12
+                  $S13
+                  $S14
+                  $S15
+                  ...
+          - pattern: |
+              async def $FN(...):
+                  $S1
+                  $S2
+                  $S3
+                  $S4
+                  $S5
+                  $S6
+                  $S7
+                  $S8
+                  $S9
+                  $S10
+                  $S11
+                  $S12
+                  $S13
+                  $S14
+                  $S15
+                  ...
+      - pattern-not: |
+          def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+      - pattern-not: |
+          async def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...

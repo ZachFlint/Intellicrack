@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import get_config_dir
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
 
 _logger = get_logger("ui.session_manager")
@@ -558,12 +559,36 @@ class SessionManagerDialog(QDialog):
     def _delete_session_sync(self, session_id: str) -> bool:
         """Delete a session synchronously.
 
+        When a session manager is available the deletion is routed through
+        ``SessionManager.delete`` via the shared bridge event loop so it is
+        reflected in the backing ``SessionStore``. When no manager is
+        provided, the on-disk sidecar fallback is used instead.
+
         Args:
             session_id: Session identifier.
 
         Returns:
             bool: True if deleted successfully.
         """
+        if self._manager is not None:
+            try:
+                result = run_bridge_coroutine(self._manager.delete(session_id))
+            except (OSError, RuntimeError, ValueError) as e:
+                _logger.warning(
+                    "session_delete_failed",
+                    session_id=session_id,
+                    error=str(e),
+                )
+                QMessageBox.warning(
+                    self,
+                    "Delete Failed",
+                    f"Failed to delete session:\n{e}",
+                )
+                return False
+            if result is None:
+                return True
+            return bool(result)
+
         session_file = self.SESSIONS_DIR / f"{session_id}.json"
         if session_file.exists():
             try:
@@ -704,85 +729,212 @@ class SessionManagerDialog(QDialog):
         return export_data
 
     def _import_session(self) -> None:
-        """Import session from file."""
-        path, _ = QFileDialog.getOpenFileName(
+        """Import session from file.
+
+        When a session manager is available, the import is routed through
+        ``SessionManager.import_json`` so the imported session lands in the
+        backing ``SessionStore``. Without a manager, the legacy disk-sidecar
+        fallback is used.
+        """
+        path_str, _ = QFileDialog.getOpenFileName(
             self,
             "Import Session",
             "",
             "JSON Files (*.json);;All Files (*)",
         )
 
-        if not path:
+        if not path_str:
             return
 
-        try:
-            with Path(path).open(encoding="utf-8") as f:
-                raw_data: object = json.load(f)
+        path = Path(path_str)
 
-            if not isinstance(raw_data, dict):
-                QMessageBox.warning(
-                    self,
-                    "Import Failed",
-                    "Invalid session file format.",
-                )
+        if self._manager is not None:
+            self._import_via_manager(path)
+        else:
+            self._import_to_disk(path)
+
+    def _import_via_manager(self, path: Path) -> None:
+        """Import a session JSON file through the session manager.
+
+        Handles duplicate-ID prompts, malformed JSON, missing files and
+        manager-level errors with user-facing dialogs.
+
+        Args:
+            path: Path to the session JSON file to import.
+        """
+        manager = self._manager
+        if manager is None:
+            return
+
+        valid, import_id = self._peek_session_id(path)
+        if not valid:
+            return
+
+        replace = False
+        if import_id is not None and self._session_id_exists(import_id):
+            if not self._confirm_replace(import_id):
                 return
+            replace = True
 
-            import_data = cast("dict[str, object]", raw_data)
-
-            required_fields = {"id", "name"}
-            if not required_fields.issubset(import_data.keys()):
-                import_data["id"] = Path(path).stem
-                import_data["name"] = Path(path).stem
-
-            existing_ids = {s["id"] for s in self._sessions}
-            if import_data["id"] in existing_ids:
-                reply = QMessageBox.question(
-                    self,
-                    "Session Exists",
-                    f"A session with ID '{import_data['id']}' already exists.\n\nDo you want to replace it?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                )
-                if reply != QMessageBox.StandardButton.Yes:
-                    return
-
-            import_data["imported_at"] = datetime.now(tz=UTC).isoformat()
-
-            self._save_session_to_disk(import_data)
-
-            _logger.debug(
-                "session_imported",
-                session_id=import_data.get("id"),
-                path=path,
+        try:
+            run_bridge_coroutine(manager.import_json(path, replace=replace))
+        except FileNotFoundError as e:
+            self._report_import_error(
+                path, e, event="session_import_file_missing", title="Import Failed", message=f"File not found:\n{path}"
             )
-            QMessageBox.information(
-                self,
-                "Import Complete",
-                f"Session imported from:\n{path}",
+            return
+        except ValueError as e:
+            self._report_import_error(
+                path, e, event="session_import_invalid", title="Import Failed", message=f"Invalid session file:\n{e}"
             )
-            self._load_sessions()
+            return
+        except (OSError, RuntimeError) as e:
+            _logger.exception("session_import_failed", path=str(path))
+            QMessageBox.warning(self, "Import Failed", f"Failed to import session:\n{e}")
+            return
 
+        _logger.debug("session_imported", session_id=import_id, path=str(path))
+        QMessageBox.information(self, "Import Complete", f"Session imported from:\n{path}")
+        self._load_sessions()
+
+    def _session_id_exists(self, session_id: str) -> bool:
+        """Check whether a session ID is already present in the listed sessions.
+
+        Args:
+            session_id: Candidate session identifier.
+
+        Returns:
+            bool: True if the ID already exists in ``self._sessions``.
+        """
+        return any(s["id"] == session_id for s in self._sessions)
+
+    def _confirm_replace(self, session_id: str) -> bool:
+        """Prompt the user to confirm replacement of an existing session.
+
+        Args:
+            session_id: Identifier of the conflicting session.
+
+        Returns:
+            bool: True if the user confirmed replacement.
+        """
+        reply = QMessageBox.question(
+            self,
+            "Session Exists",
+            f"A session with ID '{session_id}' already exists.\n\nDo you want to replace it?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def _report_import_error(self, path: Path, error: BaseException, *, event: str, title: str, message: str) -> None:
+        """Log an import failure and show a warning dialog to the user.
+
+        Args:
+            path: Path that was being imported.
+            error: Exception that was raised.
+            event: Structured-logging event name.
+            title: Dialog title.
+            message: Dialog body text.
+        """
+        _logger.warning(event, path=str(path), error=str(error))
+        QMessageBox.warning(self, title, message)
+
+    def _peek_session_id(self, path: Path) -> tuple[bool, str | None]:
+        """Peek at a session JSON file to extract its session identifier.
+
+        Handles both wrapped (``{"session": {...}}``) and unwrapped top-level
+        session forms consistent with ``SessionStore.import_from_json``.
+
+        Args:
+            path: Path to the session JSON file.
+
+        Returns:
+            tuple[bool, str | None]: ``(True, session_id)`` when the file is
+                valid and a string ID could be extracted, ``(True, None)``
+                when the file is valid but has no recognizable ID, and
+                ``(False, None)`` when the file is missing or malformed. In
+                the ``False`` case, a user-facing error dialog has already
+                been shown.
+        """
+        try:
+            with path.open(encoding="utf-8") as f:
+                raw_data: object = json.load(f)
+        except FileNotFoundError as e:
+            self._report_import_error(
+                path, e, event="session_import_file_missing", title="Import Failed", message=f"File not found:\n{path}"
+            )
+            return False, None
         except json.JSONDecodeError as e:
-            _logger.warning(
-                "session_import_failed",
-                path=path,
-                error=str(e),
+            self._report_import_error(
+                path, e, event="session_import_json_invalid", title="Import Failed", message=f"Invalid JSON file:\n{e}"
             )
-            QMessageBox.warning(
-                self,
-                "Import Failed",
-                f"Invalid JSON file:\n{e}",
-            )
+            return False, None
         except OSError as e:
-            _logger.warning(
-                "session_import_failed",
-                path=path,
-                error=str(e),
+            self._report_import_error(
+                path, e, event="session_import_read_failed", title="Import Failed", message=f"Failed to read file:\n{e}"
             )
-            QMessageBox.warning(
-                self,
-                "Import Failed",
-                f"Failed to read file:\n{e}",
+            return False, None
+
+        if not isinstance(raw_data, dict):
+            QMessageBox.warning(self, "Import Failed", "Invalid session file format.")
+            return False, None
+
+        outer = cast("dict[str, object]", raw_data)
+        inner_raw = outer.get("session", outer)
+        if not isinstance(inner_raw, dict):
+            return True, None
+
+        inner = cast("dict[str, object]", inner_raw)
+        id_val = inner.get("id")
+        return True, (id_val if isinstance(id_val, str) else None)
+
+    def _import_to_disk(self, path: Path) -> None:
+        """Import a session JSON file into the on-disk sidecar store.
+
+        This fallback is only used when no session manager has been wired
+        into the dialog; it preserves the sidecar JSON purely as an
+        export-compatible artifact for non-managed instances.
+
+        Args:
+            path: Path to the session JSON file to import.
+        """
+        try:
+            with path.open(encoding="utf-8") as f:
+                raw_data: object = json.load(f)
+        except json.JSONDecodeError as e:
+            self._report_import_error(path, e, event="session_import_failed", title="Import Failed", message=f"Invalid JSON file:\n{e}")
+            return
+        except OSError as e:
+            self._report_import_error(path, e, event="session_import_failed", title="Import Failed", message=f"Failed to read file:\n{e}")
+            return
+
+        if not isinstance(raw_data, dict):
+            QMessageBox.warning(self, "Import Failed", "Invalid session file format.")
+            return
+
+        import_data = cast("dict[str, object]", raw_data)
+
+        required_fields = {"id", "name"}
+        if not required_fields.issubset(import_data.keys()):
+            import_data["id"] = path.stem
+            import_data["name"] = path.stem
+
+        candidate_id = import_data["id"]
+        if isinstance(candidate_id, str) and self._session_id_exists(candidate_id) and not self._confirm_replace(candidate_id):
+            return
+
+        import_data["imported_at"] = datetime.now(tz=UTC).isoformat()
+
+        try:
+            self._save_session_to_disk(import_data)
+        except OSError as e:
+            self._report_import_error(
+                path, e, event="session_import_failed", title="Import Failed", message=f"Failed to write session file:\n{e}"
             )
+            return
+
+        _logger.debug("session_imported", session_id=import_data.get("id"), path=str(path))
+        QMessageBox.information(self, "Import Complete", f"Session imported from:\n{path}")
+        self._load_sessions()
 
     def _save_session_to_disk(self, session_data: dict[str, object]) -> None:
         """Save session data to disk.

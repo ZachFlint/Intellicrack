@@ -235,7 +235,7 @@ bandit *FLAGS:
 # Security scanning with Semgrep and output sorted findings
 [group('lint')]
 semgrep *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName semgrep -DisplayName Semgrep -Command "semgrep scan --config=auto --json --timeout 30 {{ FLAGS }} src/" -Pixi "{{ pixi }}" -EnvVars 'PYTHONUTF8=1','PYTHONIOENCODING=utf-8' -SuppressStderr
+    @& scripts/run-lint-tool.ps1 -ToolName semgrep -DisplayName Semgrep -Command "{{ pixi }} python scripts/run-semgrep.py --config=.semgrep/logging/ --output {TMPFILE} {{ FLAGS }}" -Pixi "{{ pixi }}" -EnvVars 'PYTHONUTF8=1','PYTHONIOENCODING=utf-8','NO_COLOR=1' -JsonDirect -TextMode
 
 # Run flake8 style linting and output sorted findings
 [group('lint')]

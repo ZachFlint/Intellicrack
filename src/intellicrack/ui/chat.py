@@ -58,6 +58,10 @@ class MessageBubble(QFrame):
     Args:
         message: The message to display.
         parent: Parent widget.
+
+    Attributes:
+        content_label: QLabel displaying the message content; updated
+            directly by streaming consumers to append incremental chunks.
     """
 
     def __init__(
@@ -73,6 +77,7 @@ class MessageBubble(QFrame):
         """
         super().__init__(parent)
         self._message = message
+        self.content_label: QLabel = QLabel(self._message.content)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -95,12 +100,11 @@ class MessageBubble(QFrame):
         header_layout.addWidget(time_label)
         layout.addLayout(header_layout)
 
-        if self._message.content:
-            content_label = QLabel(self._message.content)
-            content_label.setWordWrap(True)
-            content_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            content_label.setFont(FontManager.get_instance().get_ui_font(10))
-            layout.addWidget(content_label)
+        self.content_label.setWordWrap(True)
+        self.content_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.content_label.setFont(FontManager.get_instance().get_ui_font(10))
+        self.content_label.setVisible(bool(self._message.content))
+        layout.addWidget(self.content_label)
 
         if self._message.tool_calls:
             for call in self._message.tool_calls:
@@ -245,9 +249,19 @@ class ChatInput(QFrame):
         self._text_edit = QTextEdit()
         self._text_edit.setFont(FontManager.get_instance().get_ui_font(10))
         self._text_edit.setMaximumHeight(_INPUT_MAX_HEIGHT)
-        self._hint_text = "Type a message..."
-        self._show_hint()
-        self._text_edit.textChanged.connect(self._on_text_changed)
+        self._text_edit.setPlaceholderText("Type a message...")
+        self._text_edit.setStyleSheet("""
+            QTextEdit {
+                background-color: #2d2d30;
+                border: 1px solid #3e3e42;
+                border-radius: 8px;
+                padding: 8px;
+                color: #d4d4d4;
+            }
+            QTextEdit:focus {
+                border: 1px solid #007acc;
+            }
+        """)
         layout.addWidget(self._text_edit)
 
         self._send_button = QPushButton("Send")
@@ -284,63 +298,10 @@ class ChatInput(QFrame):
     def _on_send(self) -> None:
         """Handle send button click."""
         text = self._text_edit.toPlainText().strip()
-        if text and text != self._hint_text:
+        if text:
             _logger.debug("user_message_submitted", length=len(text))
             self.message_submitted.emit(text)
             self._text_edit.clear()
-            self._show_hint()
-
-    def _show_hint(self) -> None:
-        """Display hint text in the input field."""
-        self._text_edit.setStyleSheet("""
-            QTextEdit {
-                background-color: #2d2d30;
-                border: 1px solid #3e3e42;
-                border-radius: 8px;
-                padding: 8px;
-                color: #888888;
-            }
-            QTextEdit:focus {
-                border: 1px solid #007acc;
-                color: #d4d4d4;
-            }
-        """)
-        if not self._text_edit.toPlainText():
-            self._text_edit.setText(self._hint_text)
-
-    def _clear_hint(self) -> None:
-        """Clear hint text when user starts typing."""
-        if self._text_edit.toPlainText() == self._hint_text:
-            self._text_edit.clear()
-        self._text_edit.setStyleSheet("""
-            QTextEdit {
-                background-color: #2d2d30;
-                border: 1px solid #3e3e42;
-                border-radius: 8px;
-                padding: 8px;
-                color: #d4d4d4;
-            }
-            QTextEdit:focus {
-                border: 1px solid #007acc;
-            }
-        """)
-
-    def _on_text_changed(self) -> None:
-        """Handle text changes to manage hint visibility."""
-        current_text = self._text_edit.toPlainText()
-        if current_text and current_text != self._hint_text:
-            self._text_edit.setStyleSheet("""
-                QTextEdit {
-                    background-color: #2d2d30;
-                    border: 1px solid #3e3e42;
-                    border-radius: 8px;
-                    padding: 8px;
-                    color: #d4d4d4;
-                }
-                QTextEdit:focus {
-                    border: 1px solid #007acc;
-                }
-            """)
 
     def set_enabled(self, *, enabled: bool) -> None:
         """Enable or disable the input.
@@ -354,11 +315,9 @@ class ChatInput(QFrame):
     def clear(self) -> None:
         """Clear the input text."""
         self._text_edit.clear()
-        self._show_hint()
 
     def set_focus(self) -> None:
         """Set focus to the text input."""
-        self._clear_hint()
         self._text_edit.setFocus()
 
     def set_text(self, text: str) -> None:
@@ -367,7 +326,6 @@ class ChatInput(QFrame):
         Args:
             text: Text to set in the input field.
         """
-        self._clear_hint()
         self._text_edit.setPlainText(text)
 
 
@@ -488,22 +446,12 @@ class ChatPanel(QFrame):
             bubble,
         )
 
-        content_label: QLabel | None = None
-        bubble_layout = bubble.layout()
-        if bubble_layout is not None:
-            for i in range(bubble_layout.count()):
-                item = bubble_layout.itemAt(i)
-                if item is not None:
-                    widget = item.widget()
-                    if isinstance(widget, QLabel) and not widget.text().startswith(("You", "Intellicrack", "System", "Tool")):
-                        content_label = widget
-                        break
+        content_label = bubble.content_label
 
         def append_chunk(chunk: str) -> None:
-            nonlocal content_label
             message.content += chunk
-            if content_label is not None:
-                content_label.setText(message.content)
+            content_label.setText(message.content)
+            content_label.setVisible(bool(message.content))
             self._scroll_to_bottom()
 
         return append_chunk

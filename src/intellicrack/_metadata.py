@@ -12,7 +12,5 @@ __author__: str = "Zachary Flint"
 __email__: str = "zach.flint2@gmail.com"
 __license__: str = "GPL-3.0-or-later"
 __copyright__: str = "Copyright (C) 2026 Zachary Flint"
-__summary__: str = (
-    "AI-orchestrated reverse engineering platform that bridges multiple analysis tools to analyze and defeat software licensing protections"
-)
+__summary__: str = "Unified workspace that bridges binary-analysis tools and AI providers."
 __url__: str = "https://github.com/zacharyflint/intellicrack"
