@@ -32,7 +32,12 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, ToolCallBufferManager, create_openai_tool_schema
+from intellicrack.providers.base import (
+    LLMProviderBase,
+    ToolCallBufferManager,
+    UsageInfo,
+    create_openai_tool_schema,
+)
 
 
 if TYPE_CHECKING:
@@ -120,6 +125,23 @@ class OpenAIProvider(LLMProviderBase):
                 project=credentials.project_id,
             )
             await self.client.models.list()
+        except openai.AuthenticationError as e:
+            self.connected = False
+            self.client = None
+            self._logger.warning(
+                "openai_connect_auth_failed",
+                error=str(e),
+            )
+            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
+        except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
+            self.connected = False
+            self.client = None
+            self._logger.warning(
+                "openai_connect_failed",
+                error=str(e),
+            )
+            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+        else:
             self._credentials = credentials
             self.connected = True
             self._logger.info(
@@ -128,18 +150,6 @@ class OpenAIProvider(LLMProviderBase):
                 has_organization=credentials.organization_id is not None,
                 has_project=credentials.project_id is not None,
             )
-        except openai.AuthenticationError as e:
-            self._logger.exception(
-                "openai_connect_auth_failed",
-                error=str(e),
-            )
-            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
-        except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
-            self._logger.exception(
-                "openai_connect_failed",
-                error=str(e),
-            )
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
 
     async def disconnect(self) -> None:
         """Disconnect from OpenAI API."""
@@ -253,7 +263,7 @@ class OpenAIProvider(LLMProviderBase):
                 count=len(sorted_models),
             )
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
-            self._logger.exception(
+            self._logger.warning(
                 "openai_list_models_failed",
                 error=str(e),
             )
@@ -295,6 +305,7 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
 
         openai_messages = self.convert_messages_to_provider_format(messages)
         openai_tools = self.convert_tools_to_provider_format(tools) if tools else None
@@ -333,8 +344,9 @@ class OpenAIProvider(LLMProviderBase):
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         response_message = response.choices[0].message
-        content = response_message.content or ""
+        content = response_message.content if response_message.content is not None else ""
         tool_calls = self._parse_openai_tool_calls(response_message)
+        self._pending_usage = self._build_usage_from_completion(response)
 
         return self._build_chat_response(
             provider="openai",
@@ -368,6 +380,7 @@ class OpenAIProvider(LLMProviderBase):
             ChatCompletion: The chat completion response object.
 
         Raises:
+            AuthenticationError: If the API key is invalid.
             ProviderError: If the API call fails.
             RateLimitError: If rate limited.
         """
@@ -376,7 +389,7 @@ class OpenAIProvider(LLMProviderBase):
 
         self._logger.debug("openai_api_call_starting", model=model, has_tools=bool(tools))
         try:
-            if tools and tool_choice is not None:
+            if tools is not None and tool_choice is not None:
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -385,7 +398,7 @@ class OpenAIProvider(LLMProviderBase):
                     tools=tools,
                     tool_choice=tool_choice,
                 )
-            if tools:
+            if tools is not None:
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -399,27 +412,63 @@ class OpenAIProvider(LLMProviderBase):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+        except openai.AuthenticationError as e:
+            self._logger.warning("openai_chat_auth_failed", model=model, error=str(e))
+            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
         except openai.RateLimitError as e:
-            self._logger.exception(
-                "openai_chat_rate_limited",
-                model=model,
-                error=str(e),
-            )
+            self._logger.warning("openai_chat_rate_limited", model=model, error=str(e))
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
-            self._logger.exception(
-                "openai_chat_api_error",
-                model=model,
-                error=str(e),
-            )
+            self._logger.warning("openai_chat_api_error", model=model, error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            self._logger.exception(
-                "openai_chat_failed",
-                model=model,
-                error=str(e),
-            )
+            self._logger.warning("openai_chat_failed", model=model, error=str(e))
             raise ProviderError(_ERR_REQUEST_FAILED % e) from e
+
+    @staticmethod
+    def _build_usage_from_completion(response: ChatCompletion) -> UsageInfo | None:
+        """Extract token-usage statistics from a chat completion response.
+
+        Args:
+            response: The OpenAI API chat completion response.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present on
+            the response, otherwise ``None``.
+        """
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return None
+        prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion = int(getattr(usage, "completion_tokens", 0) or 0)
+        total = int(getattr(usage, "total_tokens", 0) or 0) or (prompt + completion)
+        return UsageInfo(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+        )
+
+    @staticmethod
+    def _build_usage_from_chunk_usage(chunk_usage: object) -> UsageInfo | None:
+        """Extract token-usage statistics from a streaming chunk usage field.
+
+        Args:
+            chunk_usage: The ``usage`` attribute from a streaming chunk.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present,
+            otherwise ``None``.
+        """
+        if chunk_usage is None:
+            return None
+        prompt = int(getattr(chunk_usage, "prompt_tokens", 0) or 0)
+        completion = int(getattr(chunk_usage, "completion_tokens", 0) or 0)
+        total = int(getattr(chunk_usage, "total_tokens", 0) or 0) or (prompt + completion)
+        return UsageInfo(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+        )
 
     def _parse_openai_tool_calls(
         self,
@@ -481,6 +530,7 @@ class OpenAIProvider(LLMProviderBase):
             str: Text chunks as they arrive.
 
         Raises:
+            AuthenticationError: If the API key is invalid.
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited by OpenAI.
         """
@@ -488,6 +538,7 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False
+        self._pending_usage = None
         if thinking is not None and thinking.enabled:
             self._logger.debug("openai_stream_thinking_ignored")
         if enable_cache:
@@ -514,6 +565,7 @@ class OpenAIProvider(LLMProviderBase):
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
+                    stream_options={"include_usage": True},
                     tools=typed_tools,
                     tool_choice=tool_choice_value,
                 )
@@ -525,6 +577,7 @@ class OpenAIProvider(LLMProviderBase):
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
+                    stream_options={"include_usage": True},
                     tools=typed_tools,
                 )
             else:
@@ -534,6 +587,7 @@ class OpenAIProvider(LLMProviderBase):
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=True,
+                    stream_options={"include_usage": True},
                 )
 
             tc_buffer = ToolCallBufferManager()
@@ -541,6 +595,9 @@ class OpenAIProvider(LLMProviderBase):
             async for chunk in stream:
                 if self._cancel_requested:
                     break
+                chunk_usage = getattr(chunk, "usage", None)
+                if chunk_usage is not None:
+                    self._pending_usage = self._build_usage_from_chunk_usage(chunk_usage)
                 if not chunk.choices:
                     continue
                 delta = chunk.choices[0].delta
@@ -557,27 +614,18 @@ class OpenAIProvider(LLMProviderBase):
 
             self._pending_tool_calls = tc_buffer.finalize()
 
+        except openai.AuthenticationError as e:
+            self._logger.warning("openai_stream_auth_failed", model=model, error=str(e))
+            raise AuthenticationError(_ERR_INVALID_KEY % e) from e
         except openai.RateLimitError as e:
-            self._logger.exception(
-                "openai_stream_rate_limited",
-                model=model,
-                error=str(e),
-            )
+            self._logger.warning("openai_stream_rate_limited", model=model, error=str(e))
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:
-            self._logger.exception(
-                "openai_stream_api_error",
-                model=model,
-                error=str(e),
-            )
+            self._logger.warning("openai_stream_api_error", model=model, error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             if not self._cancel_requested:
-                self._logger.exception(
-                    "openai_stream_failed",
-                    model=model,
-                    error=str(e),
-                )
+                self._logger.warning("openai_stream_failed", model=model, error=str(e))
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:

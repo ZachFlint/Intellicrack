@@ -52,7 +52,7 @@ class ConcreteTestProvider(LLMProviderBase):
 
     def mark_connected(self) -> None:
         """Set provider to connected state for testing."""
-        self._connected = True
+        self.connected = True
 
     @override
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -62,7 +62,7 @@ class ConcreteTestProvider(LLMProviderBase):
             credentials: Provider credentials.
         """
         self._credentials = credentials
-        self._connected = True
+        self.connected = True
 
     @override
     async def list_models(self) -> list[ModelInfo]:
