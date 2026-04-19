@@ -27,14 +27,14 @@ repos:
         stages: [pre-commit]
       - id: generate-structure-files
         name: Generate Intellicrack Structure Files (HTA/TXT)
-        entry: bash -c 'pixi run python scripts/generate_tree.py && git add IntellicrackStructure.hta IntellicrackStructure.txt'
+        entry: pixi run python scripts/generate_tree.py
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
       - id: generate-knowledge-graph
         name: Generate Intellicrack Knowledge Graph
-        entry: bash -c 'pixi run python scripts/knowledge-graph/visualize_architecture.py --layout hierarchical && git add IntellicrackKnowledgeGraph.html scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot'
+        entry: pixi run python scripts/knowledge-graph/visualize_architecture.py --layout hierarchical
         language: system
         pass_filenames: false
         always_run: true

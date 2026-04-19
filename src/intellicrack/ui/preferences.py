@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFileDialog,
+    QFontComboBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -245,18 +246,9 @@ class AppearanceSettingsWidget(QWidget):
         font_group = QGroupBox("Font")
         font_layout = QFormLayout(font_group)
 
-        self._font_family = QComboBox()
-        fonts = [
-            "Consolas",
-            "Courier New",
-            "Source Code Pro",
-            "JetBrains Mono",
-            "Fira Code",
-            "Cascadia Code",
-            "Menlo",
-            "Monaco",
-        ]
-        self._font_family.addItems(fonts)
+        self._font_family = QFontComboBox()
+        self._font_family.setFontFilters(QFontComboBox.FontFilter.MonospacedFonts)
+        self._font_family.setEditable(True)
         font_layout.addRow("Font Family:", self._font_family)
 
         self._font_size = QSpinBox()
@@ -282,9 +274,12 @@ class AppearanceSettingsWidget(QWidget):
         if idx >= 0:
             self._theme_combo.setCurrentIndex(idx)
 
-        idx = self._font_family.findText(self._config.ui.font_family)
+        saved_family = self._config.ui.font_family
+        idx = self._font_family.findText(saved_family)
         if idx >= 0:
             self._font_family.setCurrentIndex(idx)
+        else:
+            self._font_family.setEditText(saved_family)
 
         self._font_size.setValue(self._config.ui.font_size)
         self._show_tool_calls.setChecked(self._config.ui.show_tool_calls)
@@ -297,10 +292,11 @@ class AppearanceSettingsWidget(QWidget):
         """
         theme_data = _combo_current_data(self._theme_combo)
         theme = str(theme_data) if isinstance(theme_data, str) else self._config.ui.theme
+        font_family = str(self._font_family.currentText()).strip() or self._config.ui.font_family
         return {
             "ui": UIConfig(
                 theme=theme,
-                font_family=self._font_family.currentText(),
+                font_family=font_family,
                 font_size=self._font_size.value(),
                 show_tool_calls=self._show_tool_calls.isChecked(),
             ),
