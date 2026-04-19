@@ -45,39 +45,62 @@ class _LoopState:
 
 _state = _LoopState()
 
+_LOOP_READY_TIMEOUT: float = 2.0
 
-def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
+
+def _run_loop(loop: asyncio.AbstractEventLoop, ready: threading.Event) -> None:
     """Run the event loop forever in a background thread.
 
     Args:
         loop: The event loop to run.
+        ready: Event signaled once the loop is bound to the thread and about to start.
     """
     asyncio.set_event_loop(loop)
+    ready.set()
     loop.run_forever()
 
 
 def _ensure_loop() -> asyncio.AbstractEventLoop:
     """Lazily start and return the persistent background event loop.
 
+    Uses a ``threading.Event`` sentinel to guarantee that a newly created loop is
+    bound to its thread before ``_ensure_loop`` returns, preventing a race where
+    parallel callers could each create and start a loop because the first thread
+    had not yet entered ``run_forever``.
+
     Returns:
         asyncio.AbstractEventLoop: The running background event loop.
     """
-    if _state.loop is not None and _state.loop.is_running():
-        return _state.loop
+    existing = _state.loop
+    if existing is not None:
+        return existing
 
     with _state.lock:
-        if _state.loop is not None and _state.loop.is_running():
+        if _state.loop is not None:
             return _state.loop
 
         loop = asyncio.new_event_loop()
-        thread = threading.Thread(target=_run_loop, args=(loop,), daemon=True, name="bridge-event-loop")
+        ready = threading.Event()
+        thread = threading.Thread(
+            target=_run_loop,
+            args=(loop, ready),
+            daemon=True,
+            name="bridge-event-loop",
+        )
         thread.start()
 
         _state.loop = loop
         _state.thread = thread
         _logger.debug("bridge_event_loop_started", thread_name=thread.name)
 
-    return _state.loop
+        if not ready.wait(timeout=_LOOP_READY_TIMEOUT):
+            _logger.warning(
+                "bridge_event_loop_ready_timeout",
+                thread_name=thread.name,
+                timeout_s=_LOOP_READY_TIMEOUT,
+            )
+
+    return loop
 
 
 def ensure_loop() -> asyncio.AbstractEventLoop:
