@@ -156,6 +156,7 @@ class ProcessPanel(AnalysisPanelBase):
 
         self._system_tab = SystemTab()
         self._tab_widget.addTab(self._system_tab, "System")
+        self._threads_tab.attach_system_tab(self._system_tab)
 
         self._detail_tabs = [
             self._memory_tab,
