@@ -338,27 +338,39 @@ class TransformsMixin:
             params[label_text] = field_widget.text()
         return params
 
-    def _run_single_transform(self, data: bytes) -> bytes | None:
-        """Apply the currently selected single transform to data.
+    def _run_single_transform(self, offset: int, length: int) -> bytes | None:
+        """Apply the currently selected single transform via hexcore transform_data.
 
         Args:
-            data: Input bytes to transform.
+            offset: Absolute byte offset within the document.
+            length: Number of bytes to transform.
 
         Returns:
-            bytes | None: Transformed bytes, or None on failure.
+            bytes | None: Transformed bytes returned by hexcore, or None on failure.
         """
-        if self._transform_node_combo is None or not self._transform_nodes_cache:
+        if self.document is None or self._transform_node_combo is None or not self._transform_nodes_cache:
             return None
         idx = self._transform_node_combo.currentIndex()
         if idx < 0 or idx >= len(self._transform_nodes_cache):
             return None
         node = self._transform_nodes_cache[idx]
+        node_name = getattr(node, "name", None)
+        if not isinstance(node_name, str):
+            return None
         raw_params = self._collect_transform_params()
+        encoded_params: dict[str, bytes] = {key: str(value).encode("utf-8") for key, value in raw_params.items()}
         try:
-            return node.process(data, raw_params)
-        except (ValueError, TypeError, KeyError) as exc:
+            result = self.document.transform_data(node_name, offset, length, encoded_params)
+        except (RuntimeError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
             logger.debug("transform_single_failed", error=str(exc))
             return None
+        if isinstance(result, bytes):
+            return result
+        if isinstance(result, bytearray):
+            return bytes(result)
+        if isinstance(result, list):
+            return bytes(cast("list[int]", result))
+        return None
 
     def _on_transform_preview(self) -> None:
         """Apply the selected transform to the cursor region and show a hex dump preview."""
@@ -369,24 +381,16 @@ class TransformsMixin:
         if self._hex_widget is not None:
             cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
 
-        preview_len = PREVIEW_BYTES
         try:
             doc_len: int = self.document.length()
-            read_len = min(preview_len, doc_len - cursor_offset)
-            if read_len <= 0:
-                return
-            raw: object = self.document.read(cursor_offset, read_len)
-            if isinstance(raw, (list, bytearray)):
-                data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
-            elif isinstance(raw, bytes):
-                data = raw
-            else:
-                return
         except (AttributeError, ValueError) as exc:
-            logger.debug("transform_preview_read_failed", error=str(exc))
+            logger.debug("transform_preview_len_failed", error=str(exc))
+            return
+        read_len = min(PREVIEW_BYTES, doc_len - cursor_offset)
+        if read_len <= 0:
             return
 
-        result = self._run_single_transform(data)
+        result = self._run_single_transform(cursor_offset, read_len)
         if result is None:
             return
 
@@ -416,21 +420,14 @@ class TransformsMixin:
 
         try:
             doc_len: int = self.document.length()
-            read_len = min(apply_len, doc_len - cursor_offset)
-            if read_len <= 0:
-                return
-            raw: object = self.document.read(cursor_offset, read_len)
-            if isinstance(raw, (list, bytearray)):
-                data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
-            elif isinstance(raw, bytes):
-                data = raw
-            else:
-                return
         except (AttributeError, ValueError) as exc:
-            logger.debug("transform_apply_read_failed", error=str(exc))
+            logger.debug("transform_apply_len_failed", error=str(exc))
+            return
+        read_len = min(apply_len, doc_len - cursor_offset)
+        if read_len <= 0:
             return
 
-        result = self._run_single_transform(data)
+        result = self._run_single_transform(cursor_offset, read_len)
         if result is None:
             return
 
@@ -607,7 +604,7 @@ class TransformsMixin:
             logger.debug("pipeline_executed", offset=cursor_offset, length=write_len)
 
     def _on_block_fill(self) -> None:
-        """Open a dialog for filling a block with a repeating pattern."""
+        """Fill a block via hexcore document.fill_block."""
         if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
@@ -617,17 +614,16 @@ class TransformsMixin:
         offset, length, pattern = dlg.get_values()
         if not pattern:
             return
-        fill_data = (pattern * ((length // len(pattern)) + 1))[:length]
         try:
-            self.document.write_bytes(offset, bytes(fill_data))
-        except (AttributeError, ValueError) as exc:
+            self.document.fill_block(offset, length, bytes(pattern))
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             logger.debug("block_fill_failed", error=str(exc))
             return
         self._refresh_widget()
         logger.debug("block_fill_complete", offset=offset, length=length)
 
     def _on_block_copy(self) -> None:
-        """Open a dialog for copying a block to another offset."""
+        """Copy a block via hexcore document.copy_block."""
         if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
@@ -636,23 +632,14 @@ class TransformsMixin:
             return
         src, length, dst = dlg.get_values()
         try:
-            raw_read: object = self.document.read(src, length)
-            if isinstance(raw_read, bytes):
-                data = raw_read
-            elif isinstance(raw_read, list):
-                data = bytes(cast("list[int]", raw_read))
-            elif isinstance(raw_read, bytearray):
-                data = bytes(raw_read)
-            else:
-                return
-            self.document.write_bytes(dst, data)
-        except (AttributeError, ValueError) as exc:
+            self.document.copy_block(src, length, dst)
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             logger.debug("block_copy_failed", error=str(exc))
             return
         self._refresh_widget()
 
     def _on_block_move(self) -> None:
-        """Open a dialog for moving a block to another offset."""
+        """Move a block via hexcore document.move_block."""
         if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
@@ -661,25 +648,14 @@ class TransformsMixin:
             return
         src, length, dst = dlg.get_values()
         try:
-            raw_mv: object = self.document.read(src, length)
-            if isinstance(raw_mv, bytes):
-                data = raw_mv
-            elif isinstance(raw_mv, list):
-                data = bytes(cast("list[int]", raw_mv))
-            elif isinstance(raw_mv, bytearray):
-                data = bytes(raw_mv)
-            else:
-                return
-            zero_fill = bytes(length)
-            self.document.write_bytes(src, zero_fill)
-            self.document.write_bytes(dst, data)
-        except (AttributeError, ValueError) as exc:
+            self.document.move_block(src, length, dst)
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             logger.debug("block_move_failed", error=str(exc))
             return
         self._refresh_widget()
 
     def _on_block_swap(self) -> None:
-        """Open a dialog for swapping two blocks."""
+        """Swap two blocks via hexcore document.swap_blocks."""
         if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
@@ -688,27 +664,8 @@ class TransformsMixin:
             return
         off_a, len_a, off_b, len_b = dlg.get_values()
         try:
-            raw_sa: object = self.document.read(off_a, len_a)
-            raw_sb: object = self.document.read(off_b, len_b)
-            if isinstance(raw_sa, bytes):
-                data_a = raw_sa
-            elif isinstance(raw_sa, list):
-                data_a = bytes(cast("list[int]", raw_sa))
-            elif isinstance(raw_sa, bytearray):
-                data_a = bytes(raw_sa)
-            else:
-                return
-            if isinstance(raw_sb, bytes):
-                data_b = raw_sb
-            elif isinstance(raw_sb, list):
-                data_b = bytes(cast("list[int]", raw_sb))
-            elif isinstance(raw_sb, bytearray):
-                data_b = bytes(raw_sb)
-            else:
-                return
-            self.document.write_bytes(off_a, data_b[:len_a].ljust(len_a, b"\x00"))
-            self.document.write_bytes(off_b, data_a[:len_b].ljust(len_b, b"\x00"))
-        except (AttributeError, ValueError) as exc:
+            self.document.swap_blocks(off_a, len_a, off_b, len_b)
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             logger.debug("block_swap_failed", error=str(exc))
             return
         self._refresh_widget()
