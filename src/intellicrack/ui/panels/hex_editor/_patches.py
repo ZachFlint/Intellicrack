@@ -6,19 +6,12 @@
 
 from __future__ import annotations
 
-import struct
 from pathlib import Path
 from typing import Any, cast
 
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
-from intellicrack.ui.panels.hex_editor._base import (
-    IPS32_OFFSET_SIZE,
-    IPS_HEADER_SIZE,
-    IPS_LENGTH_FIELD_SIZE,
-    IPS_OFFSET_SIZE,
-    logger,
-)
+from intellicrack.ui.panels.hex_editor._base import logger
 
 
 class PatchesMixin:
@@ -94,7 +87,15 @@ class PatchesMixin:
                 self._original_data_cache[offset] = raw[0] if raw else 0
 
     def _on_export_patches(self) -> None:
-        """Export current patches to an IPS or IPS32 patch file."""
+        """Export current patches via hexcore, dispatching on file extension.
+
+        Prompts for a save path and routes to the matching document RPC:
+        ``.ips`` -> ``export_patches_ips``; ``.ips32`` -> ``export_patches_ips32``;
+        ``.bps`` -> ``export_patches_bps(source_data)``;
+        ``.ups`` -> ``export_patches_ups(source_data)``. The source bytes for
+        BPS/UPS are read from the document via ``document.read(0, doc_len)``.
+        The raw hexcore bytes are written verbatim to the selected file.
+        """
         if self._patches_tree is None or self.document is None:
             return
         patch_count = self._patches_tree.topLevelItemCount()
@@ -112,35 +113,134 @@ class PatchesMixin:
         save_path = result[0] if result else ""
         if not save_path:
             return
-        use_ips32 = save_path.lower().endswith(".ips32")
+        suffix = Path(save_path).suffix.lower()
         try:
-            records: list[bytes] = []
-            for i in range(patch_count):
-                tree_item = self._patches_tree.topLevelItem(i)
-                if tree_item is None:
-                    continue
-                offset_text = tree_item.text(0).strip()
-                new_text = tree_item.text(2).strip()
-                if not offset_text or not new_text:
-                    continue
-                offset_val = int(offset_text, 16)
-                new_byte = int(new_text, 16)
-                if use_ips32:
-                    records.append(struct.pack(">I", offset_val))
-                else:
-                    records.append(struct.pack(">I", offset_val)[1:])
-                records.extend((struct.pack(">H", 1), bytes([new_byte])))
-            patch_data = b"PATCH" + b"".join(records) + b"EOF"
-            Path(save_path).write_bytes(patch_data)
-        except (struct.error, OSError, ValueError) as exc:
-            logger.debug("patches_export_failed", error=str(exc))
+            patch_data = self._dispatch_export_patches(suffix)
+        except (AttributeError, OSError, RuntimeError, ValueError) as exc:
+            logger.debug("patches_export_failed", error=str(exc), suffix=suffix)
             QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
-        else:
-            logger.info("patches_exported", path=save_path, count=patch_count)
-            QMessageBox.information(parent, "Export Patches", f"Exported {patch_count} patch(es).")
+            return
+        if patch_data is None:
+            QMessageBox.warning(
+                parent,
+                "Export Patches",
+                f"Unsupported patch format for extension {suffix!r}.",
+            )
+            return
+        try:
+            Path(save_path).write_bytes(patch_data)
+        except OSError as exc:
+            logger.debug("patches_export_write_failed", error=str(exc), path=save_path)
+            QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
+            return
+        logger.info(
+            "patches_exported",
+            path=save_path,
+            count=patch_count,
+            suffix=suffix,
+            size=len(patch_data),
+        )
+        QMessageBox.information(parent, "Export Patches", f"Exported {patch_count} patch(es).")
+
+    def _dispatch_export_patches(self, suffix: str) -> bytes | None:
+        """Dispatch patch export to the appropriate hexcore document method.
+
+        Args:
+            suffix: Lowercase file extension including the leading dot (for
+                example ``".ips"``). Unknown suffixes return ``None``.
+
+        Returns:
+            bytes | None: Raw hexcore patch bytes for the requested format,
+                or ``None`` if ``suffix`` is not a supported patch extension
+                or the document does not expose the required method.
+        """
+        document: Any = self.document
+        if document is None:
+            return None
+        if suffix == ".ips32":
+            export_ips32: Any = getattr(document, "export_patches_ips32", None)
+            if callable(export_ips32):
+                return self._coerce_patch_bytes(export_ips32())
+            return None
+        if suffix == ".ips":
+            export_ips: Any = getattr(document, "export_patches_ips", None)
+            if callable(export_ips):
+                return self._coerce_patch_bytes(export_ips())
+            return None
+        if suffix == ".bps":
+            export_bps: Any = getattr(document, "export_patches_bps", None)
+            if callable(export_bps):
+                source_data = self._read_document_bytes()
+                return self._coerce_patch_bytes(export_bps(source_data))
+            return None
+        if suffix == ".ups":
+            export_ups: Any = getattr(document, "export_patches_ups", None)
+            if callable(export_ups):
+                source_data = self._read_document_bytes()
+                return self._coerce_patch_bytes(export_ups(source_data))
+            return None
+        return None
+
+    @staticmethod
+    def _coerce_patch_bytes(raw: object) -> bytes:
+        """Coerce a hexcore patch export return value into immutable ``bytes``.
+
+        Args:
+            raw: Value returned by a hexcore ``export_patches_*`` method.
+                Typically ``bytes`` or ``bytearray``; ``list[int]`` is also
+                accepted for compatibility with Python-only fallbacks.
+
+        Returns:
+            bytes: Raw patch bytes. Returns empty bytes when ``raw`` is not a
+                recognized byte-sequence type.
+        """
+        if isinstance(raw, bytes):
+            return raw
+        if isinstance(raw, bytearray):
+            return bytes(raw)
+        if isinstance(raw, list):
+            return bytes(cast("list[int]", raw))
+        return b""
+
+    def _read_document_bytes(self) -> bytes:
+        """Read the entire document buffer via hexcore.
+
+        Returns:
+            bytes: Current document contents from offset ``0`` for
+                ``document.length()`` bytes. Returns empty bytes when the
+                document is closed or exposes no length/read methods.
+        """
+        document: Any = self.document
+        if document is None:
+            return b""
+        length_fn: Any = getattr(document, "length", None)
+        read_fn: Any = getattr(document, "read", None)
+        if not callable(length_fn) or not callable(read_fn):
+            return b""
+        length_val: Any = length_fn()
+        if not isinstance(length_val, int):
+            return b""
+        if length_val <= 0:
+            return b""
+        raw: Any = read_fn(0, length_val)
+        if isinstance(raw, bytes):
+            return raw
+        if isinstance(raw, bytearray):
+            return bytes(raw)
+        if isinstance(raw, list):
+            return bytes(cast("list[int]", raw))
+        return b""
 
     def _on_import_patches(self) -> None:
-        """Import patches from an IPS or IPS32 file and apply them to the document."""
+        """Import patches via hexcore, dispatching on file extension.
+
+        Reads the selected patch file and routes to the matching document RPC:
+        ``.ips`` / ``.ips32`` -> ``import_patches_ips(bytes)``;
+        ``.bps`` -> ``import_patches_bps(data, source_data)``;
+        ``.ups`` -> ``import_patches_ups(data, source_data)``. The source bytes
+        for BPS/UPS are read from the document via ``document.read(0, doc_len)``
+        so the patch is applied against the current document contents.
+        """
         if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
@@ -156,52 +256,81 @@ class PatchesMixin:
         try:
             patch_bytes = Path(file_path_str).read_bytes()
         except OSError as exc:
-            logger.debug("patches_import_failed", error=str(exc))
+            logger.debug("patches_import_read_failed", error=str(exc), path=file_path_str)
             QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
 
-        use_ips32 = file_path_str.lower().endswith(".ips32")
-        if not patch_bytes.startswith(b"PATCH"):
-            QMessageBox.warning(parent, "Import Patches", "Not a valid IPS file (missing PATCH header).")
-            return
-
-        pos = IPS_HEADER_SIZE
-        applied = 0
-        eof_marker = b"EOF"
-        offset_size = IPS32_OFFSET_SIZE if use_ips32 else IPS_OFFSET_SIZE
+        suffix = Path(file_path_str).suffix.lower()
         try:
-            while pos + offset_size + IPS_LENGTH_FIELD_SIZE <= len(patch_bytes) and patch_bytes[pos : pos + IPS_OFFSET_SIZE] != eof_marker:
-                if use_ips32:
-                    (patch_offset,) = struct.unpack(">I", patch_bytes[pos : pos + IPS32_OFFSET_SIZE])
-                    pos += IPS32_OFFSET_SIZE
-                else:
-                    (patch_offset,) = struct.unpack(">I", b"\x00" + patch_bytes[pos : pos + IPS_OFFSET_SIZE])
-                    pos += IPS_OFFSET_SIZE
-                (length,) = struct.unpack(">H", patch_bytes[pos : pos + IPS_LENGTH_FIELD_SIZE])
-                pos += IPS_LENGTH_FIELD_SIZE
-                if length == 0:
-                    if pos + IPS_LENGTH_FIELD_SIZE > len(patch_bytes):
-                        break
-                    (rle_len,) = struct.unpack(">H", patch_bytes[pos : pos + IPS_LENGTH_FIELD_SIZE])
-                    pos += IPS_LENGTH_FIELD_SIZE
-                    rle_byte = patch_bytes[pos]
-                    pos += 1
-                    data_to_write = bytes([rle_byte] * rle_len)
-                else:
-                    if pos + length > len(patch_bytes):
-                        break
-                    data_to_write = patch_bytes[pos : pos + length]
-                    pos += length
-                self.document.write_bytes(patch_offset, bytes(data_to_write))
-                applied += 1
-        except (struct.error, AttributeError, ValueError, IndexError) as exc:
-            logger.debug("patches_import_failed", error=str(exc))
+            applied = self._dispatch_import_patches(suffix, patch_bytes)
+        except (AttributeError, OSError, RuntimeError, ValueError) as exc:
+            logger.debug("patches_import_failed", error=str(exc), suffix=suffix)
             QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
-        else:
-            if self._hex_widget is not None:
-                update_fn = getattr(self._hex_widget, "_update_viewport", None)
-                if callable(update_fn):
-                    update_fn()
-            self._on_data_changed()
-            logger.info("patches_imported", path=file_path_str, count=applied)
-            QMessageBox.information(parent, "Import Patches", f"Applied {applied} patch record(s).")
+            return
+        if applied is None:
+            QMessageBox.warning(
+                parent,
+                "Import Patches",
+                f"Unsupported patch format for extension {suffix!r}.",
+            )
+            return
+
+        if self._hex_widget is not None:
+            update_fn = getattr(self._hex_widget, "_update_viewport", None)
+            if callable(update_fn):
+                update_fn()
+        self._on_data_changed()
+        logger.info("patches_imported", path=file_path_str, count=applied, suffix=suffix)
+        QMessageBox.information(parent, "Import Patches", f"Applied {applied} patch record(s).")
+
+    def _dispatch_import_patches(self, suffix: str, patch_bytes: bytes) -> int | None:
+        """Dispatch patch import to the appropriate hexcore document method.
+
+        Args:
+            suffix: Lowercase file extension including the leading dot (for
+                example ``".bps"``).
+            patch_bytes: Raw patch payload read from disk.
+
+        Returns:
+            int | None: Count of patch records applied, as returned by the
+                hexcore document method. Returns ``None`` when ``suffix`` is
+                not a supported patch extension or the document does not
+                expose the required method.
+        """
+        document: Any = self.document
+        if document is None:
+            return None
+        if suffix in {".ips", ".ips32"}:
+            import_ips: Any = getattr(document, "import_patches_ips", None)
+            if callable(import_ips):
+                return self._coerce_patch_count(import_ips(patch_bytes))
+            return None
+        if suffix == ".bps":
+            import_bps: Any = getattr(document, "import_patches_bps", None)
+            if callable(import_bps):
+                source_data = self._read_document_bytes()
+                return self._coerce_patch_count(import_bps(patch_bytes, source_data))
+            return None
+        if suffix == ".ups":
+            import_ups: Any = getattr(document, "import_patches_ups", None)
+            if callable(import_ups):
+                source_data = self._read_document_bytes()
+                return self._coerce_patch_count(import_ups(patch_bytes, source_data))
+            return None
+        return None
+
+    @staticmethod
+    def _coerce_patch_count(raw: object) -> int:
+        """Coerce a hexcore patch import return value into a non-negative count.
+
+        Args:
+            raw: Value returned by a hexcore ``import_patches_*`` method.
+                Expected to be an integer record count.
+
+        Returns:
+            int: The applied-record count when ``raw`` is an integer;
+                ``0`` otherwise so callers never report a negative count.
+        """
+        if isinstance(raw, int):
+            return raw
+        return 0
