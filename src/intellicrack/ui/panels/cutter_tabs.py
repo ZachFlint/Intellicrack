@@ -44,6 +44,29 @@ RunAsyncFn = Callable[
 ]
 
 
+def _log_tab_error(tab_name: str, rpc: str) -> Callable[[object], None]:
+    """Build an error callback that logs bridge RPC failures for a named tab.
+
+    Args:
+        tab_name: The tab class name (e.g. 'StringsTab').
+        rpc: The bridge RPC label (e.g. 'get_all_strings').
+
+    Returns:
+        Callable[[object], None]: Error callback suitable for the async bridge runner.
+    """
+
+    def _callback(error: object) -> None:
+        _logger.warning(
+            "cutter_tab_refresh_failed",
+            tab=tab_name,
+            rpc=rpc,
+            error=str(error),
+            error_type=type(error).__name__,
+        )
+
+    return _callback
+
+
 def _stretch_headers(table: QTableWidget) -> None:
     """Apply stretch resize mode to all table columns.
 
@@ -98,7 +121,7 @@ class AllStringsTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_all_strings(), self._apply_data, None)
+        run_async(bridge.get_all_strings(), self._apply_data, _log_tab_error(type(self).__name__, "get_all_strings"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with string results.
@@ -143,7 +166,7 @@ class SymbolsTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_symbols(), self._apply_data, None)
+        run_async(bridge.get_symbols(), self._apply_data, _log_tab_error(type(self).__name__, "get_symbols"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with symbol results.
@@ -187,7 +210,7 @@ class LibrariesTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_libraries(), self._apply_data, None)
+        run_async(bridge.get_libraries(), self._apply_data, _log_tab_error(type(self).__name__, "get_libraries"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with library results.
@@ -229,7 +252,7 @@ class HeadersTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_headers(), self._apply_data, None)
+        run_async(bridge.get_headers(), self._apply_data, _log_tab_error(type(self).__name__, "get_headers"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with header results.
@@ -273,7 +296,7 @@ class RelocationsTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_relocations(), self._apply_data, None)
+        run_async(bridge.get_relocations(), self._apply_data, _log_tab_error(type(self).__name__, "get_relocations"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with relocation results.
@@ -318,7 +341,7 @@ class ResourcesTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_resources(), self._apply_data, None)
+        run_async(bridge.get_resources(), self._apply_data, _log_tab_error(type(self).__name__, "get_resources"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with resource results.
@@ -364,7 +387,7 @@ class CommentsTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_comments(), self._apply_data, None)
+        run_async(bridge.get_comments(), self._apply_data, _log_tab_error(type(self).__name__, "get_comments"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with comment results.
@@ -408,7 +431,7 @@ class FlagsTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_flags(), self._apply_data, None)
+        run_async(bridge.get_flags(), self._apply_data, _log_tab_error(type(self).__name__, "get_flags"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with flag results.
@@ -471,7 +494,7 @@ class ROPGadgetsTab(QWidget):
         """
         self._bridge = bridge
         self._run_async_fn = run_async
-        run_async(bridge.search_rop_gadgets(), self._apply_data, None)
+        run_async(bridge.search_rop_gadgets(), self._apply_data, _log_tab_error(type(self).__name__, "search_rop_gadgets"))
 
     def _on_search(self) -> None:
         """Trigger ROP gadget search with current pattern."""
@@ -719,9 +742,9 @@ class TypeBrowserTab(QWidget):
             run_async: Async runner function.
         """
         self._tree.clear()
-        run_async(bridge.get_types(), self._apply_types, None)
-        run_async(bridge.get_structs(), self._apply_structs, None)
-        run_async(bridge.get_enums(), self._apply_enums, None)
+        run_async(bridge.get_types(), self._apply_types, _log_tab_error(type(self).__name__, "get_types"))
+        run_async(bridge.get_structs(), self._apply_structs, _log_tab_error(type(self).__name__, "get_structs"))
+        run_async(bridge.get_enums(), self._apply_enums, _log_tab_error(type(self).__name__, "get_enums"))
 
     def _apply_types(self, result: object) -> None:
         """Populate the types category.
@@ -833,7 +856,7 @@ class SegmentsTab(QWidget):
             bridge: CutterBridge instance.
             run_async: Async runner function.
         """
-        run_async(bridge.get_segments(), self._apply_data, None)
+        run_async(bridge.get_segments(), self._apply_data, _log_tab_error(type(self).__name__, "get_segments"))
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with segment results.
