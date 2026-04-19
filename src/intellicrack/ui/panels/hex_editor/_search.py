@@ -366,10 +366,7 @@ class SearchMixin:
             if callable(highlight_fn):
                 color = _get_highlight_color()
                 highlights = [(off, length, color) for off, length in results]
-                try:
-                    highlight_fn(highlights, "search")
-                except (TypeError, AttributeError) as exc:
-                    logger.warning("search_highlight_failed", error=str(exc))
+                highlight_fn(highlights, "search")
 
         if self._search_status_label is not None:
             if not results:
@@ -613,10 +610,7 @@ class SearchMixin:
             if callable(highlight_fn):
                 color = _get_highlight_color()
                 highlights = [(off, length, color) for off, length in results]
-                try:
-                    highlight_fn(highlights, "search")
-                except (TypeError, AttributeError) as exc:
-                    logger.warning("search_highlight_failed", error=str(exc))
+                highlight_fn(highlights, "search")
 
         if self._search_status_label is not None:
             if not results:

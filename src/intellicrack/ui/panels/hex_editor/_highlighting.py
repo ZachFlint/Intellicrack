@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QColorDialog,
@@ -32,6 +32,7 @@ from intellicrack.ui.panels.hex_editor_widget import HighlightRule
 
 _DEFAULT_HIGHLIGHT_COLOR: Final[str] = "#FFFF00"
 _BYTE_MAX: Final[int] = 255
+_HIGHLIGHT_PATTERN_MAX_MATCHES: Final[int] = 10000
 
 
 class HighlightingMixin:
@@ -154,6 +155,44 @@ class HighlightingMixin:
         if color.isValid() and self._highlight_color_edit is not None:
             self._highlight_color_edit.setText(color.name())
 
+    def _resolve_pattern_rule(self, rule_id: str, color: str) -> tuple[str, dict[str, Any], str] | None:
+        """Resolve a ``pattern``-type highlight rule via hexcore ``search_hex``.
+
+        Args:
+            rule_id: Stable identifier for the rule being built.
+            color: Hex colour string used in the display label.
+
+        Returns:
+            tuple[str, dict[str, Any], str] | None: (condition_type, params, label) tuple
+            if the pattern is usable; ``None`` when the pattern is empty or the search RPC fails.
+        """
+        pattern = self._highlight_pattern_edit.text().strip() if self._highlight_pattern_edit else ""
+        parent = self if isinstance(self, QWidget) else None
+        if not pattern:
+            QMessageBox.warning(parent, "Highlight", "Pattern cannot be empty.")
+            return None
+        document = getattr(self, "document", None)
+        offsets: set[int] = set()
+        if document is not None and hasattr(document, "search_hex"):
+            try:
+                matches = document.search_hex(pattern, _HIGHLIGHT_PATTERN_MAX_MATCHES)
+            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+                logger.debug("highlight_search_failed", error=str(exc), pattern=pattern)
+                QMessageBox.warning(parent, "Highlight", f"Pattern search failed: {exc}")
+                return None
+            if isinstance(matches, list):
+                entries: list[Any] = cast("list[Any]", matches)
+                for entry in entries:
+                    if isinstance(entry, tuple):
+                        entry_tuple: tuple[Any, ...] = cast("tuple[Any, ...]", entry)
+                        if entry_tuple and isinstance(entry_tuple[0], int):
+                            offsets.add(entry_tuple[0])
+                    elif isinstance(entry, int):
+                        offsets.add(entry)
+        params: dict[str, Any] = {"pattern": pattern, "offsets": offsets}
+        label = f"[{rule_id}] Pattern {pattern}  ({len(offsets)} hits, {color})"
+        return "pattern", params, label
+
     def _on_add_highlight_rule(self) -> None:
         """Create a highlight rule from the current form values and apply it."""
         if self._highlight_condition_combo is None or self._hex_widget is None:
@@ -178,14 +217,10 @@ class HighlightingMixin:
             params = {"min": min_val, "max": max_val}
             label = f"[{rule_id}] Byte 0x{min_val:02X}-0x{max_val:02X}  ({color})"
         else:
-            pattern = self._highlight_pattern_edit.text().strip() if self._highlight_pattern_edit else ""
-            if not pattern:
-                parent = self if isinstance(self, QWidget) else None
-                QMessageBox.warning(parent, "Highlight", "Pattern cannot be empty.")
+            pattern_result = self._resolve_pattern_rule(rule_id, color)
+            if pattern_result is None:
                 return
-            condition_type = "pattern"
-            params = {"pattern": pattern}
-            label = f"[{rule_id}] Pattern {pattern}  ({color})"
+            condition_type, params, label = pattern_result
 
         add_rule_fn = getattr(self._hex_widget, "add_highlight_rule", None)
         if callable(add_rule_fn):
