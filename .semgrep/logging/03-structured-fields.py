@@ -62,8 +62,6 @@ def fn_c3_bad() -> None:
     # ruleid: intellicrack-logging-c3-reserved-logrecord-key
     _logger.info("process_started", thread="t1")
     # ruleid: intellicrack-logging-c3-reserved-logrecord-key
-    _logger.info("process_started", exc_info=True)
-    # ruleid: intellicrack-logging-c3-reserved-logrecord-key
     _logger.info("process_started", args=[1, 2])
 
 
@@ -72,6 +70,10 @@ def fn_c3_ok() -> None:
     _logger.info("process_started", process_name="firefox")
     # ok: intellicrack-logging-c3-reserved-logrecord-key
     _logger.info("process_started", tool_name="frida")
+    # ok: intellicrack-logging-c3-reserved-logrecord-key
+    _logger.info("process_started", exc_info=True)
+    # ok: intellicrack-logging-c3-reserved-logrecord-key
+    _logger.warning("operation_retrying", stack_info=True)
 
 
 def fn_c4_bad() -> None:
