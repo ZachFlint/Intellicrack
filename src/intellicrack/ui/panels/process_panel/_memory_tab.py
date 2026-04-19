@@ -51,9 +51,6 @@ class MemoryTab(QWidget):
 
     Provides sub-tabs for region map, read, write, allocate/free,
     protection changes, and pattern search.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

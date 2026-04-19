@@ -26,9 +26,6 @@ _PACKAGE_NAME: Final[str] = "intellicrack"
 class AssetNotFoundError(FileNotFoundError):
     """Raised when an asset directory or file cannot be found.
 
-    Args:
-        searched_paths: List of paths that were searched.
-
     Attributes:
         searched_paths: List of paths that were searched.
     """

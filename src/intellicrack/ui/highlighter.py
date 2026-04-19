@@ -32,12 +32,7 @@ _DELIM_STATE_MAP = (_BLOCK_STATE_DOUBLE_QUOTE, _BLOCK_STATE_SINGLE_QUOTE)
 
 
 class HighlightRule:
-    """A syntax highlighting rule.
-
-    Args:
-        pattern: Regular expression pattern.
-        text_format: Format to apply to matches.
-    """
+    """A syntax highlighting rule."""
 
     __slots__ = ("format", "pattern")
 
@@ -57,9 +52,6 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
 
     Highlights keywords, types, strings, numbers, comments,
     and function calls in decompiled C code.
-
-    Args:
-        parent: Parent QTextDocument or None.
 
     Attributes:
         KEYWORDS: C/C++ reserved keyword strings for syntax highlighting.
@@ -278,9 +270,6 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
 
     Highlights instructions, registers, addresses, and comments
     in disassembly output.
-
-    Args:
-        parent: Parent QTextDocument or None.
 
     Attributes:
         INSTRUCTIONS: Recognized x86/x64 instruction mnemonics.
@@ -743,9 +732,6 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
     Highlights Python keywords, built-ins, strings, numbers,
     and comments in Python scripts.
 
-    Args:
-        parent: Parent QTextDocument or None.
-
     Attributes:
         KEYWORDS: Python reserved keywords.
         BUILTINS: Python built-in function and type names.
@@ -1023,9 +1009,6 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
     Highlights JavaScript/Frida script keywords, functions,
     strings, numbers, and comments.
 
-    Args:
-        parent: Parent QTextDocument or None.
-
     Attributes:
         KEYWORDS: JavaScript reserved keywords.
         FRIDA_GLOBALS: Frida API global object names.
@@ -1219,9 +1202,6 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
     Highlights keywords (structural, control flow, namespace), primitive types
     (including 128-bit and char16/str), endianness prefixes, annotations,
     strings, numbers, and comments in HexPat source code.
-
-    Args:
-        parent: Parent QTextDocument or None.
 
     Attributes:
         KEYWORDS: HexPat keywords for syntax highlighting.

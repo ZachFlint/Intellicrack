@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
@@ -26,6 +27,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.hex_editor._base import (
     DESCRIPTION_TRUNCATE_LEN,
     HEX_ROW_WIDTH,
@@ -44,6 +46,18 @@ _PIPELINE_MAX_HEIGHT: Final[int] = 100
 _PIPELINE_DEFAULT_LEN: Final[int] = 65536
 _BYTE_MASK: Final[int] = 0xFF
 _BITS_PER_BYTE: Final[int] = 8
+_TRANSFORM_TUPLE_ARITY: Final[int] = 3
+
+_ARITHMETIC_OP_MAP: Final[dict[str, str]] = {
+    "XOR": "xor",
+    "AND": "and",
+    "OR": "or",
+    "NOT": "not",
+    "Shift Left": "shl",
+    "Shift Right": "shr",
+    "Rotate Left": "rol",
+    "Rotate Right": "ror",
+}
 
 _TransformPipeline_cls: Any = None
 _pipeline_available: bool = False
@@ -55,6 +69,89 @@ try:
     _pipeline_available = True
 except ImportError:
     logger.debug("transform_pipeline_class_import_unavailable")
+
+
+@dataclass(frozen=True)
+class TransformDescriptor:
+    """Describes a single transform node exposed by hexcore ``list_transforms``.
+
+    Attributes:
+        name: Machine-readable node identifier passed back to ``transform_data``.
+        category: Human-readable category grouping (e.g. ``xor``, ``compress``).
+        description: Free-form description shown in the UI.
+    """
+
+    name: str
+    category: str
+    description: str
+
+
+def _load_transform_descriptors(document: object) -> list[TransformDescriptor]:
+    """Build the transform catalogue for the UI.
+
+    Prefers the hexcore ``document.list_transforms()`` RPC when a document is
+    available, and falls back to the in-process
+    ``intellicrack.core.transform_pipeline.get_all_transform_nodes`` for the
+    no-document case (e.g. before a file has been opened) so the combo box is
+    populated on first paint.
+
+    Args:
+        document: Active hexcore document, or ``None`` when no file is open.
+
+    Returns:
+        list[TransformDescriptor]: Available transforms, in the order returned
+            by the underlying source.
+    """
+    if document is not None:
+        list_fn = getattr(document, "list_transforms", None)
+        if callable(list_fn):
+            try:
+                raw: object = list_fn()
+            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+                logger.debug("transform_list_from_document_failed", error=str(exc))
+            else:
+                if isinstance(raw, list):
+                    descriptors: list[TransformDescriptor] = []
+                    for entry in cast("list[object]", raw):
+                        if isinstance(entry, tuple) and len(cast("tuple[object, ...]", entry)) >= _TRANSFORM_TUPLE_ARITY:
+                            tup = cast("tuple[object, object, object]", entry)
+                            descriptors.append(
+                                TransformDescriptor(
+                                    name=str(tup[0]),
+                                    category=str(tup[1]),
+                                    description=str(tup[2]),
+                                ),
+                            )
+                        elif isinstance(entry, dict):
+                            typed = cast("dict[str, object]", entry)
+                            descriptors.append(
+                                TransformDescriptor(
+                                    name=str(typed.get("name", "")),
+                                    category=str(typed.get("category", "")),
+                                    description=str(typed.get("description", "")),
+                                ),
+                            )
+                    if descriptors:
+                        return descriptors
+
+    if get_all_transform_nodes_fn is None:
+        return []
+    nodes_raw: object = get_all_transform_nodes_fn()
+    if not isinstance(nodes_raw, list):
+        return []
+    fallback: list[TransformDescriptor] = []
+    for node in cast("list[object]", nodes_raw):
+        name = getattr(node, "name", None)
+        if not isinstance(name, str):
+            continue
+        fallback.append(
+            TransformDescriptor(
+                name=name,
+                category=str(getattr(node, "category", "") or ""),
+                description=str(getattr(node, "description", "") or ""),
+            ),
+        )
+    return fallback
 
 
 class TransformsMixin:
@@ -69,7 +166,8 @@ class TransformsMixin:
     _transform_preview_pane: QPlainTextEdit | None
     _transform_pipeline_list: QListWidget | None
     _transform_pipeline: Any
-    _transform_nodes_cache: list[Any]
+    _transform_nodes_cache: list[TransformDescriptor]
+    _bridge: Any | None
     _selection_start: int
     _selection_end: int
 
@@ -87,7 +185,7 @@ class TransformsMixin:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(_LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN, _LAYOUT_MARGIN)
 
-        self._transform_nodes_cache = get_all_transform_nodes_fn() if get_all_transform_nodes_fn is not None else []
+        self._transform_nodes_cache = _load_transform_descriptors(self.document)
 
         if _pipeline_available and _TransformPipeline_cls is not None:
             self._transform_pipeline = _TransformPipeline_cls()
@@ -671,8 +769,24 @@ class TransformsMixin:
         self._refresh_widget()
 
     def _on_apply_arithmetic(self) -> None:
-        """Apply the selected arithmetic operation to the current selection."""
+        """Apply the selected arithmetic operation to the current selection via the bridge.
+
+        Routes the operation through
+        :meth:`HexEditorBridge.apply_arithmetic_to_selection`, which performs the
+        native hexcore transform (``xor_repeating``/``mask_and``/``bit_shift_left``
+        etc.) and updates the shared document in-place.  The bridge's own
+        selection state is first synchronised to the widget's selection before
+        dispatch.
+        """
         if self.document is None or self._hex_widget is None:
+            return
+        if self._bridge is None:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(
+                parent,
+                "Arithmetic",
+                "Hex editor bridge is not available; cannot apply arithmetic operation.",
+            )
             return
 
         sel_start: int = getattr(self, "_selection_start", -1)
@@ -688,85 +802,41 @@ class TransformsMixin:
         if op_combo is None:
             return
 
-        op = op_combo.currentText()
+        op_label = op_combo.currentText()
+        op_short = _ARITHMETIC_OP_MAP.get(op_label)
+        if op_short is None:
+            parent = self if isinstance(self, QWidget) else None
+            QMessageBox.warning(parent, "Arithmetic", f"Unsupported operation: {op_label}")
+            return
         key_hex = key_edit.text().strip() if key_edit else ""
+        if key_hex:
+            try:
+                bytes.fromhex(key_hex.replace(" ", ""))
+            except ValueError:
+                parent = self if isinstance(self, QWidget) else None
+                QMessageBox.warning(parent, "Arithmetic", "Invalid hex key.")
+                return
         count = count_spin.value() if count_spin else 1
 
+        bridge = self._bridge
+        bridge_end = sel_end - 1
         try:
-            raw_arith: object = self.document.read(sel_start, sel_end - sel_start)
-            if isinstance(raw_arith, bytes):
-                data = bytearray(raw_arith)
-            elif isinstance(raw_arith, list):
-                data = bytearray(cast("list[int]", raw_arith))
-            elif isinstance(raw_arith, bytearray):
-                data = raw_arith
-            else:
-                return
-        except (AttributeError, ValueError) as exc:
-            logger.debug("arithmetic_read_failed", error=str(exc))
-            return
-
-        try:
-            key_bytes = bytes.fromhex(key_hex) if key_hex else b"\x00"
-        except ValueError:
+            run_bridge_coroutine(bridge.select_range(sel_start, bridge_end))
+            run_bridge_coroutine(
+                bridge.apply_arithmetic_to_selection(op_short, key_hex=key_hex, count=count),
+            )
+        except (RuntimeError, OSError, ValueError, TypeError, AttributeError) as exc:
+            logger.warning(
+                "arithmetic_bridge_failed",
+                operation=op_short,
+                selection_start=sel_start,
+                selection_end=bridge_end,
+                error=str(exc),
+            )
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Arithmetic", "Invalid hex key.")
-            return
-
-        result = self._apply_arithmetic_op(data, op, key_bytes, count)
-        try:
-            self.document.write_bytes(sel_start, bytes(result))
-        except (AttributeError, ValueError) as exc:
-            logger.debug("arithmetic_write_failed", error=str(exc))
+            QMessageBox.warning(parent, "Arithmetic", f"Arithmetic operation failed: {exc}")
             return
         self._refresh_widget()
-
-    @staticmethod
-    def _apply_arithmetic_op(
-        data: bytearray,
-        op: str,
-        key: bytes,
-        count: int,
-    ) -> bytearray:
-        """Apply an arithmetic/bitwise operation to a byte array.
-
-        Args:
-            data: Input byte array to transform.
-            op: Operation name string.
-            key: Key/mask bytes for XOR/AND/OR operations.
-            count: Shift/rotate count for shift/rotate operations.
-
-        Returns:
-            bytearray: Transformed byte array.
-        """
-        result = bytearray(len(data))
-        if op == "XOR":
-            for i, b in enumerate(data):
-                result[i] = b ^ key[i % len(key)]
-        elif op == "AND":
-            for i, b in enumerate(data):
-                result[i] = b & key[i % len(key)]
-        elif op == "OR":
-            for i, b in enumerate(data):
-                result[i] = b | key[i % len(key)]
-        elif op == "NOT":
-            for i, b in enumerate(data):
-                result[i] = (~b) & _BYTE_MASK
-        elif op == "Shift Left":
-            for i, b in enumerate(data):
-                result[i] = (b << count) & _BYTE_MASK
-        elif op == "Shift Right":
-            for i, b in enumerate(data):
-                result[i] = (b >> count) & _BYTE_MASK
-        elif op == "Rotate Left":
-            for i, b in enumerate(data):
-                result[i] = ((b << count) | (b >> (_BITS_PER_BYTE - count))) & _BYTE_MASK
-        elif op == "Rotate Right":
-            for i, b in enumerate(data):
-                result[i] = ((b >> count) | (b << (_BITS_PER_BYTE - count))) & _BYTE_MASK
-        else:
-            return data
-        return result
 
     def _refresh_widget(self) -> None:
         """Refresh the hex widget viewport and trigger data changed."""
@@ -778,12 +848,7 @@ class TransformsMixin:
 
 
 class _BlockFillDialog(QDialog):
-    """Dialog for configuring block fill parameters.
-
-    Args:
-        hex_widget: The hex editor widget for pre-filling cursor/selection values.
-        parent: Parent widget.
-    """
+    """Dialog for configuring block fill parameters."""
 
     def __init__(self, hex_widget: object, parent: QWidget | None = None) -> None:
         """Initialize the _BlockFillDialog with fill parameters.
@@ -831,12 +896,7 @@ class _BlockFillDialog(QDialog):
 
 
 class _BlockCopyMoveDialog(QDialog):
-    """Dialog for configuring block copy or move parameters.
-
-    Args:
-        title: Dialog window title.
-        parent: Parent widget.
-    """
+    """Dialog for configuring block copy or move parameters."""
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         """Initialize the _BlockCopyMoveDialog with window title.
@@ -876,11 +936,7 @@ class _BlockCopyMoveDialog(QDialog):
 
 
 class _BlockSwapDialog(QDialog):
-    """Dialog for configuring block swap parameters.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Dialog for configuring block swap parameters."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the _BlockSwapDialog.

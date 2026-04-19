@@ -59,9 +59,6 @@ class ProcessPanel(AnalysisPanelBase):
     with a persistent status bar showing attachment state, PID, architecture,
     privilege status, and bridge connection.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         process_selected: Signal emitted with PID when a process row is selected.
         process_attached: Signal emitted with PID when a process is attached.

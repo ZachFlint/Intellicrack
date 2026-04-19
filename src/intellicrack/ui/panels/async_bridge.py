@@ -120,10 +120,6 @@ class BridgeCallWorker(QThread):
     UI to remain responsive during bridge operations.  Auto-cleans
     up via deleteLater when the underlying QThread finishes.
 
-    Args:
-        coro: Coroutine to execute on the bridge event loop.
-        parent: Parent QObject for lifecycle management.
-
     Attributes:
         call_finished: Signal emitted with the coroutine result on success.
         call_error: Signal emitted with the exception on failure.
@@ -173,7 +169,7 @@ def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
     for non-blocking execution with signal-based result delivery.
 
     Args:
-        coro: Coroutine to execute.
+        coro: Coroutine to execute on the persistent event loop.
 
     Returns:
         T | None: Coroutine result when executed synchronously, or None

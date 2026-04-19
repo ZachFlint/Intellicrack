@@ -51,9 +51,6 @@ class AnalysisPanelBase(QWidget):
     ``_create_content`` to build the main display area.  Override
     ``_cleanup`` for panel-specific teardown in ``stop_tool``.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         tool_started: Signal emitted when the tool starts.
         tool_closed: Signal emitted when the tool closes.

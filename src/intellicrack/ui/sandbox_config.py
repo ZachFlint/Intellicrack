@@ -16,7 +16,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -50,8 +50,6 @@ from .resources import IconManager
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from intellicrack.sandbox.manager import SandboxManager
 
 
@@ -69,13 +67,6 @@ class SandboxTestWorker(QThread):
 
     Launches Windows Sandbox with a test configuration and monitors
     its execution without blocking the UI.
-
-    Args:
-        network_enabled: Whether networking is enabled.
-        memory_limit_mb: Memory limit in MB.
-        shared_folder: Path to shared folder.
-        read_only: Whether shared folder is read-only.
-        parent: Parent QThread.
 
     Attributes:
         finished: Signal emitted when test completes with (success, message).
@@ -277,10 +268,6 @@ class SandboxConfigDialog(QDialog):
 
     Allows users to configure sandbox isolation settings, resource
     limits, network access, and shared folders.
-
-    Args:
-        sandbox_manager: Sandbox manager instance.
-        parent: Parent widget.
 
     Attributes:
         settings_updated: Signal emitted when settings change.
@@ -799,16 +786,15 @@ class SandboxConfigDialog(QDialog):
         raw_method: object = getattr(manager, method_name, None)
         if not callable(raw_method):
             return False
-        method = cast("Callable[..., object]", raw_method)
 
         try:
-            signature = inspect.signature(method)
+            signature = inspect.signature(raw_method)
         except (TypeError, ValueError):
             _logger.debug("backend_method_signature_unavailable", method=method_name, exc_info=True)
             signature = None
 
         try:
-            result: object = method() if signature is not None and len(signature.parameters) == 0 else method(argument)
+            result: object = raw_method() if signature is not None and len(signature.parameters) == 0 else raw_method(argument)
             if inspect.iscoroutine(result):
                 run_bridge_coroutine(result)
         except (RuntimeError, TypeError, ValueError, OSError) as exc:
@@ -892,10 +878,6 @@ class SandboxMonitorWidget(QFrame):
 
     Displays information about running sandbox instances and
     allows control over them.
-
-    Args:
-        sandbox_manager: Sandbox manager instance.
-        parent: Parent widget.
 
     Attributes:
         sandbox_stopped: Signal emitted when sandbox is stopped.

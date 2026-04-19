@@ -70,9 +70,6 @@ class ProcessTab(QWidget):
     Provides sub-tabs for system process list, tracked processes,
     and per-process info with environment variables.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         process_selected: Signal emitted with PID when a process row is selected.
         process_attached: Signal emitted with PID when a process is attached.

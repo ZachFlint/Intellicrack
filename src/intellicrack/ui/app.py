@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import inspect
 import json
 import os
 import sys
@@ -115,10 +114,6 @@ class AsyncWorker(QThread):
     Runs an asyncio event loop in a separate thread to execute
     async operations without blocking the UI.
 
-    Args:
-        coro: Coroutine to execute.
-        parent: Parent widget.
-
     Attributes:
         finished: Qt signal for finished.
         error: Qt signal for error.
@@ -146,7 +141,13 @@ class AsyncWorker(QThread):
 
         Cancels any still-pending tasks and awaits their completion before
         closing the loop so ``asyncio.CancelledError`` cannot leak and orphan
-        tasks are not abandoned.
+        tasks are not abandoned.  Non-``SystemExit`` failures are reported
+        back to the UI thread via the ``error`` signal; ``SystemExit`` is
+        propagated so the interpreter can shut down.
+
+        Raises:
+            SystemExit: Re-raised to allow interpreter shutdown when the
+                worker coroutine (or its teardown) exits the process.
         """
         loop: asyncio.AbstractEventLoop | None = None
         try:
@@ -157,9 +158,11 @@ class AsyncWorker(QThread):
         except asyncio.CancelledError:
             _logger.info("async_worker_cancelled")
             self.error.emit(RuntimeError("async operation cancelled"))
-        except Exception as e:
+        except SystemExit:
+            raise
+        except BaseException as exc:
             _logger.exception("async_worker_failed")
-            self.error.emit(e)
+            self.error.emit(exc if isinstance(exc, Exception) else RuntimeError(str(exc) or type(exc).__name__))
         finally:
             if loop is not None:
                 try:
@@ -178,11 +181,6 @@ class MainWindow(QMainWindow):
 
     Combines chat panel, tool output panel, menus, and toolbar
     into the main application interface.
-
-    Args:
-        config: Application configuration.
-        orchestrator: AI agent orchestrator.
-        parent: Parent widget.
 
     Attributes:
         message_received: Qt signal for message received.
@@ -1156,9 +1154,9 @@ class MainWindow(QMainWindow):
     def _on_new_session(self) -> None:
         """Handle new session action.
 
-        Collects optional name and description from NewSessionDialog and forwards
-        them to the orchestrator if its ``start_session`` signature accepts those
-        keyword arguments. Falls back to the legacy two-argument call otherwise.
+        Collects optional name and description from ``NewSessionDialog`` and
+        forwards them to :meth:`Orchestrator.start_session`, which persists the
+        name on the new session and stores the description as ``Session.notes``.
         """
         session_mgr_mod = importlib.import_module(".session_manager", "intellicrack.ui")
         new_session_cls = getattr(session_mgr_mod, "NewSessionDialog", None)
@@ -1185,22 +1183,13 @@ class MainWindow(QMainWindow):
 
         provider: str | ProviderName = provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
 
-        start_params = inspect.signature(self._orchestrator.start_session).parameters
-        extra_kwargs: dict[str, str] = {}
-        if "name" in start_params and session_name:
-            extra_kwargs["name"] = session_name
-        if "description" in start_params and description:
-            extra_kwargs["description"] = description
-
-        if (session_name or description) and not extra_kwargs:
-            _logger.info(
-                "new_session_metadata_unforwarded",
-                reason="orchestrator_signature_missing_name_description",
-                extension_pending="group_b",
-            )
-
         async def create_session() -> None:
-            await self._orchestrator.start_session(provider, model, **extra_kwargs)
+            await self._orchestrator.start_session(
+                provider,
+                model,
+                name=session_name or None,
+                description=description or None,
+            )
 
         self._chat_panel.clear_messages()
         self.tool_panel.clear_all()

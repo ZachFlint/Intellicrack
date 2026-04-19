@@ -470,4 +470,5 @@ scripts/knowledge-graph/IntellicrackKnowledgeGraph.graphml
 # Auto-regenerated project structure artifacts (never tracked)
 IntellicrackStructure.hta
 IntellicrackStructure.txt
-reports/tests/_sandbox_*
+# Docker sandbox test artifacts (regenerated on every run, never tracked)
+reports/tests/

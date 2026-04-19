@@ -50,9 +50,6 @@ class SystemTab(QWidget):
 
     Provides sub-tabs for token/privileges, windows, services, PEB/TEB,
     pipes, mitigations, and advanced operations (registry, resources, raw query).
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

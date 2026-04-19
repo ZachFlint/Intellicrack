@@ -32,12 +32,6 @@ if TYPE_CHECKING:
 class DiffWorker(QThread):
     """Background worker that delegates byte-level comparison to HexEditorBridge.
 
-    Args:
-        bridge: HexEditorBridge instance providing compare_files.
-        path_a: Path to the first file.
-        path_b: Path to the second file.
-        parent: Parent QObject.
-
     Attributes:
         diff_finished: Emitted with result dict containing diff regions.
         diff_error: Emitted with error message string on failure.

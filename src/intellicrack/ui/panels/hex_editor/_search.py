@@ -54,14 +54,6 @@ class SearchWorker(QThread):
     Executes document search FFI calls on a background thread to
     avoid blocking the Qt main thread on large files.
 
-    Args:
-        document: The hex document to search.
-        mode: Search mode string (``Hex``, ``Text``, or ``Regex``).
-        query: The search query string.
-        encoding: Text encoding for text mode searches.
-        max_results: Maximum number of results to return.
-        parent: Parent QObject for lifecycle management.
-
     Attributes:
         search_finished: Signal emitted with results on success.
         search_error: Signal emitted with the exception on failure.
@@ -142,21 +134,6 @@ class NumericSearchWorker(QThread):
 
     Scans the document chunk-by-chunk for numeric values matching
     the given range, running entirely on a background thread.
-
-    Args:
-        document: The hex document to search.
-        min_val: Minimum value to match (inclusive).
-        max_val: Maximum value to match (inclusive).
-        fmt: struct format string for unpacking.
-        byte_width: Number of bytes per value.
-        alignment: Required byte alignment of search results.
-        max_results: Maximum number of results to return.
-        use_native: If True, try the native ``search_numeric`` FFI first.
-        size: Byte size of numeric values (1, 2, 4, or 8) for the native path.
-        signed: Whether the value is signed for the native path.
-        big_endian: Whether to use big-endian byte order for the native path.
-        is_range: Whether this is a range search (min != max).
-        parent: Parent QObject for lifecycle management.
 
     Attributes:
         search_finished: Signal emitted with results on success.

@@ -84,9 +84,6 @@ class EntropyGraphWidget(QWidget):
     Clicking on the graph emits ``block_clicked`` with the byte offset
     of the block that was clicked.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         block_clicked: Signal emitted with the byte offset of the clicked block.
     """
@@ -198,9 +195,6 @@ class ByteDistributionWidget(QWidget):
     Renders 256 vertical bars, one per byte value.  Supports optional
     logarithmic scale.  Hovering over a bar shows a tooltip with the
     byte value and count.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -301,10 +295,6 @@ class CustomCrcDialog(QDialog):
     Provides input fields for width, polynomial, initial value,
     reflection options, and XOR-out value, then computes the CRC
     over the supplied data when the user clicks Calculate.
-
-    Args:
-        data: The byte data to compute the CRC over.
-        parent: Parent widget.
     """
 
     def __init__(self, data: bytes, parent: QWidget | None = None) -> None:
@@ -393,10 +383,6 @@ class _DigramMatrixWidget(QWidget):
 
     Each pixel at (row, col) represents the frequency of the byte
     pair ``row -> col`` in the analyzed document.
-
-    Args:
-        matrix_data: Flat list of 65536 integers (256 x 256 bigram counts).
-        parent: Parent widget.
     """
 
     def __init__(
@@ -501,10 +487,6 @@ class DigramMatrixDialog(QDialog):
 
     Visualises the digram matrix as a color-coded 2D grid where
     each cell represents how often one byte follows another.
-
-    Args:
-        matrix_data: Flat list of 65536 integers (256 x 256 bigram counts).
-        parent: Parent widget.
     """
 
     def __init__(
@@ -543,12 +525,6 @@ class LargeFileSettingsDialog(QDialog):
 
     Provides controls for chunk size, memory budget, and prefetch
     behavior used when working with memory-mapped large files.
-
-    Args:
-        current_chunk_kb: Current chunk size in kilobytes.
-        current_budget_mb: Current memory budget in megabytes.
-        current_usage_mb: Current memory usage in megabytes.
-        parent: Parent widget.
     """
 
     def __init__(

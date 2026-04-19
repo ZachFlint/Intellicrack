@@ -92,9 +92,6 @@ class FridaPanel(AnalysisPanelBase):
     a console for viewing output, and a hook manager table
     for managing active function hooks.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         hook_added: Signal emitted with hook ID when a Frida hook is registered.
         script_executed: Signal emitted when a Frida script finishes execution.

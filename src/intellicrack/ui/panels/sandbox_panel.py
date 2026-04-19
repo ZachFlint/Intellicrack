@@ -64,9 +64,6 @@ class SandboxPanel(AnalysisPanelBase):
     executing binaries with monitoring, taking/restoring snapshots,
     and reviewing execution reports (file, registry, network activity).
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         execution_completed: Signal emitted with execution ID when a sandboxed binary run finishes.
         sandbox_created: Signal emitted with sandbox instance ID when a new sandbox is created.

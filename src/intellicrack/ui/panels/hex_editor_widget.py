@@ -135,9 +135,6 @@ class EntropyMiniMap(QWidget):
     Clicking the minimap navigates the attached hex editor to that
     file position.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         navigation_requested: Signal emitted with the target byte offset
             when the user clicks the minimap.
@@ -350,9 +347,6 @@ class HexEditorWidget(QAbstractScrollArea):
     virtual scrolling for large file support, keyboard editing,
     mouse selection, and customizable display options.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         DISPLAY_MODES: Available display mode names.
         cursor_moved: Signal emitted when the cursor position changes.
@@ -360,6 +354,8 @@ class HexEditorWidget(QAbstractScrollArea):
         data_changed: Signal emitted when data is modified.
         edit_mode_changed: Signal emitted when the edit mode changes.
         about_to_modify: Signal emitted before data modification at offset.
+        status_message: Signal emitted with a status-bar message string
+            (e.g. EOF clamp notifications from ``_move_cursor``).
     """
 
     DISPLAY_MODES: ClassVar[list[str]] = list(_MODE_PARAMS.keys())
@@ -709,10 +705,22 @@ class HexEditorWidget(QAbstractScrollArea):
                 sel_end,
             )
 
+            row_chars = self._decode_row_chars(row_offset, bytes_in_row, row_data)
             for col in range(bytes_in_row):
                 byte_val = row_data[col] if col < len(row_data) else 0
                 byte_offset = row_offset + col
-                self._paint_ascii_byte(painter, row_idx, y, col, byte_val, byte_offset, sel_start, sel_end)
+                ascii_ch = row_chars[col] if col < len(row_chars) else "."
+                self._paint_ascii_byte(
+                    painter,
+                    row_idx,
+                    y,
+                    col,
+                    byte_val,
+                    byte_offset,
+                    sel_start,
+                    sel_end,
+                    ascii_ch,
+                )
 
     def _paint_row_hex_groups(
         self,
@@ -1063,6 +1071,60 @@ class HexEditorWidget(QAbstractScrollArea):
             sel_end,
         )
 
+    def _decode_row_chars(self, row_offset: int, bytes_in_row: int, row_data: bytes) -> list[str]:
+        """Decode one row's worth of bytes into printable ASCII-column characters.
+
+        For ASCII encoding, produces a fast printable-byte mapping without
+        calling into the document.  For every other encoding, delegates to
+        the hexcore ``document.decode_text(offset, length, encoding)`` RPC
+        (falling back to Python's codec only when the document does not
+        expose that method) so the UI honours the document's canonical
+        decoder.  Multi-byte codepoints are anchored at their leading byte
+        and subsequent byte positions are padded with ``'.'`` to preserve
+        column alignment.
+
+        Args:
+            row_offset: Absolute byte offset of the first byte in this row.
+            bytes_in_row: Number of valid bytes in this row.
+            row_data: Raw bytes already read for the row (fallback source).
+
+        Returns:
+            list[str]: Exactly ``bytes_in_row`` single-character strings.
+        """
+        if self.encoding == "ascii" or bytes_in_row <= 0:
+            return [
+                chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
+                for b in row_data[:bytes_in_row]
+            ]
+        chars: list[str] = ["." for _ in range(bytes_in_row)]
+        decode_fn = getattr(self._document, "decode_text", None) if self._document is not None else None
+        decoded: str | None = None
+        if callable(decode_fn):
+            try:
+                raw_decoded: object = decode_fn(row_offset, bytes_in_row, self.encoding)
+            except (RuntimeError, OSError, ValueError, UnicodeDecodeError, LookupError, AttributeError):
+                decoded = None
+            else:
+                decoded = raw_decoded if isinstance(raw_decoded, str) else None
+        if decoded is None:
+            try:
+                decoded = bytes(row_data[:bytes_in_row]).decode(self.encoding, errors="replace")
+            except (UnicodeDecodeError, LookupError):
+                return chars
+        per_byte = len(decoded) == bytes_in_row
+        if per_byte:
+            for i in range(bytes_in_row):
+                ch = decoded[i]
+                chars[i] = ch if ch.isprintable() else "."
+            return chars
+        ratio = max(1, bytes_in_row // max(1, len(decoded)))
+        for glyph_index, ch in enumerate(decoded):
+            col_index = glyph_index * ratio
+            if col_index >= bytes_in_row:
+                break
+            chars[col_index] = ch if ch.isprintable() else "."
+        return chars
+
     def _paint_ascii_byte(
         self,
         painter: QPainter,
@@ -1073,6 +1135,7 @@ class HexEditorWidget(QAbstractScrollArea):
         byte_offset: int,
         sel_start: int,
         sel_end: int,
+        ascii_ch: str,
     ) -> None:
         """Paint a single byte in the ASCII column.
 
@@ -1085,17 +1148,10 @@ class HexEditorWidget(QAbstractScrollArea):
             byte_offset: Absolute byte offset in document.
             sel_start: Selection start offset (-1 if none).
             sel_end: Selection end offset (-1 if none).
+            ascii_ch: Pre-decoded character for this column from the row's
+                decoded string (anchored at leading byte for multi-byte codecs).
         """
         ascii_x = self._ascii_col_x + col * self._char_width
-        if self.encoding == "ascii":
-            ascii_ch = chr(byte_val) if _PRINTABLE_MIN <= byte_val <= _PRINTABLE_MAX else "."
-        else:
-            try:
-                ascii_ch = bytes([byte_val]).decode(self.encoding, errors="replace")
-                if len(ascii_ch) != 1 or not ascii_ch.isprintable():
-                    ascii_ch = "."
-            except (UnicodeDecodeError, LookupError):
-                ascii_ch = "."
         is_selected = sel_start >= 0 and sel_start <= byte_offset <= sel_end
 
         highlight_color: str | None = None

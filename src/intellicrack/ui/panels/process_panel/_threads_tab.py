@@ -47,9 +47,6 @@ class ThreadsTab(QWidget):
 
     Provides sub-tabs for thread list, register context, stack walk,
     SEH chain enumeration, and fiber/TLS data.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

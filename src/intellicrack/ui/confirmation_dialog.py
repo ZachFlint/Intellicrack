@@ -38,10 +38,6 @@ class ToolConfirmationDialog(QDialog):
 
     Displays the tool name, function, and arguments for user review
     before executing potentially destructive operations.
-
-    Args:
-        call: The tool call to confirm.
-        parent: Parent widget.
     """
 
     def __init__(
