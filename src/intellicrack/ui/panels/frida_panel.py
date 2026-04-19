@@ -636,14 +636,29 @@ class FridaPanel(AnalysisPanelBase):
 
         Args:
             script_size: Size of the executed script in characters.
-            result: Script ID from the bridge.
+            result: Script ID returned by the bridge.
+
+        Raises:
+            RuntimeError: If the bridge did not return a usable script handle.
         """
-        self._active_script_id = str(result) if result else None
+        if not isinstance(result, str) or not result:
+            self._active_script_id = None
+            self._console.appendPlainText("[-] Unable to track script handle - persistent load aborted")
+            self.run_btn.setEnabled(True)
+            self._stop_btn.setEnabled(False)
+            _logger.error(
+                "frida_persistent_script_handle_missing",
+                result_type=type(result).__name__,
+                script_size=script_size,
+            )
+            msg = "unable to track script handle"
+            raise RuntimeError(msg)
+        self._active_script_id = result
         self._console.appendPlainText("[+] Script loaded (persistent)")
         self.run_btn.setEnabled(False)
         self._stop_btn.setEnabled(True)
         self.script_executed.emit()
-        _logger.info("frida_script_executed", script_size=script_size)
+        _logger.info("frida_script_executed", script_size=script_size, script_id=result)
 
     def _on_run_script_error(self, exc: object) -> None:
         """Handle script execution failure.
@@ -654,25 +669,27 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[-] Script execution failed: {exc}")
         _logger.warning("frida_script_execution_failed", error=str(exc))
         self.run_btn.setEnabled(True)
+        self._stop_btn.setEnabled(False)
+        self._active_script_id = None
 
     def _on_stop_script(self) -> None:
-        """Stop the currently running script."""
+        """Stop the currently running persistent script."""
         if self._bridge is None:
             return
 
+        if self._active_script_id is None:
+            self._console.appendPlainText("[!] No persistent script handle to stop")
+            self._stop_btn.setEnabled(False)
+            self.run_btn.setEnabled(True)
+            _logger.warning("frida_stop_script_no_handle")
+            return
+
         self._stop_btn.setEnabled(False)
-        if self._active_script_id is not None:
-            self._run_async(
-                self._bridge.unload_script(self._active_script_id),
-                on_success=lambda _: self._on_stop_script_success(),
-                on_error=self._on_stop_script_error,
-            )
-        else:
-            self._run_async(
-                self._bridge.unload_all_scripts(),
-                on_success=lambda _: self._on_stop_script_success(),
-                on_error=self._on_stop_script_error,
-            )
+        self._run_async(
+            self._bridge.unload_script(self._active_script_id),
+            on_success=lambda _: self._on_stop_script_success(),
+            on_error=self._on_stop_script_error,
+        )
 
     def _on_stop_script_success(self) -> None:
         """Handle successful script stop."""
@@ -1053,7 +1070,10 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 thread_id = int(tid_text)
             except ValueError:
-                _logger.debug("stalker_stop_invalid_tid", tid_text=tid_text)
+                self._console.appendPlainText(f"[-] Invalid thread ID: {tid_text}")
+                self._stalker_stop_btn.setEnabled(True)
+                _logger.warning("frida_stalker_stop_invalid_tid", tid_text=tid_text)
+                return
 
         self._stalker_stop_btn.setEnabled(False)
         self._run_async(
