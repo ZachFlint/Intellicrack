@@ -78,6 +78,7 @@ from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from intellicrack.bridges.hex_editor import HexEditorBridge
     from intellicrack.bridges.hex_state import HexDocumentState
 
 _MODE_LABEL_WIDTH: Final[int] = 30
@@ -159,6 +160,7 @@ class HexEditorPanel(
         self._search_index: int = 0
         self._original_data_cache: dict[int, int] = {}
         self.state_holder: HexDocumentState | None = None
+        self._bridge: HexEditorBridge | None = None
         self._find_next_btn: QPushButton | None = None
         self._find_prev_btn: QPushButton | None = None
         self._state_callback: Any | None = None
@@ -729,6 +731,7 @@ class HexEditorPanel(
             size = self.document.length()
             self._file_info_label.setText(f"  {name}{modified_mark} ({format_size(size)})")
         self._update_patches()
+        self.refresh_pattern_highlights()
 
     def _on_edit_mode_changed(self, mode: str) -> None:
         """Handle edit mode toggle.
@@ -795,6 +798,19 @@ class HexEditorPanel(
                 if callable(update_fn):
                     update_fn()
             self._on_data_changed()
+
+    def set_bridge(self, bridge: HexEditorBridge) -> None:
+        """Attach a ``HexEditorBridge`` for RPC-backed transforms.
+
+        Called by the tools-panel wiring layer once the registry's hex editor
+        bridge instance is available.  Mixins (transforms, comparison, etc.)
+        route async operations through this bridge instead of duplicating
+        logic in pure Python.
+
+        Args:
+            bridge: ``HexEditorBridge`` instance supplied by the tool registry.
+        """
+        self._bridge = bridge
 
     def set_state_holder(self, state_holder: HexDocumentState) -> None:
         """Attach a shared state holder for bridge-GUI synchronization.

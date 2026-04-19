@@ -65,11 +65,6 @@ class StatisticsWorker(QThread):
     distribution, and content classification on a background thread
     to avoid blocking the Qt main thread on large files.
 
-    Args:
-        document: The hex document to analyze.
-        entropy_block_size: Block size for entropy map and classification.
-        parent: Parent QObject for lifecycle management.
-
     Attributes:
         stats_finished: Signal emitted with the result on success.
         stats_error: Signal emitted with the exception on failure.

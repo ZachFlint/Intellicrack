@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Final, Protocol, cast, runtime_checkable
 
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem
 
 from intellicrack.ui.panels.hex_editor._base import (
@@ -20,6 +21,88 @@ from intellicrack.ui.panels.hex_editor._base import (
     pefile,
     pefile_available,
 )
+
+
+_STRINGS_MIN_LENGTH: Final[int] = 4
+_STRINGS_MAX_RESULTS: Final[int] = 5000
+
+
+@runtime_checkable
+class _StringsSource(Protocol):
+    """Subset of the hexcore ``HexDocument`` API required by ``StringsExtractionWorker``."""
+
+    def extract_strings(
+        self,
+        *,
+        min_length: int,
+        include_ascii: bool,
+        include_utf16: bool,
+        max_results: int,
+    ) -> object:
+        """Extract string matches from the underlying document.
+
+        Args:
+            min_length: Minimum string length in codepoints to keep.
+            include_ascii: Whether to include ASCII-encoded strings.
+            include_utf16: Whether to include UTF-16 encoded strings.
+            max_results: Upper bound on returned matches.
+
+        Returns:
+            object: Iterable of dict-like records with at minimum ``offset`` and ``text`` keys.
+        """
+
+
+class StringsExtractionWorker(QThread):
+    """Background worker that invokes ``document.extract_strings`` off the UI thread.
+
+    Attributes:
+        strings_ready: Signal emitted with the list of string entries on success.
+        strings_failed: Signal emitted with the error message on failure.
+    """
+
+    strings_ready: pyqtSignal = pyqtSignal(object)
+    strings_failed: pyqtSignal = pyqtSignal(str)
+
+    def __init__(
+        self,
+        document: _StringsSource,
+        min_length: int,
+        max_results: int,
+        parent: QThread | None = None,
+    ) -> None:
+        """Initialise the strings extraction worker.
+
+        Args:
+            document: The hexcore ``HexDocument`` (or compatible) to invoke ``extract_strings`` on.
+            min_length: Minimum string length in characters/codepoints to keep.
+            max_results: Upper bound on returned entries.
+            parent: Optional ``QThread`` parent for Qt ownership.
+        """
+        super().__init__(parent)
+        self._document: _StringsSource = document
+        self._min_length: int = min_length
+        self._max_results: int = max_results
+        _: object = self.finished.connect(self.deleteLater)
+
+    def run(self) -> None:
+        """Execute ``extract_strings`` on the worker thread and emit the result.
+
+        Emits ``strings_ready`` with the returned iterable on success, or
+        ``strings_failed`` with the stringified error message on any recognised
+        hexcore / IO failure.
+        """
+        document = self._document
+        try:
+            results = document.extract_strings(
+                min_length=self._min_length,
+                include_ascii=True,
+                include_utf16=True,
+                max_results=self._max_results,
+            )
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+            self.strings_failed.emit(str(exc))
+            return
+        self.strings_ready.emit(results)
 
 
 class SectionsMixin:
@@ -156,30 +239,60 @@ class SectionsMixin:
             pe.close()
 
     def _populate_strings(self) -> None:
-        """Populate the strings tab using hexcore's extract_strings RPC."""
+        """Populate the strings tab asynchronously via a ``QThread`` worker.
+
+        Dispatches the hexcore ``extract_strings`` RPC on a background thread so
+        that very large binaries do not block the Qt event loop while the Rust
+        backend streams matches back.  Results are consumed on the UI thread
+        through the worker's ``strings_ready`` / ``strings_failed`` signals.
+        """
         if self._strings_tree is None or self.document is None:
             return
 
         self._strings_tree.clear()
-        max_display_len = PREVIEW_BYTES
+        pending_row = QTreeWidgetItem(["-", "-", "(scanning...)"])
+        self._strings_tree.addTopLevelItem(pending_row)
 
-        try:
-            results = self.document.extract_strings(
-                min_length=4,
-                include_ascii=True,
-                include_utf16=True,
-                max_results=5000,
-            )
-        except (RuntimeError, OSError, ValueError) as exc:
-            logger.debug("strings_extract_failed", error=str(exc))
+        previous = getattr(self, "_strings_worker", None)
+        if isinstance(previous, StringsExtractionWorker) and previous.isRunning():
+            previous.requestInterruption()
+
+        worker = StringsExtractionWorker(
+            self.document,
+            _STRINGS_MIN_LENGTH,
+            _STRINGS_MAX_RESULTS,
+            parent=cast("QThread | None", self if isinstance(self, QThread) else None),
+        )
+        self._strings_worker = worker
+        _: object = worker.strings_ready.connect(self._on_strings_ready)
+        _ = worker.strings_failed.connect(self._on_strings_failed)
+        worker.start()
+
+    def _on_strings_ready(self, results: object) -> None:
+        """Replace the strings tree contents with the extracted entries.
+
+        Args:
+            results: Iterable of dict-like records with ``offset`` and ``text`` keys as
+                returned by ``HexDocument.extract_strings``.
+        """
+        if self._strings_tree is None:
             return
-
-        for entry in results:
-            offset_val = entry.get("offset")
-            text_val = entry.get("text") or entry.get("value")
+        self._strings_tree.clear()
+        if not isinstance(results, list):
+            return
+        max_display_len = PREVIEW_BYTES
+        for entry in cast("list[object]", results):
+            if not isinstance(entry, dict):
+                continue
+            typed: dict[str, object] = cast("dict[str, object]", entry)
+            offset_val = typed.get("offset")
+            text_val = typed.get("text") or typed.get("value")
             if offset_val is None or text_val is None:
                 continue
-            offset_int = int(offset_val)
+            try:
+                offset_int = int(cast("Any", offset_val))
+            except (TypeError, ValueError):
+                continue
             text_str = str(text_val)
             display = text_str[:max_display_len]
             item = QTreeWidgetItem([
@@ -188,6 +301,17 @@ class SectionsMixin:
                 display,
             ])
             self._strings_tree.addTopLevelItem(item)
+
+    def _on_strings_failed(self, message: str) -> None:
+        """Record a failed string extraction and clear the pending-scan row.
+
+        Args:
+            message: Error message emitted by the extraction worker.
+        """
+        logger.debug("strings_extract_failed", error=message)
+        if self._strings_tree is not None:
+            self._strings_tree.clear()
+            self._strings_tree.addTopLevelItem(QTreeWidgetItem(["-", "-", f"(error: {message})"]))
 
     def _on_string_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         """Navigate to the string offset when double-clicked.

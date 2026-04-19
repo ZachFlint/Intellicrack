@@ -133,9 +133,6 @@ class GhidraPanel(AnalysisPanelBase):
     structures, memory maps, segments, program info, call graphs,
     comments, symbols, namespaces, equates, relocations, and a
     Ghidra script runner powered by the GhidraBridge backend.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

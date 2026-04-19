@@ -288,6 +288,60 @@ class HighlightingMixin:
         if self._highlight_rules_list is not None:
             self._highlight_rules_list.clear()
 
+    def refresh_pattern_highlights(self) -> None:
+        """Re-resolve offsets for every pattern-type highlight rule.
+
+        Called by the hex editor panel whenever the active document's byte
+        content changes (``HexEditorWidget.data_changed``) so that
+        pattern-based highlight rules stay consistent with the underlying
+        document.  Byte-value and byte-range rules do not need to be
+        refreshed because their match logic is re-evaluated per-paint from
+        the raw byte value.
+        """
+        if self._hex_widget is None:
+            return
+        rules_attr = getattr(self._hex_widget, "_highlight_rules", None)
+        if not isinstance(rules_attr, list):
+            return
+        document = getattr(self, "document", None)
+        search_fn = getattr(document, "search_hex", None) if document is not None else None
+        if not callable(search_fn):
+            return
+        for rule in cast("list[Any]", rules_attr):
+            condition_type = getattr(rule, "condition_type", None)
+            if condition_type != "pattern":
+                continue
+            params_attr: object = getattr(rule, "condition_params", None)
+            if not isinstance(params_attr, dict):
+                continue
+            params_dict = cast("dict[str, Any]", params_attr)
+            pattern_raw: object = params_dict.get("pattern")
+            if not isinstance(pattern_raw, str) or not pattern_raw:
+                continue
+            offsets: set[int] = set()
+            try:
+                matches = search_fn(pattern_raw, _HIGHLIGHT_PATTERN_MAX_MATCHES)
+            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+                logger.debug(
+                    "highlight_pattern_refresh_failed",
+                    pattern=pattern_raw,
+                    error=str(exc),
+                )
+                continue
+            if isinstance(matches, list):
+                entries: list[Any] = cast("list[Any]", matches)
+                for entry in entries:
+                    if isinstance(entry, tuple):
+                        tup = cast("tuple[Any, ...]", entry)
+                        if tup and isinstance(tup[0], int):
+                            offsets.add(tup[0])
+                    elif isinstance(entry, int):
+                        offsets.add(entry)
+            params_dict["offsets"] = offsets
+        update_fn = getattr(self._hex_widget, "update", None)
+        if callable(update_fn):
+            update_fn()
+
         update_fn = getattr(self._hex_widget, "update", None)
         if callable(update_fn):
             update_fn()

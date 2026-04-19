@@ -298,9 +298,6 @@ class FridaStackSource:
 class StackFrameTable(QTableWidget):
     """Table widget for displaying stack frames.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         frame_clicked: Qt signal for frame clicked.
         frame_double_clicked: Qt signal for frame double clicked.
@@ -432,9 +429,6 @@ class StackViewerPanel(QWidget):
 
     Displays call stack frames from x64dbg or Frida sources
     with auto-refresh during debugging.
-
-    Args:
-        parent: Parent widget.
 
     Attributes:
         address_navigate: Qt signal for address navigate.

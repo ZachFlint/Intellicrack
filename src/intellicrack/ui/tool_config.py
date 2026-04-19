@@ -94,11 +94,6 @@ class ToolInstallWorker(QThread):
 
     Downloads and installs tools in a separate thread to avoid blocking UI.
 
-    Args:
-        tool_id: The tool identifier.
-        install_path: Directory to install the tool.
-        parent: Parent widget.
-
     Attributes:
         progress: Signal emitted with progress percentage (0-100).
         install_finished: Signal emitted when installation completes with (success, message).
@@ -544,11 +539,6 @@ class ToolInstallWorker(QThread):
 class ToolStatusCheckWorker(QThread):
     """Worker thread for checking tool status.
 
-    Args:
-        tool_id: The tool identifier.
-        tool_path: Path to the tool installation.
-        parent: Parent widget.
-
     Attributes:
         status_checked: Signal emitted when check completes with (tool_id, is_available, message).
     """
@@ -742,11 +732,6 @@ class ToolConfigDialog(QDialog):
     - Install missing tools
     - Test tool connections
 
-    Args:
-        tool_registry: Registry containing tool bridge instances.
-        tools_directory: Directory for tool installations.
-        parent: Parent widget.
-
     Attributes:
         tool_updated: Signal emitted when a tool config changes.
     """
@@ -879,15 +864,6 @@ class ToolSettingsWidget(QFrame):
 
     Displays path configuration, enable/disable toggle, and
     installation options for a specific tool.
-
-    Args:
-        tool_id: The tool identifier.
-        display_name: Human-readable tool name.
-        description: Tool description.
-        tools_directory: Base directory for tool installations.
-        registry: Tool registry for status checking.
-        config_path: Path to configuration file.
-        parent: Parent widget.
 
     Attributes:
         status_changed: Signal emitted when tool status changes.
@@ -1210,11 +1186,7 @@ class ToolSettingsWidget(QFrame):
 
 
 class ToolCapabilitiesWidget(QFrame):
-    """Widget displaying tool capabilities in a grid format.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Widget displaying tool capabilities in a grid format."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ToolCapabilitiesWidget.
@@ -1316,10 +1288,6 @@ class ToolStatusDialog(QDialog):
 
     Displays which tools are installed, their connection state,
     supported capabilities, architectures, and file formats.
-
-    Args:
-        tool_registry: Registry containing tool bridge instances.
-        parent: Parent widget.
 
     Attributes:
         TOOL_CAPABILITIES: Mapping of tool IDs to their supported features, architectures, and formats.

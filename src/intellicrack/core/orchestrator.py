@@ -166,12 +166,6 @@ class Orchestrator:
     Manages the conversation loop between the user, LLM, and tools.
     Coordinates tool execution and handles confirmations.
 
-    Args:
-        provider_registry: Registry of LLM providers used for routing chat requests.
-        tool_registry: Registry of tool bridges available for execution.
-        session_manager: Session state manager that persists conversation state.
-        config: Optional configuration override; defaults to ``OrchestratorConfig()``.
-
     Attributes:
         DESTRUCTIVE_PATTERNS: Substrings identifying tool calls that modify state and require user confirmation.
     """
@@ -277,6 +271,8 @@ class Orchestrator:
         provider: str | ProviderName,
         model: str,
         binary_path: Path | None = None,
+        name: str | None = None,
+        description: str | None = None,
     ) -> Session:
         """Start a new session.
 
@@ -284,6 +280,8 @@ class Orchestrator:
             provider: LLM provider to use.
             model: Model ID to use.
             binary_path: Optional binary to load.
+            name: Optional human-readable session name recorded on the new ``Session``.
+            description: Optional free-form description persisted as ``Session.notes``.
 
         Returns:
             Session: New session instance.
@@ -307,7 +305,11 @@ class Orchestrator:
         session = await self._sessions.create(
             provider=provider,
             model=model,
+            name=name,
         )
+        if description:
+            session.notes = description
+            await self._sessions.save()
 
         if binary_path is not None:
             binary_info = await self._load_binary(binary_path)
@@ -442,7 +444,7 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If provider is not available.
-            CancelledError: If the operation is cancelled.
+            asyncio.CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
             return
@@ -1020,7 +1022,7 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If no active session.
-            CancelledError: If the operation is cancelled.
+            asyncio.CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
             error_message = "No active session"
@@ -1125,7 +1127,7 @@ class Orchestrator:
             list[ToolResult]: List of tool results.
 
         Raises:
-            CancelledError: If the operation is cancelled.
+            asyncio.CancelledError: If the operation is cancelled.
         """
         results: list[ToolResult] = []
 
@@ -1779,13 +1781,12 @@ class Orchestrator:
         ``asyncio.CancelledError`` and ``KeyboardInterrupt``) are intentionally not
         caught and propagate through the ``finally`` clause that clears final state. All
         caught exceptions are collected and, once every stage has had a chance to run,
-        the first is re-raised (or an ``ExceptionGroup`` is raised when multiple stages
-        fail) so callers learn about every teardown failure.
+        bundled into a single ``ExceptionGroup`` so callers learn about every teardown
+        failure.
 
         Raises:
-            ExceptionGroup: When two or more teardown steps raised non-cancellation
+            ExceptionGroup: When one or more teardown steps raised non-cancellation
                 exceptions, all collected failures are bundled into an ``ExceptionGroup``.
-                A single failure is re-raised directly rather than wrapped.
         """
         if self._shutdown_called:
             _logger.debug("orchestrator_shutdown_already_called", state=self._state)
@@ -1861,10 +1862,8 @@ class Orchestrator:
                 error_count=len(errors),
             )
 
-        if len(errors) == 1:
-            raise errors[0]
-        if len(errors) > 1:
-            group_message = "orchestrator shutdown encountered multiple failures"
+        if errors:
+            group_message = "orchestrator shutdown encountered failures"
             raise ExceptionGroup(group_message, errors)
 
 

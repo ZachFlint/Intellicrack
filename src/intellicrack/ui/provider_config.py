@@ -193,9 +193,6 @@ class CredentialSourceDetector:
     Identifies whether API credentials came from a .env file, environment
     variables, manual configuration, or are not configured at all.
 
-    Args:
-        config_path: Path to the saved configuration file.
-
     Attributes:
         ENV_VAR_MAPPING: Mapping of provider names to their API key environment variable names.
     """
@@ -296,12 +293,6 @@ class ConnectionTestWorker(QThread):
     """Worker thread for testing provider connections.
 
     Runs connection tests in a separate thread to avoid blocking the UI.
-
-    Args:
-        provider_id: The provider identifier.
-        api_key: The API key to test.
-        api_base: Optional API base URL.
-        parent: Parent widget.
 
     Attributes:
         test_finished: Signal emitted when test completes with (success, message).
@@ -594,13 +585,6 @@ class ConnectionTestWorker(QThread):
 
 class ModelRefreshWorker(QThread):
     """Worker thread for refreshing model lists from provider APIs.
-
-    Args:
-        provider_id: The provider identifier.
-        api_key: The API key for authentication.
-        api_base: Optional API base URL.
-        provider: Optional connected provider instance for direct model listing.
-        parent: Parent widget.
 
     Attributes:
         refresh_finished: Signal emitted when refresh completes with (success, models, message).
@@ -969,11 +953,6 @@ class ProviderConfigDialog(QDialog):
     - Test provider connections
     - Set active provider for analysis
     - View connection status and model counts
-
-    Args:
-        provider_registry: Registry containing provider instances.
-        model_discovery: Discovery service for model information.
-        parent: Parent widget.
 
     Attributes:
         provider_updated: Signal emitted when a provider config changes.
@@ -1524,14 +1503,6 @@ class ProviderSettingsWidget(QFrame):
     Displays API key input, model selection, connection settings,
     and credential source information for a specific LLM provider.
 
-    Args:
-        provider_id: The provider identifier.
-        registry: Provider registry for connection testing.
-        config_path: Path to configuration file.
-        credential_detector: Detector for credential source identification.
-        model_discovery: Discovery service for model recommendations.
-        parent: Parent widget.
-
     Attributes:
         connection_tested: Signal emitted after connection test.
         ollama_pull_progress: Signal emitted per ``pull_model`` status chunk
@@ -1763,16 +1734,17 @@ class ProviderSettingsWidget(QFrame):
         """
         self._set_status(f"Pulling {model_name}: {status}")
 
-    def _on_ollama_pull_finished(self, success: bool, model_name: str, message: str) -> None:
+    def _on_ollama_pull_finished(self, success: object, model_name: str, message: str) -> None:
         """Finalize UI state when an Ollama pull completes.
 
         Args:
-            success: Whether the pull succeeded.
+            success: Whether the pull succeeded (received as Qt ``object`` slot arg).
             model_name: The model that was pulled.
             message: Outcome message.
         """
+        ok: bool = bool(success)
         icon_manager = IconManager.get_instance()
-        if success:
+        if ok:
             _logger.info("ollama_model_pulled", model=model_name)
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._set_status(message or f"Pulled {model_name}")
@@ -2576,34 +2548,43 @@ class ProviderSettingsWidget(QFrame):
         )
         provider = OllamaProvider()
 
+        pull_result_arity: Final[int] = 2
+        pull_failure: Final[bool] = False
+
         async def _pull() -> tuple[bool, str]:
+            success: bool = False
+            message: str = ""
             try:
                 await provider.connect(creds)
             except ProviderError as exc:
                 _logger.warning("ollama_pull_connect_failed", model=model_name, error=str(exc))
-                return False, f"Connect failed: {exc}"
+                return pull_failure, f"Connect failed: {exc}"
             try:
                 last_status = ""
                 async for status in provider.pull_model(model_name):
                     last_status = status
                     self.ollama_pull_progress.emit(model_name, status)
-                return True, last_status or f"Pulled {model_name}"
             except ProviderError as exc:
                 _logger.warning("ollama_pull_failed", model=model_name, error=str(exc))
-                return False, str(exc)
+                message = str(exc)
+            else:
+                success = True
+                message = last_status or f"Pulled {model_name}"
             finally:
                 await provider.disconnect()
+            return success, message
 
         def _on_success(result: object) -> None:
-            if isinstance(result, tuple) and len(result) == 2:
-                ok = bool(result[0])
-                msg = result[1] if isinstance(result[1], str) else ""
+            if isinstance(result, tuple) and len(cast("tuple[object, ...]", result)) == pull_result_arity:
+                tup = cast("tuple[object, object]", result)
+                ok = bool(tup[0])
+                msg = tup[1] if isinstance(tup[1], str) else ""
                 self.ollama_pull_finished.emit(ok, model_name, msg)
             else:
-                self.ollama_pull_finished.emit(False, model_name, "Unexpected pull result")
+                self.ollama_pull_finished.emit(pull_failure, model_name, "Unexpected pull result")
 
         def _on_error(exc: object) -> None:
-            self.ollama_pull_finished.emit(False, model_name, str(exc))
+            self.ollama_pull_finished.emit(pull_failure, model_name, str(exc))
 
         self._set_status(f"Pulling {model_name}...")
         run_bridge_coroutine_async(_pull(), on_success=_on_success, on_error=_on_error, parent=self)
@@ -2663,13 +2644,6 @@ class ModelSelectionDialog(QDialog):
 
     Displays available models with their capabilities and allows
     the user to select one.
-
-    Args:
-        models: List of available models.
-        current_model: Currently selected model ID.
-        provider_name: Provider identifier for discovery status lookup.
-        discovery: Discovery service for last-event status display.
-        parent: Parent widget.
 
     Attributes:
         model_selected: Signal emitted when a model is selected.

@@ -42,11 +42,6 @@ class DetachedPanelWindow(QMainWindow):
     ``reattach_requested`` returns the panel to the tab bar
     instead of destroying it on close.
 
-    Args:
-        panel: The panel widget to host.
-        title: Window title and tab label for re-docking.
-        parent: Parent widget.
-
     Attributes:
         reattach_requested: Signal emitted with (panel, title) when
             the user requests re-docking.

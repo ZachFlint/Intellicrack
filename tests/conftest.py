@@ -7,17 +7,12 @@
 
 This module provides shared fixtures for credential loading, API key availability
 checks, XPU hardware detection, and common test utilities used across all test modules.
-
-When running on a Windows host (not inside Windows Sandbox and not in CI), tests are
-automatically redirected to run inside Windows Sandbox for process and registry isolation.
+Sandbox isolation is handled by the Docker-based harness at
+``scripts/sandbox/docker_sandbox.py``; pytest itself runs normally here.
 """
 
 from __future__ import annotations
 
-import logging
-import os
-import shutil
-import subprocess
 from pathlib import Path
 
 import httpx
@@ -29,65 +24,6 @@ from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
 
 
 _HTTP_OK = 200
-_SANDBOX_LAUNCHER = Path(r"D:\Sandbox\shared\launch_sandbox_test.ps1")
-_REPORTS_DIR = Path(r"D:\Intellicrack\reports\tests")
-_SANDBOX_ARGS_FILE = _REPORTS_DIR / "_sandbox_pytest_args.txt"
-
-_sandbox_logger = logging.getLogger("intellicrack.sandbox_redirect")
-
-
-def pytest_configure(config: pytest.Config) -> None:
-    """Redirect test execution to Windows Sandbox when running on the host.
-
-    Checks whether tests are running inside Windows Sandbox by looking for
-    the ``INTELLICRACK_SANDBOXED`` environment variable. Setting
-    ``INTELLICRACK_LOCAL_TESTS=1`` bypasses sandbox redirection and runs
-    tests directly on the local system. When not sandboxed, launches Windows
-    Sandbox with the current pytest arguments and streams the output back to
-    the caller. Falls back to local execution if sandbox infrastructure is
-    unavailable.
-
-    Args:
-        config: The pytest configuration object.
-    """
-    if os.environ.get("INTELLICRACK_SANDBOXED") == "1":
-        return
-    if os.environ.get("INTELLICRACK_LOCAL_TESTS") == "1":
-        return
-    if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
-        return
-    if not _SANDBOX_LAUNCHER.exists():
-        return
-    if not shutil.which("gsudo"):
-        _sandbox_logger.warning("gsudo not found, running tests locally")
-        return
-
-    raw_args = [str(a) for a in config.invocation_params.args]
-    args_str = " ".join(raw_args)
-
-    _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    _SANDBOX_ARGS_FILE.write_text(args_str, encoding="utf-8")
-
-    cmd = [
-        "gsudo",
-        "pwsh",
-        "-NoLogo",
-        "-File",
-        str(_SANDBOX_LAUNCHER),
-        "-TestType",
-        "custom",
-    ]
-
-    try:
-        result = subprocess.run(cmd, cwd=r"D:\Intellicrack", check=False)
-    except OSError:
-        _sandbox_logger.warning("Failed to launch sandbox, running tests locally")
-        return
-
-    pytest.exit(
-        reason=f"Tests executed in Windows Sandbox (exit code: {result.returncode})",
-        returncode=result.returncode,
-    )
 
 
 @pytest.fixture(scope="session")

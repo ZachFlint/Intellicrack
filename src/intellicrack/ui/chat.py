@@ -55,14 +55,12 @@ class MessageBubble(QFrame):
     Displays a message from the user, assistant, or tool with
     appropriate styling and formatting.
 
-    Args:
-        message: The message to display.
-        parent: Parent widget.
-
     Attributes:
         content_label: QLabel displaying the message content; updated
             directly by streaming consumers to append incremental chunks.
     """
+
+    content_label: QLabel
 
     def __init__(
         self,
@@ -77,7 +75,7 @@ class MessageBubble(QFrame):
         """
         super().__init__(parent)
         self._message = message
-        self.content_label: QLabel = QLabel(self._message.content)
+        self.content_label = QLabel(self._message.content)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -222,9 +220,6 @@ class ChatInput(QFrame):
     Provides a text input area and send button for composing
     messages to send to the AI.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         message_submitted: Qt signal for message submitted.
     """
@@ -334,9 +329,6 @@ class ChatPanel(QFrame):
 
     Contains the message history scroll area and input widget.
     Manages displaying conversation messages and collecting user input.
-
-    Args:
-        parent: Parent widget.
 
     Attributes:
         message_submitted: Qt signal for message submitted.

@@ -38,12 +38,6 @@ class SignatureScanWorker(QThread):
     Supports DIE-style JSON databases, ClamAV .ndb/.hdb files, and
     custom JSON signature formats.
 
-    Args:
-        doc_data: Full document contents as bytes.
-        db_type: Database format (``"die"``, ``"clamav"``, ``"custom"``).
-        db_path: Path to the signature database file.
-        parent: Parent QObject.
-
     Attributes:
         scan_finished: Emitted with list of match dicts on success.
         scan_error: Emitted with error message on failure.

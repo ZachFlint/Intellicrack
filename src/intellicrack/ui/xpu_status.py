@@ -86,9 +86,6 @@ class XPUStatusDialog(QDialog):
     Displays device information, memory utilization, model cache state,
     and Windows system requirement checks with periodic auto-refresh
     for memory metrics.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

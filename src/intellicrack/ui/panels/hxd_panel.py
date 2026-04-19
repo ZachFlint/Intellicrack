@@ -105,9 +105,6 @@ class HxDPanel(QWidget):
     Detects HxD installation, launches HxD as a subprocess, and
     provides file loading and lifecycle management.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         tool_started: Signal emitted when HxD starts.
         tool_closed: Signal emitted when HxD closes.

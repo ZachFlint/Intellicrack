@@ -93,12 +93,7 @@ def _item_set_font(item: QListWidgetItem, font: QFont) -> None:
 
 
 class GeneralSettingsWidget(QWidget):
-    """Widget for general application settings.
-
-    Args:
-        config: Application configuration.
-        parent: Parent widget.
-    """
+    """Widget for general application settings."""
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
         """Initialize the GeneralSettingsWidget with application configuration.
@@ -208,12 +203,7 @@ class GeneralSettingsWidget(QWidget):
 
 
 class AppearanceSettingsWidget(QWidget):
-    """Widget for appearance settings.
-
-    Args:
-        config: Application configuration.
-        parent: Parent widget.
-    """
+    """Widget for appearance settings."""
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
         """Initialize the AppearanceSettingsWidget with application configuration.
@@ -304,12 +294,7 @@ class AppearanceSettingsWidget(QWidget):
 
 
 class SessionSettingsWidget(QWidget):
-    """Widget for session settings.
-
-    Args:
-        config: Application configuration.
-        parent: Parent widget.
-    """
+    """Widget for session settings."""
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
         """Initialize the SessionSettingsWidget with application configuration.
@@ -376,12 +361,7 @@ class SessionSettingsWidget(QWidget):
 
 
 class LoggingSettingsWidget(QWidget):
-    """Widget for logging settings.
-
-    Args:
-        config: Application configuration.
-        parent: Parent widget.
-    """
+    """Widget for logging settings."""
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
         """Initialize the LoggingSettingsWidget with application configuration.
@@ -476,10 +456,6 @@ class PreferencesDialog(QDialog):
 
     Provides a unified interface for configuring all application
     settings organized into logical categories.
-
-    Args:
-        config: Application configuration.
-        parent: Parent widget.
 
     Attributes:
         settings_changed: Qt signal for settings changed.

@@ -1,0 +1,116 @@
+# syntax=docker/dockerfile:1.6
+#
+# Intellicrack Windows test sandbox image.
+#
+# Layered build: each stage isolates expensive setup so cache survives across
+# routine source changes. Only the pixi stage invalidates when pixi.lock moves;
+# the Python/Java/tool stages invalidate only when their respective version
+# pins change.
+#
+# Build:  docker build --file docker/Dockerfile.windows --isolation process -t intellicrack-sandbox:latest .
+# Run:    docker run --rm --isolation process -v D:\Intellicrack:C:\workspace:ro \
+#             -v D:\Intellicrack\reports:C:\workspace\reports intellicrack-sandbox:latest unit
+
+ARG WINDOWS_VERSION=ltsc2022
+
+# Stage 1 -- base tools (Python 3.13, Git, VC redist, 7-Zip)
+FROM mcr.microsoft.com/windows/servercore:${WINDOWS_VERSION} AS base
+
+SHELL ["powershell", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
+
+ENV chocolateyVersion="2.2.2" \
+    chocolateyUseWindowsCompression="true"
+
+RUN $ErrorActionPreference = 'Stop'; \
+    Set-ExecutionPolicy Bypass -Scope Process -Force; \
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; \
+    iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')); \
+    choco feature disable --name showDownloadProgress
+
+RUN choco install -y --no-progress python313 --version=3.13.1 --params='/InstallDir:C:\Python313' ; \
+    choco install -y --no-progress git --params='/GitAndUnixToolsOnPath /NoAutoCrlf' ; \
+    choco install -y --no-progress 7zip ; \
+    choco install -y --no-progress vcredist140
+
+RUN [Environment]::SetEnvironmentVariable('PATH', 'C:\Python313;C:\Python313\Scripts;' + $env:PATH, 'Machine')
+
+ENV PATH="C:\\Python313;C:\\Python313\\Scripts;C:\\Program Files\\Git\\cmd;C:\\Program Files\\7-Zip;${PATH}"
+
+RUN python --version ; pip --version ; git --version
+
+# Stage 2 -- external analysis tools (JDK 21, Ghidra, radare2)
+FROM base AS tools
+
+ENV JAVA_VERSION="21.0.5.11.1" \
+    GHIDRA_VERSION="11.2.1_PUBLIC_20241105" \
+    RADARE2_VERSION="5.9.8"
+
+RUN choco install -y --no-progress temurin21
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $ghidraUrl = 'https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.2.1_build/ghidra_11.2.1_PUBLIC_20241105.zip'; \
+    $ghidraZip = 'C:\temp\ghidra.zip'; \
+    New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null; \
+    New-Item -ItemType Directory -Force -Path 'C:\tools' | Out-Null; \
+    Invoke-WebRequest -Uri $ghidraUrl -OutFile $ghidraZip -UseBasicParsing; \
+    Expand-Archive -Path $ghidraZip -DestinationPath 'C:\tools'; \
+    Remove-Item $ghidraZip -Force; \
+    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'ghidra_*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'ghidra' }
+
+RUN $ErrorActionPreference = 'Stop'; \
+    $r2Url = 'https://github.com/radareorg/radare2/releases/download/5.9.8/radare2-5.9.8-w64.zip'; \
+    $r2Zip = 'C:\temp\radare2.zip'; \
+    Invoke-WebRequest -Uri $r2Url -OutFile $r2Zip -UseBasicParsing; \
+    Expand-Archive -Path $r2Zip -DestinationPath 'C:\tools'; \
+    Remove-Item $r2Zip -Force; \
+    Get-ChildItem -Path 'C:\tools' -Directory -Filter 'radare2-*' | ForEach-Object { Rename-Item -Path $_.FullName -NewName 'radare2' }
+
+ENV GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
+    RADARE2_HOME="C:\\tools\\radare2"
+
+RUN [Environment]::SetEnvironmentVariable('PATH', 'C:\tools\ghidra\support;C:\tools\radare2\bin;' + $env:PATH, 'Machine')
+
+# Stage 3 -- pixi environment. Only invalidates when pixi.lock or pyproject.toml change.
+FROM tools AS pixi-env
+
+ENV PIXI_VERSION="0.37.0"
+
+RUN $ErrorActionPreference = 'Stop'; \
+    New-Item -ItemType Directory -Force -Path 'C:\Users\ContainerAdministrator\.pixi\bin' | Out-Null; \
+    $pixiUrl = 'https://github.com/prefix-dev/pixi/releases/download/v0.37.0/pixi-x86_64-pc-windows-msvc.zip'; \
+    $pixiZip = 'C:\temp\pixi.zip'; \
+    Invoke-WebRequest -Uri $pixiUrl -OutFile $pixiZip -UseBasicParsing; \
+    Expand-Archive -Path $pixiZip -DestinationPath 'C:\Users\ContainerAdministrator\.pixi\bin'; \
+    Remove-Item $pixiZip -Force
+
+ENV PATH="C:\\Users\\ContainerAdministrator\\.pixi\\bin;${PATH}"
+
+WORKDIR C:\\workspace
+
+COPY pyproject.toml pixi.lock ./
+
+RUN pixi install --frozen
+
+# Stage 4 -- final image
+FROM pixi-env AS final
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONUTF8=1 \
+    INTELLICRACK_SANDBOXED=1 \
+    INTELLICRACK_LOCAL_TESTS=1 \
+    QT_QPA_PLATFORM=offscreen \
+    PYTEST_ADDOPTS="--color=yes --tb=short" \
+    CI=1 \
+    GIT_PYTHON_REFRESH=quiet
+
+LABEL intellicrack-sandbox=1 \
+      org.opencontainers.image.title="Intellicrack Test Sandbox" \
+      org.opencontainers.image.description="Windows process-isolated test runner for Intellicrack"
+
+COPY docker/entrypoint.ps1 C:\\workspace\\docker\\entrypoint.ps1
+
+WORKDIR C:\\workspace
+
+ENTRYPOINT ["powershell.exe", "-NoProfile", "-NoLogo", "-ExecutionPolicy", "Bypass", "-File", "C:\\workspace\\docker\\entrypoint.ps1"]
+CMD ["unit"]

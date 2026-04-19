@@ -102,9 +102,6 @@ class X64DbgPanel(AnalysisPanelBase):
     Displays disassembly, registers, breakpoints, memory dumps,
     stack traces, and a command console for controlling x64dbg
     via the X64DbgBridge backend.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

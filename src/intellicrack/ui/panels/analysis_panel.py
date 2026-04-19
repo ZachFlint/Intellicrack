@@ -48,9 +48,6 @@ class BridgeAnalysisPanel(QWidget):
     Shows data from connected bridges in tabbed tables: strings, imports,
     exports, functions, sections, and notes.
 
-    Args:
-        parent: Optional parent widget.
-
     Attributes:
         address_navigate: Signal emitted with an address when a cell with
             an address value is double-clicked.

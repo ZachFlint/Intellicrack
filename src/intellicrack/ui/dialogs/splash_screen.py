@@ -154,9 +154,6 @@ class SplashScreen(QSplashScreen):
     with real-time progress updates, animated visual effects, and a
     multi-phase pipeline loading indicator.
 
-    Args:
-        version: Application version string to display.
-
     Attributes:
         progress_updated: Qt signal emitted on progress change with (value, message).
     """

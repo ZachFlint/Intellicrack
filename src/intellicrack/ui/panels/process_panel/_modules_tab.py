@@ -44,11 +44,7 @@ _TOOLBAR_HEIGHT: Final[int] = 32
 
 
 class ModulesTab(QWidget):
-    """Tab for module inspection, DLL injection, handles, heaps, and COM/.NET.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab for module inspection, DLL injection, handles, heaps, and COM/.NET."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ModulesTab.

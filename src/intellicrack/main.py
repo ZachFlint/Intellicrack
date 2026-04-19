@@ -342,7 +342,7 @@ def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
 
         if _QApp.instance() is None:
             _QApp.setHighDpiScaleFactorRoundingPolicy(_Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-            _QApp.setAttribute(_Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
+            _QApp.setAttribute(_Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
 
         app = _QApp(sys.argv)
         _QApp.setApplicationName("Intellicrack")
@@ -487,6 +487,77 @@ async def _initialize_providers(
     await asyncio.gather(*starmap(_init_one, providers))
 
 
+def _resolve_config_path(cli_options: _CLIOptions, get_config_dir: Callable[[], Path]) -> Path | None:
+    """Resolve the config file path from CLI options or the default directory.
+
+    Args:
+        cli_options: Parsed CLI options.
+        get_config_dir: Callable returning the configured data directory.
+
+    Returns:
+        Path | None: Resolved path; ``None`` if the user supplied an explicit path that does not exist.
+    """
+    config_path = cli_options.config_path if cli_options.config_path is not None else get_config_dir() / "config.toml"
+    if cli_options.config_path is not None and not config_path.exists():
+        sys.stderr.write(f"Error: --config path does not exist: {config_path}\n")
+        return None
+    return config_path
+
+
+def _finalize_shutdown(loop: asyncio.AbstractEventLoop, process_manager: ProcessManager, logger: BoundLogger) -> None:
+    """Run final async process cleanup and teardown the bridge loop.
+
+    Args:
+        loop: Event loop the application ran on.
+        process_manager: ProcessManager instance providing ``cleanup_all_async``.
+        logger: Structured logger for shutdown events.
+    """
+    try:
+        loop.run_until_complete(
+            asyncio.wait_for(
+                process_manager.cleanup_all_async(),
+                timeout=_SHUTDOWN_PROCESS_TIMEOUT,
+            ),
+        )
+    except TimeoutError:
+        logger.warning("final_process_cleanup_timeout")
+    except (OSError, RuntimeError):
+        logger.debug("final_process_cleanup_failed", exc_info=True)
+    process_manager.uninstall_handlers()
+    loop.close()
+
+
+def _load_startup_config(cli_options: _CLIOptions) -> tuple[Config, BoundLogger, ProcessManager] | None:
+    """Load configuration, start logging, and spin up the process manager.
+
+    Args:
+        cli_options: Parsed CLI options that may override config values.
+
+    Returns:
+        tuple[Config, BoundLogger, ProcessManager] | None: ``(config, logger, process_manager)``
+            on success; ``None`` when the caller should exit with status 1 (e.g. bad ``--config``).
+    """
+    config_cls, get_config_dir = _import_config_module()
+    get_logger, setup_logging = _import_logging_funcs()
+    pm_cls = _import_process_manager()
+
+    config_path = _resolve_config_path(cli_options, get_config_dir)
+    if config_path is None:
+        return None
+    config = config_cls.load(config_path) if config_path.exists() else config_cls.default()
+    _apply_cli_overrides(config, cli_options)
+    config.ensure_directories()
+
+    setup_logging(config.log)
+    logger = get_logger("main")
+    logger.info("app_starting", version=_APP_VERSION, log_level=config.log.level)
+
+    process_manager = pm_cls.get_instance()
+    process_manager.install_handlers()
+    logger.debug("process_manager_initialized", handlers_installed=True)
+    return config, logger, process_manager
+
+
 def main() -> int:
     """Run the Intellicrack application.
 
@@ -501,26 +572,10 @@ def main() -> int:
         return 1
     app, early_splash = early_result
 
-    config_cls, get_config_dir = _import_config_module()
-    get_logger, setup_logging = _import_logging_funcs()
-    pm_cls = _import_process_manager()
-
-    config_path = cli_options.config_path if cli_options.config_path is not None else get_config_dir() / "config.toml"
-    if cli_options.config_path is not None and not config_path.exists():
-        sys.stderr.write(f"Error: --config path does not exist: {config_path}\n")
+    startup = _load_startup_config(cli_options)
+    if startup is None:
         return 1
-    config = config_cls.load(config_path) if config_path.exists() else config_cls.default()
-
-    _apply_cli_overrides(config, cli_options)
-    config.ensure_directories()
-
-    setup_logging(config.log)
-    logger = get_logger("main")
-    logger.info("app_starting", version=_APP_VERSION, log_level=config.log.level)
-
-    process_manager = pm_cls.get_instance()
-    process_manager.install_handlers()
-    logger.debug("process_manager_initialized", handlers_installed=True)
+    config, logger, process_manager = startup
 
     splash = _upgrade_to_full_splash(app, early_splash, logger)
     if splash is None:
@@ -528,7 +583,6 @@ def main() -> int:
         return 1
 
     logger.info("splash_screen_shown")
-
     splash.set_progress(5, "Loading configuration...")
     app.processEvents()
 
@@ -543,19 +597,7 @@ def main() -> int:
         logger.exception("startup_failed", error=str(exc))
         return 1
     finally:
-        try:
-            loop.run_until_complete(
-                asyncio.wait_for(
-                    process_manager.cleanup_all_async(),
-                    timeout=_SHUTDOWN_PROCESS_TIMEOUT,
-                ),
-            )
-        except TimeoutError:
-            logger.warning("final_process_cleanup_timeout")
-        except (OSError, RuntimeError):
-            logger.debug("final_process_cleanup_failed", exc_info=True)
-        process_manager.uninstall_handlers()
-        loop.close()
+        _finalize_shutdown(loop, process_manager, logger)
 
 
 def _init_script_engine(config: Config, logger: BoundLogger) -> tuple[object, object]:

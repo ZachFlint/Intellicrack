@@ -68,80 +68,29 @@ install-x64dbg-plugin:
 clean:
     @& scripts/clean.ps1 -Pixi "{{ pixi }}" -SrcAndTests "{{ src_and_tests }}"
 
-# Launch interactive Windows Sandbox for Intellicrack testing (READ-ONLY)
+# Run tests in Docker sandbox. Usage: just test [TYPE] [FLAGS...]
+# TYPE: unit (default), all, coverage, integration, e2e, smoke, parallel, failed, verbose, bench, module, module-cov, registry, custom
+# FLAGS: --module NAME, --extra-args "...", --rebuild, --rw, --network NAME, --memory X, --cpus X, --log-level LEVEL
+
+# Examples: just test | just test coverage | just test module --module bridges | just test custom --extra-args "-x tests/test_core"
+[group('test')]
+test *ARGS='unit':
+    @{{ pixi }} python -m scripts.sandbox.docker_sandbox {{ ARGS }}
+
+# Open an interactive shell inside the Docker sandbox (add --rw for writable workspace)
 [group('sandbox')]
-sandbox:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType interactive }
+sandbox *ARGS:
+    @{{ pixi }} python -m scripts.sandbox.docker_sandbox --shell {{ ARGS }}
 
-# Launch interactive Windows Sandbox with READ-WRITE access (changes persist to host)
+# Build or refresh the Intellicrack Docker sandbox image
 [group('sandbox')]
-sandbox-rw:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType interactive-rw }
+build-testing-sandbox *ARGS:
+    @{{ pixi }} python -m scripts.sandbox.docker_sandbox --rebuild --build-only {{ ARGS }}
 
-# Launch sandbox and run hardware spoofer registry tests
+# Remove cached Intellicrack Docker sandbox images
 [group('sandbox')]
-sandbox-test-registry:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType registry }
-
-# Quick unit tests - runs in Windows Sandbox for isolation
-[group('test')]
-test:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType unit }
-
-# Full test suite - runs in Windows Sandbox for isolation
-[group('test')]
-test-all:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType all }
-
-# Coverage report - runs in Windows Sandbox with 95%+ coverage requirement
-[group('test')]
-test-coverage:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType coverage }
-
-# Runs tests for a specific module in Windows Sandbox
-[group('test')]
-test-module module:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType module -Module "{{ module }}" }
-
-# Benchmarks - runs in Windows Sandbox
-[group('test')]
-test-bench:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType bench }
-
-# Integration tests - runs in Windows Sandbox
-[group('test')]
-test-integration:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType integration }
-
-# End-to-end tests - runs in Windows Sandbox
-[group('test')]
-test-e2e:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType e2e }
-
-# Quick smoke test - runs in Windows Sandbox
-[group('test')]
-test-smoke:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType smoke }
-
-# Module tests with coverage - runs in Windows Sandbox
-[group('test')]
-test-module-cov module:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType module-cov -Module "{{ module }}" }
-
-# Parallel tests - runs in Windows Sandbox
-[group('test')]
-test-parallel:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType parallel }
-
-# Retest failed tests - runs in Windows Sandbox
-[group('test')]
-test-failed:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType failed }
-
-# Verbose tests - runs in Windows Sandbox
-[group('test')]
-test-verbose:
-    @gsudo { & "D:\Sandbox\shared\launch_sandbox_test.ps1" -TestType verbose }
+clean-testing-sandbox:
+    @docker image prune -af --filter "label=intellicrack-sandbox=1"
 
 # Verify no mocks or fake data
 [group('test')]
@@ -427,40 +376,13 @@ git-rebase *FLAGS:
 git-commit-hooks message:
     @& scripts/git-commit-hooks.ps1 -Message '{{ message }}'
 
-# Generate Sphinx documentation
-[group('docs')]
-docs-build *FLAGS:
-    @& scripts/docs-build.ps1 -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
+# Documentation dispatcher. Usage: just docs [ACTION] [FLAGS...]
+# ACTION: build (default), clean, apidoc, linkcheck, pdf, open, rebuild
 
-# Clean documentation build
+# Examples: just docs | just docs clean | just docs apidoc | just docs rebuild | just docs build -v
 [group('docs')]
-docs-clean:
-    @$ErrorActionPreference = 'Stop'; $e = [char]27; function Write-Step { param($msg) Write-Host "$e[36m[DOCS]$e[0m $msg" }; function Write-Success { param($msg) Write-Host "  $e[32m[OK]$e[0m $msg" }; Write-Step "Cleaning documentation build..."; if (Test-Path "docs\build") { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue docs\build\*; Write-Success "Documentation build cleaned" } else { Write-Success "Nothing to clean" }
-
-# Regenerate API documentation from code
-[group('docs')]
-docs-apidoc *FLAGS:
-    @$ErrorActionPreference = 'Stop'; $e = [char]27; function Write-Step { param($msg) Write-Host "$e[36m[DOCS]$e[0m $msg" }; function Write-Success { param($msg) Write-Host "  $e[32m[OK]$e[0m $msg" }; function Write-Fail { param($msg) Write-Host "  $e[31m[FAIL]$e[0m $msg" }; Write-Step "Generating API documentation..."; try { {{ pixi }} sphinx-apidoc {{ FLAGS }} -f -o docs/source {{ src }} 2>&1 | ForEach-Object { Write-Host "  $_" }; if ($LASTEXITCODE -ne 0) { throw "sphinx-apidoc failed" }; Write-Success "API documentation generated" } catch { Write-Fail "Generation failed: $_"; exit 1 }
-
-# Full documentation rebuild
-[group('docs')]
-docs-rebuild: docs-clean docs-apidoc docs-build
-    @$e = [char]27; Write-Host "`n$e[1;32m=== Documentation Rebuild Complete ===$e[0m"; Write-Host "View at: docs/build/html/index.html`n"
-
-# Open documentation in browser (Windows)
-[group('docs')]
-docs-open:
-    @$ErrorActionPreference = 'Stop'; $e = [char]27; function Write-Step { param($msg) Write-Host "$e[36m[DOCS]$e[0m $msg" }; function Write-Success { param($msg) Write-Host "  $e[32m[OK]$e[0m $msg" }; function Write-Fail { param($msg) Write-Host "  $e[31m[FAIL]$e[0m $msg" }; $docPath = "docs\build\html\index.html"; if (-not (Test-Path $docPath)) { Write-Fail "Documentation not found. Run 'just docs-build' first."; exit 1 }; Write-Step "Opening documentation in browser..."; Start-Process $docPath; Write-Success "Opened in browser"
-
-# Build PDF documentation
-[group('docs')]
-docs-pdf *FLAGS:
-    @& scripts/docs-pdf.ps1 -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
-
-# Check documentation links
-[group('docs')]
-docs-linkcheck *FLAGS:
-    @& scripts/docs-linkcheck.ps1 -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
+docs ACTION='build' *FLAGS:
+    @& scripts/docs.ps1 -Action "{{ ACTION }}" -Pixi "{{ pixi }}" -Src "{{ src }}" -Flags "{{ FLAGS }}"
 
 [doc('Generate interactive knowledge graph visualization of codebase')]
 [group('docs')]
@@ -494,48 +416,48 @@ install-rust-tools:
 
 [doc('Run Clippy linter on Rust hexcore crate')]
 [group('lint')]
-clippy:
-    @& scripts/run-lint-tool.ps1 -ToolName clippy -DisplayName Clippy -Command "{{ pixi }} cargo clippy --all-targets -- -W clippy::all -W clippy::pedantic" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+clippy *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName clippy -DisplayName Clippy -Command "{{ pixi }} cargo clippy {{ FLAGS }} --all-targets -- -W clippy::all -W clippy::pedantic" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Check Rust formatting with rustfmt')]
 [group('lint')]
-rustfmt:
-    @& scripts/run-lint-tool.ps1 -ToolName rustfmt -DisplayName RustFmt -Command "{{ pixi }} cargo fmt -- --check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+rustfmt *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName rustfmt -DisplayName RustFmt -Command "{{ pixi }} cargo fmt {{ FLAGS }} -- --check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run cargo-deny license and advisory checks on Rust hexcore crate')]
 [group('lint')]
-cargo-deny:
-    @& scripts/run-lint-tool.ps1 -ToolName cargo-deny -DisplayName CargoDeny -Command "{{ pixi }} cargo deny check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+cargo-deny *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName cargo-deny -DisplayName CargoDeny -Command "{{ pixi }} cargo deny {{ FLAGS }} check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run Rust tests with cargo-nextest')]
 [group('lint')]
-nextest:
-    @& scripts/run-lint-tool.ps1 -ToolName nextest -DisplayName Nextest -Command "{{ pixi }} cargo nextest run --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+nextest *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName nextest -DisplayName Nextest -Command "{{ pixi }} cargo nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run code coverage with cargo-llvm-cov on Rust hexcore crate')]
 [group('lint')]
-llvm-cov:
-    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+llvm-cov *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Detect unused Rust dependencies with cargo-machete')]
 [group('lint')]
-machete:
-    @& scripts/run-lint-tool.ps1 -ToolName machete -DisplayName Machete -Command "{{ pixi }} cargo machete" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+machete *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName machete -DisplayName Machete -Command "{{ pixi }} cargo machete {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run mutation testing with cargo-mutants on Rust hexcore crate (standalone, slow)')]
 [group('lint')]
-mutants:
-    @& scripts/run-lint-tool.ps1 -ToolName mutants -DisplayName Mutants -Command "{{ pixi }} cargo mutants --no-shuffle --timeout 60" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+mutants *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName mutants -DisplayName Mutants -Command "{{ pixi }} cargo mutants {{ FLAGS }} --no-shuffle --timeout 60" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run rust-code-analysis complexity metrics on Rust hexcore crate')]
 [group('lint')]
-rust-code-analysis:
-    @& scripts/run-lint-tool.ps1 -ToolName rust-code-analysis -DisplayName RustAnalysis -Command "{{ pixi }} rust-code-analysis-cli -m -p src/" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+rust-code-analysis *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName rust-code-analysis -DisplayName RustAnalysis -Command "{{ pixi }} rust-code-analysis-cli {{ FLAGS }} -m -p src/" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Run typos spell checker on Rust hexcore crate')]
 [group('lint')]
-typos:
-    @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos ." -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+typos *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 [doc('Generate unified HTML lint dashboard from all tool findings')]
 [group('reports')]

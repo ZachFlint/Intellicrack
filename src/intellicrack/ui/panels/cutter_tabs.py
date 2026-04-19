@@ -12,7 +12,7 @@ asynchronously queries the bridge and populates the view.
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -30,7 +30,15 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import SectionInfo, SegmentInfo
 from intellicrack.ui.resources.font_manager import FontManager
+
+
+_HEXDUMP_AUTO_BYTES: Final[int] = 256
+_ESIL_WELCOME: Final[str] = (
+    "[ESIL] console ready. Commands: 'Eval' runs 'ae <expr>', 'Step' runs 'aes', 'Init Mem' runs 'aeim'.\n"
+    "[ESIL] Emulation memory will be initialised automatically."
+)
 
 
 if TYPE_CHECKING:
@@ -96,11 +104,7 @@ def _make_table(columns: list[str]) -> QTableWidget:
 
 
 class AllStringsTab(QWidget):
-    """Tab showing all strings from the binary including non-data sections.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing all strings from the binary including non-data sections."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the AllStringsTab with a table for string display.
@@ -141,11 +145,7 @@ class AllStringsTab(QWidget):
 
 
 class SymbolsTab(QWidget):
-    """Tab showing all symbols from the binary.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing all symbols from the binary."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the SymbolsTab with a table for symbol display.
@@ -185,11 +185,7 @@ class SymbolsTab(QWidget):
 
 
 class LibrariesTab(QWidget):
-    """Tab showing linked libraries from the binary.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing linked libraries from the binary."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the LibrariesTab with a table for library display.
@@ -227,11 +223,7 @@ class LibrariesTab(QWidget):
 
 
 class HeadersTab(QWidget):
-    """Tab showing binary header field information.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing binary header field information."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the HeadersTab with a table for header field display.
@@ -271,11 +263,7 @@ class HeadersTab(QWidget):
 
 
 class RelocationsTab(QWidget):
-    """Tab showing relocation table entries.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing relocation table entries."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the RelocationsTab with a table for relocation display.
@@ -316,11 +304,7 @@ class RelocationsTab(QWidget):
 
 
 class ResourcesTab(QWidget):
-    """Tab showing embedded resource information.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing embedded resource information."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ResourcesTab with a table for resource display.
@@ -362,11 +346,7 @@ class ResourcesTab(QWidget):
 
 
 class CommentsTab(QWidget):
-    """Tab showing all comment annotations.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing all comment annotations."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the CommentsTab with a table for comment display.
@@ -406,11 +386,7 @@ class CommentsTab(QWidget):
 
 
 class FlagsTab(QWidget):
-    """Tab showing all flags/labels.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing all flags/labels."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the FlagsTab with a table for flag display.
@@ -450,11 +426,7 @@ class FlagsTab(QWidget):
 
 
 class ROPGadgetsTab(QWidget):
-    """Tab showing ROP gadget search results with pattern input.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing ROP gadget search results with pattern input."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ROPGadgetsTab with search input and results table.
@@ -524,11 +496,7 @@ class ROPGadgetsTab(QWidget):
 
 
 class HexdumpTab(QWidget):
-    """Tab showing hexdump output with address and length inputs.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing hexdump output with address and length inputs."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the HexdumpTab with address and length inputs and output display.
@@ -571,7 +539,12 @@ class HexdumpTab(QWidget):
         self._addr_input.returnPressed.connect(self._on_dump)
 
     def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
-        """Store bridge reference for manual dump requests.
+        """Store bridge reference and trigger an automatic dump of the entry region.
+
+        Retrieves the binary's section layout and dumps ``_HEXDUMP_AUTO_BYTES`` bytes
+        starting at the first executable section's virtual address, falling back to
+        the first section when none is executable. Manual dumps via the toolbar
+        remain available; the auto-dump only runs when the address input is empty.
 
         Args:
             bridge: CutterBridge instance.
@@ -579,6 +552,34 @@ class HexdumpTab(QWidget):
         """
         self._bridge = bridge
         self._run_async_fn = run_async
+        if not self._addr_input.text().strip():
+            run_async(
+                bridge.get_sections(),
+                self._apply_auto_sections,
+                _log_tab_error(type(self).__name__, "get_sections"),
+            )
+
+    def _apply_auto_sections(self, result: object) -> None:
+        """Select an auto-dump origin from the section list and trigger the dump.
+
+        Args:
+            result: ``list[SectionInfo]`` returned by ``get_sections``.
+        """
+        if self._bridge is None or self._run_async_fn is None or not isinstance(result, list):
+            return
+        entries: list[SectionInfo] = [entry for entry in cast("list[object]", result) if isinstance(entry, SectionInfo)]
+        if not entries:
+            return
+        chosen = next((sec for sec in entries if sec.is_executable), entries[0])
+        if chosen.virtual_address <= 0:
+            return
+        self._addr_input.setText(f"0x{chosen.virtual_address:X}")
+        self._len_input.setText(str(_HEXDUMP_AUTO_BYTES))
+        self._run_async_fn(
+            self._bridge.hexdump(chosen.virtual_address, _HEXDUMP_AUTO_BYTES),
+            self._apply_data,
+            lambda e: self._output.setPlainText(f"[error] {e}"),
+        )
 
     def _on_dump(self) -> None:
         """Trigger hexdump with current address and length inputs."""
@@ -609,11 +610,7 @@ class HexdumpTab(QWidget):
 
 
 class ESILConsoleTab(QWidget):
-    """Tab providing an interactive ESIL expression evaluator.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab providing an interactive ESIL expression evaluator."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ESILConsoleTab with expression input and output display.
@@ -652,13 +649,14 @@ class ESILConsoleTab(QWidget):
 
         self._bridge: CutterBridge | None = None
         self._run_async_fn: RunAsyncFn | None = None
+        self._esil_initialised: bool = False
         self._eval_btn.clicked.connect(self._on_eval)
         self._expr_input.returnPressed.connect(self._on_eval)
         self._step_btn.clicked.connect(self._on_step)
         self._init_btn.clicked.connect(self._on_init_mem)
 
     def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
-        """Store bridge reference for ESIL operations.
+        """Store bridge reference, emit a welcome banner and auto-initialise ESIL memory.
 
         Args:
             bridge: CutterBridge instance.
@@ -666,6 +664,32 @@ class ESILConsoleTab(QWidget):
         """
         self._bridge = bridge
         self._run_async_fn = run_async
+        if not self._esil_initialised:
+            self._output.appendPlainText(_ESIL_WELCOME)
+            self._output.appendPlainText("> aeim")
+            run_async(
+                bridge.esil_init_memory(),
+                self._on_auto_init_success,
+                self._on_auto_init_error,
+            )
+
+    def _on_auto_init_success(self, _result: object) -> None:
+        """Handle success of the automatic ``aeim`` initialisation.
+
+        Args:
+            _result: Unused result payload from the bridge call.
+        """
+        self._esil_initialised = True
+        self._output.appendPlainText("[ok] ESIL memory initialised")
+
+    def _on_auto_init_error(self, error: object) -> None:
+        """Handle failure of the automatic ``aeim`` initialisation.
+
+        Args:
+            error: Exception reported by the bridge runner.
+        """
+        _logger.warning("esil_auto_init_failed", error=str(error))
+        self._output.appendPlainText(f"[error] aeim failed: {error}")
 
     def _on_eval(self) -> None:
         """Evaluate the current ESIL expression."""
@@ -715,11 +739,7 @@ class ESILConsoleTab(QWidget):
 
 
 class TypeBrowserTab(QWidget):
-    """Tab providing a tree view of types, structs, and enums.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab providing a tree view of types, structs, and enums."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the TypeBrowserTab with a tree widget for type browsing.
@@ -831,11 +851,7 @@ class TypeBrowserTab(QWidget):
 
 
 class SegmentsTab(QWidget):
-    """Tab showing binary segment information.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Tab showing binary segment information."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the SegmentsTab with a table for segment display.
@@ -862,15 +878,16 @@ class SegmentsTab(QWidget):
         """Populate the table with segment results.
 
         Args:
-            result: List of SegmentInfo from the bridge.
+            result: List of :class:`SegmentInfo` dataclass instances from the bridge.
         """
-        items: list[object] = [*result] if isinstance(result, list) else []
-        self._table.setRowCount(0)
-        for seg in items:
-            row = self._table.rowCount()
-            self._table.insertRow(row)
-            self._table.setItem(row, 0, QTableWidgetItem(getattr(seg, "name", "")))
-            self._table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(seg, 'address', 0):X}"))
-            self._table.setItem(row, 2, QTableWidgetItem(str(getattr(seg, "size", 0))))
-            self._table.setItem(row, 3, QTableWidgetItem(getattr(seg, "permissions", "")))
-            self._table.setItem(row, 4, QTableWidgetItem(getattr(seg, "type", "")))
+        segments: list[SegmentInfo] = []
+        if isinstance(result, list):
+            entries: list[object] = cast("list[object]", result)
+            segments.extend(entry for entry in entries if isinstance(entry, SegmentInfo))
+        self._table.setRowCount(len(segments))
+        for row, seg in enumerate(segments):
+            self._table.setItem(row, 0, QTableWidgetItem(seg.name))
+            self._table.setItem(row, 1, QTableWidgetItem(f"0x{seg.address:X}"))
+            self._table.setItem(row, 2, QTableWidgetItem(str(seg.size)))
+            self._table.setItem(row, 3, QTableWidgetItem(seg.permissions))
+            self._table.setItem(row, 4, QTableWidgetItem(seg.type))

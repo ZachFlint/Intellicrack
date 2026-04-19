@@ -112,9 +112,6 @@ class CutterPanel(AnalysisPanelBase):
     strings, imports, exports, sections, cross-references, and a raw
     r2 command console -- all driven by the CutterBridge headless
     backend via r2pipe.
-
-    Args:
-        parent: Parent widget.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

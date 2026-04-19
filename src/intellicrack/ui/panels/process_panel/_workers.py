@@ -30,9 +30,6 @@ class TrackedRefreshWorker(QThread):
     Queries ProcessManager for all tracked processes and their running state
     in a separate thread, then emits the serialized results back to the main thread.
 
-    Args:
-        parent: Parent QObject.
-
     Attributes:
         refresh_finished: Signal emitted with tracked process data when collection completes.
     """

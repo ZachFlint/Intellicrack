@@ -79,15 +79,6 @@ class SandboxWorker(QThread):
     Runs sandbox save or test operations in a background thread to
     avoid blocking the Qt main thread during subprocess execution.
 
-    Args:
-        operation: Either ``"save"`` or ``"test"``.
-        file_path: Path to the binary file.
-        sandbox_type: Sandbox backend (``"docker"``, ``"qemu"``, ``"windows_sandbox"``).
-        dest_path: Destination path inside the sandbox.
-        command_args: Command-line arguments for test execution.
-        timeout: Maximum wait time in seconds.
-        parent: Parent QObject.
-
     Attributes:
         finished_signal: Emitted with result dict on success.
         error_signal: Emitted with error message on failure.

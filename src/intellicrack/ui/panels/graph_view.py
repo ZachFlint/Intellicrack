@@ -124,13 +124,7 @@ _RET_MNEMONICS = frozenset({"ret", "retn", "retf", "iret", "iretd", "iretq"})
 
 
 class BasicBlockItem(QGraphicsRectItem):
-    """Renders a single basic block as a styled rectangle with assembly text.
-
-    Args:
-        block_address: Start address of the block.
-        ops: List of instruction dicts from r2 agj (offset, disasm, ...).
-        parent: Parent graphics item.
-    """
+    """Renders a single basic block as a styled rectangle with assembly text."""
 
     def __init__(
         self,
@@ -229,14 +223,7 @@ class BasicBlockItem(QGraphicsRectItem):
 
 
 class EdgeItem(QGraphicsPathItem):
-    """Bezier curve edge between basic blocks with directional arrow.
-
-    Args:
-        start: Source point (bottom center of source block).
-        end: Destination point (top center of target block).
-        edge_type: Branch type for coloring.
-        parent: Parent graphics item.
-    """
+    """Bezier curve edge between basic blocks with directional arrow."""
 
     def __init__(
         self,
@@ -311,11 +298,7 @@ class EdgeItem(QGraphicsPathItem):
 
 
 class CFGGraphScene(QGraphicsScene):
-    """Scene that parses r2 agj output and lays out basic blocks hierarchically.
-
-    Args:
-        parent: Parent widget.
-    """
+    """Scene that parses r2 agj output and lays out basic blocks hierarchically."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the CFGGraphScene instance.
@@ -505,9 +488,6 @@ class CFGGraphView(QGraphicsView):
 
     Emits ``block_clicked`` with the block address when a
     BasicBlockItem is clicked.
-
-    Args:
-        parent: Parent widget.
 
     Attributes:
         block_clicked: Signal emitted with block address when a basic block is clicked.

@@ -393,10 +393,6 @@ class CodeDisplay(QPlainTextEdit):
 
     Provides a read-only text area for displaying code with
     appropriate syntax highlighting based on language.
-
-    Args:
-        language: Programming language for highlighting.
-        parent: Parent widget.
     """
 
     def __init__(
@@ -480,11 +476,6 @@ class ToolTab(QFrame):
 
     Contains a code display area and optional metadata panel
     for showing tool-specific output.
-
-    Args:
-        name: Tab name.
-        language: Default syntax highlighting language.
-        parent: Parent widget.
     """
 
     def __init__(
@@ -591,9 +582,6 @@ class FunctionListPanel(QFrame):
 
     Allows navigation to specific functions by clicking.
 
-    Args:
-        parent: Parent widget.
-
     Attributes:
         function_selected: Qt signal for function selected.
     """
@@ -682,9 +670,6 @@ class XRefPanel(QFrame):
     """Panel showing cross-references to/from an address.
 
     Displays incoming and outgoing references for navigation.
-
-    Args:
-        parent: Parent widget.
 
     Attributes:
         xref_selected: Qt signal for xref selected.
@@ -778,9 +763,6 @@ class ToolOutputPanel(QFrame):
     Contains tabbed interface for different tool outputs including
     decompiled code, disassembly, strings, cross-references, embedded
     external tools, and specialized analysis panels.
-
-    Args:
-        parent: Parent widget.
 
     Attributes:
         address_clicked: Signal emitted when an address is clicked.
@@ -2054,6 +2036,9 @@ class ToolOutputPanel(QFrame):
                     bridge_set_reg = getattr(bridge, "set_tool_registry", None)
                     if callable(bridge_set_reg):
                         bridge_set_reg(self._tool_registry)
+                    panel_set_bridge = getattr(panel_widget, "set_bridge", None)
+                    if callable(panel_set_bridge):
+                        panel_set_bridge(bridge)
                     _logger.info("hex_editor_state_wired", source="registry")
                 except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
