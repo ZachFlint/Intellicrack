@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut, QStandardItemModel
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -41,7 +41,6 @@ from PyQt6.QtWidgets import (
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor._base import (
     CURSOR_CONTEXT_BYTES,
-    ENCODING_ENTRIES,
     HASH_ALGORITHMS,
     PREVIEW_BYTES,
     HexDocumentEvent_cls,
@@ -119,9 +118,6 @@ class HexEditorPanel(
     Combines the custom HexEditorWidget with data inspector,
     bookmarks, sections, imports, exports, strings, statistics,
     and template panels in a split layout.
-
-    Args:
-        parent: Parent widget.
 
     Attributes:
         context_push_requested: Signal emitted with context dict when hex data is pushed to AI chat.
@@ -273,16 +269,7 @@ class HexEditorPanel(
 
         self._encoding_combo = QComboBox()
         self._encoding_combo.setFixedWidth(_ENCODING_COMBO_WIDTH)
-        for enc_entry in ENCODING_ENTRIES:
-            self._encoding_combo.addItem(enc_entry)
-            if enc_entry.startswith("---"):
-                idx = self._encoding_combo.count() - 1
-                model = self._encoding_combo.model()
-                if isinstance(model, QStandardItemModel):
-                    item = model.item(idx)
-                    if item is not None:
-                        item.setEnabled(False)
-        self._encoding_combo.currentIndexChanged.connect(self._on_encoding_index_changed)
+        self._populate_toolbar_encoding_combo(self._encoding_combo)
         toolbar.addWidget(self._encoding_combo)
 
         self._add_secondary_button(toolbar, "Send to AI", self._on_send_to_ai)
@@ -870,33 +857,49 @@ class HexEditorPanel(
         if start >= 0:
             self._update_data_inspector(start)
 
-    def _on_encoding_changed(self, text: str) -> None:
+    @staticmethod
+    def _populate_toolbar_encoding_combo(combo: QComboBox) -> None:
+        """Populate the toolbar encoding combo from the hexcore registry.
+
+        Each entry uses the human-readable description as the display
+        label and stores the hexcore codec name as the item's user data
+        so the ASCII-column renderer receives a codec name that both the
+        Rust backend and Python ``bytes.decode`` accept.
+
+        Args:
+            combo: The combo box to populate.
+        """
+        combo.clear()
+        encodings: list[tuple[str, str]] = []
+        if hexcore_available and hexcore is not None:
+            try:
+                encodings = list(hexcore.HexDocument.list_encodings())
+            except (AttributeError, TypeError, ValueError) as exc:
+                logger.debug("toolbar_list_encodings_failed", error=str(exc))
+                encodings = []
+        if not encodings:
+            encodings = [("utf-8", "UTF-8"), ("ascii", "ASCII (7-bit)")]
+        for name, description in encodings:
+            combo.addItem(description, userData=name)
+
+    def _on_encoding_changed(self, _text: str) -> None:
         """Handle encoding combo box selection changes.
 
-        Skips separator entries and forwards the encoding name to the
-        hex widget for ASCII column rendering.
+        Reads the hexcore codec name from the selected item's user data
+        and forwards it unmodified to the hex widget so the ASCII column
+        uses a codec name supported by the backend.
 
         Args:
-            text: The selected combo box text.
+            _text: The selected combo box display text (unused; the codec
+                name is read from the item's user data).
         """
-        if text.startswith("---"):
+        if self._encoding_combo is None or self._hex_widget is None:
             return
-        if self._hex_widget is not None:
-            self._hex_widget.set_encoding(text.lower().replace("-", ""))
-
-    def _on_encoding_index_changed(self, idx: int) -> None:
-        """Skip separator entries when navigating the encoding combo via keyboard.
-
-        Args:
-            idx: The newly selected combo box index.
-        """
-        if self._encoding_combo is None:
-            return
-        text = self._encoding_combo.itemText(idx)
-        if text.startswith("---"):
-            count = self._encoding_combo.count()
-            next_idx = idx + 1 if idx + 1 < count else idx - 1
-            self._encoding_combo.setCurrentIndex(next_idx)
+        data = self._encoding_combo.currentData()
+        encoding = data if isinstance(data, str) and data else "utf-8"
+        set_encoding_fn = getattr(self._hex_widget, "set_encoding", None)
+        if callable(set_encoding_fn):
+            set_encoding_fn(encoding)
 
     def has_unsaved_changes(self) -> bool:
         """Check whether the current document has unsaved modifications.

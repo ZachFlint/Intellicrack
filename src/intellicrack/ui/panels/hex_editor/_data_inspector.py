@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from intellicrack.ui.panels.hex_editor._base import ENCODING_ENTRIES, logger
+from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available, logger
 
 
 if TYPE_CHECKING:
@@ -142,6 +142,10 @@ class DataInspectorMixin:
     def _update_bit_buttons(self, offset: int) -> None:
         """Refresh bit button states from the byte at the given offset.
 
+        Uses ``document.get_bit`` for each bit so the GUI reflects the
+        authoritative state from the hexcore backend without performing
+        its own read-modify arithmetic.
+
         Args:
             offset: Byte offset to read.
         """
@@ -149,30 +153,24 @@ class DataInspectorMixin:
             return
 
         self._bit_editor_offset = offset
-        try:
-            raw = self.document.read(offset, 1)
-            if isinstance(raw, bytes) and len(raw) > 0:
-                byte_val: int = raw[0]
-            elif isinstance(raw, list):
-                int_list = cast("list[int]", raw)
-                if not int_list:
-                    return
-                byte_val = int(int_list[0])
-            elif isinstance(raw, bytearray) and len(raw) > 0:
-                byte_val = raw[0]
-            else:
-                return
-        except (AttributeError, ValueError):
-            return
-
         for i, btn in enumerate(self._bit_buttons):
             bit_idx = 7 - i
-            is_set = bool(byte_val & (1 << bit_idx))
+            try:
+                is_set = bool(self.document.get_bit(offset, bit_idx))
+            except (AttributeError, ValueError, OverflowError) as exc:
+                logger.debug("bit_read_failed", offset=offset, bit=bit_idx, error=str(exc))
+                return
             btn.setChecked(is_set)
             btn.setText("1" if is_set else "0")
 
     def _on_bit_toggled(self, bit_index: int, *, checked: bool) -> None:
         """Handle a bit toggle button click.
+
+        Delegates the single-bit write to ``document.set_bit`` so the
+        hexcore backend performs the read-modify-write atomically and
+        records it in the undo history. The button is re-synced from
+        ``document.get_bit`` after the write to avoid drift if the
+        backend clamps or rejects the value.
 
         Args:
             bit_index: Bit position (0=LSB, 7=MSB).
@@ -183,37 +181,66 @@ class DataInspectorMixin:
 
         offset = self._bit_editor_offset if hasattr(self, "_bit_editor_offset") else 0
         try:
-            raw = self.document.read(offset, 1)
-            if isinstance(raw, bytes) and len(raw) > 0:
-                byte_val: int = raw[0]
-            elif isinstance(raw, list):
-                int_list = cast("list[int]", raw)
-                if not int_list:
-                    return
-                byte_val = int(int_list[0])
-            elif isinstance(raw, bytearray) and len(raw) > 0:
-                byte_val = raw[0]
-            else:
-                return
-        except (AttributeError, ValueError):
-            return
-
-        byte_val = byte_val | (1 << bit_index) if checked else byte_val & (~(1 << bit_index) & 0xFF)
-
-        try:
-            new_bytes = byte_val.to_bytes(1, "little")
-            self.document.write_bytes(offset, new_bytes)
-        except (AttributeError, ValueError):
+            self.document.set_bit(offset, bit_index, checked)
+        except (AttributeError, ValueError, OverflowError) as exc:
+            logger.debug("bit_write_failed", offset=offset, bit=bit_index, error=str(exc))
             return
 
         btn_idx = 7 - bit_index
         if 0 <= btn_idx < len(self._bit_buttons):
-            self._bit_buttons[btn_idx].setText("1" if checked else "0")
+            try:
+                is_set = bool(self.document.get_bit(offset, bit_index))
+            except (AttributeError, ValueError, OverflowError):
+                is_set = checked
+            self._bit_buttons[btn_idx].setChecked(is_set)
+            self._bit_buttons[btn_idx].setText("1" if is_set else "0")
 
         if self._hex_widget is not None:
             update_fn = getattr(self._hex_widget, "_update_viewport", None)
             if callable(update_fn):
                 update_fn()
+
+    @staticmethod
+    def _populate_encoding_combo(combo: QComboBox) -> None:
+        """Populate an encoding combo from the hexcore encoding registry.
+
+        Each entry uses the human-readable description as the display
+        label and stores the hexcore codec name as the item's user data,
+        so the decode/encode handlers can pass the untransformed codec
+        name to the backend.
+
+        Args:
+            combo: The combo box to populate.
+        """
+        combo.clear()
+        encodings: list[tuple[str, str]] = []
+        if hexcore_available and hexcore is not None:
+            try:
+                encodings = list(hexcore.HexDocument.list_encodings())
+            except (AttributeError, TypeError, ValueError) as exc:
+                logger.debug("list_encodings_failed", error=str(exc))
+                encodings = []
+        if not encodings:
+            encodings = [("utf-8", "UTF-8"), ("ascii", "ASCII (7-bit)")]
+        for name, description in encodings:
+            combo.addItem(description, userData=name)
+
+    @staticmethod
+    def _selected_encoding(combo: QComboBox | None) -> str:
+        """Return the hexcore codec name for the combo's current selection.
+
+        Args:
+            combo: The encoding combo box, or ``None`` if not initialized.
+
+        Returns:
+            str: The hexcore codec name, defaulting to ``"utf-8"``.
+        """
+        if combo is None:
+            return "utf-8"
+        data = combo.currentData()
+        if isinstance(data, str) and data:
+            return data
+        return "utf-8"
 
     def _create_text_decode_group(self) -> QGroupBox:
         """Create the text decode/encode group box.
@@ -227,9 +254,7 @@ class DataInspectorMixin:
 
         decode_row = QHBoxLayout()
         self._decode_combo = QComboBox()
-        for entry in ENCODING_ENTRIES:
-            if not entry.startswith("---"):
-                self._decode_combo.addItem(entry)
+        self._populate_encoding_combo(self._decode_combo)
         decode_row.addWidget(self._decode_combo)
         self._decode_length_spin = QSpinBox()
         self._decode_length_spin.setRange(1, _DECODE_MAX_LEN)
@@ -251,9 +276,7 @@ class DataInspectorMixin:
         self._encode_input.setToolTip("Text to encode")
         encode_row.addWidget(self._encode_input)
         self._encode_combo = QComboBox()
-        for entry in ENCODING_ENTRIES:
-            if not entry.startswith("---"):
-                self._encode_combo.addItem(entry)
+        self._populate_encoding_combo(self._encode_combo)
         encode_row.addWidget(self._encode_combo)
         encode_btn = QPushButton("Encode")
         encode_btn.clicked.connect(self._on_encode_text)
@@ -267,7 +290,12 @@ class DataInspectorMixin:
         return box
 
     def _on_decode_text(self) -> None:
-        """Decode bytes at the cursor position as text in the selected encoding."""
+        """Decode bytes at the cursor position using the hexcore backend.
+
+        Calls ``document.decode_text`` so the Rust codec registry handles
+        EBCDIC, Shift-JIS, and other encodings that lack a Python stdlib
+        codec. The hexcore name is read from the combo's user data.
+        """
         if self.document is None or self._decode_output is None:
             return
 
@@ -275,26 +303,34 @@ class DataInspectorMixin:
         if self._hex_widget is not None:
             cursor_offset = int(getattr(self._hex_widget, "_cursor_offset", 0))
 
-        encoding = self._decode_combo.currentText().lower().replace("-", "") if self._decode_combo else "utf8"
+        encoding = self._selected_encoding(self._decode_combo)
         length = self._decode_length_spin.value() if self._decode_length_spin else _DECODE_DEFAULT_LEN
 
+        doc_len = 0
         try:
-            raw = self.document.read(cursor_offset, length)
-            if isinstance(raw, bytes):
-                data = raw
-            elif isinstance(raw, bytearray):
-                data = bytes(raw)
-            elif isinstance(raw, list):
-                data = bytes(cast("list[int]", raw))
-            else:
-                return
-            decoded = data.decode(encoding, errors="replace")
-            self._decode_output.setPlainText(decoded)
-        except (AttributeError, ValueError, LookupError) as exc:
+            doc_len = int(self.document.length())
+        except (AttributeError, TypeError, ValueError):
+            doc_len = 0
+        if doc_len > 0:
+            length = max(0, min(length, doc_len - cursor_offset))
+        if length <= 0:
+            self._decode_output.setPlainText("")
+            return
+
+        try:
+            decoded = self.document.decode_text(cursor_offset, length, encoding)
+        except (AttributeError, ValueError, OverflowError) as exc:
             self._decode_output.setPlainText(f"Error: {exc}")
+        else:
+            self._decode_output.setPlainText(str(decoded))
 
     def _on_encode_text(self) -> None:
-        """Encode text input to hex in the selected encoding."""
+        """Encode text input to hex using the hexcore backend.
+
+        Calls ``document.encode_text_to_bytes`` so the Rust codec
+        registry handles encodings that lack a Python stdlib codec
+        (e.g. EBCDIC).
+        """
         if self._encode_input is None or self._encode_output is None:
             return
 
@@ -302,11 +338,34 @@ class DataInspectorMixin:
         if not text:
             return
 
-        encoding = self._encode_combo.currentText().lower().replace("-", "") if self._encode_combo else "utf8"
+        encoding = self._selected_encoding(self._encode_combo)
+
+        encode_bytes_fn: Any = None
+        if self.document is not None:
+            encode_bytes_fn = getattr(self.document, "encode_text_to_bytes", None)
+        if encode_bytes_fn is None and hexcore_available and hexcore is not None:
+            encode_bytes_fn = getattr(hexcore.HexDocument, "encode_text_to_bytes", None)
+        if encode_bytes_fn is None:
+            self._encode_output.setText("Error: hexcore not available")
+            return
 
         try:
-            encoded = text.encode(encoding, errors="replace")
-            hex_str = " ".join(f"{b:02X}" for b in encoded)
-            self._encode_output.setText(hex_str)
-        except (LookupError, ValueError) as exc:
+            encoded = encode_bytes_fn(text, encoding)
+        except (AttributeError, ValueError, OverflowError) as exc:
             self._encode_output.setText(f"Error: {exc}")
+            return
+
+        if isinstance(encoded, (bytes, bytearray)):
+            data = bytes(encoded)
+        elif isinstance(encoded, list):
+            try:
+                data = bytes(cast("list[int]", encoded))
+            except (ValueError, TypeError) as exc:
+                self._encode_output.setText(f"Error: {exc}")
+                return
+        else:
+            self._encode_output.setText("Error: unexpected encoder return type")
+            return
+
+        hex_str = " ".join(f"{b:02X}" for b in data)
+        self._encode_output.setText(hex_str)
