@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Live end-to-end tests for LocalTransformersProvider (Unit 5 batch).
+"""Live end-to-end tests for ``LocalTransformersProvider`` chat and streaming.
 
 Loads a tiny model (``TinyLlama/TinyLlama-1.1B-Chat-v1.0``) and
 exercises the full chat and chat_stream paths, asserting non-empty

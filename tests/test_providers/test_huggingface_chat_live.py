@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Live end-to-end tests for ``HuggingFaceProvider`` (Group C unit 4).
+"""Live end-to-end tests for ``HuggingFaceProvider`` chat and streaming.
 
 These tests hit the live HuggingFace Inference API via
 ``huggingface_hub.AsyncInferenceClient``.  The HuggingFace token is resolved
