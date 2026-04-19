@@ -65,7 +65,82 @@ rules:
           except $E as $X:
               raise $Y(...) from $X
       - pattern-not: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              raise $Y(...) from $X
+      - pattern-not: |
+          try:
+              ...
+          except $E as $X:
+              ...
+              raise
+      - pattern-not: |
+          try:
+              ...
+          except $E:
+              ...
+              raise
+      - pattern-not: |
+          try:
+              ...
+          except $E:
+              ...
+              raise $Y(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2):
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2) as $X:
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3):
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3) as $X:
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4):
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3, $E4) as $X:
+              ...
+              $L.$LVL(...)
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2) as $X:
+              ...
+              raise $Y(...) from $X
+      - pattern-not: |
+          try:
+              ...
+          except ($E1, $E2, $E3) as $X:
+              ...
+              raise $Y(...) from $X
+      - pattern-not: |
           with contextlib.suppress(...):
+              ...
+      - pattern-not: |
+          with suppress(...):
               ...
 
   - id: intellicrack-logging-d2-except-pass
@@ -189,6 +264,44 @@ rules:
               except $E as $X:
                   $L.$LVL(...)
                   raise $ERR(...) from $X
+      - pattern-not: |
+          def $FN(...):
+              ...
+              raise $ERR(...) from $X
+      - pattern-not: |
+          def $FN(...):
+              ...
+              try:
+                  ...
+              except $E as $X:
+                  ...
+                  raise $ERR(...) from $X
+      - pattern-not: |
+          def $FN(...):
+              ...
+              try:
+                  ...
+              except ($E1, $E2) as $X:
+                  ...
+                  raise $ERR(...) from $X
+      - pattern-not: |
+          def $FN(...):
+              ...
+              try:
+                  ...
+              except ($E1, $E2, $E3) as $X:
+                  ...
+                  raise $ERR(...) from $X
+      - pattern-not: |
+          async def $FN(...):
+              ...
+              raise $ERR(...) from $X
+      - pattern-not: |
+          async def $FN(...):
+              ...
+              $L.$LVL(...)
+              ...
+              raise $ERR(...)
 
   - id: intellicrack-logging-d6-bridge-method-no-entry-log
     message: >-
@@ -274,6 +387,44 @@ rules:
           def $M(self, $P):
               self.$A = $P
               return $X
+      - pattern-not: |
+          def $M(self, ...):
+              return self.$A.$F(...)
+      - pattern-not: |
+          async def $M(self, ...):
+              return await self.$A.$F(...)
+      - pattern-not: |
+          async def $M(self, ...):
+              return self.$A.$F(...)
+      - pattern-not: |
+          def $M(self, ...) -> $RT:
+              return self.$A.$F(...)
+      - pattern-not: |
+          async def $M(self, ...) -> $RT:
+              return await self.$A.$F(...)
+      - pattern-not: |
+          async def $M(self, ...) -> $RT:
+              return self.$A.$F(...)
+      - pattern-not: |
+          def $M(self, ...):
+              if $COND:
+                  return $X
+              return $Y
+      - pattern-not: |
+          def $M(self, ...) -> $RT:
+              if $COND:
+                  return $X
+              return $Y
+      - pattern-not: |
+          async def $M(self, ...):
+              if $COND:
+                  return $X
+              return $Y
+      - pattern-not: |
+          async def $M(self, ...) -> $RT:
+              if $COND:
+                  return $X
+              return $Y
 
   - id: intellicrack-logging-d7-subprocess-without-log
     message: >-
