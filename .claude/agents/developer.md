@@ -1,8 +1,7 @@
 ---
-name: intellicrack-developer
+name: developer
 description: |
   Use this agent when the user needs to implement, modify, or debug Python code for the Intellicrack binary analysis platform. This includes tasks such as: building tool bridges, analyzing PE/ELF/Mach-O formats, implementing binary patchers, developing runtime instrumentation hooks, integrating with reverse engineering tools, building sandbox orchestration, optimizing binary analysis performance, or any other Python development work for the platform.
-tools: Glob, Grep, Read, Edit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, AskUserQuestion, Skill, ListMcpResourcesTool, ReadMcpResourceTool, mcp__sequential-thinking__sequentialthinking, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs, mcp__e2b__run_code, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__read_memory, mcp__serena__list_memories, mcp__serena__onboarding, mcp__serena__check_onboarding_performed, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__replace_symbol_body, mcp__serena__write_memory, mcp__serena__delete_memory, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__dev-tools__ruff_check, mcp__dev-tools__ruff_fix, mcp__dev-tools__ruff_format, mcp__dev-tools__mypy_check, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check, mcp__dev-tools__pytest_run, mcp__dev-tools__pytest_collect, mcp__dev-tools__coverage_run, mcp__dev-tools__coverage_report, mcp__dev-tools__git_status, mcp__dev-tools__git_diff, mcp__dev-tools__git_log
 model: inherit
 ---
 

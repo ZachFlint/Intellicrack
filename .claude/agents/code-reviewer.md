@@ -1,8 +1,7 @@
 ---
-name: intellicrack-code-reviewer
+name: code-reviewer
 description: |
   Use this agent when conducting code reviews for the Intellicrack project, particularly after implementing binary analysis features, tool bridge integrations, reverse engineering workflows, or any production code changes. This agent should be invoked proactively after completing logical code chunks to ensure production-readiness and compliance with project standards.
-tools: Glob, Grep, Read, Write, TodoWrite, WebSearch, AskUserQuestion, Skill, mcp__sequential-thinking__sequentialthinking, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs, mcp__e2b__run_code, ListMcpResourcesTool, ReadMcpResourceTool, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__read_memory, mcp__serena__list_memories, mcp__serena__onboarding, mcp__serena__check_onboarding_performed, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__replace_symbol_body, mcp__serena__write_memory, mcp__serena__delete_memory, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__dev-tools__ruff_check, mcp__dev-tools__mypy_check, mcp__dev-tools__bandit_check, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check, mcp__dev-tools__pytest_run, mcp__dev-tools__pytest_collect, mcp__dev-tools__coverage_run, mcp__dev-tools__coverage_report, mcp__dev-tools__git_status, mcp__dev-tools__git_diff, mcp__dev-tools__git_log
 model: inherit
 ---
 

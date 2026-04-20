@@ -2,7 +2,6 @@
 name: test-reviewer
 description: |
   Use this agent to review tests written by the test-writer agent for the Intellicrack project. This agent verifies tests are production-ready, contain no mocks or stubs, are placed in the correct tests/ subdirectory, and genuinely validate Intellicrack's bridge completeness and orchestration capabilities. Invoke proactively after test-writer completes to ensure quality compliance.
-tools: Glob, Grep, Read, Write, TodoWrite, WebSearch, mcp__dev-tools__pytest_run, mcp__dev-tools__pytest_collect, mcp__dev-tools__coverage_run, mcp__dev-tools__coverage_report, mcp__dev-tools__ruff_check, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check, mcp__dev-tools__git_status, mcp__dev-tools__git_diff, mcp__dev-tools__git_log
 model: inherit
 ---
 

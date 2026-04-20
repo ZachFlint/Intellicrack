@@ -18,7 +18,6 @@ Invoke via ``pixi run python -m scripts.sandbox.docker_sandbox --help``.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shlex
 import shutil
@@ -60,7 +59,7 @@ _ENTRYPOINT_HOST = _PROJECT_ROOT / "docker" / "entrypoint.ps1"
 _PIXI_LOCK = _PROJECT_ROOT / "pixi.lock"
 _IMAGE_NAME = "intellicrack-sandbox"
 _IMAGE_LABEL = "intellicrack-sandbox"
-_CONTAINER_WORKSPACE = "C:\\workspace"
+_CONTAINER_WORKSPACE = "C:\\app"
 _CONTAINER_REPORTS = f"{_CONTAINER_WORKSPACE}\\reports"
 _CONTAINER_SPEC_PATH = f"{_CONTAINER_REPORTS}\\tests\\_run_spec.json"
 _HOST_SPEC_PATH = _REPORTS_ROOT / "_run_spec.json"
@@ -233,17 +232,15 @@ def _ensure_windows_engine() -> None:
 
 
 def _compute_image_tag() -> str:
-    """Compute a deterministic image tag from Dockerfile + pixi.lock hash.
+    """Return the canonical image tag.
+
+    Docker's layer cache handles invalidation automatically when ``pixi.lock``
+    or the Dockerfile changes, so we don't need a content-addressed tag.
 
     Returns:
-        str: Tag in the form ``intellicrack-sandbox:<12-char-sha>``.
+        str: ``intellicrack-sandbox:latest``.
     """
-    hasher = hashlib.sha256()
-    for path in (_DOCKERFILE, _PIXI_LOCK, _ENTRYPOINT_HOST):
-        if path.exists():
-            hasher.update(path.read_bytes())
-    digest = hasher.hexdigest()[:12]
-    return f"{_IMAGE_NAME}:{digest}"
+    return f"{_IMAGE_NAME}:latest"
 
 
 def _image_exists(tag: str) -> bool:
@@ -288,14 +285,10 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
         str(_DOCKERFILE),
         "--tag",
         tag,
-        "--tag",
-        f"{_IMAGE_NAME}:latest",
         "--label",
         f"{_IMAGE_LABEL}=1",
         "--isolation",
         "process",
-        "--progress",
-        "plain",
         str(_PROJECT_ROOT),
     ]
     _LOGGER.info("sandbox_image_building", tag=tag, dockerfile=str(_DOCKERFILE))
@@ -340,15 +333,16 @@ def _build_docker_run_argv(
         list[str]: Argument vector beginning with the ``docker`` executable.
     """
     docker = _docker_binary()
-    workspace_mount = f"{_PROJECT_ROOT}:{_CONTAINER_WORKSPACE}"
-    if not writable_workspace:
-        workspace_mount += ":ro"
     reports_mount = f"{_REPORTS_ROOT.parent}:{_CONTAINER_REPORTS}"
+    _ = writable_workspace
 
+    container_name = f"intellicrack-sandbox-{spec.test_type.value}"
     argv: list[str] = [
         docker,
         "run",
         "--rm",
+        "--name",
+        container_name,
         "--isolation",
         "process",
         "--init",
@@ -358,8 +352,6 @@ def _build_docker_run_argv(
         cpus,
         "--network",
         network,
-        "--volume",
-        workspace_mount,
         "--volume",
         reports_mount,
         "--workdir",
@@ -391,6 +383,23 @@ def _build_docker_run_argv(
         argv.extend(["-t"])
     argv.append(tag)
     return argv
+
+
+def _remove_stale_container(name: str) -> None:
+    """Remove a leftover container with the given name, if it exists.
+
+    Handles the case where a prior run was killed abruptly (``kill -9``, power
+    cut) before ``--rm`` could remove the container. Without this, the next
+    ``docker run --name`` with the same name would fail with a conflict.
+
+    Args:
+        name: Container name to probe and remove.
+    """
+    proc = _run_docker(["ps", "-a", "--filter", f"name=^{name}$", "--format", "{{.Names}}"], check=False)
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return
+    _LOGGER.info("sandbox_stale_container_removed", name=name)
+    _run_docker(["rm", "-f", name], check=False)
 
 
 def _write_spec_file(spec: TestRunSpec) -> None:
@@ -483,6 +492,7 @@ class DockerSandbox:
             SummaryRecord: Normalized summary for the completed run.
         """
         tag = self.ensure_image()
+        _remove_stale_container(f"intellicrack-sandbox-{spec.test_type.value}")
         _write_spec_file(spec)
         argv = _build_docker_run_argv(
             spec,

@@ -2,7 +2,6 @@
 name: test-writer
 description: |
   Use this agent when you need to write comprehensive, production-grade tests for Intellicrack's tool bridge completeness, orchestration, and integration capabilities. This agent should be used after implementing new features, when coverage is low, or when proactively testing new functionality.
-tools: Glob, Grep, Read, Edit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, ListMcpResourcesTool, ReadMcpResourceTool, mcp__dev-tools__pytest_run, mcp__dev-tools__pytest_collect, mcp__dev-tools__coverage_run, mcp__dev-tools__coverage_report, mcp__dev-tools__ruff_check, mcp__dev-tools__ruff_fix, mcp__dev-tools__ruff_format, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check
 model: inherit
 ---
 

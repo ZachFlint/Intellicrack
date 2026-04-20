@@ -2,7 +2,6 @@
 name: linter
 description: |
   Use this agent when you need to run ruff linting on Python files and fix ALL identified issues with production-ready implementations that meet the strictest PEP standards. This agent should be used after writing or modifying Python code to ensure it meets all linting standards.
-tools: Glob, Grep, Read, Edit, TodoWrite, WebSearch, mcp__dev-tools__ruff_check, mcp__dev-tools__ruff_fix, mcp__dev-tools__ruff_format, mcp__dev-tools__mypy_check, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check
 model: inherit
 ---
 
