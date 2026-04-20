@@ -9,6 +9,16 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Migrate test harness from Windows Sandbox to Docker (`cf470c3`)
+Replace the legacy Windows Sandbox-based test redirection with a unified Docker-based sandbox driver. The new harness uses Windows process-isolated containers to provide consistent, reproducible environments for unit, integration, and E2E tests while maintaining host-side report harvesting.
+- Add `scripts/sandbox/` driver for container orchestration and artifact collection
+- Add `docker/Dockerfile.windows` and `entrypoint.ps1` for the test environment
+- Update `justfile` to route all test and documentation tasks through the new scripts
+- Implement `HexEditorBridge` wiring in the UI to support RPC-backed transforms
+- Enhance `CutterPanel` with automatic ESIL memory initialization and hexdump previews
+- Refactor `Orchestrator` session creation to support persistent metadata (name/notes)
+- Remove legacy `.ps1` documentation and sandbox launchers in favor of unified Python/PowerShell dispatchers
+
 - **hexpat:** Parser — templates, varargs, padding, enum ranges, endianness, recovery (B27-B31, B37, B38)  (`f64500b`)
 
 - **hexpat:** Add optional span fields on parse/runtime errors (B36)  (`d324291`)
@@ -143,16 +153,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Migrate test harness from Windows Sandbox to Docker (``)
-Replace the legacy Windows Sandbox-based test redirection with a unified Docker-based sandbox driver. The new harness uses Windows process-isolated containers to provide consistent, reproducible environments for unit, integration, and E2E tests while maintaining host-side report harvesting.
-- Add `scripts/sandbox/` driver for container orchestration and artifact collection
-- Add `docker/Dockerfile.windows` and `entrypoint.ps1` for the test environment
-- Update `justfile` to route all test and documentation tasks through the new scripts
-- Implement `HexEditorBridge` wiring in the UI to support RPC-backed transforms
-- Enhance `CutterPanel` with automatic ESIL memory initialization and hexdump previews
-- Refactor `Orchestrator` session creation to support persistent metadata (name/notes)
-- Remove legacy `.ps1` documentation and sandbox launchers in favor of unified Python/PowerShell dispatchers
 
 
 ### Changed

@@ -7,7 +7,6 @@ description: |
   - Before code reviews to ensure documentation standards are met
   - When ruff flags missing docstrings or type annotations
   - Proactively after any code implementation to maintain documentation standards
-tools: Read, Edit, Glob, Grep, TodoWrite, mcp__dev-tools__ruff_check, mcp__dev-tools__ruff_fix, mcp__dev-tools__ruff_format, mcp__dev-tools__pydocstyle_check, mcp__dev-tools__pydoclint_check
 model: haiku
 ---
 

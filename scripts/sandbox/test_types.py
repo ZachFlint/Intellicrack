@@ -22,7 +22,7 @@ from pathlib import PurePosixPath
 from typing import cast
 
 
-_CONTAINER_WORKSPACE = PurePosixPath("C:/workspace")
+_CONTAINER_WORKSPACE = PurePosixPath("C:/app")
 _CONTAINER_REPORTS = _CONTAINER_WORKSPACE / "reports" / "tests"
 
 

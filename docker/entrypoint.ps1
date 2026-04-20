@@ -31,12 +31,21 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$WorkspaceRoot = 'C:\workspace'
+$WorkspaceRoot = 'C:\app'
 $ReportsRoot = Join-Path $WorkspaceRoot 'reports\tests'
 $SpecPath = if ($env:SANDBOX_SPEC_PATH) { $env:SANDBOX_SPEC_PATH } else { Join-Path $ReportsRoot '_run_spec.json' }
 $PixiPython = Join-Path $WorkspaceRoot '.pixi\envs\default\python.exe'
 $PixiExe = 'pixi.exe'
 $ContainerEventsLog = Join-Path $ReportsRoot '_container_events.jsonl'
+$CacheRoot = 'C:\cache'
+
+if (-not (Test-Path $CacheRoot)) {
+    New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $CacheRoot 'pytest') -Force | Out-Null
+}
+if (-not (Test-Path $ReportsRoot)) {
+    New-Item -ItemType Directory -Path $ReportsRoot -Force | Out-Null
+}
 
 function Write-SandboxLog {
     param(

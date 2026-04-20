@@ -23,15 +23,21 @@ htmlcov/
 **/*.pyo
 **/*.pyd
 node_modules/
-vendor/ImHex-Patterns/
-vendor/PatternLanguage/
-vendor/community-patterns/
+vendor/
 CLI Coding/target/
+CLI Coding/**/target/
 src/intellicrack-hexcore/target/
 Screenshots/
 tools/
 docs/build/
+docs/source/_build/
 *.log
 .env
 .env.*
 !.env.sample
+target/
+**/target/
+*.vhd
+*.vhdx
+*.iso
+*.img
