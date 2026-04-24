@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
 
 
-_LIVE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
+_LIVE_MODEL = "katanemo/Arch-Router-1.5B"
 
 
 @pytest.mark.integration

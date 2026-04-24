@@ -43,6 +43,8 @@ if TYPE_CHECKING:
 
 _logger = get_logger("providers.ollama")
 
+_CLOUD_HOST_FRAGMENTS: tuple[str, ...] = ("ollama.com", "ollama.ai")
+
 _MSG_NOT_CONNECTED = "Not connected"
 _ERR_CONNECT_BOTH_FAILED = "Could not connect to local or cloud Ollama. Ensure local Ollama is running or provide a valid API key."
 _ERR_CLOUD_NOT_AVAILABLE = "Ollama cloud not available"
@@ -576,6 +578,51 @@ class OllamaProvider(LLMProviderBase):
         self._raise_for_status(response)
         return cast("OllamaEmbeddingsResponse", response.json())
 
+    @classmethod
+    def _is_cloud_url(cls, url: str) -> bool:
+        """Determine whether ``url`` points at the Ollama cloud service.
+
+        Args:
+            url: Base URL of an Ollama endpoint.
+
+        Returns:
+            bool: True when the URL host matches one of the recognised
+            Ollama cloud host fragments.
+        """
+        lowered = url.lower()
+        return any(fragment in lowered for fragment in _CLOUD_HOST_FRAGMENTS)
+
+    def _is_cloud_endpoint(self, base_url: str) -> bool:
+        """Decide whether requests for ``base_url`` should use the cloud path layout.
+
+        Cloud Ollama exposes OpenAI-compatible ``/v1/`` endpoints in addition
+        to the legacy ``/api/`` ones; chat traffic uses ``/v1/chat/completions``
+        when the host is the cloud service or whenever a cloud API key is
+        configured for the matching client.
+
+        Args:
+            base_url: Base URL associated with the active Ollama client.
+
+        Returns:
+            bool: True if the chat call should target the OpenAI-compatible
+            ``/v1/chat/completions`` route.
+        """
+        if self._is_cloud_url(base_url):
+            return True
+        return base_url == self.CLOUD_API_URL and self._cloud_api_key is not None
+
+    def _chat_endpoint(self, base_url: str) -> str:
+        """Return the chat endpoint path appropriate for ``base_url``.
+
+        Args:
+            base_url: Base URL associated with the active Ollama client.
+
+        Returns:
+            str: ``/v1/chat/completions`` for cloud endpoints, otherwise the
+            legacy ``/api/chat`` path used by local Ollama servers.
+        """
+        return "/v1/chat/completions" if self._is_cloud_endpoint(base_url) else "/api/chat"
+
     def _get_source_client(self, source: str) -> tuple[httpx.AsyncClient, str]:
         """Resolve a client and base URL by explicit source name.
 
@@ -809,7 +856,7 @@ class OllamaProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
-            tool_choice: How the model should select tools (ignored by Ollama).
+            tool_choice: How the model should select tools.
             thinking: Extended thinking configuration (ignored by Ollama).
             enable_cache: Whether to enable prompt caching (ignored by Ollama).
 
@@ -826,8 +873,6 @@ class OllamaProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
         self._cancel_requested = False
-        if tool_choice is not None:
-            self._logger.debug("ollama_tool_choice_ignored", mode=tool_choice.mode.value)
         if thinking is not None and thinking.enabled:
             self._logger.debug("ollama_thinking_ignored")
         if enable_cache:
@@ -835,6 +880,8 @@ class OllamaProvider(LLMProviderBase):
 
         client, base_url, actual_model = self._get_client_and_model(model)
         ollama_messages = self.convert_messages_to_provider_format(messages)
+        endpoint = self._chat_endpoint(base_url)
+        is_cloud = self._is_cloud_endpoint(base_url)
 
         log_provider_request(
             provider="ollama",
@@ -843,29 +890,41 @@ class OllamaProvider(LLMProviderBase):
             tools_count=len(tools) if tools else 0,
         )
 
-        request_body: dict[str, object] = {
-            "model": actual_model,
-            "messages": ollama_messages,
-            "stream": False,
-            "options": {
+        request_body: dict[str, object]
+        if is_cloud:
+            request_body = {
+                "model": actual_model,
+                "messages": ollama_messages,
                 "temperature": temperature,
-                "num_predict": max_tokens,
-            },
-        }
+                "max_tokens": max_tokens,
+                "stream": False,
+            }
+        else:
+            request_body = {
+                "model": actual_model,
+                "messages": ollama_messages,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                },
+            }
         if tools:
             request_body["tools"] = self.convert_tools_to_provider_format(tools)
+            if tool_choice is not None:
+                request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
 
         start_time = time.perf_counter()
         data = await self._make_ollama_api_call(
             client=client,
             base_url=base_url,
+            endpoint=endpoint,
             request_body=request_body,
         )
         duration_ms = (time.perf_counter() - start_time) * 1000
 
-        content = data.get("message", {}).get("content", "")
-        tool_calls = self._parse_ollama_tool_calls(data)
-        self._record_usage_from_chunk(data)
+        content, tool_calls = self._parse_chat_response(data, is_cloud=is_cloud)
+        self._record_usage_from_chat(data, is_cloud=is_cloud)
 
         return self._build_chat_response(
             provider="ollama",
@@ -880,13 +939,16 @@ class OllamaProvider(LLMProviderBase):
         *,
         client: httpx.AsyncClient,
         base_url: str,
+        endpoint: str,
         request_body: dict[str, object],
     ) -> dict[str, Any]:
-        """Execute the Ollama ``/api/chat`` call with typed error mapping.
+        """Execute an Ollama chat call with typed error mapping.
 
         Args:
             client: The httpx async client to use.
             base_url: The base URL for the Ollama API.
+            endpoint: Path appended to ``base_url`` for the request, either
+                ``/api/chat`` for local or ``/v1/chat/completions`` for cloud.
             request_body: The request payload.
 
         Returns:
@@ -900,7 +962,7 @@ class OllamaProvider(LLMProviderBase):
         """
         try:
             response = await client.post(
-                f"{base_url}/api/chat",
+                f"{base_url}{endpoint}",
                 json=request_body,
             )
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
@@ -913,6 +975,124 @@ class OllamaProvider(LLMProviderBase):
         except (ValueError, json.JSONDecodeError) as e:
             self._logger.warning("ollama_response_decode_failed", error=str(e))
             raise ProviderError(_ERR_TRANSPORT % e, provider_name="ollama") from e
+
+    def _parse_chat_response(
+        self,
+        data: dict[str, Any],
+        *,
+        is_cloud: bool,
+    ) -> tuple[str, list[ToolCall]]:
+        """Extract content and tool calls from a chat response payload.
+
+        Cloud responses use the OpenAI-compatible ``choices[0].message``
+        envelope; local ``/api/chat`` responses use a ``message`` object at
+        the top level.
+
+        Args:
+            data: Parsed JSON response from the Ollama server.
+            is_cloud: True when the response came from a cloud
+                ``/v1/chat/completions`` call.
+
+        Returns:
+            tuple[str, list[ToolCall]]: Pair of ``(content, tool_calls)``.
+        """
+        if is_cloud:
+            choices = cast("list[dict[str, Any]]", data.get("choices") or [])
+            if not choices:
+                return "", []
+            cloud_message: dict[str, Any] = cast("dict[str, Any]", choices[0].get("message", {}) or {})
+            cloud_content_raw: object = cloud_message.get("content")
+            cloud_content = cloud_content_raw if isinstance(cloud_content_raw, str) else ""
+            cloud_tool_calls = self._parse_openai_compatible_tool_calls(cloud_message)
+            return cloud_content, cloud_tool_calls
+
+        local_message_obj: object = data.get("message") or {}
+        local_content_raw: object = ""
+        if isinstance(local_message_obj, dict):
+            local_content_raw = cast("dict[str, Any]", local_message_obj).get("content")
+        local_content = local_content_raw if isinstance(local_content_raw, str) else ""
+        local_tool_calls = self._parse_ollama_tool_calls(data)
+        return local_content, local_tool_calls
+
+    def _record_usage_from_chat(
+        self,
+        data: dict[str, Any],
+        *,
+        is_cloud: bool,
+    ) -> None:
+        """Update ``self._pending_usage`` from a chat response.
+
+        Args:
+            data: Parsed JSON response from the Ollama server.
+            is_cloud: True when the response came from a cloud
+                ``/v1/chat/completions`` call.
+        """
+        if is_cloud:
+            self._record_usage_from_openai_payload(data)
+        else:
+            self._record_usage_from_chunk(data)
+
+    def _record_usage_from_openai_payload(self, data: dict[str, Any]) -> None:
+        """Update ``self._pending_usage`` from an OpenAI-compatible payload.
+
+        Args:
+            data: Parsed JSON payload (full response or streaming chunk)
+                with an OpenAI ``usage`` field.
+        """
+        usage_obj_raw: object = data.get("usage")
+        if not isinstance(usage_obj_raw, dict):
+            return
+        usage_obj: dict[str, Any] = cast("dict[str, Any]", usage_obj_raw)
+        try:
+            prompt_tokens = int(usage_obj.get("prompt_tokens", 0) or 0)
+            completion_tokens = int(usage_obj.get("completion_tokens", 0) or 0)
+            total_tokens = int(usage_obj.get("total_tokens", 0) or 0) or (prompt_tokens + completion_tokens)
+        except (TypeError, ValueError):
+            return
+        if prompt_tokens == 0 and completion_tokens == 0:
+            return
+        self._pending_usage = UsageInfo(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+        )
+
+    def _parse_openai_compatible_tool_calls(
+        self,
+        message_data: dict[str, Any],
+    ) -> list[ToolCall]:
+        """Parse tool calls from an OpenAI-compatible chat message.
+
+        Args:
+            message_data: The ``choices[0].message`` dict from an OpenAI-
+                compatible chat completion response.
+
+        Returns:
+            list[ToolCall]: Parsed tool calls, possibly empty.
+        """
+        tool_calls: list[ToolCall] = []
+        raw_calls_obj: object = message_data.get("tool_calls") or []
+        if not isinstance(raw_calls_obj, list):
+            return tool_calls
+        raw_calls: list[Any] = cast("list[Any]", raw_calls_obj)
+        for idx, tc in enumerate(cast("list[dict[str, Any]]", raw_calls)):
+            func_data: dict[str, Any] = tc.get("function", {}) or {}
+            func_name = str(func_data.get("name", ""))
+            raw_args: Any = func_data.get("arguments", "{}")
+            raw_arguments: str | dict[str, object]
+            if isinstance(raw_args, str):
+                raw_arguments = raw_args
+            elif isinstance(raw_args, dict):
+                raw_arguments = cast("dict[str, object]", raw_args)
+            else:
+                raw_arguments = "{}"
+            tool_call = self._parse_tool_call_common(
+                call_id=str(tc.get("id") or f"call_{idx}"),
+                function_name=func_name,
+                raw_arguments=raw_arguments,
+            )
+            tool_calls.append(tool_call)
+        return tool_calls
 
     def _parse_ollama_tool_calls(self, data: dict[str, Any]) -> list[ToolCall]:
         """Parse tool calls from an Ollama API response.
@@ -996,11 +1176,11 @@ class OllamaProvider(LLMProviderBase):
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from Ollama.
 
-        Automatically routes to local or cloud based on model prefix.
-        When tools are provided, falls back to a non-streaming request
-        internally to ensure reliable tool call capture. The final
-        NDJSON frame's ``prompt_eval_count`` and ``eval_count`` fields
-        are recorded in ``self._pending_usage``.
+        Automatically routes to local or cloud based on model prefix and
+        accumulates streamed tool-call deltas in both transports.  The
+        final NDJSON frame's ``prompt_eval_count`` and ``eval_count``
+        fields (or the OpenAI-compatible ``usage`` block on cloud) are
+        recorded in ``self._pending_usage``.
 
         Args:
             messages: Conversation history.
@@ -1008,7 +1188,7 @@ class OllamaProvider(LLMProviderBase):
             tools: Available tools for function calling.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
-            tool_choice: How the model should select tools (ignored by Ollama).
+            tool_choice: How the model should select tools.
             thinking: Extended thinking configuration (ignored by Ollama).
             enable_cache: Whether to enable prompt caching (ignored by Ollama).
 
@@ -1016,70 +1196,129 @@ class OllamaProvider(LLMProviderBase):
             str: Text chunks as they arrive.
 
         Raises:
-            AuthenticationError: If the server returns HTTP 401 or 403.
-            RateLimitError: If the server returns HTTP 429.
             ProviderError: If not connected, no client is available for the
                 requested model, a transport error occurs, or the server
-                returns any other non-2xx status.
+                returns any other non-2xx status.  ``AuthenticationError``
+                (HTTP 401/403) and ``RateLimitError`` (HTTP 429) raised by
+                the underlying transport propagate unchanged.
         """
         if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
         self._cancel_requested = False
-        if tool_choice is not None:
-            self._logger.debug("ollama_tool_choice_ignored", mode=tool_choice.mode.value)
         if thinking is not None and thinking.enabled:
             self._logger.debug("ollama_thinking_ignored")
         if enable_cache:
             self._logger.debug("ollama_cache_ignored")
 
-        if tools:
-            response_msg, tool_calls_result = await self.chat(
-                messages=messages,
-                model=model,
-                tools=tools,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            if response_msg.content:
-                yield response_msg.content
-            if tool_calls_result:
-                self._pending_tool_calls = list(tool_calls_result)
-            return
-
         client, base_url, actual_model = self._get_client_and_model(model)
         ollama_messages = self.convert_messages_to_provider_format(messages)
+        endpoint = self._chat_endpoint(base_url)
+        is_cloud = self._is_cloud_endpoint(base_url)
 
-        request_body: dict[str, object] = {
-            "model": actual_model,
-            "messages": ollama_messages,
-            "stream": True,
-            "options": {
+        request_body: dict[str, object]
+        if is_cloud:
+            request_body = {
+                "model": actual_model,
+                "messages": ollama_messages,
                 "temperature": temperature,
-                "num_predict": max_tokens,
-            },
-        }
+                "max_tokens": max_tokens,
+                "stream": True,
+                "stream_options": {"include_usage": True},
+            }
+        else:
+            request_body = {
+                "model": actual_model,
+                "messages": ollama_messages,
+                "stream": True,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                },
+            }
+        if tools:
+            request_body["tools"] = self.convert_tools_to_provider_format(tools)
+            if tool_choice is not None:
+                request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
 
+        if is_cloud:
+            async for chunk in self._stream_openai_compatible(
+                client=client,
+                base_url=base_url,
+                endpoint=endpoint,
+                request_body=request_body,
+            ):
+                yield chunk
+            return
+
+        async for chunk in self._stream_native(
+            client=client,
+            base_url=base_url,
+            endpoint=endpoint,
+            request_body=request_body,
+        ):
+            yield chunk
+
+    async def _stream_native(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        base_url: str,
+        endpoint: str,
+        request_body: dict[str, object],
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion via the local NDJSON ``/api/chat`` route.
+
+        Captures streamed tool-call deltas as they arrive so callers may
+        consume them via ``_pending_tool_calls`` once the stream completes.
+
+        Args:
+            client: The httpx async client to use.
+            base_url: Base URL of the local Ollama instance.
+            endpoint: The ``/api/chat`` path appended to ``base_url``.
+            request_body: The fully constructed request payload.
+
+        Yields:
+            str: Content chunks as they arrive.
+
+        Raises:
+            AuthenticationError: If the server returns HTTP 401 or 403.
+            RateLimitError: If the server returns HTTP 429.
+            ProviderError: If a transport error occurs or the server returns
+                any other non-2xx status.
+        """
         last_chunk_data: dict[str, Any] = {}
+        accumulated_tool_calls: dict[str, dict[str, Any]] = {}
+        tool_call_order: list[str] = []
         try:
             async with client.stream(
                 "POST",
-                f"{base_url}/api/chat",
+                f"{base_url}{endpoint}",
                 json=request_body,
             ) as response:
                 self._raise_for_status(response)
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
                         break
-                    if line:
-                        try:
-                            chunk_data = json.loads(line)
-                        except json.JSONDecodeError as exc:
-                            self._logger.debug("stream_json_parse_skipped", error=str(exc))
-                            continue
-                        last_chunk_data = chunk_data
-                        if content := chunk_data.get("message", {}).get("content", ""):
-                            yield content
+                    if not line:
+                        continue
+                    try:
+                        chunk_data = json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        self._logger.debug("stream_json_parse_skipped", error=str(exc))
+                        continue
+                    last_chunk_data = cast("dict[str, Any]", chunk_data)
+                    message_obj_raw: object = last_chunk_data.get("message")
+                    if isinstance(message_obj_raw, dict):
+                        message_obj: dict[str, Any] = cast("dict[str, Any]", message_obj_raw)
+                        content_part = message_obj.get("content")
+                        if isinstance(content_part, str) and content_part:
+                            yield content_part
+                        self._accumulate_native_tool_call_deltas(
+                            message_obj,
+                            accumulated_tool_calls,
+                            tool_call_order,
+                        )
         except (AuthenticationError, RateLimitError, ProviderError):
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
@@ -1088,8 +1327,225 @@ class OllamaProvider(LLMProviderBase):
                 raise ProviderError(_ERR_TRANSPORT % e, provider_name="ollama") from e
 
         if not self._cancel_requested and last_chunk_data:
-            self._pending_tool_calls = self._parse_ollama_tool_calls(last_chunk_data)
+            if accumulated_tool_calls:
+                self._pending_tool_calls = self._finalize_native_tool_calls(
+                    accumulated_tool_calls,
+                    tool_call_order,
+                )
+            else:
+                self._pending_tool_calls = self._parse_ollama_tool_calls(last_chunk_data)
             self._record_usage_from_chunk(last_chunk_data)
+
+    @staticmethod
+    def _accumulate_native_tool_call_deltas(
+        message_obj: dict[str, Any],
+        accumulated: dict[str, dict[str, Any]],
+        order: list[str],
+    ) -> None:
+        """Merge tool-call deltas from ``message_obj`` into ``accumulated``.
+
+        Args:
+            message_obj: The ``message`` dict from a single NDJSON chunk.
+            accumulated: Mapping of stable call ID to the merged payload.
+            order: Insertion order of unique call IDs encountered so far.
+        """
+        deltas_obj: object = message_obj.get("tool_calls")
+        if not isinstance(deltas_obj, list):
+            return
+        deltas = cast("list[dict[str, Any]]", deltas_obj)
+        for idx, raw in enumerate(deltas):
+            call_id = str(raw.get("id") or f"call_{idx}")
+            entry = accumulated.get(call_id)
+            if entry is None:
+                entry = {"id": call_id, "function": {"name": "", "arguments": ""}}
+                accumulated[call_id] = entry
+                order.append(call_id)
+            func_obj: object = raw.get("function") or {}
+            if not isinstance(func_obj, dict):
+                continue
+            func: dict[str, Any] = cast("dict[str, Any]", func_obj)
+            entry_func: dict[str, Any] = cast("dict[str, Any]", entry["function"])
+            name_val = func.get("name")
+            if isinstance(name_val, str) and name_val:
+                entry_func["name"] = name_val
+            args_val: object = func.get("arguments")
+            if isinstance(args_val, str):
+                entry_func["arguments"] = cast("str", entry_func["arguments"]) + args_val
+            elif isinstance(args_val, dict):
+                entry_func["arguments"] = args_val
+
+    def _finalize_native_tool_calls(
+        self,
+        accumulated: dict[str, dict[str, Any]],
+        order: list[str],
+    ) -> list[ToolCall]:
+        """Convert accumulated streamed tool-call deltas into ``ToolCall`` objects.
+
+        Args:
+            accumulated: Mapping of call IDs to merged tool-call payloads.
+            order: Insertion order of unique call IDs.
+
+        Returns:
+            list[ToolCall]: Parsed tool calls in their original order.
+        """
+        results: list[ToolCall] = []
+        for call_id in order:
+            entry = accumulated[call_id]
+            func: dict[str, Any] = cast("dict[str, Any]", entry.get("function") or {})
+            raw_args: Any = func.get("arguments", "{}")
+            raw_arguments: str | dict[str, object]
+            if isinstance(raw_args, str):
+                raw_arguments = raw_args or "{}"
+            elif isinstance(raw_args, dict):
+                raw_arguments = cast("dict[str, object]", raw_args)
+            else:
+                raw_arguments = "{}"
+            results.append(
+                self._parse_tool_call_common(
+                    call_id=str(entry.get("id") or call_id),
+                    function_name=str(func.get("name", "")),
+                    raw_arguments=raw_arguments,
+                ),
+            )
+        return results
+
+    async def _stream_openai_compatible(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        base_url: str,
+        endpoint: str,
+        request_body: dict[str, object],
+    ) -> AsyncIterator[str]:
+        """Stream a chat completion via the cloud OpenAI-compatible route.
+
+        Parses Server-Sent Events ``data: {...}`` frames, accumulates
+        OpenAI-style tool-call deltas, and finalises tool calls plus usage
+        on completion.
+
+        Args:
+            client: The httpx async client to use.
+            base_url: Base URL of the cloud Ollama instance.
+            endpoint: The ``/v1/chat/completions`` path appended to
+                ``base_url``.
+            request_body: The fully constructed OpenAI-compatible payload.
+
+        Yields:
+            str: Content chunks as they arrive.
+
+        Raises:
+            AuthenticationError: If the server returns HTTP 401 or 403.
+            RateLimitError: If the server returns HTTP 429.
+            ProviderError: If a transport error occurs or the server returns
+                any other non-2xx status.
+        """
+        accumulated_tool_calls: dict[int, dict[str, Any]] = {}
+        try:
+            async with client.stream(
+                "POST",
+                f"{base_url}{endpoint}",
+                json=request_body,
+            ) as response:
+                self._raise_for_status(response)
+                async for line in response.aiter_lines():
+                    if self._cancel_requested:
+                        break
+                    if not line.startswith("data: "):
+                        continue
+                    payload = line[6:].strip()
+                    if not payload:
+                        continue
+                    if payload == "[DONE]":
+                        break
+                    try:
+                        chunk_data = json.loads(payload)
+                    except json.JSONDecodeError as exc:
+                        self._logger.debug("stream_json_parse_skipped", error=str(exc))
+                        continue
+                    self._record_usage_from_openai_payload(cast("dict[str, Any]", chunk_data))
+                    choices = cast("list[dict[str, Any]]", chunk_data.get("choices") or [])
+                    if not choices:
+                        continue
+                    delta: dict[str, Any] = cast("dict[str, Any]", choices[0].get("delta", {}) or {})
+                    content_delta = delta.get("content")
+                    if isinstance(content_delta, str) and content_delta:
+                        yield content_delta
+                    tc_deltas = delta.get("tool_calls")
+                    if isinstance(tc_deltas, list):
+                        self._accumulate_openai_tool_call_deltas(
+                            cast("list[dict[str, Any]]", tc_deltas),
+                            accumulated_tool_calls,
+                        )
+        except (AuthenticationError, RateLimitError, ProviderError):
+            raise
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
+            if not self._cancel_requested:
+                self._logger.warning("ollama_stream_failed", error=str(e))
+                raise ProviderError(_ERR_TRANSPORT % e, provider_name="ollama") from e
+
+        if not self._cancel_requested and accumulated_tool_calls:
+            self._pending_tool_calls = self._finalize_openai_tool_calls(accumulated_tool_calls)
+
+    @staticmethod
+    def _accumulate_openai_tool_call_deltas(
+        deltas: list[dict[str, Any]],
+        accumulated: dict[int, dict[str, Any]],
+    ) -> None:
+        """Merge OpenAI-style tool-call deltas keyed by index.
+
+        Args:
+            deltas: The ``tool_calls`` array from a single streaming chunk.
+            accumulated: Mapping of delta ``index`` to the merged payload.
+        """
+        for delta in deltas:
+            index = int(delta.get("index", 0))
+            entry = accumulated.get(index)
+            if entry is None:
+                entry = {"id": delta.get("id"), "function": {"name": "", "arguments": ""}}
+                accumulated[index] = entry
+            id_val = delta.get("id")
+            if isinstance(id_val, str) and id_val:
+                entry["id"] = id_val
+            func_obj: object = delta.get("function") or {}
+            if not isinstance(func_obj, dict):
+                continue
+            func_delta: dict[str, Any] = cast("dict[str, Any]", func_obj)
+            entry_func: dict[str, Any] = cast("dict[str, Any]", entry["function"])
+            name_val = func_delta.get("name")
+            if isinstance(name_val, str) and name_val:
+                entry_func["name"] = name_val
+            args_val = func_delta.get("arguments")
+            if isinstance(args_val, str) and args_val:
+                entry_func["arguments"] = cast("str", entry_func["arguments"]) + args_val
+
+    def _finalize_openai_tool_calls(
+        self,
+        accumulated: dict[int, dict[str, Any]],
+    ) -> list[ToolCall]:
+        """Convert merged OpenAI tool-call deltas into ``ToolCall`` objects.
+
+        Args:
+            accumulated: Mapping of delta indices to merged tool-call payloads.
+
+        Returns:
+            list[ToolCall]: Parsed tool calls in delta-index order.
+        """
+        results: list[ToolCall] = []
+        for index in sorted(accumulated.keys()):
+            entry = accumulated[index]
+            func: dict[str, Any] = cast("dict[str, Any]", entry.get("function") or {})
+            raw_args_obj: object = func.get("arguments")
+            raw_arguments = raw_args_obj if isinstance(raw_args_obj, str) and raw_args_obj else "{}"
+            call_id_val: object = entry.get("id")
+            call_id = call_id_val if isinstance(call_id_val, str) and call_id_val else f"call_{index}"
+            results.append(
+                self._parse_tool_call_common(
+                    call_id=str(call_id),
+                    function_name=str(func.get("name", "")),
+                    raw_arguments=raw_arguments,
+                ),
+            )
+        return results
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""

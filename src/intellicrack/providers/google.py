@@ -39,7 +39,7 @@ from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_googl
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterable
+    from collections.abc import AsyncIterator
 
     from google.genai.types import GenerateContentResponse
 
@@ -54,8 +54,6 @@ _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
 _MSG_CONTENT_BLOCKED = "Response blocked by safety filters"
 _MSG_PROHIBITED_CONTENT = "Response blocked for prohibited content"
-
-_STREAM_SENTINEL: Final = object()
 
 _AUTH_STATUS_CODES: Final = frozenset({401, 403})
 _RATE_LIMIT_STATUS_CODES: Final = frozenset({429})
@@ -316,20 +314,18 @@ class GoogleProvider(LLMProviderBase):
             client = self.client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
-            def _generate() -> GenerateContentResponse:
-                """Invoke the synchronous Gemini generate_content endpoint.
-
-                Returns:
-                    GenerateContentResponse: The raw Gemini API response for
-                    the prepared model, contents, and configuration.
-                """
-                return client.models.generate_content(
+            generate_task: asyncio.Task[GenerateContentResponse] = asyncio.create_task(
+                client.aio.models.generate_content(
                     model=model,
                     contents=typed_contents,
                     config=config,
-                )
-
-            response = await asyncio.to_thread(_generate)
+                ),
+            )
+            self._current_task = cast("asyncio.Task[object]", generate_task)
+            try:
+                response = await generate_task
+            finally:
+                self._current_task = None
 
             duration_ms = (time.perf_counter() - start_time) * 1000
 
@@ -455,27 +451,21 @@ class GoogleProvider(LLMProviderBase):
             client = self.client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
-            def _start_stream() -> Iterable[GenerateContentResponse]:
-                """Open a synchronous Gemini streaming generation request.
-
-                Returns:
-                    Iterable[GenerateContentResponse]: Iterable yielding
-                    response chunks from the Gemini streaming API.
-                """
-                return client.models.generate_content_stream(
+            stream_init_task: asyncio.Task[AsyncIterator[GenerateContentResponse]] = asyncio.create_task(
+                client.aio.models.generate_content_stream(
                     model=model,
                     contents=typed_contents,
                     config=config,
-                )
-
-            response_stream = iter(await asyncio.to_thread(_start_stream))
+                ),
+            )
+            self._current_task = cast("asyncio.Task[object]", stream_init_task)
+            try:
+                response_stream: AsyncIterator[GenerateContentResponse] = await stream_init_task
+            finally:
+                self._current_task = None
 
             last_chunk: GenerateContentResponse | None = None
-            while True:
-                raw_chunk = await asyncio.to_thread(next, response_stream, _STREAM_SENTINEL)
-                if raw_chunk is _STREAM_SENTINEL:
-                    break
-                chunk = cast("GenerateContentResponse", raw_chunk)
+            async for chunk in response_stream:
                 if self._cancel_requested:
                     self._logger.info(
                         "google_chat_stream_cancelled",

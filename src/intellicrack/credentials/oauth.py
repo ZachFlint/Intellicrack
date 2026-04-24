@@ -24,7 +24,7 @@ import webbrowser
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 
 import httpx
 
@@ -46,6 +46,10 @@ except ImportError:
 _logger = get_logger("credentials.oauth")
 
 _GOOGLE_OAUTH_ENDPOINT: Final = "https://oauth2.googleapis.com/token"
+_ANTHROPIC_OAUTH_AUTHORIZE_URL: Final = "https://claude.ai/oauth/authorize"
+_ANTHROPIC_OAUTH_EXCHANGE_URL: Final = "https://console.anthropic.com/v1/oauth/token"
+_HUGGINGFACE_OAUTH_AUTHORIZE_URL: Final = "https://huggingface.co/oauth/authorize"
+_HUGGINGFACE_OAUTH_EXCHANGE_URL: Final = "https://huggingface.co/oauth/token"
 _HTTP_OK: Final = 200
 _HTTP_UNAUTHORIZED: Final = 401
 _HTTP_FORBIDDEN: Final = 403
@@ -82,13 +86,22 @@ class OAuthFlowType(Enum):
 
 
 class OAuthProvider(Enum):
-    """Providers that support OAuth authentication."""
+    """Providers that support OAuth authentication.
+
+    OpenAI is intentionally absent: the OpenAI Platform exposes only API
+    keys, not a public OAuth flow for API access, so users must register a
+    static API key via the credential store instead.
+    """
 
     GOOGLE = "google"
+    ANTHROPIC = "anthropic"
+    HUGGINGFACE = "huggingface"
 
 
 _OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, ProviderName] = {
     OAuthProvider.GOOGLE: ProviderName.GOOGLE,
+    OAuthProvider.ANTHROPIC: ProviderName.ANTHROPIC,
+    OAuthProvider.HUGGINGFACE: ProviderName.HUGGINGFACE,
 }
 
 
@@ -286,6 +299,33 @@ OAUTH_CONFIGS: dict[OAuthProvider, OAuthConfig] = {
         use_pkce=True,
         revoke_url="https://oauth2.googleapis.com/revoke",
     ),
+    OAuthProvider.ANTHROPIC: OAuthConfig(
+        provider=OAuthProvider.ANTHROPIC,
+        client_id=os.environ.get("ANTHROPIC_OAUTH_CLIENT_ID", ""),
+        client_secret=os.environ.get("ANTHROPIC_OAUTH_CLIENT_SECRET"),
+        authorization_url=_ANTHROPIC_OAUTH_AUTHORIZE_URL,
+        token_url=_ANTHROPIC_OAUTH_EXCHANGE_URL,
+        scopes=(
+            "user:inference",
+            "user:profile",
+        ),
+        use_pkce=True,
+        revoke_url=None,
+    ),
+    OAuthProvider.HUGGINGFACE: OAuthConfig(
+        provider=OAuthProvider.HUGGINGFACE,
+        client_id=os.environ.get("HUGGINGFACE_OAUTH_CLIENT_ID", ""),
+        client_secret=os.environ.get("HUGGINGFACE_OAUTH_CLIENT_SECRET"),
+        authorization_url=_HUGGINGFACE_OAUTH_AUTHORIZE_URL,
+        token_url=_HUGGINGFACE_OAUTH_EXCHANGE_URL,
+        scopes=(
+            "openid",
+            "profile",
+            "inference-api",
+        ),
+        use_pkce=True,
+        revoke_url=None,
+    ),
 }
 
 
@@ -320,14 +360,13 @@ def verify_pkce_pair(code_verifier: str, code_challenge: str) -> bool:
     return secrets.compare_digest(recomputed, code_challenge)
 
 
-_callback_state_lock = threading.Lock()
+class _OAuthCallbackTCPServer(socketserver.TCPServer):
+    """TCPServer that carries per-instance OAuth callback state.
 
-
-class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
-    """HTTP request handler for OAuth callbacks.
-
-    Uses class-level state protected by a module-level lock so concurrent
-    handler instances cannot corrupt the shared callback result.
+    The callback handler stores the received authorization code, state, and
+    error string on the server instance so concurrent OAuth flows running
+    different ``_OAuthCallbackTCPServer`` instances cannot stomp each
+    other's results via shared class state.
 
     Attributes:
         callback_code: Authorization code received from the OAuth provider.
@@ -337,40 +376,49 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
         expected_state: State value the handler should accept (CSRF check).
     """
 
-    callback_code: ClassVar[str | None] = None
-    callback_state: ClassVar[str | None] = None
-    callback_error: ClassVar[str | None] = None
-    callback_event: ClassVar[threading.Event | None] = None
-    expected_state: ClassVar[str | None] = None
+    callback_code: str | None = None
+    callback_state: str | None = None
+    callback_error: str | None = None
+    callback_event: threading.Event | None = None
+    expected_state: str | None = None
+
+
+class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
+    """HTTP request handler for OAuth callbacks.
+
+    Reads CSRF/state context from the ``_OAuthCallbackTCPServer`` instance
+    that owns the handler so concurrent OAuth flows on different ports do
+    not share class-level state.
+    """
 
     def do_GET(self) -> None:
         """Handle GET request from OAuth redirect."""
         _logger.debug("oauth_callback_received")
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
+        server = cast("_OAuthCallbackTCPServer", self.server)
 
-        with _callback_state_lock:
-            if "error" in params:
-                OAuthCallbackHandler.callback_error = params["error"][0]
+        if "error" in params:
+            server.callback_error = params["error"][0]
+            status = 400
+            message = f"Authorization failed: {params['error'][0]}. You can close this window."
+        elif "code" in params and "state" in params:
+            received_state = params["state"][0]
+            expected = server.expected_state
+            if expected is not None and not secrets.compare_digest(received_state, expected):
+                server.callback_error = "state_mismatch"
                 status = 400
-                message = f"Authorization failed: {params['error'][0]}. You can close this window."
-            elif "code" in params and "state" in params:
-                received_state = params["state"][0]
-                expected = OAuthCallbackHandler.expected_state
-                if expected is not None and not secrets.compare_digest(received_state, expected):
-                    OAuthCallbackHandler.callback_error = "state_mismatch"
-                    status = 400
-                    message = "State parameter mismatch. Possible CSRF attempt."
-                else:
-                    OAuthCallbackHandler.callback_code = params["code"][0]
-                    OAuthCallbackHandler.callback_state = received_state
-                    status = 200
-                    message = "Authorization successful! You can close this window."
+                message = "State parameter mismatch. Possible CSRF attempt."
             else:
-                status = 400
-                message = "Invalid callback parameters."
+                server.callback_code = params["code"][0]
+                server.callback_state = received_state
+                status = 200
+                message = "Authorization successful! You can close this window."
+        else:
+            status = 400
+            message = "Invalid callback parameters."
 
-            event = OAuthCallbackHandler.callback_event
+        event = server.callback_event
 
         self._send_response(status, message)
 
@@ -436,7 +484,7 @@ class OAuthCallbackServer:
         self._port = port
         self._timeout = timeout
         self._expected_state = expected_state
-        self._server: socketserver.TCPServer | None = None
+        self._server: _OAuthCallbackTCPServer | None = None
         self._thread: threading.Thread | None = None
         self._event = threading.Event()
 
@@ -446,15 +494,9 @@ class OAuthCallbackServer:
         Raises:
             OAuthCallbackError: If the local bind socket cannot be opened.
         """
-        OAuthCallbackHandler.callback_code = None
-        OAuthCallbackHandler.callback_state = None
-        OAuthCallbackHandler.callback_error = None
-        OAuthCallbackHandler.callback_event = self._event
-        OAuthCallbackHandler.expected_state = self._expected_state
-
         socketserver.TCPServer.allow_reuse_address = True
         try:
-            self._server = socketserver.TCPServer(
+            self._server = _OAuthCallbackTCPServer(
                 ("127.0.0.1", self._port),
                 OAuthCallbackHandler,
             )
@@ -464,6 +506,11 @@ class OAuthCallbackServer:
             raise OAuthCallbackError(msg) from exc
 
         server = self._server
+        server.callback_code = None
+        server.callback_state = None
+        server.callback_error = None
+        server.callback_event = self._event
+        server.expected_state = self._expected_state
 
         def serve() -> None:
             try:
@@ -489,16 +536,21 @@ class OAuthCallbackServer:
             msg = "Timeout waiting for OAuth callback"
             raise OAuthCallbackError(msg)
 
-        if OAuthCallbackHandler.callback_error:
-            error_msg = OAuthCallbackHandler.callback_error
+        server = self._server
+        if server is None:
+            msg = "Callback server is not running"
+            raise OAuthCallbackError(msg)
+
+        if server.callback_error:
+            error_msg = server.callback_error
             if "denied" in error_msg.lower() or "access_denied" in error_msg.lower():
                 msg = f"Authorization denied: {error_msg}"
                 raise OAuthAuthorizationError(msg)
             msg = f"OAuth error: {error_msg}"
             raise OAuthCallbackError(msg)
 
-        code = OAuthCallbackHandler.callback_code
-        state = OAuthCallbackHandler.callback_state
+        code = server.callback_code
+        state = server.callback_state
 
         if not code or not state:
             msg = "Invalid callback: missing code or state"
@@ -517,6 +569,8 @@ class OAuthCallbackServer:
         """
         server = self._server
         if server is not None:
+            server.callback_event = None
+            server.expected_state = None
             try:
                 server.server_close()
             except OSError as exc:
@@ -525,8 +579,6 @@ class OAuthCallbackServer:
         if self._thread is not None:
             self._thread.join(timeout=1.0)
             self._thread = None
-        OAuthCallbackHandler.callback_event = None
-        OAuthCallbackHandler.expected_state = None
         _logger.info("oauth_callback_server_stopped")
 
 
@@ -903,6 +955,10 @@ class OAuthManager:
     ) -> OAuthToken | None:
         """Get a valid OAuth token for a provider.
 
+        Uses the 10-minute ``needs_refresh`` buffer to refresh tokens
+        proactively before they actually expire so callers never observe a
+        token within the refresh window unless the refresh itself failed.
+
         Args:
             provider: The OAuth provider.
             config: OAuth config for refresh (uses default if None).
@@ -916,7 +972,7 @@ class OAuthManager:
             return None
 
         effective_config = config or OAUTH_CONFIGS.get(provider)
-        if effective_config and token.is_expired and auto_refresh and token.refresh_token:
+        if effective_config and token.needs_refresh and auto_refresh and token.refresh_token:
             try:
                 token = await self.refresh_token(provider, effective_config)
             except OAuthTokenRefreshError:
@@ -1017,18 +1073,28 @@ class OAuthManager:
     async def revoke_token(self, provider: OAuthProvider) -> bool:
         """Revoke and delete OAuth token.
 
+        The returned bool reflects whether *both* the optional remote
+        revocation call (when the provider exposes a ``revoke_url``) and the
+        local keyring delete succeeded.  When no remote endpoint is
+        configured the result reflects only the keyring delete.  The
+        in-memory token cache is always cleared so subsequent ``get_token``
+        calls do not return a stale token even if revocation reports false.
+
         Args:
             provider: The OAuth provider.
 
         Returns:
-            bool: True if token was revoked/deleted.
+            bool: True if both the remote revocation (if any) and the
+            keyring deletion succeeded.
         """
         token = await self._load_token(provider)
         if token is None:
             return False
 
+        revoke_succeeded = True
         config = OAUTH_CONFIGS.get(provider)
         if config and config.revoke_url:
+            revoke_succeeded = False
             client = await self._get_http_client()
             try:
                 revoke_response = await client.post(
@@ -1036,7 +1102,12 @@ class OAuthManager:
                     data={"token": token.access_token},
                 )
                 revoke_response.raise_for_status()
-                _logger.info("oauth_token_revoked", provider=provider.value)
+                revoke_succeeded = True
+                _logger.info(
+                    "oauth_token_revoked",
+                    provider=provider.value,
+                    status_code=revoke_response.status_code,
+                )
             except httpx.HTTPStatusError as http_exc:
                 _logger.warning(
                     "oauth_token_revocation_http_error",
@@ -1049,10 +1120,12 @@ class OAuthManager:
         async with self._token_cache_lock:
             self._token_cache.pop(provider, None)
 
+        keyring_succeeded = True
         if self._credential_store:
+            keyring_succeeded = False
             provider_name = _oauth_provider_to_name(provider)
             try:
-                await self._credential_store.delete(provider_name)
+                keyring_succeeded = await self._credential_store.delete(provider_name)
             except _KeyringError as exc:
                 _logger.warning(
                     "oauth_token_delete_failed",
@@ -1063,7 +1136,15 @@ class OAuthManager:
             except (OSError, KeyError, ValueError) as exc:
                 _logger.warning("oauth_token_delete_failed", provider=provider.value, error=str(exc))
 
-        return True
+        combined_success = revoke_succeeded and keyring_succeeded
+        _logger.info(
+            "oauth_token_revoke_completed",
+            provider=provider.value,
+            revoke_succeeded=revoke_succeeded,
+            keyring_succeeded=keyring_succeeded,
+            combined_success=combined_success,
+        )
+        return combined_success
 
     async def to_provider_credentials(
         self,

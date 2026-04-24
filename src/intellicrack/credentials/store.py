@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import IntellicrackError, ProviderCredentials, ProviderName
@@ -126,11 +126,22 @@ class CredentialStore:
         self._keyring_checked: bool = False
         self._keyring_available: bool = False
 
+    _UNUSABLE_BACKEND_NAMES: ClassVar[frozenset[str]] = frozenset({
+        "fail.Keyring",
+        "null.Keyring",
+    })
+
     def _check_keyring(self) -> bool:
         """Check if keyring backend is available and functional.
 
+        Performs passive inspection of the active keyring backend instead of
+        writing and deleting a probe key.  The previous approach mutated the
+        user's keyring on every initialization, which could collide with
+        legitimate keys named ``intellicrack_test`` and pollute audit logs.
+
         Returns:
-            bool: True if keyring is available and working.
+            bool: True if keyring is available and the active backend is a
+            real credential store (not a fail/null backend).
         """
         if self._keyring_checked:
             return self._keyring_available
@@ -142,23 +153,37 @@ class CredentialStore:
             return False
 
         try:
-            test_key = f"{self.SERVICE_NAME}_test"
-            _keyring_module.set_password(self.SERVICE_NAME, test_key, "test_value")
-            result = _keyring_module.get_password(self.SERVICE_NAME, test_key)
-            _keyring_module.delete_password(self.SERVICE_NAME, test_key)
-
-            if result == "test_value":
-                self._keyring = _keyring_module
-                self._keyring_available = True
-                _logger.info("keyring_backend_available", backend=_keyring_module.get_keyring().__class__.__name__)
+            backend = _keyring_module.get_keyring()
         except (OSError, RuntimeError, KeyError, ValueError, _KeyringError) as e:
             _logger.warning("keyring_unavailable", error=str(e), exc_info=True)
             return False
-        else:
-            if self._keyring_available:
-                return True
-            _logger.warning("keyring_test_failed", reason="value_mismatch")
-        return False
+
+        backend_module = getattr(type(backend), "__module__", "")
+        backend_name = type(backend).__name__
+        qualified_name = f"{backend_module.rsplit('.', 1)[-1]}.{backend_name}" if backend_module else backend_name
+
+        if qualified_name in self._UNUSABLE_BACKEND_NAMES or backend_name in {"Keyring", "FailKeyring", "NullKeyring"}:
+            _logger.warning(
+                "keyring_unavailable",
+                reason="backend_is_fail_or_null",
+                backend=qualified_name,
+            )
+            return False
+
+        priority = getattr(backend, "priority", None)
+        if isinstance(priority, (int, float)) and priority <= 0:
+            _logger.warning(
+                "keyring_unavailable",
+                reason="backend_priority_non_positive",
+                backend=qualified_name,
+                priority=priority,
+            )
+            return False
+
+        self._keyring = _keyring_module
+        self._keyring_available = True
+        _logger.info("keyring_backend_available", backend=qualified_name)
+        return True
 
     @cached_property
     def keyring_available(self) -> bool:
