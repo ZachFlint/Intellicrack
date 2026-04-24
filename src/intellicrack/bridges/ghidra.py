@@ -1435,7 +1435,8 @@ ghidra_bridge_server.GhidraBridgeServer(
 
         Raises:
             ToolError: If the file does not exist, if the remote importFile
-                call fails, or if Ghidra reports that no program was produced.
+                call fails, if Ghidra reports that no program was produced,
+                or if metadata extraction from the loaded program fails.
         """
         if not await asyncio.to_thread(path.exists):
             error_message = f"{_ERR_FILE_NOT_FOUND}: {path}"
@@ -1476,13 +1477,6 @@ ghidra_bridge_server.GhidraBridgeServer(
         file_type = self._detect_format(data)
         arch, is_64 = await self._resolve_architecture(data)
 
-        self.state.connected = True
-        self.state.tool_running = True
-        self.state.binary_loaded = True
-        self.state.target_path = self._binary_path
-
-        _logger.info("binary_loaded", path=path.name)
-
         entry_point = 0
         sections: list[SectionInfo] = []
         imports: list[ImportInfo] = []
@@ -1491,8 +1485,20 @@ ghidra_bridge_server.GhidraBridgeServer(
         if self._bridge is not None:
             try:
                 entry_point, sections, imports, exports = await self._extract_binary_metadata()
-            except Exception:
+            except Exception as exc:
                 _logger.exception("ghidra_metadata_extraction_failed", binary_path=str(path))
+                self.state.binary_loaded = False
+                self.state.target_path = None
+                self.state.last_error = str(exc)
+                msg = f"Ghidra metadata extraction failed: {exc}"
+                raise ToolError(msg) from exc
+
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.binary_loaded = True
+        self.state.target_path = self._binary_path
+
+        _logger.info("binary_loaded", path=path.name)
 
         return BinaryInfo(
             path=self._binary_path,
