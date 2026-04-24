@@ -99,8 +99,6 @@ TEST_PID_PROTECTED = 4567
 TEST_PARENT_PID = 4
 TEST_TID = 1234
 TEST_TID_INITIAL = 1
-TEST_THREAD_PRIORITY = 8
-TEST_THREAD_PRIORITY_HIGH = 10
 
 # Test constants for characteristics and flags
 SECTION_CHARACTERISTICS = 0x60000020
@@ -568,8 +566,8 @@ def test_process_info_creation() -> None:
     thread = ThreadInfo(
         tid=TEST_TID_INITIAL,
         start_address=ADDR_THREAD_START,
+        current_pc=ADDR_THREAD_START,
         state="running",
-        priority=TEST_THREAD_PRIORITY,
     )
     module = ModuleInfo(
         name="ntdll.dll",
@@ -601,8 +599,8 @@ def test_thread_info_uses_tid() -> None:
     thread = ThreadInfo(
         tid=TEST_TID,
         start_address=ADDR_THREAD_START,
+        current_pc=ADDR_THREAD_START,
         state="suspended",
-        priority=TEST_THREAD_PRIORITY_HIGH,
     )
     assert thread.tid == TEST_TID
 

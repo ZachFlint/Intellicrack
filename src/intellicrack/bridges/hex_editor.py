@@ -224,7 +224,6 @@ except (ImportError, OSError) as _exc:
 _JAVA_SIGNED_BYTE_THRESHOLD = 0x7F
 _PRINTABLE_MIN = 0x20
 _PRINTABLE_MAX = 0x7E
-_FLOAT32_BYTE_SIZE = 4
 _MIN_HEADER_SIZE = 4
 _BYTE_MASK = 0xFF
 _U16_MASK = 0xFFFF
@@ -1502,18 +1501,20 @@ class HexEditorBridge(ToolBridgeBase):
     async def shutdown(self) -> None:
         """Shutdown the hex editor bridge.
 
-        Releases the active document, resets cursor and selection,
-        drops cached highlight rules, and fully clears the shared
-        ``HexDocumentState`` if one is attached so that downstream
-        observers drop any cached references.
+        Mirrors :meth:`close_file`: notify the shared
+        ``HexDocumentState`` that the document is going away
+        (``set_document(None, None)``) before dropping the local
+        reference so downstream observers see a consistent transition,
+        then resets cursor and selection and clears cached highlight
+        rules.
         """
+        if self.state_holder is not None:
+            self.state_holder.set_document(None, None, source="bridge")
         with self._state_lock:
             self.document = None
             self._cursor_offset = 0
             self._selection = None
             self._highlight_rules.clear()
-        if self.state_holder is not None:
-            self.state_holder.clear_all(source="bridge")
         _logger.debug("hex_editor_shutdown")
         await super().shutdown()
 
@@ -3289,28 +3290,32 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("custom_crc_computed", width=width, result=f"{crc:#0{hex_width + 2}x}")
         return f"{crc:0{hex_width}X}"
 
-    async def export_patches(self, patch_format: str = "ips") -> str:
+    async def export_patches(self, patch_format: str = "ips", original_path: str | None = None) -> str:
         """Export document patches in the requested patch format.
 
         Dispatches on ``patch_format``:
 
         * ``"ips"`` / ``"ips32"`` use the document's native IPS export
           when available, falling back to a Python builder.
-        * ``"bps"`` / ``"ups"`` require an original reference file and
-          are not supported through this single-argument API; call
-          :meth:`export_patches_bps` or :meth:`export_patches_ups`
-          directly.
+        * ``"bps"`` / ``"ups"`` are routed to :meth:`export_patches_bps`
+          / :meth:`export_patches_ups`, which require ``original_path``
+          to point at the unmodified source file used for the diff.
 
         Args:
-            patch_format: Patch format name (``"ips"`` or ``"ips32"``).
+            patch_format: Patch format name (``"ips"``, ``"ips32"``,
+                ``"bps"``, or ``"ups"``).
+            original_path: Path to the original unmodified file. Required
+                when ``patch_format`` is ``"bps"`` or ``"ups"``; ignored
+                for IPS/IPS32.
 
         Returns:
             str: Base64-encoded patch data.
 
         Raises:
             RuntimeError: If no document is open.
-            ToolError: If ``patch_format`` is not a recognized format or
-                the current backend cannot export the requested format.
+            ToolError: If ``patch_format`` is not a recognized format,
+                the current backend cannot export the requested format,
+                or BPS/UPS were requested without an ``original_path``.
         """
         if self.document is None:
             msg = _ERR_NO_DOCUMENT
@@ -3321,8 +3326,12 @@ class HexEditorBridge(ToolBridgeBase):
             msg = f"{_ERR_UNKNOWN_PATCH_FORMAT}: {patch_format!r} (supported: {sorted(_EXPORT_PATCH_FORMATS)})"
             raise ToolError(msg)
         if normalized in _BPS_UPS_FORMATS:
-            msg = f"patch format {normalized!r} requires an original reference file; use export_patches_{normalized}(original_path) instead"
-            raise ToolError(msg)
+            if original_path is None:
+                msg = f"patch format {normalized!r} requires original_path"
+                raise ToolError(msg)
+            if normalized == "bps":
+                return await self.export_patches_bps(original_path)
+            return await self.export_patches_ups(original_path)
 
         raw: bytes
         if normalized == "ips32" and hasattr(self.document, "export_patches_ips32"):
@@ -3339,7 +3348,7 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("patches_exported", patch_format=normalized, size=len(raw))
         return base64.b64encode(raw).decode("ascii")
 
-    async def import_patches(self, data_b64: str) -> int:
+    async def import_patches(self, data_b64: str, original_path: str | None = None) -> int:
         """Import and apply a patch blob, dispatching by magic bytes.
 
         The first bytes of the decoded payload are inspected to select
@@ -3350,14 +3359,17 @@ class HexEditorBridge(ToolBridgeBase):
         * ``BPS1``  -> BPS
         * ``UPS1``  -> UPS
 
-        BPS and UPS require the original source bytes to reconstruct
-        the target, so they can only be applied when the current
-        document contents match the source referenced by the patch.
-        The current document contents are used as the source when
-        applying those formats through this method.
+        BPS and UPS reconstruct the target from a separate source file.
+        When ``original_path`` is provided that file's bytes are used as
+        the source; otherwise the current document contents are used,
+        which only works when the document already matches the source
+        referenced by the patch.
 
         Args:
             data_b64: Base64-encoded patch data.
+            original_path: Optional path to the unmodified source file
+                used as the input for BPS/UPS reconstruction. Ignored
+                for IPS/IPS32 formats.
 
         Returns:
             int: Number of patch records applied. For BPS/UPS this is
@@ -3395,7 +3407,7 @@ class HexEditorBridge(ToolBridgeBase):
                     msg = f"{_ERR_INVALID_IPS}: {exc}"
                     raise ToolError(msg) from exc
         elif magic4 == _BPS_MAGIC:
-            source = self._read_all_doc_bytes()
+            source = await self._resolve_patch_source(original_path)
             try:
                 target = self._apply_bps_patch(raw, source)
             except (struct.error, ValueError, IndexError) as exc:
@@ -3404,7 +3416,7 @@ class HexEditorBridge(ToolBridgeBase):
             self.document.write_bytes(0, target)
             count = 1
         elif magic4 == _UPS_MAGIC:
-            source = self._read_all_doc_bytes()
+            source = await self._resolve_patch_source(original_path)
             try:
                 target = self._apply_ups_patch(raw, source)
             except (struct.error, ValueError, IndexError) as exc:
@@ -3422,6 +3434,22 @@ class HexEditorBridge(ToolBridgeBase):
             doc_len: int = self.document.length()
             self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return count
+
+    async def _resolve_patch_source(self, original_path: str | None) -> bytes:
+        """Resolve the source bytes used as the BPS/UPS reconstruction input.
+
+        Args:
+            original_path: Optional path to the unmodified source file.
+                When provided the file bytes are returned; when ``None``
+                the current document bytes are returned.
+
+        Returns:
+            bytes: Source bytes the BPS/UPS engine should treat as the
+            patch input.
+        """
+        if original_path is None:
+            return self._read_all_doc_bytes()
+        return await asyncio.to_thread(Path(original_path).read_bytes)
 
     @staticmethod
     def _build_ips_from_patches(
@@ -3529,6 +3557,13 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> list[dict[str, int]]:
         """Search for a numeric value in the document.
 
+        Always dispatches to the native ``intellicrack_hexcore`` Rust
+        implementation (``search_numeric_float`` for floats, otherwise
+        ``search_numeric``). The Rust extension is built into the
+        project and ``open_file`` rejects up-front when it cannot be
+        loaded, so any document held by this bridge is guaranteed to
+        expose the native search APIs and no Python fallback is needed.
+
         Args:
             value: Numeric value to search for.
             size: Byte size of the value: 1, 2, 4, or 8.
@@ -3542,7 +3577,8 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, int]]: List of dicts with offset and length.
 
         Raises:
-            RuntimeError: If the operation fails.
+            RuntimeError: If no document is open or the document does
+                not expose the native search APIs.
         """
         if self.document is None:
             msg = "no document open"
@@ -3550,52 +3586,19 @@ class HexEditorBridge(ToolBridgeBase):
 
         big_endian = endianness == "big"
         if value_type == "float":
-            if hasattr(self.document, "search_numeric_float"):
-                results = self.document.search_numeric_float(value, size, big_endian, tolerance, alignment, max_results)
-                _logger.debug("search_numeric_float_completed", matches=len(results))
-                return [{"offset": r[0], "length": r[1]} for r in results]
-        elif hasattr(self.document, "search_numeric"):
-            results = self.document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
-            _logger.debug("search_numeric_completed", matches=len(results))
+            if not hasattr(self.document, "search_numeric_float"):
+                msg = "document backend does not expose search_numeric_float"
+                raise RuntimeError(msg)
+            results = self.document.search_numeric_float(value, size, big_endian, tolerance, alignment, max_results)
+            _logger.debug("search_numeric_float_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
 
-        if value_type == "float" and tolerance > 0.0:
-            return self._search_float_fallback(
-                float(value),
-                size,
-                big_endian=big_endian,
-                tolerance=tolerance,
-                alignment=alignment,
-                max_results=max_results,
-            )
-
-        needle = self._pack_numeric_needle(value, size, value_type, big_endian=big_endian)
-        doc_len: int = self.document.length()
-        matches: list[dict[str, int]] = []
-        step = max(alignment, 1)
-        pos = 0
-        while pos <= doc_len - size and len(matches) < max_results:
-            chunk_len = min(65536, doc_len - pos)
-            raw = self.document.read(pos, chunk_len)
-            if isinstance(raw, bytes):
-                chunk = raw
-            elif isinstance(raw, bytearray) or not isinstance(raw, list):
-                chunk = bytes(raw)
-            else:
-                chunk = bytes(cast("list[int]", raw))
-            start_rem = pos % step
-            idx = 0 if start_rem == 0 else step - start_rem
-            while idx <= len(chunk) - size and len(matches) < max_results:
-                if chunk[idx : idx + size] == needle:
-                    matches.append({"offset": pos + idx, "length": size})
-                idx += step
-            advance = chunk_len - (size - 1)
-            if advance <= 0:
-                break
-            pos += advance
-
-        _logger.debug("search_numeric_completed", matches=len(matches))
-        return matches
+        if not hasattr(self.document, "search_numeric"):
+            msg = "document backend does not expose search_numeric"
+            raise RuntimeError(msg)
+        results = self.document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
+        _logger.debug("search_numeric_completed", matches=len(results))
+        return [{"offset": r[0], "length": r[1]} for r in results]
 
     async def search_numeric_range(
         self,
@@ -3690,101 +3693,6 @@ class HexEditorBridge(ToolBridgeBase):
         endian_char = ">" if big_endian else "<"
         fmt_char = size_chars[size] if value_type == "int" else size_chars[size].upper()
         return endian_char + fmt_char
-
-    @staticmethod
-    def _pack_numeric_needle(value: float, size: int, value_type: str, *, big_endian: bool) -> bytes:
-        """Pack a numeric value into bytes for use as a search needle.
-
-        Args:
-            value: Numeric value to pack.
-            size: Byte width: 1, 2, 4, or 8 for integers; 4 or 8 for floats.
-            value_type: ``"float"``, ``"int"``, or ``"uint"``.
-            big_endian: True for big-endian byte order.
-
-        Returns:
-            bytes: Packed bytes representation of the value.
-
-        Raises:
-            ValueError: If size is invalid for the given value_type.
-        """
-        endian_char = ">" if big_endian else "<"
-        if value_type == "float":
-            if size not in {4, 8}:
-                msg = f"float size must be 4 or 8, got {size}"
-                raise ValueError(msg)
-            fmt_char = "f" if size == _FLOAT32_BYTE_SIZE else "d"
-            return struct.pack(endian_char + fmt_char, float(value))
-        if size not in {1, 2, 4, 8}:
-            msg = f"numeric size must be 1, 2, 4, or 8, got {size}"
-            raise ValueError(msg)
-        signed = value_type == "int"
-        size_chars = {1: "b", 2: "h", 4: "i", 8: "q"}
-        fmt_char = size_chars[size] if signed else size_chars[size].upper()
-        return struct.pack(endian_char + fmt_char, value)
-
-    def _search_float_fallback(
-        self,
-        value: float,
-        size: int,
-        *,
-        big_endian: bool,
-        tolerance: float,
-        alignment: int,
-        max_results: int,
-    ) -> list[dict[str, int]]:
-        """Tolerance-based float search fallback when Rust extension is unavailable.
-
-        Scans document chunks, unpacking each aligned position as a float
-        and comparing against the target value within the given tolerance.
-
-        Args:
-            value: Target float value.
-            size: Byte width (4 for float32, 8 for float64).
-            big_endian: True for big-endian byte order.
-            tolerance: Maximum allowed absolute difference.
-            alignment: Search step alignment in bytes.
-            max_results: Maximum number of results to return.
-
-        Returns:
-            list[dict[str, int]]: List of dicts with offset and length.
-
-        Raises:
-            RuntimeError: If no document is open.
-            ValueError: If size is not 4 or 8.
-        """
-        if self.document is None:
-            msg = "no document open"
-            raise RuntimeError(msg)
-        if size not in {4, 8}:
-            msg = f"float size must be 4 or 8, got {size}"
-            raise ValueError(msg)
-
-        endian_prefix = ">" if big_endian else "<"
-        fmt = endian_prefix + ("f" if size == _FLOAT32_BYTE_SIZE else "d")
-        doc_len: int = self.document.length()
-        matches: list[dict[str, int]] = []
-        pos = 0
-        while pos <= doc_len - size and len(matches) < max_results:
-            chunk_len = min(65536, doc_len - pos)
-            raw = self.document.read(pos, chunk_len)
-            if isinstance(raw, bytes):
-                chunk = raw
-            elif isinstance(raw, bytearray) or not isinstance(raw, list):
-                chunk = bytes(raw)
-            else:
-                chunk = bytes(cast("list[int]", raw))
-            idx = 0
-            while idx <= len(chunk) - size and len(matches) < max_results:
-                abs_offset = pos + idx
-                if abs_offset % alignment == 0:
-                    candidate: float = struct.unpack(fmt, chunk[idx : idx + size])[0]
-                    if abs(candidate - value) <= tolerance:
-                        matches.append({"offset": abs_offset, "length": size})
-                idx += alignment
-            pos += chunk_len - size + 1
-
-        _logger.debug("search_numeric_float_fallback_completed", matches=len(matches))
-        return matches
 
     async def add_highlight_rule(
         self,

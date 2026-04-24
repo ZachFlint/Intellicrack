@@ -1006,7 +1006,7 @@ class GhidraBridge(StaticAnalysisBridge):
                     returns="String result of the script",
                 ),
                 ToolFunction(
-                    name="ghidra.manage_thunks",
+                    name="ghidra.get_thunk_info",
                     description="Query thunk status and resolved target for a function",
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Function address", required=True),
@@ -1014,7 +1014,7 @@ class GhidraBridge(StaticAnalysisBridge):
                     returns="Dict with address, is_thunk, thunked_function, and thunked_address",
                 ),
                 ToolFunction(
-                    name="ghidra.manage_external_references",
+                    name="ghidra.get_external_references",
                     description="Get external (imported) references from an address",
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Address to query", required=True),
@@ -5367,7 +5367,7 @@ metadata
         result = await self._execute_remote(injected)
         return str(result) if result is not None else ""
 
-    async def manage_thunks(self, address: int) -> dict[str, Any]:
+    async def get_thunk_info(self, address: int) -> dict[str, Any]:
         """Query thunk status and resolved target for a function.
 
         Args:
@@ -5383,7 +5383,7 @@ metadata
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
-        _logger.debug("thunk_managing", address=hex(address))
+        _logger.debug("thunk_info_fetching", address=hex(address))
         try:
             result = await self._execute_remote(f"""
                 addr = toAddr({address})
@@ -5407,10 +5407,10 @@ metadata
                 else {"address": hex(address), "is_thunk": False, "thunked_function": None, "thunked_address": None}
             )
         except Exception:
-            _logger.exception("manage_thunks_failed", address=hex(address))
+            _logger.exception("get_thunk_info_failed", address=hex(address))
             return {"address": hex(address), "is_thunk": False, "thunked_function": None, "thunked_address": None}
 
-    async def manage_external_references(self, address: int) -> list[dict[str, Any]]:
+    async def get_external_references(self, address: int) -> list[dict[str, Any]]:
         """Get external (imported) references from an address.
 
         Args:
@@ -5448,7 +5448,7 @@ metadata
             """)
             return cast("list[dict[str, Any]]", result) if result else []
         except Exception:
-            _logger.exception("manage_external_references_failed", address=hex(address))
+            _logger.exception("get_external_references_failed", address=hex(address))
             return []
 
     async def add_external_function(self, library: str, name: str, address: int | None = None) -> dict[str, Any]:

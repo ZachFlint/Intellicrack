@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import sys
 import tempfile
 import threading
 import time
@@ -177,6 +176,7 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="path", type="string", description="Path to executable", required=True),
             ToolParameter(name="args", type="array", description="Command line arguments", required=False),
+            ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
         returns="Process ID of spawned process",
     ),
@@ -185,6 +185,7 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="Attach Frida to a running process",
         parameters=[
             ToolParameter(name="target", type="string", description="Process name or PID", required=True),
+            ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
         returns="Session information",
     ),
@@ -1016,6 +1017,12 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
                 enum=["x86", "arm", "arm64", "thumb", "mips"],
             ),
             ToolParameter(name="instructions", type="array", description="List of instruction method calls", required=True),
+            ToolParameter(
+                name="max_size",
+                type="integer",
+                description="Probe-buffer byte budget for the two-phase write; defaults to 4096",
+                required=False,
+            ),
         ],
         returns="Number of bytes written",
     ),
@@ -1059,6 +1066,7 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="source", type="string", description="TypeScript source code or entry path", required=True),
             ToolParameter(name="project_root", type="string", description="Project root for imports", required=False),
+            ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
         returns="Compiled JavaScript source",
     ),
@@ -1340,11 +1348,15 @@ class FridaBridge(InstrumentationBridge):
             _logger.warning("frida_attach_failed", pid=pid, error=str(e))
             raise ToolError(_ERR_ATTACH_FAILED) from e
 
-    async def attach_by_name(self, name: str) -> None:
+    async def attach_by_name(self, name: str, *, cancellable_id: str | None = None) -> None:
         """Attach to a process by name.
 
         Args:
             name: Process name to attach to.
+            cancellable_id: Optional cancellation token identifier returned
+                by :meth:`create_cancellable`. When supplied, the token is
+                passed through to the underlying Frida attach call so the
+                operation can be aborted with :meth:`cancel`.
 
         Raises:
             ToolError: If attachment fails.
@@ -1355,6 +1367,8 @@ class FridaBridge(InstrumentationBridge):
         device = self._device
         if device is None:
             raise ToolError(_ERR_DEVICE_FAILED)
+
+        cancellable = self._resolve_cancellable(cancellable_id)
 
         try:
             processes = await asyncio.to_thread(device.enumerate_processes)
@@ -1368,8 +1382,10 @@ class FridaBridge(InstrumentationBridge):
 
         try:
             self._session = await asyncio.to_thread(
-                device.attach,
-                name,
+                self._attach_with_cancellable,
+                device,
+                target_pid,
+                cancellable,
             )
         except frida.ProcessNotFoundError as e:
             _logger.warning("frida_process_not_found_by_name", process_name=name, error=str(e))
@@ -1877,7 +1893,7 @@ class FridaBridge(InstrumentationBridge):
         script_code = f"""
         var mod = Process.findModuleByName('{escaped_module}');
         if (!mod) {{
-            send({{ type: 'exports', moduleFound: false, data: [] }});
+            send({{ type: 'exports', error: 'module_not_found', data: [] }});
         }} else {{
             var exports = mod.enumerateExports();
             var result = exports.map(function(e) {{
@@ -1887,20 +1903,20 @@ class FridaBridge(InstrumentationBridge):
                     address: e.address.toString()
                 }};
             }});
-            send({{ type: 'exports', moduleFound: true, data: result }});
+            send({{ type: 'exports', data: result }});
         }}
         """
 
         result = await self._execute_script_and_wait(script_code)
 
-        if "error" in result:
-            raise ToolError(_ERR_EXPORT_NOT_FOUND)
-
-        if result.get("moduleFound") is False:
+        if result.get("error") == "module_not_found":
             raise ToolError(
                 _ERR_MODULE_NOT_FOUND,
                 details={"module": module_name},
             )
+
+        if "error" in result:
+            raise ToolError(_ERR_EXPORT_NOT_FOUND)
 
         exports: list[ExportInfo] = []
         export_data = result.get("data", [])
@@ -2514,7 +2530,7 @@ class FridaBridge(InstrumentationBridge):
         script_code = f"""
         var mod = Process.findModuleByName('{escaped_module}');
         if (!mod) {{
-            send({{ type: 'imports', moduleFound: false, data: [] }});
+            send({{ type: 'imports', error: 'module_not_found', data: [] }});
         }} else {{
             var imports = mod.enumerateImports();
             var result = imports.map(function(i) {{
@@ -2525,20 +2541,20 @@ class FridaBridge(InstrumentationBridge):
                     address: i.address ? i.address.toString() : '0'
                 }};
             }});
-            send({{ type: 'imports', moduleFound: true, data: result }});
+            send({{ type: 'imports', data: result }});
         }}
         """
 
         result = await self._execute_script_and_wait(script_code)
 
-        if "error" in result:
-            raise ToolError(_ERR_IMPORT_NOT_FOUND)
-
-        if result.get("moduleFound") is False:
+        if result.get("error") == "module_not_found":
             raise ToolError(
                 _ERR_MODULE_NOT_FOUND,
                 details={"module": module_name},
             )
+
+        if "error" in result:
+            raise ToolError(_ERR_IMPORT_NOT_FOUND)
 
         imports: list[ImportInfo] = []
         import_data = result.get("data", [])
@@ -2567,6 +2583,14 @@ class FridaBridge(InstrumentationBridge):
     async def enumerate_threads(self) -> list[ThreadInfo]:
         """List all threads in the attached process.
 
+        Each ``ThreadInfo`` returned exposes ``current_pc`` (where the
+        thread is currently executing, sourced from ``t.context.pc``)
+        and a separate ``start_address`` for the thread's original
+        entry point. The Frida API does not expose the entry point
+        directly, so ``start_address`` is reported as 0 here; consumers
+        that need a real entry point should pair this call with an
+        x64dbg / Toolhelp32 enumeration on Windows.
+
         Returns:
             list[ThreadInfo]: List of thread information.
 
@@ -2576,73 +2600,17 @@ class FridaBridge(InstrumentationBridge):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
-        is_windows = sys.platform == "win32"
-        if is_windows:
-            script_code = """
-            var k32 = Process.findModuleByName('kernel32.dll');
-            var getPrio = null;
-            var openThread = null;
-            var closeHandle = null;
-            if (k32) {
-                try {
-                    getPrio = new NativeFunction(
-                        k32.getExportByName('GetThreadPriority'),
-                        'int',
-                        ['pointer']
-                    );
-                    openThread = new NativeFunction(
-                        k32.getExportByName('OpenThread'),
-                        'pointer',
-                        ['uint32', 'int', 'uint32']
-                    );
-                    closeHandle = new NativeFunction(
-                        k32.getExportByName('CloseHandle'),
-                        'int',
-                        ['pointer']
-                    );
-                } catch (e) {
-                    getPrio = null;
-                }
-            }
-            var THREAD_QUERY_LIMITED_INFORMATION = 0x0800;
-            var threads = Process.enumerateThreads();
-            var result = threads.map(function(t) {
-                var prio = 0;
-                if (getPrio && openThread && closeHandle) {
-                    try {
-                        var h = openThread(THREAD_QUERY_LIMITED_INFORMATION, 0, t.id);
-                        if (!h.isNull()) {
-                            prio = getPrio(h);
-                            closeHandle(h);
-                        }
-                    } catch (eInner) {
-                        prio = 0;
-                    }
-                }
-                return {
-                    id: t.id,
-                    state: t.state,
-                    pc: t.context.pc.toString(),
-                    currentPc: t.context.pc.toString(),
-                    priority: prio
-                };
-            });
-            send({ type: 'threads', data: result });
-            """
-        else:
-            script_code = """
-            var threads = Process.enumerateThreads();
-            var result = threads.map(function(t) {
-                return {
-                    id: t.id,
-                    state: t.state,
-                    pc: t.context.pc.toString(),
-                    currentPc: t.context.pc.toString(),
-                    priority: 0
-                };
-            });
-            send({ type: 'threads', data: result });
-            """
+        script_code = """
+        var threads = Process.enumerateThreads();
+        var result = threads.map(function(t) {
+            return {
+                id: t.id,
+                state: t.state,
+                currentPc: t.context.pc.toString()
+            };
+        });
+        send({ type: 'threads', data: result });
+        """
 
         result = await self._execute_script_and_wait(script_code)
 
@@ -2658,17 +2626,15 @@ class FridaBridge(InstrumentationBridge):
                 t = cast("dict[str, object]", raw_thread)
                 tid_val = t.get("id", 0)
                 state_val = t.get("state", "waiting")
-                current_pc_val = t.get("currentPc", t.get("pc", "0"))
+                current_pc_val = t.get("currentPc", "0")
                 pc_str = str(current_pc_val)
-                pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
-                prio_val = t.get("priority", 0)
-                priority = int(prio_val) if isinstance(prio_val, (int, float)) else 0
+                current_pc = int(pc_str, 16) if pc_str.startswith("0x") else int(pc_str)
                 threads.append(
                     ThreadInfo(
                         tid=int(tid_val) if isinstance(tid_val, (int, float)) else 0,
-                        start_address=pc,
+                        start_address=0,
+                        current_pc=current_pc,
                         state=str(state_val) if state_val else "waiting",
-                        priority=priority,
                     ),
                 )
 
@@ -3135,6 +3101,12 @@ class FridaBridge(InstrumentationBridge):
     def _validate_protection(protection: str) -> None:
         """Validate that ``protection`` uses a supported Frida rwx triplet.
 
+        Frida ``Memory.protect`` / ``Process.enumerateRanges`` /
+        ``Kernel.protect`` / ``Kernel.enumerateRanges`` accept a
+        three-character ``r``/``w``/``x``/``-`` mask. Validation runs
+        before the protection string is interpolated into any JS payload
+        so malformed input cannot reach the script template.
+
         Args:
             protection: Protection string such as ``'r-x'`` or ``'rwx'``.
 
@@ -3143,14 +3115,22 @@ class FridaBridge(InstrumentationBridge):
                 ``_VALID_PROTECTION_FLAGS``.
         """
         if protection not in _VALID_PROTECTION_FLAGS:
+            allowed = sorted(_VALID_PROTECTION_FLAGS)
             raise ToolError(
                 _ERR_INVALID_PROTECTION,
-                details={"reason": f"invalid protection flags: {protection}"},
+                details={
+                    "reason": f"invalid protection flags: {protection!r}",
+                    "allowed": allowed,
+                },
             )
 
     @staticmethod
     def _validate_socket_family(family: str) -> None:
         """Validate that ``family`` is a supported Frida socket family.
+
+        Validation runs before the family is interpolated into any
+        ``Socket.listen`` / ``Socket.connect`` JS payload so malformed
+        input cannot reach the script template.
 
         Args:
             family: Socket family identifier such as ``'ipv4'``.
@@ -3160,9 +3140,13 @@ class FridaBridge(InstrumentationBridge):
                 ``_VALID_SOCKET_FAMILIES``.
         """
         if family not in _VALID_SOCKET_FAMILIES:
+            allowed = sorted(_VALID_SOCKET_FAMILIES)
             raise ToolError(
                 _ERR_SOCKET_FAILED,
-                details={"reason": f"invalid socket family: {family}"},
+                details={
+                    "reason": f"invalid socket family: {family!r}",
+                    "allowed": allowed,
+                },
             )
 
     @staticmethod
@@ -5866,19 +5850,36 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_SQLITE_FAILED)
         return str(result.get("data", ""))
 
-    async def write_code(self, address: int, architecture: str, instructions: list[str]) -> int:
+    async def write_code(
+        self,
+        address: int,
+        architecture: str,
+        instructions: list[str],
+        max_size: int | None = None,
+    ) -> int:
         """Write machine code instructions at an address using architecture-specific writers.
+
+        Uses a two-phase pattern: a sized probe buffer is allocated and the
+        instruction list is emitted into it to measure the produced byte
+        count, then ``Memory.patchCode`` is called with that exact size.
+        Callers can size the probe buffer with ``max_size`` for instruction
+        sequences larger than the default 4096-byte budget; values smaller
+        than the default still raise so callers cannot accidentally
+        truncate their own writes.
 
         Args:
             address: Target address to write code.
             architecture: Target architecture ('x86', 'arm', 'arm64', 'thumb', 'mips').
             instructions: List of writer method call strings (e.g., 'putNop', 'putRet').
+            max_size: Maximum byte budget for the probe buffer. Defaults to
+                ``_PATCH_CODE_PROBE_SIZE`` (4096). Must be a positive integer.
 
         Returns:
             int: Number of bytes written.
 
         Raises:
-            ToolError: If not attached, architecture is invalid, or write fails.
+            ToolError: If not attached, architecture is invalid,
+                ``max_size`` is non-positive, or the write fails.
         """
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
@@ -5886,13 +5887,20 @@ class FridaBridge(InstrumentationBridge):
         if architecture not in _VALID_CODE_ARCHITECTURES:
             raise ToolError(_ERR_CODE_WRITER_FAILED, details={"reason": f"invalid architecture: {architecture}"})
 
+        probe_size = _PATCH_CODE_PROBE_SIZE if max_size is None else int(max_size)
+        if probe_size <= 0:
+            raise ToolError(
+                _ERR_CODE_WRITER_FAILED,
+                details={"reason": f"max_size must be positive, got {probe_size}"},
+            )
+
         writer_class = _CODE_WRITER_MAP[architecture]
         probe_insn_calls = "\n            ".join(f"wProbe.{insn}();" for insn in instructions)
         insn_calls = "\n            ".join(f"w.{insn}();" for insn in instructions)
 
         script_code = f"""
         try {{
-            var probeBuf = Memory.alloc({_PATCH_CODE_PROBE_SIZE});
+            var probeBuf = Memory.alloc({probe_size});
             var wProbe = new {writer_class}(probeBuf, {{ pc: ptr({address}) }});
             {probe_insn_calls}
             wProbe.flush();
@@ -5902,7 +5910,7 @@ class FridaBridge(InstrumentationBridge):
                     type: 'code_write_error',
                     error: 'probe produced no bytes'
                 }});
-            }} else if (probedSize > {_PATCH_CODE_PROBE_SIZE}) {{
+            }} else if (probedSize > {probe_size}) {{
                 send({{
                     type: 'code_write_error',
                     error: 'probe size ' + probedSize + ' exceeds probe buffer'
@@ -6037,8 +6045,13 @@ class FridaBridge(InstrumentationBridge):
         _logger.debug("range_uncloaked", address=hex(address), size=size)
         return True
 
-    @staticmethod
-    async def compile_typescript(source: str, project_root: str | None = None) -> str:
+    async def compile_typescript(
+        self,
+        source: str,
+        project_root: str | None = None,
+        *,
+        cancellable_id: str | None = None,
+    ) -> str:
         """Compile TypeScript source to JavaScript using Frida compiler.
 
         Accepts either a path to an existing entry file or raw TypeScript
@@ -6049,6 +6062,10 @@ class FridaBridge(InstrumentationBridge):
         Args:
             source: TypeScript source code or path to an entry file.
             project_root: Optional project root directory for imports.
+            cancellable_id: Optional cancellation token identifier returned by
+                :meth:`create_cancellable`. When supplied, the token is passed
+                through to ``frida.Compiler.build`` so the compilation can be
+                aborted via :meth:`cancel`.
 
         Returns:
             str: Compiled JavaScript source code.
@@ -6058,6 +6075,8 @@ class FridaBridge(InstrumentationBridge):
         """
         source_path = Path(source)
         is_path: bool = await asyncio.to_thread(source_path.is_file)
+
+        cancellable = self._resolve_cancellable(cancellable_id)
 
         temp_path: Path | None = None
         try:
@@ -6069,14 +6088,13 @@ class FridaBridge(InstrumentationBridge):
 
             try:
                 compiler = frida.Compiler()
-                if project_root is not None:
-                    compiled: str = await asyncio.to_thread(
-                        compiler.build,
-                        entrypoint,
-                        project_root=project_root,
-                    )
-                else:
-                    compiled = await asyncio.to_thread(compiler.build, entrypoint)
+                compiled: str = await asyncio.to_thread(
+                    self._compiler_build_with_cancellable,
+                    compiler,
+                    entrypoint,
+                    project_root,
+                    cancellable,
+                )
             except Exception as e:
                 _logger.warning("typescript_compile_failed", error=str(e))
                 raise ToolError(_ERR_COMPILE_FAILED) from e
@@ -6093,6 +6111,33 @@ class FridaBridge(InstrumentationBridge):
 
         _logger.info("typescript_compiled", output_size=len(compiled))
         return compiled
+
+    @staticmethod
+    def _compiler_build_with_cancellable(
+        compiler: frida.Compiler,
+        entrypoint: str,
+        project_root: str | None,
+        cancellable: frida.Cancellable | None,
+    ) -> str:
+        """Invoke ``frida.Compiler.build`` honoring an optional cancellation token.
+
+        Args:
+            compiler: Frida ``Compiler`` instance to drive the build.
+            entrypoint: Path to the TypeScript entrypoint file.
+            project_root: Optional project root directory for imports.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to ``Compiler.build`` when provided.
+
+        Returns:
+            str: Compiled JavaScript source produced by the compiler.
+        """
+        build_fn = cast("Callable[..., str]", compiler.build)
+        kwargs: dict[str, Any] = {}
+        if project_root is not None:
+            kwargs["project_root"] = project_root
+        if cancellable is not None:
+            kwargs["cancellable"] = cancellable
+        return build_fn(entrypoint, **kwargs)
 
     async def monitor_path(self, path: str) -> str:
         """Monitor a file path for changes on the target device.

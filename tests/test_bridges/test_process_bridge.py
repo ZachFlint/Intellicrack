@@ -645,14 +645,14 @@ class TestThreadEnumeration:
         valid_states = {"running", "suspended", "terminated", "waiting"}
         assert any(t.state in valid_states for t in threads)
 
-    async def test_get_threads_have_priority(self, attached_bridge: ProcessBridge) -> None:
-        """Verify all threads have non-negative priority.
+    async def test_get_threads_expose_pc_fields(self, attached_bridge: ProcessBridge) -> None:
+        """Verify all threads have separate start_address and current_pc fields.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
         """
         threads = await attached_bridge.get_threads(os.getpid())
-        assert all(t.priority >= 0 for t in threads)
+        assert all(t.start_address >= 0 and t.current_pc >= 0 for t in threads)
 
 
 class TestModuleListing:
