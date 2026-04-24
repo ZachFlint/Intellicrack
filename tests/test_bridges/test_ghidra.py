@@ -182,8 +182,8 @@ def test_tool_definition_new_functions(bridge: GhidraBridge) -> None:
         "ghidra.set_color",
         "ghidra.set_program_metadata",
         "ghidra.execute_script_with_params",
-        "ghidra.manage_thunks",
-        "ghidra.manage_external_references",
+        "ghidra.get_thunk_info",
+        "ghidra.get_external_references",
         "ghidra.add_external_function",
         "ghidra.create_overlay_space",
         "ghidra.add_bookmark",
@@ -956,24 +956,24 @@ class TestNewMethodsRaiseWhenDisconnected:
             await disconnected.set_program_metadata(name="test")
 
     @pytest.mark.asyncio
-    async def test_manage_thunks_not_connected(self, disconnected: GhidraBridge) -> None:
-        """Verify manage_thunks raises when not connected.
+    async def test_get_thunk_info_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_thunk_info raises when not connected.
 
         Args:
             disconnected: GhidraBridge fixture.
         """
         with pytest.raises(ToolError, match="not connected"):
-            await disconnected.manage_thunks(_TEST_ADDRESS)
+            await disconnected.get_thunk_info(_TEST_ADDRESS)
 
     @pytest.mark.asyncio
-    async def test_manage_external_references_not_connected(self, disconnected: GhidraBridge) -> None:
-        """Verify manage_external_references raises when not connected.
+    async def test_get_external_references_not_connected(self, disconnected: GhidraBridge) -> None:
+        """Verify get_external_references raises when not connected.
 
         Args:
             disconnected: GhidraBridge fixture.
         """
         with pytest.raises(ToolError, match="not connected"):
-            await disconnected.manage_external_references(_TEST_ADDRESS)
+            await disconnected.get_external_references(_TEST_ADDRESS)
 
     @pytest.mark.asyncio
     async def test_add_external_function_not_connected(self, disconnected: GhidraBridge) -> None:

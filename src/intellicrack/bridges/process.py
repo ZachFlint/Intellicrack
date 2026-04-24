@@ -2012,8 +2012,8 @@ class ProcessBridge(ToolBridgeBase):
                             ThreadInfo(
                                 tid=tid,
                                 start_address=start_addr,
+                                current_pc=0,
                                 state=state,
-                                priority=entry.tpBasePri,
                             ),
                         )
 

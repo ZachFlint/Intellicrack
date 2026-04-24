@@ -145,7 +145,28 @@ MAX_USER_ADDRESS_64 = 0x7FFFFFFFFFFF
 MIN_PATTERN_LENGTH = 16
 MAX_MEMORY_READ_SIZE = 0x100000
 DWORD_MASK = 0xFFFFFFFF
-INVALID_HANDLE_VALUE = -1
+
+
+def _compute_invalid_handle_value() -> int:
+    """Compute the platform-correct ``INVALID_HANDLE_VALUE`` constant.
+
+    Uses ``wintypes.HANDLE(-1).value`` on Windows so the bit pattern
+    matches what the kernel returns from APIs like
+    ``CreateToolhelp32Snapshot``. Falls back to ``DWORD_MASK`` on
+    non-Windows platforms where the constant is unused.
+
+    Returns:
+        int: ``0xFFFFFFFFFFFFFFFF`` on 64-bit Windows, ``0xFFFFFFFF``
+        on 32-bit Windows or non-Windows hosts.
+    """
+    if sys.platform == "win32":
+        value = wintypes.HANDLE(-1).value
+        if value is not None:
+            return value
+    return DWORD_MASK
+
+
+INVALID_HANDLE_VALUE: int = _compute_invalid_handle_value()
 PAGE_NOACCESS = 0x01
 PAGE_READONLY = 0x02
 PAGE_READWRITE = 0x04
@@ -222,6 +243,121 @@ def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:
         TypeGuard[dict[str, object]]: True if data is a dict with string keys.
     """
     return isinstance(data, dict)
+
+
+_win32_apis_configured: bool = False
+
+
+def _configure_win32_apis() -> None:
+    """Configure ``restype``/``argtypes`` for every Win32 API used by this bridge.
+
+    Without explicit ``restype`` / ``argtypes``, ``ctypes`` defaults to
+    ``c_int`` for return values, which silently truncates 64-bit ``HANDLE``
+    pointers on 64-bit Python and corrupts subsequent
+    ``ReadProcessMemory`` / ``CloseHandle`` / ``VirtualQueryEx`` calls.
+    Centralising the declarations guarantees they are configured exactly
+    once and that every call site sees consistent signatures.
+
+    The function is idempotent and a no-op on non-Windows platforms.
+    """
+    global _win32_apis_configured  # noqa: PLW0603
+    if _win32_apis_configured or not _IS_WIN32:
+        return
+
+    kernel32 = ctypes.windll.kernel32
+    advapi32 = ctypes.windll.advapi32
+
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.GetCurrentProcess.argtypes = []
+
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+
+    kernel32.ReadProcessMemory.restype = wintypes.BOOL
+    kernel32.ReadProcessMemory.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_size_t),
+    ]
+
+    kernel32.WriteProcessMemory.restype = wintypes.BOOL
+    kernel32.WriteProcessMemory.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_size_t),
+    ]
+
+    kernel32.VirtualAllocEx.restype = ctypes.c_void_p
+    kernel32.VirtualAllocEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        wintypes.DWORD,
+        wintypes.DWORD,
+    ]
+
+    kernel32.VirtualFreeEx.restype = wintypes.BOOL
+    kernel32.VirtualFreeEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        wintypes.DWORD,
+    ]
+
+    kernel32.VirtualQueryEx.restype = ctypes.c_size_t
+    kernel32.VirtualQueryEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+    ]
+
+    kernel32.IsWow64Process.restype = wintypes.BOOL
+    kernel32.IsWow64Process.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.BOOL)]
+
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+
+    kernel32.Thread32First.restype = wintypes.BOOL
+    kernel32.Thread32First.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.Thread32Next.restype = wintypes.BOOL
+    kernel32.Thread32Next.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.Module32FirstW.restype = wintypes.BOOL
+    kernel32.Module32FirstW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.Module32NextW.restype = wintypes.BOOL
+    kernel32.Module32NextW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.Process32FirstW.restype = wintypes.BOOL
+    kernel32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.Process32NextW.restype = wintypes.BOOL
+    kernel32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.WaitNamedPipeW.restype = wintypes.BOOL
+    kernel32.WaitNamedPipeW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD]
+
+    advapi32.OpenProcessToken.restype = wintypes.BOOL
+    advapi32.OpenProcessToken.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.HANDLE),
+    ]
+
+    _win32_apis_configured = True
+
+
+if _IS_WIN32:
+    _configure_win32_apis()
 
 
 def _read_process_memory_block(
@@ -1826,8 +1962,6 @@ class X64DbgBridge(DebuggerBridge):
 
         kernel32 = ctypes.windll.kernel32
         wait_fn = kernel32.WaitNamedPipeW
-        wait_fn.argtypes = [wintypes.LPCWSTR, wintypes.DWORD]
-        wait_fn.restype = wintypes.BOOL
 
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self._PIPE_READY_TIMEOUT_SECONDS
@@ -2576,8 +2710,6 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
-        kernel32.OpenProcess.restype = wintypes.HANDLE
-        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_READ,
             WIN_NO_INHERIT_HANDLE,
@@ -2632,8 +2764,6 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
-        kernel32.OpenProcess.restype = wintypes.HANDLE
-        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_WRITE | WIN_PROCESS_VM_OPERATION,
             WIN_NO_INHERIT_HANDLE,
@@ -2702,8 +2832,6 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
-        kernel32.OpenProcess.restype = wintypes.HANDLE
-        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_OPERATION,
             WIN_NO_INHERIT_HANDLE,
@@ -2715,7 +2843,6 @@ class X64DbgBridge(DebuggerBridge):
             raise ToolError(msg)
 
         try:
-            kernel32.VirtualAllocEx.restype = ctypes.c_void_p
             address_result = kernel32.VirtualAllocEx(
                 handle,
                 0,
@@ -3090,13 +3217,23 @@ class X64DbgBridge(DebuggerBridge):
 
         Returns:
             list[MemorySearchResult]: List of matches with context.
+
+        Raises:
+            ToolError: If the pattern is empty or shorter than
+                ``MIN_PATTERN_LENGTH`` bytes (such patterns produce too
+                many false-positive matches to be useful).
         """
         if isinstance(pattern, str):
             pattern = bytes.fromhex(pattern.replace(" ", ""))
-        if len(pattern) < MIN_PATTERN_LENGTH:
-            _logger.warning("scan_pattern_too_short", length=len(pattern))
         if not pattern:
-            return []
+            msg = "scan_memory: pattern must be non-empty"
+            raise ToolError(msg, tool_name="x64dbg")
+        if len(pattern) < MIN_PATTERN_LENGTH:
+            msg = (
+                f"scan_memory: pattern too short for reliable scan "
+                f"(got {len(pattern)} bytes, need at least {MIN_PATTERN_LENGTH})"
+            )
+            raise ToolError(msg, tool_name="x64dbg")
 
         regions = await self.get_memory_regions()
         matches: list[MemorySearchResult] = []
@@ -3296,8 +3433,6 @@ class X64DbgBridge(DebuggerBridge):
                 ("dwFlags", wintypes.DWORD),
             ]
 
-        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
-        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
         snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
         if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
             error_code = ctypes.get_last_error()
@@ -3318,8 +3453,8 @@ class X64DbgBridge(DebuggerBridge):
                             ThreadInfo(
                                 tid=te32.th32ThreadID,
                                 start_address=0,
+                                current_pc=0,
                                 state="unknown",
-                                priority=te32.tpBasePri,
                             ),
                         )
                     if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
@@ -3377,8 +3512,6 @@ class X64DbgBridge(DebuggerBridge):
                 ("szExePath", ctypes.c_wchar * 260),
             ]
 
-        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
-        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
         snapshot = kernel32.CreateToolhelp32Snapshot(
             TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
             self._attached_pid,
@@ -3422,10 +3555,50 @@ class X64DbgBridge(DebuggerBridge):
     async def get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
 
+        For each enumerated module the in-memory PE header is parsed to
+        populate ``ModuleInfo.entry_point`` with the fully-resolved virtual
+        address (``base + AddressOfEntryPoint``). Modules whose PE header
+        cannot be read (e.g. paged-out, native dlls, partial reads) keep
+        ``entry_point = 0``.
+
         Returns:
-            list[ModuleInfo]: List of loaded module information.
+            list[ModuleInfo]: List of loaded module information with
+            entry points populated where the PE header is readable.
         """
-        return await self._get_modules()
+        modules = await self._get_modules()
+        for module in modules:
+            module.entry_point = await self._read_module_entry_point(module.base_address, module.name)
+        return modules
+
+    async def _read_module_entry_point(self, base_address: int, module_name: str) -> int:
+        """Read the PE ``AddressOfEntryPoint`` for a loaded module.
+
+        Reads the in-memory DOS and NT headers via ``ReadProcessMemory`` and
+        extracts the entry-point RVA from the optional header. Returns the
+        fully-resolved virtual address (``base_address + RVA``). Returns 0
+        if the PE header cannot be parsed for this module.
+
+        Args:
+            base_address: Module base address in the target process.
+            module_name: Module name for diagnostic logging.
+
+        Returns:
+            int: Resolved virtual address of the entry point, or 0 if the
+            PE header could not be read or validated.
+        """
+        try:
+            _, pe_header = await self._read_pe_header(base_address, module_name, size=256)
+        except ToolError as exc:
+            _logger.debug("module_entry_point_read_failed", module_name=module_name, base=hex(base_address), error=str(exc))
+            return 0
+
+        entry_offset = NT_HEADERS_OPTIONAL_OFFSET + PE_ENTRY_POINT_OFFSET
+        if len(pe_header) < entry_offset + 4:
+            _logger.debug("module_entry_point_header_short", module_name=module_name, length=len(pe_header))
+            return 0
+
+        entry_rva = struct.unpack_from("<I", pe_header, entry_offset)[0]
+        return base_address + entry_rva
 
     async def get_threads(self) -> list[ThreadInfo]:
         """Get thread information for the attached process.
@@ -3448,7 +3621,7 @@ class X64DbgBridge(DebuggerBridge):
             return None
 
         threads = await self.get_threads()
-        modules = await self._get_modules()
+        modules = await self.get_modules()
 
         command_line = self._get_command_line(self._attached_pid)
         parent_pid = self._get_parent_pid(self._attached_pid)
@@ -3920,8 +4093,93 @@ class X64DbgBridge(DebuggerBridge):
 
         return addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, num_functions
 
+    async def _read_export_name(
+        self,
+        base_address: int,
+        name_rva: int,
+        ordinal: int,
+        module_name: str,
+    ) -> tuple[str, ToolError | None]:
+        """Read a single PE export name from process memory.
+
+        Args:
+            base_address: Module base address.
+            name_rva: Relative virtual address of the name string.
+            ordinal: Resolved ordinal for the export, used for the
+                synthetic name when the read is silently skipped.
+            module_name: Module name for diagnostic logging.
+
+        Returns:
+            tuple[str, ToolError | None]: Tuple of (resolved name,
+            recoverable read error). The error is non-None only when the
+            read failed with a recoverable pipe/file error.
+
+        Raises:
+            ToolError: If ``read_memory`` raises a non-recoverable error
+                that callers must surface.
+        """
+        try:
+            name_data = await self.read_memory(base_address + name_rva, PE_EXPORT_NAME_BUF)
+        except ToolError as exc:
+            if not self._is_recoverable_pipe_error(exc):
+                raise
+            _logger.debug(
+                "export_name_read_recoverable",
+                module=module_name,
+                ordinal=ordinal,
+                error=str(exc),
+            )
+            return f"ordinal_{ordinal}", exc
+
+        null_pos = name_data.find(b"\x00")
+        return name_data[: null_pos if null_pos != -1 else PE_EXPORT_NAME_BUF].decode("ascii", errors="replace"), None
+
+    async def _build_export_entries(
+        self,
+        base_address: int,
+        module_name: str,
+        tables: tuple[bytes, bytes, bytes, int, int, int],
+    ) -> tuple[list[dict[str, Any]], ToolError | None]:
+        """Build per-export dicts from previously-read PE export tables.
+
+        Args:
+            base_address: Module base address.
+            module_name: Module name for diagnostic logging.
+            tables: Tuple returned by ``_read_export_tables``: (addr_table,
+                name_ptrs, ordinal_table, num_names, ordinal_base, num_functions).
+
+        Returns:
+            tuple[list[dict[str, Any]], ToolError | None]: Tuple of
+            (exports list, last recoverable read error if any).
+            Non-recoverable read errors are propagated from
+            ``_read_export_name`` rather than returned.
+        """
+        addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, _ = tables
+        exports: list[dict[str, Any]] = []
+        last_error: ToolError | None = None
+        for i in range(min(num_names, PE_EXPORT_MAX)):
+            name_rva = struct.unpack_from("<I", name_ptrs, i * 4)[0]
+            ordinal_index = struct.unpack_from("<H", ordinal_table, i * 2)[0]
+            func_rva = struct.unpack_from("<I", addr_table, ordinal_index * 4)[0]
+            ordinal = ordinal_base + ordinal_index
+            func_name, read_error = await self._read_export_name(base_address, name_rva, ordinal, module_name)
+            if read_error is not None:
+                last_error = read_error
+            exports.append({
+                "ordinal": ordinal,
+                "name": func_name,
+                "address": hex(base_address + func_rva),
+            })
+        return exports, last_error
+
     async def get_module_exports(self, module_name: str) -> list[dict[str, Any]]:
         """Get exports of a loaded module by parsing its in-memory PE export table.
+
+        Per-name ``read_memory`` failures with a non-pipe / non-file-not-found
+        error are propagated from ``_build_export_entries`` so callers see
+        real plugin or RPC failures. Recoverable pipe/file errors during
+        name reads are tolerated and the affected entry's ``name`` field
+        is set to the synthetic ``ordinal_<N>`` form.
 
         Args:
             module_name: Module name (e.g. 'kernel32.dll').
@@ -3934,30 +4192,14 @@ class X64DbgBridge(DebuggerBridge):
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
         try:
-            addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, _ = await self._read_export_tables(base_address, pe_header)
+            tables = await self._read_export_tables(base_address, pe_header)
         except ToolError as exc:
             _logger.debug("export_tables_read_failed", module=module_name, error=str(exc))
             return []
 
-        exports: list[dict[str, Any]] = []
-        for i in range(min(num_names, PE_EXPORT_MAX)):
-            name_rva = struct.unpack_from("<I", name_ptrs, i * 4)[0]
-            ordinal_index = struct.unpack_from("<H", ordinal_table, i * 2)[0]
-            func_rva = struct.unpack_from("<I", addr_table, ordinal_index * 4)[0]
-
-            try:
-                name_data = await self.read_memory(base_address + name_rva, PE_EXPORT_NAME_BUF)
-                null_pos = name_data.find(b"\x00")
-                func_name = name_data[: null_pos if null_pos != -1 else PE_EXPORT_NAME_BUF].decode("ascii", errors="replace")
-            except ToolError:
-                func_name = f"ordinal_{ordinal_base + ordinal_index}"
-
-            exports.append({
-                "ordinal": ordinal_base + ordinal_index,
-                "name": func_name,
-                "address": hex(base_address + func_rva),
-            })
-
+        exports, last_error = await self._build_export_entries(base_address, module_name, tables)
+        if last_error is not None:
+            _logger.debug("module_exports_partial", module=module_name, last_error=str(last_error))
         return exports
 
     async def get_entry_point(self, module_name: str | None = None) -> dict[str, Any]:
@@ -5518,8 +5760,6 @@ class X64DbgBridge(DebuggerBridge):
                 ("szExeFile", ctypes.c_wchar * 260),
             ]
 
-        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
-        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
         snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
         if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
             error_code = ctypes.get_last_error()

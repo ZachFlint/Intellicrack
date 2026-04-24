@@ -367,13 +367,12 @@ async def test_find_pattern_in_own_memory(x64dbg_bridge: X64DbgBridge) -> None:
     """
     x64dbg_bridge.attached_pid = os.getpid()
 
-    test_pattern = b"UNIQUE_PATTERN_12345"
+    test_pattern = b"UNIQUE_PATTERN_FOR_TEST_12345"
     buffer = ctypes.create_string_buffer(test_pattern)
     start_addr = ctypes.addressof(buffer)
 
-    # Search for "UNIQUE_PATTERN"
     results = await x64dbg_bridge.scan_memory(
-        pattern=b"UNIQUE_PATTERN",
+        pattern=b"UNIQUE_PATTERN_FOR_TEST",
     )
 
     assert isinstance(results, list)

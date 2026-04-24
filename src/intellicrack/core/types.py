@@ -838,23 +838,28 @@ class ThreadInfo:
 
     Attributes:
         tid: Thread ID.
-        start_address: Thread start address.
+        start_address: Thread start address (the entry point used to
+            create the thread). Zero when the bridge cannot recover it
+            from OS-level APIs.
+        current_pc: Current program counter (instruction pointer).
+            Reflects where the thread is executing right now and may
+            differ from ``start_address`` for any thread that has run
+            past its entry point. Zero when unavailable.
         state: Thread state.
-        priority: Thread priority.
     """
 
     tid: int
     start_address: int
+    current_pc: int
     state: str
-    priority: int
 
     def __str__(self) -> str:
         """Get string representation of the thread.
 
         Returns:
-            str: Formatted thread info with TID, state, priority, and address.
+            str: Formatted thread info with TID, state, and current PC.
         """
-        return f"Thread {self.tid} ({self.state}, prio={self.priority}) @ {hex(self.start_address)}"
+        return f"Thread {self.tid} ({self.state}) @ pc={hex(self.current_pc)}"
 
 
 @dataclass

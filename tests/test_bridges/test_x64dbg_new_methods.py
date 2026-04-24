@@ -272,11 +272,11 @@ class TestScanMemory:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xca\xfe\xba\xbe"
+        marker = b"\xca\xfe\xba\xbe\xde\xad\xbe\xef\xfe\xed\xfa\xce\x12\x34\x56\x78"
         buf = ctypes.create_string_buffer(marker)
         _buf_addr = ctypes.addressof(buf)
 
-        results = await attached_bridge.scan_memory("CAFEBABE")
+        results = await attached_bridge.scan_memory("CAFEBABEDEADBEEFFEEDFACE12345678")
         assert isinstance(results, list)
         assert len(results) > 0
 
@@ -287,13 +287,39 @@ class TestScanMemory:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xab\xcd\xef\x01"
+        marker = b"\xab\xcd\xef\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d"
         buf = ctypes.create_string_buffer(marker)
         _buf_addr = ctypes.addressof(buf)
 
-        results = await attached_bridge.scan_memory("AB CD EF 01")
+        results = await attached_bridge.scan_memory(
+            "AB CD EF 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D",
+        )
         assert isinstance(results, list)
         assert len(results) > 0
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+    async def test_scan_short_pattern_raises(self, attached_bridge: X64DbgBridge) -> None:
+        """Test scan_memory rejects patterns shorter than MIN_PATTERN_LENGTH.
+
+        Args:
+            attached_bridge: X64DbgBridge with attached_pid.
+        """
+        from intellicrack.core.types import ToolError
+
+        with pytest.raises(ToolError, match="too short"):
+            await attached_bridge.scan_memory(b"short")
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+    async def test_scan_empty_pattern_raises(self, attached_bridge: X64DbgBridge) -> None:
+        """Test scan_memory rejects empty patterns.
+
+        Args:
+            attached_bridge: X64DbgBridge with attached_pid.
+        """
+        from intellicrack.core.types import ToolError
+
+        with pytest.raises(ToolError, match="non-empty"):
+            await attached_bridge.scan_memory(b"")
 
 
 @pytest.mark.asyncio
