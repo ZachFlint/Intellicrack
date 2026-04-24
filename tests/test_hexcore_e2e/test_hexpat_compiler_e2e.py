@@ -192,6 +192,44 @@ class TestHexPatCompilerCompile:
         with pytest.raises(HexPatError):
             HexPatCompiler.compile("")
 
+    def test_compile_if_else_eq_emits_paired_conditionals(self) -> None:
+        """if/else on equality emits a pair of Conditional fields with inverted ops."""
+        source = "struct S { u8 flag; if (flag == 1) { u32 a; } else { u16 b; } };"
+        result = HexPatCompiler.compile_to_dict(source)
+        fields = result["fields"]
+        assert len(fields) == 3
+        if_field = fields[1]["field_type"]["params"]
+        else_field = fields[2]["field_type"]["params"]
+        assert if_field["condition_op"] == "Eq"
+        assert else_field["condition_op"] == "Ne"
+
+    def test_compile_if_else_bitmask_emits_bitand_paired_with_bitandzero(self) -> None:
+        """if/else on a bit-mask test emits BitAnd / BitAndZero paired Conditional fields.
+
+        The runtime BitAndZero opcode evaluates ``(field & mask) == 0`` and is
+        the natural inverse of ``BitAnd`` (``(field & mask) != 0``).
+        """
+        source = "struct S { u8 flags; if (flags & 4) { u32 a; } else { u16 b; } };"
+        result = HexPatCompiler.compile_to_dict(source)
+        fields = result["fields"]
+        assert len(fields) == 3
+        if_field = fields[1]["field_type"]["params"]
+        else_field = fields[2]["field_type"]["params"]
+        assert if_field["condition_op"] == "BitAnd"
+        assert if_field["condition_value"] == 4
+        assert else_field["condition_op"] == "BitAndZero"
+        assert else_field["condition_value"] == 4
+
+    def test_compile_if_only_bitmask_emits_single_bitand_conditional(self) -> None:
+        """An ``if`` block without an ``else`` on a bit-mask still emits a single BitAnd."""
+        source = "struct S { u8 flags; if (flags & 8) { u32 a; } };"
+        result = HexPatCompiler.compile_to_dict(source)
+        fields = result["fields"]
+        assert len(fields) == 2
+        if_field = fields[1]["field_type"]["params"]
+        assert if_field["condition_op"] == "BitAnd"
+        assert if_field["condition_value"] == 8
+
 
 class TestHexPatLexerTokenization:
     """Tests for HexPatLexer.tokenize() producing correct token sequences."""

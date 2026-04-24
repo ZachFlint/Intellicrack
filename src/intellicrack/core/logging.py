@@ -401,21 +401,6 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     return cast("structlog.stdlib.BoundLogger", structlog.get_logger(logger_name))
 
 
-def get_structlog_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
-    """Get a structlog bound logger for structured logging.
-
-    .. deprecated::
-        Use :func:`get_logger` instead, which now returns ``BoundLogger``.
-
-    Args:
-        name: Module name for the logger. If None, returns root app logger.
-
-    Returns:
-        structlog.stdlib.BoundLogger: Configured BoundLogger instance for structured logging.
-    """
-    return get_logger(name)
-
-
 def log_tool_call(
     tool_name: str,
     function_name: str,

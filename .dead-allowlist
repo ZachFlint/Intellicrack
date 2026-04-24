@@ -25,7 +25,6 @@ apply_structure_at
 apply_transform
 assemble_at
 auto_detect_pattern
-bootstrap_builtins
 breakpoints
 calculate_checksum
 calculate_hash
