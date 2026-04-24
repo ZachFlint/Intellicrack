@@ -188,15 +188,15 @@ def _import_config_module() -> tuple[type[Config], Callable[[], Path]]:
     )
 
 
-def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]:
+def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[LogConfig, Path | None], None]]:
     """Import logging functions dynamically.
 
     Returns:
-        tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]: Tuple of (get_logger function, setup_logging function).
+        tuple[Callable[[str], BoundLogger], Callable[[LogConfig, Path | None], None]]: Tuple of (get_logger function, setup_logging function).
     """
     mod = importlib.import_module("intellicrack.core.logging")
     return cast(
-        "tuple[Callable[[str], BoundLogger], Callable[[LogConfig], None]]",
+        "tuple[Callable[[str], BoundLogger], Callable[[LogConfig, Path | None], None]]",
         (mod.get_logger, mod.setup_logging),
     )
 
@@ -548,7 +548,7 @@ def _load_startup_config(cli_options: _CLIOptions) -> tuple[Config, BoundLogger,
     _apply_cli_overrides(config, cli_options)
     config.ensure_directories()
 
-    setup_logging(config.log)
+    setup_logging(config.log, log_dir=config.logs_directory)
     logger = get_logger("main")
     logger.info("app_starting", version=_APP_VERSION, log_level=config.log.level)
 

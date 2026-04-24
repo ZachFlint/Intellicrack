@@ -727,4 +727,10 @@ Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
 
+- Improve ghidra error handling and logging initialization (``)
+Refactor the Ghidra bridge to ensure state consistency by deferring status updates until after successful metadata extraction. This prevents the system from reporting a loaded binary if the subsequent analysis phase fails.
+* Update Ghidra bridge to raise ToolError on metadata extraction failure and rollback state
+* Fix type signature and call site for logging setup to correctly pass the log directory
+* Replace legacy fix tracking with formal remediation audit results
+
 
