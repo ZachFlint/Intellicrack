@@ -1,3 +1,0 @@
-1 findings in src\intellicrack\plugins\x64dbg_plugin\CMakeLists.txt
-
-src\intellicrack\plugins\x64dbg_plugin\CMakeLists.txt: mixed line endings
