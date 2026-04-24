@@ -472,3 +472,9 @@ IntellicrackStructure.hta
 IntellicrackStructure.txt
 # Docker sandbox test artifacts (regenerated on every run, never tracked)
 reports/tests/
+
+# Intel oneAPI installer debris (must never be staged into the repo root)
+/basekit*
+/intel_page.html
+/intel.oneapi.*.dot
+/intel.sessionmanifest.*.json
