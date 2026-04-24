@@ -49,109 +49,7 @@ dependencies = [
   "pyproject-fmt",
   "vermin",
   "wily",
-  "torch",
-  "astor",
-  "autopep8",
-  "bandit",
-  "basedpyright",
-  "black",
-  "blinter",
-  "build",
-  "bumpversion",
-  "codespell",
-  "commitizen",
-  "darglint",
-  "dead",
-  "deadcode",
-  "deptry",
-  "detect-secrets",
-  "flake8",
-  "flake8-pyproject",
-  "interrogate",
-  "isort",
-  "jsonlint",
-  "mccabe",
-  "monkeytype",
-  "mypy",
-  "mypy-extensions",
-  "nodeenv",
-  "pip-audit",
-  "pipdeptree",
-  "poetry",
-  "pre-commit",
-  "pre-commit-hooks",
-  "pyannotate",
-  "pyclean",
-  "pycodestyle",
-  "pydoclint",
-  "pydocstyle",
-  "pygount",
-  "pylint",
-  "pyroma",
-  "pyupgrade",
-  "radon",
-  "rope",
-  "ruff",
-  "safety",
-  "sourcery",
-  "twine",
-  "ty",
-  "types-pyyaml",
-  "types-requests",
-  "uncalled",
-  "validate-pyproject",
-  "skylos",
-  "validate-pyproject-schema-store",
-  "vulture",
-  "wemake-python-styleguide",
-  "xenon",
-  "yamllint",
-  "yapf",
-  "mkdocs-material",
-  "myst-parser",
-  "pdoc3",
-  "pymdown-extensions",
-  "sphinx",
-  "sphinx-autobuild",
-  "sphinx-autodoc-typehints",
-  "sphinx-copybutton",
-  "sphinx-rtd-theme",
-  "sphinx-tabs",
-  "sphinxcontrib-mermaid",
-  "accelerate",
-  "bitsandbytes",
-  "safetensors",
-  "sentencepiece",
-  "transformers",
-  "ipdb",
-  "line-profiler",
-  "memory-profiler",
-  "py-spy",
-  "pycallgraph2",
-  "pyinstrument",
-  "scalene",
-  "snakeviz",
-  "coverage",
-  "faker",
-  "freezegun",
-  "hypothesis",
-  "nox",
-  "pytest",
-  "pytest-asyncio",
-  "pytest-benchmark",
-  "pytest-cov",
-  "pytest-deadfixtures",
-  "pytest-env",
-  "pytest-html",
-  "pytest-instafail",
-  "pytest-mock",
-  "pytest-qt",
-  "pytest-randomly",
-  "pytest-sugar",
-  "pytest-timeout",
-  "pytest-xdist",
-  "responses",
-  "tox",
+  "torch", "astor", "autopep8", "bandit", "basedpyright", "black", "blinter", "build", "bumpversion", "codespell", "commitizen", "darglint", "dead", "deadcode", "deptry", "detect-secrets", "flake8", "flake8-pyproject", "interrogate", "isort", "jsonlint", "mccabe", "monkeytype", "mypy", "mypy-extensions", "nodeenv", "pip-audit", "pipdeptree", "poetry", "pre-commit", "pre-commit-hooks", "pyannotate", "pyclean", "pycodestyle", "pydoclint", "pydocstyle", "pygount", "pylint", "pyroma", "pyupgrade", "radon", "rope", "ruff", "safety", "sourcery", "twine", "ty", "types-pyyaml", "types-requests", "uncalled", "validate-pyproject", "skylos", "validate-pyproject-schema-store", "vulture", "wemake-python-styleguide", "xenon", "yamllint", "yapf", "mkdocs-material", "myst-parser", "pdoc3", "pymdown-extensions", "sphinx", "sphinx-autobuild", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-rtd-theme", "sphinx-tabs", "sphinxcontrib-mermaid", "accelerate", "bitsandbytes", "safetensors", "sentencepiece", "transformers", "ipdb", "line-profiler", "memory-profiler", "py-spy", "pycallgraph2", "pyinstrument", "scalene", "snakeviz", "coverage", "faker", "freezegun", "hypothesis", "nox", "pytest", "pytest-asyncio", "pytest-benchmark", "pytest-cov", "pytest-deadfixtures", "pytest-env", "pytest-html", "pytest-instafail", "pytest-mock", "pytest-qt", "pytest-randomly", "pytest-sugar", "pytest-timeout", "pytest-xdist", "responses", "tox",
 ]
 optional-dependencies.dev = [
   "astor",
@@ -1028,10 +926,10 @@ sort_commits = "newest"
 [tool.pixi]
 dependencies.python = "3.13.*"
 dependencies.git = ">=2.53.0,<3"
-dependencies.just = ">=1.49.0,<2"
+dependencies.just = ">=1.50.0,<2"
 dependencies.shellcheck = ">=0.11.0,<0.12"
 dependencies.nodejs = ">=24.14.1,<24.15"
-dependencies.yarn = ">=4.13.0,<5"
+dependencies.yarn = ">=4.14.1,<5"
 dependencies.markdownlint-cli = ">=0.48.0,<0.49"
 dependencies.taplo = ">=0.10.0,<0.11"
 dependencies.git-cliff = ">=2.12.0,<3"
@@ -1044,8 +942,8 @@ pypi-dependencies.intellicrack = { path = ".", editable = true }
 # Build/packaging
 pypi-dependencies.pip = ">=26.0.1, <27"
 pypi-dependencies.maturin = ">=1.13.1, <2"
-pypi-dependencies.wheel = ">=0.46.3, <0.47"
-pypi-dependencies.build = ">=1.4.3, <2"
+pypi-dependencies.wheel = ">=0.47.0, <0.48"
+pypi-dependencies.build = ">=1.4.4, <2"
 pypi-dependencies.pyclean = ">=3.6.0, <4"
 # Runtime deps (version-bounded)
 pypi-dependencies.PyQt6 = ">=6.11.0, <7"
@@ -1057,12 +955,12 @@ pypi-dependencies.frida = ">=17.9.1, <18"
 pypi-dependencies.frida-tools = ">=14.8.1, <15"
 pypi-dependencies.r2pipe = ">=1.9.8, <2"
 pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
-pypi-dependencies.anthropic = ">=0.95.0, <0.96"
+pypi-dependencies.anthropic = ">=0.97.0, <0.98"
 pypi-dependencies.openai = ">=2.32.0, <3"
 pypi-dependencies.google-genai = ">=1.73.1, <2"
 pypi-dependencies.httpx = ">=0.28.1, <0.29"
 pypi-dependencies.structlog = ">=25.5.0, <26"
-pypi-dependencies.pydantic = ">=2.13.1, <3"
+pypi-dependencies.pydantic = ">=2.13.3, <3"
 pypi-dependencies.tomli-w = ">=1.2.0, <2"
 pypi-dependencies.xxhash = ">=3.6.0, <4"
 # Transitive / environment packages (keep bounded)
@@ -1077,23 +975,23 @@ pypi-dependencies.aiosqlite = ">=0.22.1, <0.23"
 pypi-dependencies.mcp = ">=1.27.0, <2"
 pypi-dependencies.ollama = ">=0.6.1, <0.7"
 # ML deps (bounded)
-pypi-dependencies.transformers = ">=5.5.4, <6"
+pypi-dependencies.transformers = ">=5.6.2, <6"
 pypi-dependencies.accelerate = ">=1.13.0, <2"
 pypi-dependencies.bitsandbytes = ">=0.49.2, <0.50"
 pypi-dependencies.sentencepiece = ">=0.2.1, <0.3"
 pypi-dependencies.safetensors = ">=0.7.0, <0.8"
 # Dev tools (unbounded - float to latest)
 pypi-dependencies.validate-pyproject = ">=0.25, <0.26"
-pypi-dependencies.validate-pyproject-schema-store = ">=2026.4.11, <2027"
+pypi-dependencies.validate-pyproject-schema-store = ">=2026.4.24, <2027"
 pypi-dependencies.types-requests = ">=2.33.0.20260408, <3"
 pypi-dependencies.types-pyyaml = ">=6.0.12.20260408, <7"
 pypi-dependencies.pytest = ">=9.0.3, <10"
-pypi-dependencies.mypy = ">=1.20.1, <2"
+pypi-dependencies.mypy = ">=1.20.2, <2"
 pypi-dependencies.black = ">=26.3.1, <27"
 pypi-dependencies.pylint = ">=4.0.5, <5"
 pypi-dependencies.autopep8 = ">=2.3.2, <3"
 pypi-dependencies.flake8 = ">=7.3.0, <8"
-pypi-dependencies.ruff = ">=0.15.10, <0.16"
+pypi-dependencies.ruff = ">=0.15.12, <0.16"
 pypi-dependencies.isort = ">=8.0.1, <9"
 pypi-dependencies.pycodestyle = ">=2.14.0, <3"
 pypi-dependencies.bandit = ">=1.9.4, <2"
@@ -1108,14 +1006,14 @@ pypi-dependencies.pydoclint = ">=0.8.3, <0.9"
 pypi-dependencies.pyroma = ">=5.0.1, <6"
 pypi-dependencies.mypy-extensions = ">=1.1.0, <2"
 pypi-dependencies.dead = ">=2.1.0, <3"
-pypi-dependencies.skylos = ">=4.3.2, <5"
+pypi-dependencies.skylos = ">=4.5.0, <5"
 pypi-dependencies.uncalled = ">=0.1.8, <0.2"
 pypi-dependencies.deadcode = ">=2.4.1, <3"
 pypi-dependencies.pygount = ">=3.2.0, <4"
 pypi-dependencies.pytest-deadfixtures = ">=3.1.0, <4"
-pypi-dependencies.basedpyright = ">=1.39.0, <2"
+pypi-dependencies.basedpyright = ">=1.39.3, <2"
 pypi-dependencies.monkeytype = ">=23.3.0, <24"
-pypi-dependencies.ty = ">=0.0.31, <0.0.32"
+pypi-dependencies.ty = ">=0.0.32, <0.0.33"
 pypi-dependencies.mccabe = ">=0.7.0, <0.8"
 pypi-dependencies.xenon = ">=0.9.3, <0.10"
 pypi-dependencies.safety = ">=3.7.0, <4"
@@ -1129,17 +1027,17 @@ pypi-dependencies.pytest-timeout = ">=2.4.0, <3"
 pypi-dependencies.pytest-qt = ">=4.5.0, <5"
 pypi-dependencies.pytest-benchmark = ">=5.2.3, <6"
 pypi-dependencies.pytest-html = ">=4.2.0, <5"
-pypi-dependencies.pytest-randomly = ">=4.0.1, <5"
+pypi-dependencies.pytest-randomly = ">=4.1.0, <5"
 pypi-dependencies.pytest-sugar = ">=1.1.1, <2"
 pypi-dependencies.pytest-env = ">=1.6.0, <2"
 pypi-dependencies.pytest-instafail = ">=0.5.0, <0.6"
-pypi-dependencies.hypothesis = ">=6.152.1, <7"
+pypi-dependencies.hypothesis = ">=6.152.2, <7"
 pypi-dependencies.tox = ">=4.53.0, <5"
 pypi-dependencies.nox = ">=2026.4.10, <2027"
 pypi-dependencies.coverage = ">=7.13.5, <8"
 pypi-dependencies.freezegun = ">=1.5.5, <2"
 pypi-dependencies.responses = ">=0.26.0, <0.27"
-pypi-dependencies.faker = ">=40.13.0, <41"
+pypi-dependencies.faker = ">=40.15.0, <41"
 pypi-dependencies.radon = ">=5.1.0, <6"
 pypi-dependencies.sphinx = ">=9.1.0, <10"
 pypi-dependencies.sphinx-rtd-theme = ">=3.1.0, <4"
@@ -1159,7 +1057,7 @@ pypi-dependencies.py-spy = ">=0.4.1, <0.5"
 pypi-dependencies.snakeviz = ">=2.2.2, <3"
 pypi-dependencies.pyinstrument = ">=5.1.2, <6"
 pypi-dependencies.scalene = ">=2.2.1, <3"
-pypi-dependencies.pre-commit = ">=4.5.1, <5"
+pypi-dependencies.pre-commit = ">=4.6.0, <5"
 pypi-dependencies.commitizen = ">=4.13.10, <5"
 pypi-dependencies.bumpversion = ">=0.6.0, <0.7"
 pypi-dependencies.pipdeptree = ">=2.35.1, <3"

@@ -9,6 +9,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Implement BitAndZero opcode in hexcore and compiler (`f144be8`)
+Introduces a dedicated BitAndZero condition operator to the Rust hexcore evaluator and updates the Python compiler to utilize it for inverted bit-mask predicates. This allows the compiler to correctly lower if/else constructs involving bitwise AND operations, which previously raised an error due to the lack of a direct inverse primitive.
+* Implement BitAndZero logic in TemplateEvaluator and ConditionOp
+* Update HexPatCodegen to map BitAnd to BitAndZero for else-branch inversion
+* Refactor various UI components and docstrings for consistent line length and formatting
+* Update linting reports and semgrep rules to reflect recent codebase changes
+
 - Migrate test harness from Windows Sandbox to Docker (`cf470c3`)
 Replace the legacy Windows Sandbox-based test redirection with a unified Docker-based sandbox driver. The new harness uses Windows process-isolated containers to provide consistent, reproducible environments for unit, integration, and E2E tests while maintaining host-side report harvesting.
 - Add `scripts/sandbox/` driver for container orchestration and artifact collection
@@ -154,13 +161,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
-- Implement BitAndZero opcode in hexcore and compiler (``)
-Introduces a dedicated BitAndZero condition operator to the Rust hexcore evaluator and updates the Python compiler to utilize it for inverted bit-mask predicates. This allows the compiler to correctly lower if/else constructs involving bitwise AND operations, which previously raised an error due to the lack of a direct inverse primitive.
-* Implement BitAndZero logic in TemplateEvaluator and ConditionOp
-* Update HexPatCodegen to map BitAnd to BitAndZero for else-branch inversion
-* Refactor various UI components and docstrings for consistent line length and formatting
-* Update linting reports and semgrep rules to reflect recent codebase changes
-
 
 ### Changed
 
@@ -299,6 +299,81 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **providers+credentials:** Remediate audit items C4, C5, C10, C11, C12, C13, C14, C15, C16, C17, C19, C29, C30, C31, C32, C33 (`32eb78e`)
+Squash merge of worktree-agent-aeee6cf169ee4fc8b (Group C).
+- C4: google.chat_stream uses native client.aio.models.generate_content_stream.
+- C5: _current_task assigned in google chat/chat_stream for cancel_request.
+- C10: grok-4 256K context window and max_completion_tokens per-model routing.
+- C11: grok.cancel_request emits info log.
+- C12: openrouter.connect aclose()s stale client before creating new one.
+- C13: openrouter stream error path reads full body before raising.
+- C14: ollama cloud routed through OpenAI-compatible /v1/chat/completions.
+- C15: real streaming for ollama tool calls; blocking chat() fallback removed.
+- C16: ollama tool_choice wired into request body for both transports.
+- C17: huggingface DEFAULT_PROVIDER switched to explicit hf-inference router.
+- C17-followup: HF test fixtures updated to katanemo/Arch-Router-1.5B
+(currently the only chat-capable model served by hf-inference router).
+- C19: _extract_503_message guards response.json() against JSONDecodeError /
+DecodingError with "Model is loading" fallback.
+- C29: keyring backend inspected via passive class introspection instead of
+destructive test_key write/delete probe.
+- C30: OAuthProvider.ANTHROPIC and OAuthProvider.HUGGINGFACE added with
+PKCE configs; OpenAI documented as no-public-OAuth.
+- C31: get_token uses 10-minute needs_refresh window for proactive refresh.
+- C32: _OAuthCallbackTCPServer carries per-instance callback state; handler
+reads self.server.<attr> instead of class-level globals.
+- C33: revoke_token returns combined success of API revocation and keyring delete.
+
+- **bridges:** Remediate audit items A1, A9, A14, A18, A21, A26, A32, A33, A35, A41, A44, A45, A46, A48, A52 (`7f8e10a`)
+Squash merge of worktree-agent-aabbb8be77c439b39 (Group A).
+- A1: defer ghidra state.connected/binary_loaded updates until after metadata
+extraction; on failure set binary_loaded=False, target_path=None, last_error.
+- A9: rename ghidra.manage_thunks -> get_thunk_info and
+manage_external_references -> get_external_references; update tool_definitions
+and tests.
+- A14: populate ModuleInfo.entry_point by parsing in-memory PE header via
+new _read_module_entry_point (DOS e_lfanew -> NT OptionalHeader.AddressOfEntryPoint).
+- A18: centralize Win32 API restype/argtypes via _configure_win32_apis; declare
+OpenProcess, ReadProcessMemory, WriteProcessMemory, VirtualAllocEx/FreeEx,
+VirtualQueryEx, IsWow64Process, CreateToolhelp32Snapshot, Thread32/Module32/Process32
+family, WaitNamedPipeW, CloseHandle, GetCurrentProcess, OpenProcessToken.
+INVALID_HANDLE_VALUE derived from wintypes.HANDLE(-1).value.
+- A21: scan_memory raises ToolError for empty or below-MIN_PATTERN_LENGTH patterns.
+- A26: _get_export_names classifies errors via _is_recoverable_pipe_error;
+re-raises non-pipe errors, tracks recoverable ones in last_error.
+- A32: Frida enumerate_exports/imports JS emits {error: 'module_not_found'}
+payload; Python handles it.
+- A33: wire Frida Cancellable through attach_by_name, spawn, execute_script,
+compile_typescript via _attach_with_cancellable / _spawn_with_cancellable /
+_create_script_with_cancellable / _compiler_build_with_cancellable.
+- A35: write_code accepts configurable max_size parameter.
+- A41: _VALID_PROTECTION_FLAGS set and _validate_protection called upfront
+before any JS injection.
+- A44: drop fake ThreadInfo.priority; add current_pc split from start_address;
+Frida reads t.context.pc, x64dbg/process fill start_address via Toolhelp32
+and NtQueryInformationThread.
+- A45: import_patches accepts original_path and dispatches on magic header
+(PATCH/IPS32/BPS1/UPS1).
+- A46: export_patches routes bps/ups to export_patches_bps/ups with
+original_path source.
+- A48: shutdown mirrors close_file pattern via state_holder.set_document(None)
+before nulling self.document.
+- A52: remove Python fallback in search_numeric; hexcore native path only.
+
+- **core+hexpat:** Remediate audit items B12, B18, B21, B22, B24, B25 (`86f6f4f`)
+Squash merge of worktree-agent-ab0a24d9a626e051b (Group B).
+- B12: main.py now forwards config.logs_directory to setup_logging via log_dir
+kwarg. _SetupLoggingFn Protocol preserves keyword-arg type fidelity.
+- B18: deleted unused get_structlog_logger from core/logging.py and pruned
+all dead-code allowlist entries.
+- B24: BitAndZero condition opcode added to hexcore templates/mod.rs and
+evaluated in eval.rs. Python compiler now lowers bit-mask if/else to
+paired BitAnd + BitAndZero, and bitwise OR/XOR/AND parser levels added.
+- B21/B22/B25: _init_script_engine returns ScriptGenerator, _init_template_manager
+constructs TemplateManager and runs bootstrap_builtins on a headless
+HexDocument. MainWindow gains set_script_generator and set_template_manager.
+TemplateBootstrapError handled explicitly.
 
 - Improve ghidra error handling and logging initialization (`461d962`)
 Refactor the Ghidra bridge to ensure state consistency by deferring status updates until after successful metadata extraction. This prevents the system from reporting a loaded binary if the subsequent analysis phase fails.
