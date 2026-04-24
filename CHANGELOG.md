@@ -240,6 +240,11 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
+- Decommission basekit integration and update gitignore (``)
+Remove deprecated basekit static assets and data files that are no longer required for the current production environment. This cleanup significantly reduces the repository footprint and streamlines the asset pipeline.
+- Delete basekit.html and related JSON data structures
+- Update .gitignore to exclude local environment artifacts
+
 
 ### Documentation
 
