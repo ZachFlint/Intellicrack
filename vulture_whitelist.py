@@ -136,7 +136,6 @@ intellicrack.core.hexpat.stdlib.set_array_index  # unused-method
 intellicrack.core.process_manager.ASYNC_SUBPROCESS  # unused-variable
 intellicrack.core.session.row_factory  # unused-attribute
 intellicrack.core.template_manager._config_dir  # unused-attribute
-intellicrack.core.template_manager.bootstrap_builtins  # unused-method
 intellicrack.core.template_manager.list_all_templates  # unused-method
 intellicrack.core.template_manager.save_user_template  # unused-method
 intellicrack.core.template_manager.delete_user_template  # unused-method

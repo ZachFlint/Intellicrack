@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from itertools import starmap
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final, Protocol, cast
 
 from intellicrack._metadata import __version__
 
@@ -31,9 +31,15 @@ if TYPE_CHECKING:
     from intellicrack.core.config import Config, LogConfig
     from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.process_manager import ProcessManager
+    from intellicrack.core.script_gen import (
+        ScriptGenerator,
+        ScriptManager,
+        ScriptValidator,
+    )
     from intellicrack.core.session import SessionManager, SessionStore
+    from intellicrack.core.template_manager import TemplateManager
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import ProviderName
+    from intellicrack.core.types import HexDocumentFull, ProviderName
     from intellicrack.credentials.env_loader import CredentialLoader
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import ModelDiscovery
@@ -42,6 +48,25 @@ if TYPE_CHECKING:
     from intellicrack.ui.dialogs import SplashScreen
     from intellicrack.ui.resources.icon_manager import IconManager
     from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+class _SetupLoggingFn(Protocol):
+    """Callable protocol matching :func:`intellicrack.core.logging.setup_logging`.
+
+    Defined as a Protocol so the ``log_dir`` parameter can be supplied either
+    positionally or via keyword without losing type fidelity at the call site
+    inside :func:`_load_startup_config`.
+    """
+
+    def __call__(self, config: LogConfig, log_dir: Path | None = ...) -> None:
+        """Invoke the wrapped ``setup_logging`` function.
+
+        Args:
+            config: Log configuration to apply.
+            log_dir: Optional directory for log files. Defaults to ``None``,
+                in which case ``setup_logging`` falls back to its portable
+                default (``Path.cwd() / "logs"``).
+        """
 
 
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
@@ -188,15 +213,15 @@ def _import_config_module() -> tuple[type[Config], Callable[[], Path]]:
     )
 
 
-def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], Callable[[LogConfig, Path | None], None]]:
+def _import_logging_funcs() -> tuple[Callable[[str], BoundLogger], _SetupLoggingFn]:
     """Import logging functions dynamically.
 
     Returns:
-        tuple[Callable[[str], BoundLogger], Callable[[LogConfig, Path | None], None]]: Tuple of (get_logger function, setup_logging function).
+        tuple[Callable[[str], BoundLogger], _SetupLoggingFn]: Tuple of (get_logger function, setup_logging function).
     """
     mod = importlib.import_module("intellicrack.core.logging")
     return cast(
-        "tuple[Callable[[str], BoundLogger], Callable[[LogConfig, Path | None], None]]",
+        "tuple[Callable[[str], BoundLogger], _SetupLoggingFn]",
         (mod.get_logger, mod.setup_logging),
     )
 
@@ -600,22 +625,117 @@ def main() -> int:
         _finalize_shutdown(loop, process_manager, logger)
 
 
-def _init_script_engine(config: Config, logger: BoundLogger) -> tuple[object, object]:
+def _init_script_engine(
+    config: Config,
+    logger: BoundLogger,
+) -> tuple[ScriptManager, ScriptValidator, ScriptGenerator]:
     """Initialize the script engine subsystem.
+
+    Constructs the on-disk script directory, instantiates the
+    :class:`~intellicrack.core.script_gen.ScriptManager`,
+    :class:`~intellicrack.core.script_gen.ScriptValidator`, and
+    :class:`~intellicrack.core.script_gen.ScriptGenerator` and returns
+    all three so the caller can persist them on the application context.
+    Holding ``ScriptGenerator`` for the lifetime of the application keeps
+    its API surface available to AI/tool bridges that build script-
+    generation prompts.
 
     Args:
         config: Application configuration.
         logger: BoundLogger instance.
 
     Returns:
-        tuple[object, object]: Tuple of (script_manager, script_validator).
+        tuple[ScriptManager, ScriptValidator, ScriptGenerator]: Tuple of
+            (script_manager, script_validator, script_generator).
     """
     script_gen_mod = importlib.import_module("intellicrack.core.script_gen")
     scripts_dir = config.data_directory / "scripts"
     scripts_dir.mkdir(parents=True, exist_ok=True)
-    script_gen_mod.ScriptGenerator()
+    script_manager = cast("ScriptManager", script_gen_mod.ScriptManager(scripts_dir))
+    script_validator = cast("ScriptValidator", script_gen_mod.ScriptValidator())
+    script_generator = cast("ScriptGenerator", script_gen_mod.ScriptGenerator())
     logger.info("script_engine_initialized")
-    return script_gen_mod.ScriptManager(scripts_dir), script_gen_mod.ScriptValidator()
+    return script_manager, script_validator, script_generator
+
+
+def _init_template_manager(
+    logger: BoundLogger,
+) -> TemplateManager | None:
+    """Initialize the hex editor template manager and bootstrap built-ins.
+
+    Builds a :class:`~intellicrack.core.template_manager.TemplateManager`
+    rooted under the project-local config directory, ensures the on-disk
+    builtin/user template subdirectories exist, and exports every built-in
+    template registered on a headless ``HexDocument`` to its JSON sidecar
+    via :meth:`TemplateManager.bootstrap_builtins`.
+
+    The bootstrap does not abort startup on failure: per-template export
+    failures are surfaced through ``TemplateBootstrapError.failed_templates``
+    and logged as a structured warning. If the native hex core cannot be
+    imported (for example, because the Rust crate has not been built),
+    ``None`` is returned and the caller continues without template
+    persistence.
+
+    Args:
+        logger: BoundLogger instance.
+
+    Returns:
+        TemplateManager | None: The bootstrapped TemplateManager, or
+            ``None`` when the native ``intellicrack_hexcore`` backend
+            cannot supply a ``HexDocument`` to drive the bootstrap.
+    """
+    config_mod = importlib.import_module("intellicrack.core.config")
+    template_mod = importlib.import_module("intellicrack.core.template_manager")
+
+    template_manager_cls = cast("type[TemplateManager]", template_mod.TemplateManager)
+    bootstrap_error_cls: type[Exception] = cast(
+        "type[Exception]",
+        template_mod.TemplateBootstrapError,
+    )
+
+    config_dir = cast("Path", config_mod.get_config_dir())
+    template_manager = template_manager_cls(config_dir)
+    template_manager.ensure_directories()
+
+    try:
+        hexcore_mod = importlib.import_module("intellicrack_hexcore")
+    except ImportError:
+        logger.warning(
+            "template_manager_skipped_no_hexcore",
+            reason="intellicrack_hexcore module not available",
+        )
+        return template_manager
+
+    hex_document_cls = getattr(hexcore_mod, "HexDocument", None)
+    if hex_document_cls is None:
+        logger.warning(
+            "template_manager_skipped_no_hex_document",
+            reason="intellicrack_hexcore.HexDocument not available",
+        )
+        return template_manager
+
+    open_bytes = getattr(hex_document_cls, "open_bytes", None)
+    if not callable(open_bytes):
+        logger.warning(
+            "template_manager_skipped_no_open_bytes",
+            reason="HexDocument.open_bytes factory not available",
+        )
+        return template_manager
+
+    document = open_bytes(b"")
+    try:
+        template_manager.bootstrap_builtins(cast("HexDocumentFull", document))
+    except bootstrap_error_cls as exc:
+        logger.warning(
+            "template_bootstrap_partial",
+            error=str(exc),
+            failed_count=len(template_manager.failed_templates),
+            failed_paths=[str(path) for path, _ in template_manager.failed_templates],
+        )
+    else:
+        logger.info("template_manager_initialized")
+
+    return template_manager
 
 
 async def _init_model_discovery(
@@ -662,6 +782,39 @@ async def init_model_discovery(
     return await _init_model_discovery(provider_registry, config, logger)
 
 
+def init_script_engine(
+    config: Config,
+    logger: BoundLogger,
+) -> tuple[ScriptManager, ScriptValidator, ScriptGenerator]:
+    """Public wrapper around :func:`_init_script_engine`.
+
+    Args:
+        config: Application configuration.
+        logger: BoundLogger instance.
+
+    Returns:
+        tuple[ScriptManager, ScriptValidator, ScriptGenerator]: Tuple of
+            (script_manager, script_validator, script_generator).
+    """
+    return _init_script_engine(config, logger)
+
+
+def init_template_manager(
+    logger: BoundLogger,
+) -> TemplateManager | None:
+    """Public wrapper around :func:`_init_template_manager`.
+
+    Args:
+        logger: BoundLogger instance.
+
+    Returns:
+        TemplateManager | None: The bootstrapped TemplateManager, or
+            ``None`` when the native ``intellicrack_hexcore`` backend is
+            unavailable.
+    """
+    return _init_template_manager(logger)
+
+
 def _clear_model_cache(logger: BoundLogger) -> None:
     """Clear the global model cache during shutdown.
 
@@ -679,6 +832,110 @@ def _clear_model_cache(logger: BoundLogger) -> None:
             logger.debug("model_cache_cleared")
         except (ImportError, OSError, RuntimeError):
             logger.debug("model_cache_cleanup_skipped", exc_info=True)
+
+
+def _create_main_window(
+    *,
+    config: Config,
+    orchestrator: Orchestrator,
+    script_manager: ScriptManager,
+    script_validator: ScriptValidator,
+    script_generator: ScriptGenerator,
+    template_manager: TemplateManager | None,
+    model_discovery: object,
+) -> MainWindow:
+    """Construct the main window and wire startup-scoped services into it.
+
+    Args:
+        config: Application configuration.
+        orchestrator: AI orchestrator owning provider/tool registries.
+        script_manager: ScriptManager owning the on-disk scripts directory.
+        script_validator: ScriptValidator used by the script panel.
+        script_generator: ScriptGenerator API surface persisted on the window.
+        template_manager: TemplateManager rooted under the user's config
+            directory, or ``None`` when bootstrap could not run.
+        model_discovery: ModelDiscovery instance for provider model lookups.
+
+    Returns:
+        MainWindow: The fully wired main window ready to show.
+    """
+    window = _import_main_window()(config, orchestrator)
+    window.wire_script_manager(script_manager, script_validator)
+    window.set_script_generator(script_generator)
+    if template_manager is not None:
+        window.set_template_manager(template_manager)
+    window.set_model_discovery(cast("ModelDiscovery", model_discovery))
+    return window
+
+
+async def _shutdown_application(
+    *,
+    logger: BoundLogger,
+    provider_registry: ProviderRegistry,
+    orchestrator: Orchestrator,
+    session_manager: SessionManager,
+    process_manager: ProcessManager,
+    model_discovery: object,
+    discovery_cache: Path,
+) -> None:
+    """Run the application shutdown sequence with bounded timeouts.
+
+    Args:
+        logger: BoundLogger for shutdown progress.
+        provider_registry: Provider registry to disconnect.
+        orchestrator: Orchestrator to shut down.
+        session_manager: SessionManager to close.
+        process_manager: ProcessManager whose tracked processes are
+            cleaned up via :meth:`cleanup_all_async`.
+        model_discovery: ModelDiscovery whose cache is persisted to
+            ``discovery_cache`` if it exposes ``save_cache``.
+        discovery_cache: Path of the model discovery cache file.
+    """
+    logger.info("shutdown_started")
+    save_cache = getattr(model_discovery, "save_cache", None)
+    if callable(save_cache):
+        await cast("Awaitable[None]", save_cache(discovery_cache))
+
+    try:
+        await asyncio.wait_for(
+            provider_registry.disconnect_all(),
+            timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT,
+        )
+    except TimeoutError:
+        logger.warning("provider_disconnect_timeout")
+
+    _clear_model_cache(logger)
+
+    try:
+        await asyncio.wait_for(orchestrator.shutdown(), timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT)
+    except TimeoutError:
+        logger.warning("orchestrator_shutdown_timeout")
+
+    try:
+        await asyncio.wait_for(session_manager.close(), timeout=_SHUTDOWN_SESSION_TIMEOUT)
+    except TimeoutError:
+        logger.warning("session_close_timeout")
+
+    try:
+        await asyncio.wait_for(
+            process_manager.cleanup_all_async(),
+            timeout=_SHUTDOWN_PROCESS_TIMEOUT,
+        )
+    except TimeoutError:
+        logger.warning("process_cleanup_timeout")
+
+    try:
+        shutdown_fn = getattr(
+            importlib.import_module("intellicrack.ui.panels.async_bridge"),
+            "shutdown_bridge_loop",
+            None,
+        )
+        if callable(shutdown_fn):
+            shutdown_fn()
+    except (ImportError, OSError, RuntimeError):
+        logger.debug("bridge_loop_shutdown_failed", exc_info=True)
+
+    logger.info("shutdown_complete")
 
 
 async def _run_application(
@@ -737,7 +994,12 @@ async def _run_application(
     splash.set_progress(90, "Initializing script engine...")
     app.processEvents()
 
-    script_manager, script_validator = _init_script_engine(config, logger)
+    script_manager, script_validator, script_generator = _init_script_engine(config, logger)
+
+    splash.set_progress(92, "Initializing template manager...")
+    app.processEvents()
+
+    template_manager = _init_template_manager(logger)
 
     splash.set_progress(93, "Initializing model discovery...")
     app.processEvents()
@@ -747,9 +1009,15 @@ async def _run_application(
     splash.set_progress(95, "Initializing UI...")
     app.processEvents()
 
-    window = _import_main_window()(config, orchestrator)
-    window.wire_script_manager(script_manager, script_validator)
-    window.set_model_discovery(cast("ModelDiscovery", model_discovery))
+    window = _create_main_window(
+        config=config,
+        orchestrator=orchestrator,
+        script_manager=script_manager,
+        script_validator=script_validator,
+        script_generator=script_generator,
+        template_manager=template_manager,
+        model_discovery=model_discovery,
+    )
 
     splash.set_progress(100, "Ready")
     app.processEvents()
@@ -758,52 +1026,15 @@ async def _run_application(
     logger.info("ui_started")
     exit_code = app.exec()
 
-    logger.info("shutdown_started")
-    save_cache = getattr(model_discovery, "save_cache", None)
-    if callable(save_cache):
-        await cast("Awaitable[None]", save_cache(discovery_cache))
-
-    try:
-        await asyncio.wait_for(
-            provider_registry.disconnect_all(),
-            timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT,
-        )
-    except TimeoutError:
-        logger.warning("provider_disconnect_timeout")
-
-    _clear_model_cache(logger)
-
-    try:
-        await asyncio.wait_for(orchestrator.shutdown(), timeout=_SHUTDOWN_ORCHESTRATOR_TIMEOUT)
-    except TimeoutError:
-        logger.warning("orchestrator_shutdown_timeout")
-
-    try:
-        await asyncio.wait_for(session_manager.close(), timeout=_SHUTDOWN_SESSION_TIMEOUT)
-    except TimeoutError:
-        logger.warning("session_close_timeout")
-
-    try:
-        await asyncio.wait_for(
-            process_manager.cleanup_all_async(),
-            timeout=_SHUTDOWN_PROCESS_TIMEOUT,
-        )
-    except TimeoutError:
-        logger.warning("process_cleanup_timeout")
-
-    try:
-        shutdown_fn = getattr(
-            importlib.import_module("intellicrack.ui.panels.async_bridge"),
-            "shutdown_bridge_loop",
-            None,
-        )
-        if callable(shutdown_fn):
-            shutdown_fn()
-    except (ImportError, OSError, RuntimeError):
-        logger.debug("bridge_loop_shutdown_failed", exc_info=True)
-
-    logger.info("shutdown_complete")
-
+    await _shutdown_application(
+        logger=logger,
+        provider_registry=provider_registry,
+        orchestrator=orchestrator,
+        session_manager=session_manager,
+        process_manager=process_manager,
+        model_discovery=model_discovery,
+        discovery_cache=discovery_cache,
+    )
     return exit_code
 
 

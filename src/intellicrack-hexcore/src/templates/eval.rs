@@ -1082,6 +1082,81 @@ mod tests {
         assert_eq!(result.len(), 1);
     }
 
+    fn make_bitmask_fields(condition_op: ConditionOp, condition_value: i64) -> Vec<FieldDefinition> {
+        vec![
+            FieldDefinition {
+                name: "flags".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "flags".to_string(),
+                    condition_value,
+                    condition_op,
+                    fields: vec![FieldDefinition {
+                        name: "guarded".to_string(),
+                        field_type: FieldType::UInt8,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_conditional_bitand_set_emits_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAnd, 0b0000_0100);
+        let data = [0b0000_0110, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "guarded");
+    }
+
+    #[test]
+    fn test_conditional_bitand_clear_skips_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAnd, 0b0000_0100);
+        let data = [0b0000_0010, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_conditional_bitand_zero_clear_emits_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAndZero, 0b0000_0100);
+        let data = [0b0000_0010, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "guarded");
+    }
+
+    #[test]
+    fn test_conditional_bitand_zero_set_skips_inner() {
+        let reg = make_registry();
+        let fields = make_bitmask_fields(ConditionOp::BitAndZero, 0b0000_0100);
+        let data = [0b0000_0110, 0xAA];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
     #[test]
     fn test_enum_field() {
         let reg = make_registry();

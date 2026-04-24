@@ -359,3 +359,48 @@ class TestSessionDataIntegrity:
         """
         result = store.delete("nonexistent-session-id")
         assert result is False
+
+
+class TestStartupWiring:
+    """Test startup-time wiring of TemplateManager and ScriptGenerator."""
+
+    @staticmethod
+    def test_init_script_engine_returns_three_components(tmp_path: Path) -> None:
+        """_init_script_engine returns (manager, validator, generator) triple.
+
+        Args:
+            tmp_path: Pytest temporary directory used as the data root.
+        """
+        from intellicrack.core.config import Config
+        from intellicrack.core.logging import get_logger
+        from intellicrack.core.script_gen import ScriptGenerator, ScriptManager, ScriptValidator
+        from intellicrack.main import init_script_engine
+
+        config = Config.default()
+        config.data_directory = tmp_path / "data"
+        config.data_directory.mkdir(parents=True, exist_ok=True)
+        logger = get_logger("test")
+
+        manager, validator, generator = init_script_engine(config, logger)
+
+        assert isinstance(manager, ScriptManager)
+        assert isinstance(validator, ScriptValidator)
+        assert isinstance(generator, ScriptGenerator)
+        assert (config.data_directory / "scripts").is_dir()
+
+    @staticmethod
+    def test_init_template_manager_creates_directories() -> None:
+        """_init_template_manager builds template tree under config_dir."""
+        from intellicrack.core.config import get_config_dir
+        from intellicrack.core.logging import get_logger
+        from intellicrack.core.template_manager import TemplateManager
+        from intellicrack.main import init_template_manager
+
+        logger = get_logger("test")
+        manager = init_template_manager(logger)
+
+        assert isinstance(manager, TemplateManager)
+        templates_dir = get_config_dir() / "templates"
+        assert templates_dir.is_dir()
+        assert (templates_dir / "builtin").is_dir()
+        assert (templates_dir / "user").is_dir()

@@ -22,7 +22,6 @@ from intellicrack.core.logging import (
     OperationTimer,
     cleanup_old_logs,
     get_logger,
-    get_structlog_logger,
     log_analysis_operation,
     log_binary_operation,
     log_provider_request,
@@ -480,21 +479,6 @@ def test_get_logger_with_name() -> None:
     """Verify get_logger with name returns named bound logger."""
     logger = get_logger("my_module")
     assert hasattr(logger, "bind")
-
-
-# --- get_structlog_logger ---
-
-
-def test_get_structlog_logger_no_name() -> None:
-    """Verify get_structlog_logger with no name returns structlog logger."""
-    slog = get_structlog_logger()
-    assert slog is not None
-
-
-def test_get_structlog_logger_with_name() -> None:
-    """Verify get_structlog_logger with name returns named structlog logger."""
-    slog = get_structlog_logger("test")
-    assert slog is not None
 
 
 # --- log convenience functions (verify no exceptions) ---

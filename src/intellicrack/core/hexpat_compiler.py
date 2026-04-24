@@ -1066,7 +1066,54 @@ class HexPatParser:
         Returns:
             ExprNode: Parsed expression node.
         """
-        return self._parse_comparison()
+        return self._parse_bitwise_or()
+
+    def _parse_bitwise_or(self) -> ExprNode:
+        """Parse a bitwise OR expression (lowest binary precedence).
+
+        Returns:
+            ExprNode: Parsed expression.
+        """
+        left = self._parse_bitwise_xor()
+        while self._current().type == TokenType.PIPE:
+            op_tok = self._advance()
+            right = self._parse_bitwise_xor()
+            left = BinaryExpr(op=op_tok.value, left=left, right=right)
+        return left
+
+    def _parse_bitwise_xor(self) -> ExprNode:
+        """Parse a bitwise XOR expression.
+
+        Returns:
+            ExprNode: Parsed expression.
+        """
+        left = self._parse_bitwise_and()
+        while self._current().type == TokenType.CARET:
+            op_tok = self._advance()
+            right = self._parse_bitwise_and()
+            left = BinaryExpr(op=op_tok.value, left=left, right=right)
+        return left
+
+    def _parse_bitwise_and(self) -> ExprNode:
+        """Parse a bitwise AND expression.
+
+        Bitwise AND is lower precedence than equality so that
+        ``flag & MASK != 0`` parses as ``(flag & MASK) != 0`` to match the
+        intent of pattern authors writing bit-mask predicates. C's official
+        precedence places AND below equality, which would parse the same
+        text as ``flag & (MASK != 0)``; the alternative chosen here matches
+        ImHex pattern language conventions and avoids the C precedence
+        footgun in DSL source.
+
+        Returns:
+            ExprNode: Parsed expression.
+        """
+        left = self._parse_comparison()
+        while self._current().type == TokenType.AMPERSAND:
+            op_tok = self._advance()
+            right = self._parse_comparison()
+            left = BinaryExpr(op=op_tok.value, left=left, right=right)
+        return left
 
     def _parse_comparison(self) -> ExprNode:
         """Parse a comparison expression.

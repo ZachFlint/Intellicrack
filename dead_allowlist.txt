@@ -57,7 +57,6 @@ apply_transform
 assemble_at
 authorize_google
 auto_detect_pattern
-bootstrap_builtins
 breakpoints
 bytes_received
 bytes_sent

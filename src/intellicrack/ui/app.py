@@ -47,7 +47,7 @@ from intellicrack._metadata import __copyright__, __license__, __version__
 from intellicrack.bridges.installer import ToolInstaller
 from intellicrack.core.config import get_config_dir, get_config_file
 from intellicrack.core.logging import get_logger
-from intellicrack.core.script_gen import ScriptManager
+from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
 from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
 from intellicrack.providers.discovery import ModelDiscovery
 from intellicrack.sandbox import SandboxConfig, SandboxManager
@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
+    from intellicrack.core.template_manager import TemplateManager
 
 
 _logger = get_logger("ui.app")
@@ -225,6 +226,8 @@ class MainWindow(QMainWindow):
         self.current_binary: Path | None = None
         self._script_manager: object | None = None
         self._script_validator: object | None = None
+        self._script_generator: ScriptGenerator | None = None
+        self.template_manager: TemplateManager | None = None
         self.model_discovery: ModelDiscovery | None = None
 
         _logger.debug("loading_icon_manager")
@@ -365,6 +368,33 @@ class MainWindow(QMainWindow):
         self._script_validator = validator
         self.tool_panel.wire_script_backend(manager, validator)
         _logger.debug("script_manager_wired")
+
+    def set_script_generator(self, generator: ScriptGenerator) -> None:
+        """Persist the application-scoped ScriptGenerator instance.
+
+        ``ScriptGenerator`` is the API surface used by AI/tool bridges to
+        prepare prompts for script generation. Holding the instance on the
+        main window keeps it alive for the lifetime of the application and
+        gives downstream panels a stable handle to reach it.
+
+        Args:
+            generator: ScriptGenerator instance constructed during startup.
+        """
+        self._script_generator = generator
+        _logger.debug("script_generator_set")
+
+    def set_template_manager(self, manager: TemplateManager) -> None:
+        """Persist the application-scoped TemplateManager instance.
+
+        ``TemplateManager`` owns the on-disk built-in and user template
+        directories under ``config_dir/templates/`` and surfaces them to
+        the hex editor pattern UI.
+
+        Args:
+            manager: TemplateManager instance bootstrapped during startup.
+        """
+        self.template_manager = manager
+        _logger.debug("template_manager_set")
 
     def set_model_discovery(self, discovery: ModelDiscovery) -> None:
         """Set the model discovery instance.
